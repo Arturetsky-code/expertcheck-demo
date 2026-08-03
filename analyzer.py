@@ -318,17 +318,19 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
     включая сооружения, отсутствующие в первоначальном словаре.
     """
     low = normalized_search_text(text)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    pos_re = re.compile(r"^4\.\d+(?:\.\d+){0,2}$")
+    position_count = sum(1 for line in lines if pos_re.match(line))
     table_signals = (
         "позиция\nпо\nгенплану" in low
         or "позиция по генплану" in low
         or ("наименование объекта" in low and "генплан" in low)
         or ("наименование зданий" in low and "генплан" in low)
+        or (position_count >= 2 and any(token in low for token in ("площадь", "сооруж", "объект", "строитель")))
     )
     if not table_signals:
         return []
 
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    pos_re = re.compile(r"^4\.\d+(?:\.\d+){0,2}$")
     class_re = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}(?:\s|$)")
     ordinal_re = re.compile(r"^\d{1,3}$")
     stop_prefixes = (
@@ -405,6 +407,117 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
         ))
     return result
 
+
+
+def _extract_quantity_from_name(name: str) -> int:
+    for pattern in (
+        r"(?:количеств[оа]|в количестве)\s*[:\-]?\s*(\d{1,3})",
+        r"\b(\d{1,3})\s*(?:шт\.?|ед\.?)(?:\b|$)",
+    ):
+        match = re.search(pattern, name, flags=re.I)
+        if match:
+            return max(1, int(match.group(1)))
+    return 1
+
+
+def _candidate_name_after_line(lines: list[str], index: int, max_lines: int = 4) -> str:
+    collected: list[str] = []
+    stop = re.compile(r"^(?:лист|изм\.?|том|раздел|часть|проектная документация|масштаб|м\s*1:|\d+\s*$)", flags=re.I)
+    code = re.compile(r"RAM-[A-ZА-Я0-9.\-]+", flags=re.I)
+    for candidate in lines[index + 1:index + 1 + max_lines]:
+        clean = candidate.strip(" .;:-")
+        if not clean or stop.match(clean) or code.match(clean):
+            break
+        collected.append(clean)
+        if len(" ".join(collected)) > 150:
+            break
+    return _clean_object_name(collected)
+
+
+def _extract_multisource_object_candidates(page_no: int, text: str, filename: str, document_type: str, objects: list[dict]) -> list[Finding]:
+    """Кандидаты перечня объектов из шифров, ведомостей, экспликаций и заголовков."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    result: list[Finding] = []
+    seen: set[tuple[str, str]] = set()
+    code_re = re.compile(
+        r"(?:RAM-[A-ZА-Я0-9.\-]*?-ПД-)(?P<pos>4\.\d+(?:\.\d+){0,2})-(?:АР2|ТХ2|КР|ИОС\d*(?:\.\d+)?)",
+        flags=re.I,
+    )
+    if document_type in {"АР2", "ТХ2"}:
+        code_lines = enumerate(lines)
+    else:
+        code_lines = []
+    for index, line in code_lines:
+        match = code_re.search(line)
+        if not match:
+            continue
+        position = match.group("pos")
+        tail = line[match.end():].strip(" .;:-")
+        name = tail if len(tail) >= 3 else _candidate_name_after_line(lines, index, 5)
+        if not name:
+            continue
+        canonical = _canonical_from_text(name, objects) or name
+        key = (position, normalized_search_text(canonical))
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(Finding(
+            document=filename, document_type=document_type, page=page_no,
+            parameter_code="OBJECT_CANDIDATE", parameter_name="Кандидат в перечень объектов",
+            value=float(_extract_quantity_from_name(name)), value_text=name, unit="шт.",
+            context=f"Шифр позиции {position}: {name}", confidence=0.97,
+            object_hint=canonical, match_method="позиция из шифра комплекта",
+            structural_zone="Ведомость/шифр объекта",
+            extraction_profile=f"{document_type}: подтверждение перечня объектов",
+            genplan_position=position,
+        ))
+
+    position_lines = [(i, line) for i, line in enumerate(lines) if re.fullmatch(r"4\.\d+(?:\.\d+){0,2}", line)]
+    if document_type == "ПЗУ1" and len(position_lines) >= 2:
+        for index, position in position_lines:
+            name = _candidate_name_after_line(lines, index, 5)
+            if not name:
+                continue
+            canonical = _canonical_from_text(name, objects) or name
+            key = (position, normalized_search_text(canonical))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(Finding(
+                document=filename, document_type=document_type, page=page_no,
+                parameter_code="OBJECT_CANDIDATE", parameter_name="Кандидат в перечень объектов",
+                value=float(_extract_quantity_from_name(name)), value_text=name, unit="шт.",
+                context=f"Позиция {position}: {name}", confidence=0.84,
+                object_hint=canonical, match_method="позиция из ведомости/экспликации",
+                structural_zone="Перечень объектов",
+                extraction_profile=f"{document_type}: подтверждение перечня объектов",
+                genplan_position=position,
+            ))
+
+    if document_type in {"АР1", "ТХ1"}:
+        heading_re = re.compile(r"^\d+(?:\.\d+){1,3}\s+(.{3,150})$")
+        for line in lines:
+            match = heading_re.match(line)
+            if not match:
+                continue
+            name = match.group(1).strip(" .;:-")
+            canonical = _canonical_from_text(name, objects)
+            if not canonical:
+                continue
+            key = ("", normalized_search_text(canonical))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(Finding(
+                document=filename, document_type=document_type, page=page_no,
+                parameter_code="OBJECT_CANDIDATE", parameter_name="Кандидат в перечень объектов",
+                value=1.0, value_text=name, unit="шт.", context=line, confidence=0.72,
+                object_hint=canonical, match_method="заголовок подраздела",
+                structural_zone="Описание объекта",
+                extraction_profile=f"{document_type}: подтверждение перечня объектов",
+                genplan_position="",
+            ))
+    return result
 
 def _extract_pz_complex_table(page_no: int, text: str, filename: str, parameters: list[dict], objects: list[dict]) -> list[Finding]:
     """Извлекает строки таблицы состава сложного объекта ПЗ.
@@ -521,6 +634,7 @@ def extract_findings(
 
         specialized: list[Finding] = []
         structured_metrics: list[Finding] = []
+        specialized.extend(_extract_multisource_object_candidates(page_no, text, filename, document_type, objects))
         if document_type == "ПЗ":
             specialized.extend(_extract_pz_object_registry(page_no, text, filename, objects))
             structured_metrics = _extract_pz_complex_table(page_no, text, filename, parameters, objects)
@@ -768,7 +882,7 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
     parameter_map = {p.get("code"): p for p in parameters}
     groups: dict[tuple[str, str, str], list[Finding]] = {}
     for finding in findings:
-        if finding.value is None or finding.object_hint == "Не определён":
+        if finding.parameter_code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} or finding.value is None or finding.object_hint == "Не определён":
             continue
         groups.setdefault(
             (finding.object_hint, finding.parameter_code, normalize_unit(finding.unit)), []
@@ -881,9 +995,9 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
         doc_findings = extract_findings(uploaded.name, doc_type, pages, parameters, objects)
         object_positions = {
             x.genplan_position for x in doc_findings
-            if x.parameter_code == "OBJECT_ENTRY" and x.genplan_position
+            if x.parameter_code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} and x.genplan_position
         }
-        characteristic_count = sum(1 for x in doc_findings if x.parameter_code != "OBJECT_ENTRY")
+        characteristic_count = sum(1 for x in doc_findings if x.parameter_code not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"})
         documents.append({
             "Файл": uploaded.name,
             "Тип документа": doc_type,
@@ -891,7 +1005,7 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
             "Профиль анализа": _profile_name(doc_type),
             "Объектов по реестру": len(object_positions),
             "Извлечено характеристик": characteristic_count,
-            "Высокая уверенность": sum(1 for x in doc_findings if x.parameter_code != "OBJECT_ENTRY" and x.confidence >= 0.82),
+            "Высокая уверенность": sum(1 for x in doc_findings if x.parameter_code not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} and x.confidence >= 0.82),
         })
         all_findings.extend(doc_findings)
     return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings, parameters)

@@ -148,6 +148,8 @@ def init_state() -> None:
         "object_registry_confirmed": False,
         "raw_result": None,
         "registry_application_stats": None,
+        "review_register": None,
+        "review_register_saved": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -570,20 +572,102 @@ def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(stored)
     return build_candidate_registry(findings_df)
 
-def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame) -> bytes:
+
+REVIEW_STATUSES = [
+    "Новое",
+    "Подтверждено",
+    "Ложное срабатывание",
+    "Требует уточнения",
+    "Передано в работу",
+    "Устранено",
+]
+REVIEW_PRIORITIES = ["Высокий", "Средний", "Низкий"]
+REVIEW_SECTIONS = ["Не назначен", "ПЗ", "ПЗУ", "АР", "КР", "ТХ", "ИОС", "ПОС", "ООС", "ПБ", "ГОЧС", "Изыскания", "Межраздельное"]
+
+
+def _review_key(row: pd.Series | dict) -> str:
+    getter = row.get
+    code = str(getter("check_code", "") or "").strip()
+    obj = str(getter("object", "") or "").strip()
+    param = str(getter("parameter_code", "") or getter("parameter_name", "") or "").strip()
+    return "|".join([code, obj, param])
+
+
+def build_review_register(comparisons_df: pd.DataFrame, existing: list[dict] | None = None) -> pd.DataFrame:
+    columns = [
+        "Ключ", "Включить в отчёт", "Объект", "Характеристика", "Автоматический результат",
+        "Рабочий статус", "Приоритет", "Ответственный раздел", "Комментарий проверяющего",
+        "Разделы-источники", "Значения по разделам", "Источники", "Код проверки",
+    ]
+    if comparisons_df.empty:
+        return pd.DataFrame(columns=columns)
+    work = comparisons_df.copy()
+    if "status" in work.columns:
+        work = work[work["status"].isin(["ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ", "ТРЕБУЕТ УТОЧНЕНИЯ"])].copy()
+    old_map = {_review_key(x): x for x in (existing or [])}
+    rows = []
+    for _, row in work.iterrows():
+        key = _review_key(row)
+        old = old_map.get(key, {})
+        auto_status = str(row.get("status", "") or "")
+        default_status = "Требует уточнения" if auto_status == "ТРЕБУЕТ УТОЧНЕНИЯ" else "Новое"
+        priority = str(old.get("Приоритет") or row.get("priority") or "Средний")
+        if priority.capitalize() in REVIEW_PRIORITIES:
+            priority = priority.capitalize()
+        elif priority not in REVIEW_PRIORITIES:
+            priority = "Средний"
+        rows.append({
+            "Ключ": key,
+            "Включить в отчёт": bool(old.get("Включить в отчёт", True)),
+            "Объект": str(row.get("object", "") or ""),
+            "Характеристика": str(row.get("parameter_name", "") or ""),
+            "Автоматический результат": auto_status,
+            "Рабочий статус": str(old.get("Рабочий статус") or default_status),
+            "Приоритет": priority,
+            "Ответственный раздел": str(old.get("Ответственный раздел") or "Не назначен"),
+            "Комментарий проверяющего": str(old.get("Комментарий проверяющего") or ""),
+            "Разделы-источники": str(row.get("documents", "") or ""),
+            "Значения по разделам": str(row.get("document_values", "") or ""),
+            "Источники": str(row.get("sources", "") or ""),
+            "Код проверки": str(row.get("check_code", "") or ""),
+        })
+    return pd.DataFrame(rows, columns=columns)
+
+
+def current_review_register(comparisons_df: pd.DataFrame) -> pd.DataFrame:
+    existing = st.session_state.get("review_register")
+    return build_review_register(comparisons_df, existing)
+
+
+def review_metrics(review_df: pd.DataFrame) -> dict[str, int]:
+    if review_df.empty:
+        return {"total": 0, "confirmed": 0, "false": 0, "work": 0, "resolved": 0, "included": 0}
+    statuses = review_df["Рабочий статус"].fillna("").astype(str)
+    return {
+        "total": len(review_df),
+        "confirmed": int(statuses.eq("Подтверждено").sum()),
+        "false": int(statuses.eq("Ложное срабатывание").sum()),
+        "work": int(statuses.isin(["Новое", "Требует уточнения", "Передано в работу"]).sum()),
+        "resolved": int(statuses.eq("Устранено").sum()),
+        "included": int(review_df["Включить в отчёт"].fillna(False).astype(bool).sum()),
+    }
+
+def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame, review_df: pd.DataFrame | None = None) -> bytes:
     mismatch_count, matched_count = comparison_counts(comparisons_df)
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as writer:
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.9.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.10.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
                 ["Потенциальных расхождений", mismatch_count],
                 ["Совпадений", matched_count],
                 ["Требуют уточнения", clarification_count(comparisons_df)],
+                ["Рабочих записей в реестре", len(review_df) if review_df is not None else 0],
+                ["Подтверждённых замечаний", int((review_df["Рабочий статус"] == "Подтверждено").sum()) if review_df is not None and not review_df.empty else 0],
             ],
             columns=["Характеристика", "Значение"],
         )
@@ -592,6 +676,9 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         registry_coverage(registry_for_export(findings_df)).to_excel(writer, sheet_name="Перечень объектов", index=False)
         findings_for_user(characteristic_findings(findings_df)).to_excel(writer, sheet_name="Характеристики проекта", index=False)
         comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
+        if review_df is not None:
+            export_review = review_df.drop(columns=["Ключ"], errors="ignore")
+            export_review.to_excel(writer, sheet_name="Реестр замечаний", index=False)
 
         for sheet in writer.book.worksheets:
             sheet.freeze_panes = "A2"
@@ -615,7 +702,7 @@ with st.sidebar:
         "Перечень объектов",
         "Характеристики проекта",
         "Проверки",
-        "Несоответствия",
+        "Реестр замечаний",
         "Отчёт",
         "О версии",
     ]
@@ -628,7 +715,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.9.0")
+    st.caption("Demo Cloud v0.10.0")
 
 
 # ---------- Общая шапка ----------
@@ -639,7 +726,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.9.0</div>
+      <div class="ec-badge">Demo Cloud v0.10.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -708,6 +795,8 @@ if page == "Главная":
                         st.session_state["object_registry"] = None
                         st.session_state["object_registry_confirmed"] = False
                         st.session_state["registry_application_stats"] = None
+                        st.session_state["review_register"] = None
+                        st.session_state["review_register_saved"] = False
                     st.success("Цифровой профиль проекта сформирован")
                     st.rerun()
                 except Exception as exc:
@@ -993,18 +1082,70 @@ elif page == "Проверки":
         st.dataframe(comparisons_for_user(comparisons_df), use_container_width=True, hide_index=True)
         st.warning("Автоматический результат является предварительным и требует подтверждения специалистом.")
 
-# ---------- Расхождения ----------
-elif page == "Несоответствия":
-    st.markdown('<div class="ec-section-title">Потенциальные расхождения</div>', unsafe_allow_html=True)
-    if comparisons_df.empty or "status" not in comparisons_df.columns:
-        st.info("Расхождения ещё не сформированы.")
+# ---------- Реестр замечаний ----------
+elif page == "Реестр замечаний":
+    st.markdown('<div class="ec-section-title">Реестр предэкспертных замечаний</div>', unsafe_allow_html=True)
+    st.caption("Автоматическая находка становится рабочим замечанием только после проверки специалистом.")
+    review_df = current_review_register(comparisons_df)
+    if review_df.empty:
+        st.success("Потенциальные расхождения и неопределённые результаты для включения в реестр не найдены.")
     else:
-        mismatch_df = comparisons_df[comparisons_df["status"] == "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ"].copy()
-        if mismatch_df.empty:
-            st.success("В текущем анализе потенциальные расхождения не найдены.")
-        else:
-            st.metric("Требует ручной проверки", len(mismatch_df))
-            st.dataframe(comparisons_for_user(mismatch_df), use_container_width=True, hide_index=True)
+        metrics = review_metrics(review_df)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Записей", metrics["total"])
+        c2.metric("В работе", metrics["work"])
+        c3.metric("Подтверждено", metrics["confirmed"])
+        c4.metric("Ложных срабатываний", metrics["false"])
+        c5.metric("Устранено", metrics["resolved"])
+
+        st.info("Измените рабочий статус, приоритет и ответственный раздел. Ложные срабатывания можно исключить из отчёта, сохранив их в истории проверки.")
+        edited_review = st.data_editor(
+            review_df,
+            key="review_register_editor",
+            use_container_width=True,
+            hide_index=True,
+            disabled=["Ключ", "Объект", "Характеристика", "Автоматический результат", "Разделы-источники", "Значения по разделам", "Источники", "Код проверки"],
+            column_config={
+                "Ключ": None,
+                "Включить в отчёт": st.column_config.CheckboxColumn("В отчёт", help="Включить запись в итоговый реестр замечаний"),
+                "Объект": st.column_config.TextColumn("Объект", width="large"),
+                "Характеристика": st.column_config.TextColumn("Характеристика", width="medium"),
+                "Автоматический результат": st.column_config.TextColumn("Результат системы", width="medium"),
+                "Рабочий статус": st.column_config.SelectboxColumn("Рабочий статус", options=REVIEW_STATUSES, required=True, width="medium"),
+                "Приоритет": st.column_config.SelectboxColumn("Приоритет", options=REVIEW_PRIORITIES, required=True, width="small"),
+                "Ответственный раздел": st.column_config.SelectboxColumn("Ответственный раздел", options=REVIEW_SECTIONS, required=True, width="medium"),
+                "Комментарий проверяющего": st.column_config.TextColumn("Комментарий проверяющего", width="large"),
+                "Разделы-источники": st.column_config.TextColumn("Разделы", width="medium"),
+                "Значения по разделам": st.column_config.TextColumn("Значения по разделам", width="large"),
+                "Источники": st.column_config.TextColumn("Источники", width="large"),
+                "Код проверки": st.column_config.TextColumn("Код проверки", width="small"),
+            },
+        )
+        b1, b2, b3 = st.columns([1, 1, 2])
+        with b1:
+            if st.button("Сохранить реестр", type="primary", use_container_width=True):
+                clean = edited_review.copy()
+                clean["Включить в отчёт"] = clean["Включить в отчёт"].fillna(False).astype(bool)
+                st.session_state["review_register"] = clean.to_dict("records")
+                st.session_state["review_register_saved"] = True
+                st.success("Реестр сохранён в текущей сессии")
+                st.rerun()
+        with b2:
+            if st.button("Сбросить решения", use_container_width=True):
+                st.session_state["review_register"] = None
+                st.session_state["review_register_saved"] = False
+                st.rerun()
+        with b3:
+            if st.session_state.get("review_register_saved"):
+                st.success("Рабочие решения сохранены и будут включены в Excel-отчёт.")
+            else:
+                st.warning("Изменения в таблице необходимо сохранить отдельной кнопкой.")
+
+        saved_or_edited = edited_review
+        included = saved_or_edited[saved_or_edited["Включить в отчёт"].fillna(False).astype(bool)]
+        with st.expander(f"Предварительный итоговый реестр: {len(included)} записей", expanded=False):
+            cols = ["Объект", "Характеристика", "Рабочий статус", "Приоритет", "Ответственный раздел", "Комментарий проверяющего", "Значения по разделам"]
+            st.dataframe(included[[c for c in cols if c in included.columns]], use_container_width=True, hide_index=True)
 
 # ---------- Отчёт ----------
 elif page == "Отчёт":
@@ -1020,7 +1161,7 @@ elif page == "Отчёт":
             """
             <div class="ec-card">
                 <div style="font-size:1.05rem;font-weight:720;color:#172033;">Excel-отчёт ExpertCheck</div>
-                <div class="ec-card-note">Сводка, документы, подтверждённый перечень объектов, характеристики и результаты межраздельной проверки.</div>
+                <div class="ec-card-note">Сводка, документы, подтверждённый перечень объектов, характеристики, автоматические проверки и управляемый реестр замечаний.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1028,7 +1169,10 @@ elif page == "Отчёт":
         st.write("")
         st.download_button(
             "Скачать Excel-отчёт",
-            data=make_excel(st.session_state["project_name"], docs_df, findings_df, comparisons_df),
+            data=make_excel(
+                st.session_state["project_name"], docs_df, findings_df, comparisons_df,
+                current_review_register(comparisons_df),
+            ),
             file_name=f"ExpertCheck_{safe_project}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
@@ -1037,26 +1181,27 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.9.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.10.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
-        **Назначение версии:** сформировать проверяемый перечень объектов из нескольких разделов и не допускать, чтобы ошибки распознавания автоматически превращались в замечания.
+        **Назначение версии:** превратить автоматические результаты проверки в управляемый реестр предэкспертных замечаний.
 
-        **Что изменилось:**
-        - вкладка переименована в «Перечень объектов»;
-        - перечень собирается из ПЗ, шифров АР/ТХ, ведомостей и заголовков подразделов;
-        - поддержано продолжение многостраничной таблицы ПЗ без повторной шапки;
-        - добавлено ручное редактирование, исключение и добавление объектов;
-        - разделены реестровые позиции и физическое количество объектов;
-        - межраздельная работа начинается с подтверждения перечня;
-        - обновлён дизайн и добавлен пошаговый маршрут анализа.
+        **Что добавлено:**
+        - рабочие статусы замечаний;
+        - подтверждение и отклонение ложных срабатываний;
+        - изменение приоритета;
+        - назначение ответственного раздела;
+        - комментарий проверяющего;
+        - включение или исключение записи из итогового отчёта;
+        - сохранение решений в текущей пользовательской сессии;
+        - отдельный лист «Реестр замечаний» в Excel-отчёте.
 
         **Ограничения Demo:**
+        - данные пока не сохраняются после перезапуска облачного приложения;
+        - регистрация, личные кабинеты и постоянное хранилище будут добавляться позднее;
         - анализируется текстовый слой PDF;
-        - сканы без текста могут не читаться;
-        - автоматическое извлечение перечня требует подтверждения специалистом;
-        - графические решения и нормативное соответствие пока не оцениваются;
-        - найденное расхождение не является готовым замечанием экспертизы.
+        - автоматическая находка требует профессионального подтверждения;
+        - графические решения и нормативное соответствие пока не оцениваются полностью.
         """
     )
 

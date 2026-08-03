@@ -11,7 +11,7 @@ import streamlit as st
 from analyzer import analyze_uploaded
 
 BASE_DIR = Path(__file__).resolve().parent
-CONFIG_DIR = BASE_DIR / "config"
+CONFIG_DIR = BASE_DIR
 
 st.set_page_config(
     page_title="ExpertCheck Demo",

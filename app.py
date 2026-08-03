@@ -155,6 +155,61 @@ def result_frames():
     return pd.DataFrame(documents), pd.DataFrame(findings), pd.DataFrame(comparisons)
 
 
+DISPLAY_FINDING_COLUMNS = {
+    "document": "Файл",
+    "document_type": "Раздел",
+    "page": "Страница",
+    "object_hint": "Объект",
+    "parameter_code": "Код характеристики",
+    "parameter_name": "Характеристика",
+    "value": "Числовое значение",
+    "value_text": "Найденное значение",
+    "unit": "Ед. изм.",
+    "confidence": "Уверенность",
+    "context": "Фрагмент документа",
+}
+
+DISPLAY_COMPARISON_COLUMNS = {
+    "object": "Объект",
+    "parameter_code": "Код характеристики",
+    "parameter_name": "Характеристика",
+    "unit": "Ед. изм.",
+    "status": "Результат проверки",
+    "min_value": "Минимальное значение",
+    "max_value": "Максимальное значение",
+    "documents": "Разделы",
+    "sources": "Источники",
+    "comment": "Комментарий",
+}
+
+UNIT_LABELS = {
+    "m2": "м²", "м2": "м²", "м²": "м²", "кв.м": "м²", "квм": "м²",
+    "m3": "м³", "м3": "м³", "м³": "м³", "куб.м": "м³", "кубм": "м³",
+    "kva": "кВА", "ква": "кВА", "kw": "кВт", "квт": "кВт",
+    "mw": "МВт", "мвт": "МВт", "чел": "чел.", "чел.": "чел.",
+    "эт": "эт.", "эт.": "эт.", "м": "м", "т/ч": "т/ч",
+    "т/сут": "т/сут", "т/год": "т/год", "м3/ч": "м³/ч", "м³/ч": "м³/ч",
+}
+
+def humanize_units(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    if "unit" in result.columns:
+        result["unit"] = result["unit"].fillna("").astype(str).map(
+            lambda x: UNIT_LABELS.get(x.strip().lower(), x)
+        )
+    return result
+
+def findings_for_user(df: pd.DataFrame) -> pd.DataFrame:
+    result = humanize_units(df)
+    if "confidence" in result.columns:
+        result["confidence"] = result["confidence"].apply(
+            lambda value: f"{float(value):.0%}" if pd.notna(value) else "—"
+        )
+    return result.rename(columns=DISPLAY_FINDING_COLUMNS)
+
+def comparisons_for_user(df: pd.DataFrame) -> pd.DataFrame:
+    return humanize_units(df).rename(columns=DISPLAY_COMPARISON_COLUMNS)
+
 def comparison_counts(comparisons_df: pd.DataFrame) -> tuple[int, int]:
     if comparisons_df.empty or "status" not in comparisons_df.columns:
         return 0, 0
@@ -170,19 +225,19 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.2"],
+                ["Версия ExpertCheck", "Demo Cloud v0.2.1"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
-                ["Найдено упоминаний", len(findings_df)],
+                ["Извлечено характеристик", len(findings_df)],
                 ["Потенциальных расхождений", mismatch_count],
                 ["Совпадений", matched_count],
             ],
-            columns=["Показатель", "Значение"],
+            columns=["Характеристика", "Значение"],
         )
         summary.to_excel(writer, sheet_name="Сводка", index=False)
         docs_df.to_excel(writer, sheet_name="Документы", index=False)
-        findings_df.to_excel(writer, sheet_name="Найденные параметры", index=False)
-        comparisons_df.to_excel(writer, sheet_name="Сверка", index=False)
+        findings_for_user(findings_df).to_excel(writer, sheet_name="Характеристики проекта", index=False)
+        comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
 
         for sheet in writer.book.worksheets:
             sheet.freeze_panes = "A2"
@@ -196,16 +251,16 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 # ---------- Боковая навигация ----------
 with st.sidebar:
     st.markdown("## ✓ ExpertCheck")
-    st.caption("Pre-expert review platform")
+    st.caption("Предэкспертная проверка документации")
     st.divider()
 
     pages = [
         "Главная",
         "Проект",
         "Документы",
-        "Найденные данные",
-        "Проверка",
-        "Расхождения",
+        "Характеристики проекта",
+        "Проверки",
+        "Несоответствия",
         "Отчёт",
         "О версии",
     ]
@@ -218,7 +273,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.2")
+    st.caption("Demo Cloud v0.2.1")
 
 
 # ---------- Общая шапка ----------
@@ -229,7 +284,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.2</div>
+      <div class="ec-badge">Demo Cloud v0.2.1</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -245,7 +300,7 @@ if page == "Главная":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Документов", len(docs_df), help="Количество документов в последнем анализе")
-    c2.metric("Найдено данных", len(findings_df), help="Количество найденных упоминаний параметров")
+    c2.metric("Извлечено характеристик", len(findings_df), help="Количество найденных упоминаний характеристик")
     c3.metric("Расхождений", mismatch_count, help="Потенциальные межраздельные расхождения")
     c4.metric("Совпадений", matched_count, help="Сопоставленные одинаковые значения")
 
@@ -376,7 +431,7 @@ elif page == "Проект":
         p1, p2, p3 = st.columns(3)
         p1.metric("Документы", len(docs_df))
         p2.metric("Страницы", int(docs_df["Страниц"].sum()) if "Страниц" in docs_df.columns else 0)
-        p3.metric("Найденные упоминания", len(findings_df))
+        p3.metric("Извлечённые характеристики", len(findings_df))
 
 # ---------- Документы ----------
 elif page == "Документы":
@@ -388,8 +443,8 @@ elif page == "Документы":
         st.caption("Тип раздела определяется по имени файла, шифру и содержанию первых страниц.")
 
 # ---------- Найденные данные ----------
-elif page == "Найденные данные":
-    st.markdown('<div class="ec-section-title">Найденные параметры</div>', unsafe_allow_html=True)
+elif page == "Характеристики проекта":
+    st.markdown('<div class="ec-section-title">Характеристики проекта</div>', unsafe_allow_html=True)
     if findings_df.empty:
         st.info("Данные ещё не извлечены либо в PDF отсутствует текстовый слой.")
     else:
@@ -399,7 +454,7 @@ elif page == "Найденные данные":
             selected_docs = st.multiselect("Разделы", doc_options, default=doc_options)
         with filter_col2:
             param_options = sorted(findings_df["parameter_name"].dropna().astype(str).unique()) if "parameter_name" in findings_df else []
-            selected_params = st.multiselect("Показатели", param_options)
+            selected_params = st.multiselect("Характеристики", param_options)
 
         view = findings_df.copy()
         if selected_docs and "document_type" in view:
@@ -412,24 +467,34 @@ elif page == "Найденные данные":
             "value_text", "unit", "confidence", "context",
         ]
         available = [c for c in display_cols if c in view.columns]
-        st.dataframe(view[available], use_container_width=True, hide_index=True)
-        st.caption(f"Показано записей: {len(view)} из {len(findings_df)}")
+        user_view = findings_for_user(view[available])
+        st.dataframe(
+            user_view,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Фрагмент документа": st.column_config.TextColumn(width="large"),
+                "Уверенность": st.column_config.TextColumn(width="small"),
+                "Страница": st.column_config.NumberColumn(format="%d"),
+            },
+        )
+        st.caption(f"Показано характеристик: {len(view)} из {len(findings_df)}")
 
 # ---------- Проверка ----------
-elif page == "Проверка":
+elif page == "Проверки":
     st.markdown('<div class="ec-section-title">Результаты межраздельной проверки</div>', unsafe_allow_html=True)
     if comparisons_df.empty:
-        st.info("Не найдено показателей, которые удалось сопоставить минимум в двух разделах.")
+        st.info("Не найдено характеристик, которые удалось сопоставить минимум в двух разделах.")
     else:
         c1, c2, c3 = st.columns(3)
         c1.metric("Всего сравнений", len(comparisons_df))
         c2.metric("Совпадает", matched_count)
         c3.metric("Требует проверки", mismatch_count)
-        st.dataframe(comparisons_df, use_container_width=True, hide_index=True)
+        st.dataframe(comparisons_for_user(comparisons_df), use_container_width=True, hide_index=True)
         st.warning("Автоматический результат является предварительным и требует подтверждения специалистом.")
 
 # ---------- Расхождения ----------
-elif page == "Расхождения":
+elif page == "Несоответствия":
     st.markdown('<div class="ec-section-title">Потенциальные расхождения</div>', unsafe_allow_html=True)
     if comparisons_df.empty or "status" not in comparisons_df.columns:
         st.info("Расхождения ещё не сформированы.")
@@ -439,7 +504,7 @@ elif page == "Расхождения":
             st.success("В текущем анализе потенциальные расхождения не найдены.")
         else:
             st.metric("Требует ручной проверки", len(mismatch_df))
-            st.dataframe(mismatch_df, use_container_width=True, hide_index=True)
+            st.dataframe(comparisons_for_user(mismatch_df), use_container_width=True, hide_index=True)
 
 # ---------- Отчёт ----------
 elif page == "Отчёт":
@@ -455,7 +520,7 @@ elif page == "Отчёт":
             """
             <div class="ec-card">
                 <div style="font-size:1.05rem;font-weight:720;color:#172033;">Excel-отчёт ExpertCheck</div>
-                <div class="ec-card-note">Сводка, документы, найденные параметры и результаты межраздельной сверки.</div>
+                <div class="ec-card-note">Сводка, документы, характеристики проекта и результаты межраздельной проверки.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -472,18 +537,18 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.2</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.2.1</div>', unsafe_allow_html=True)
     st.markdown(
         """
-        **Назначение версии:** показать целевой пользовательский сценарий облачного сервиса — от загрузки комплекта до просмотра цифрового профиля и отчёта.
+        **Назначение версии:** полностью русифицировать пользовательский слой и представить извлечённые сведения как характеристики проекта, а не технические данные парсера.
 
         **Что изменилось:**
-        - единая рабочая панель;
-        - карточка проекта и показатели анализа;
-        - отдельная навигация по документам, данным, проверкам и отчётам;
-        - фильтрация найденных параметров;
-        - новый нейтральный интерфейс ExpertCheck;
-        - совместимость как с плоской структурой GitHub, так и с папками `modules` и `config`.
+        - вкладка «Характеристики проекта» вместо технического названия;
+        - русские названия всех пользовательских колонок;
+        - единицы измерения приведены к инженерному виду: м², м³, кВА, кВт, чел.;
+        - вкладки «Проверки» и «Несоответствия» используют инженерную терминологию;
+        - Excel-отчёт полностью русифицирован;
+        - сохранена совместимость как с плоской структурой GitHub, так и с папками `modules` и `config`.
 
         **Ограничения Demo:**
         - анализируется текстовый слой PDF;

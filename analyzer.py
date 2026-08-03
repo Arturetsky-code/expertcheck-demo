@@ -27,6 +27,7 @@ class Finding:
     review_note: str = ""
     structural_zone: str = ""
     extraction_profile: str = "универсальный"
+    genplan_position: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -276,6 +277,120 @@ def _line_oriented_match(text: str, keyword_start: int, param: dict) -> tuple[re
             return candidates[0][0], "структурная строка/таблица", start
     return None, "", 0
 
+
+def _parameter_by_code(parameters: list[dict], code: str) -> dict | None:
+    return next((p for p in parameters if p.get("code") == code), None)
+
+
+def _extract_values_from_block(block: str, parameter: dict) -> list[tuple[float, str, str]]:
+    result: list[tuple[float, str, str]] = []
+    for match, _ in _value_candidates(block, parameter):
+        raw = match.groupdict().get("value")
+        if raw is None:
+            continue
+        value = normalize_number(raw)
+        if value is None:
+            continue
+        result.append((value, match.groupdict().get("unit") or parameter.get("unit") or "", re.sub(r"\s+", " ", match.group(0)).strip()))
+    return result
+
+
+def _extract_pz_complex_table(page_no: int, text: str, filename: str, parameters: list[dict], objects: list[dict]) -> list[Finding]:
+    """Извлекает строки таблицы состава сложного объекта ПЗ.
+
+    Каждая позиция по генплану задаёт отдельный блок, поэтому характеристики
+    больше не связываются с соседним объектом по расстоянию.
+    """
+    low = normalized_search_text(text)
+    if "позиция" not in low or not re.search(r"по\s+генплану", low) or "технико-экономические" not in low:
+        return []
+    markers = list(re.finditer(r"(?m)^(?P<pos>4\.\d+(?:\.\d+)?)\s*$", text))
+    if not markers:
+        return []
+    result: list[Finding] = []
+    wanted = ["AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "CAPACITY", "HEIGHT_BUILD", "RES_VOLUME"]
+    for i, marker in enumerate(markers):
+        end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
+        block = text[marker.start():end]
+        head = block[:500]
+        obj = _canonical_from_text(head, objects)
+        if not obj:
+            continue
+        pos = marker.group("pos")
+        for code in wanted:
+            parameter = _parameter_by_code(parameters, code)
+            if not parameter:
+                continue
+            for value, unit, value_text in _extract_values_from_block(block, parameter):
+                start = text.find(value_text.split()[0], marker.start(), end)
+                result.append(Finding(
+                    document=filename,
+                    document_type="ПЗ",
+                    page=page_no,
+                    parameter_code=code,
+                    parameter_name=parameter["name"],
+                    value=value,
+                    value_text=value_text,
+                    unit=unit,
+                    context=re.sub(r"\s+", " ", block[:900]).strip(),
+                    confidence=0.985,
+                    object_hint=obj,
+                    match_method="строка таблицы состава сложного объекта",
+                    structural_zone="Состав сложного объекта",
+                    extraction_profile="ПЗ: состав объекта и ТЭП",
+                    genplan_position=pos,
+                ))
+    return result
+
+
+def _extract_pzu_building_areas(page_no: int, text: str, filename: str, parameters: list[dict], objects: list[dict]) -> list[Finding]:
+    """Извлекает площади объектов из таблицы ТЭП ПЗУ."""
+    low = normalized_search_text(text)
+    if "площадь застройки, всего" not in low or "технико-экономические показатели земельного участка" not in low:
+        return []
+    parameter = _parameter_by_code(parameters, "AREA_BUILD")
+    if not parameter:
+        return []
+    result: list[Finding] = []
+    normalized = normalize_text(text)
+    for obj in objects:
+        best: tuple[int, int, str] | None = None
+        for alias in obj.get("aliases", []):
+            for m in re.finditer(re.escape(normalized_search_text(alias)), normalized_search_text(normalized)):
+                if best is None or len(alias) > len(best[2]):
+                    best = (m.start(), m.end(), alias)
+        if not best:
+            continue
+        segment = normalized[best[1]: min(len(normalized), best[1] + 120)]
+        vm = re.search(r"(?:«|м\s*[2²])\s*(?P<value>\(?\d[\d \u00a0]*(?:[.,]\d+)?\)?)", segment, flags=re.I)
+        if not vm:
+            continue
+        raw = vm.group("value").strip("()")
+        value = normalize_number(raw)
+        if value is None:
+            continue
+        # Подстроки насосной/резервуаров в скобках не считаем общей площадью объекта.
+        if vm.group("value").startswith("("):
+            continue
+        context = _context(normalized, best[0], best[1] + vm.end(), window=80)
+        result.append(Finding(
+            document=filename,
+            document_type="ПЗУ1",
+            page=page_no,
+            parameter_code="AREA_BUILD",
+            parameter_name=parameter["name"],
+            value=value,
+            value_text=f"{best[2]} — {value:g} м²",
+            unit="м²",
+            context=context,
+            confidence=0.97,
+            object_hint=obj["canonical"],
+            match_method="строка таблицы ТЭП ПЗУ",
+            structural_zone="ТЭП земельного участка",
+            extraction_profile="ПЗУ: экспликация и показатели участка",
+        ))
+    return result
+
 def extract_findings(
     filename: str,
     document_type: str,
@@ -292,7 +407,20 @@ def extract_findings(
         page_object, page_heading = _page_section_object(text, document_type, objects)
         zone = _structural_zone(text, document_type)
         profile = _profile_name(document_type)
+
+        specialized: list[Finding] = []
+        if document_type == "ПЗ":
+            specialized = _extract_pz_complex_table(page_no, text, filename, parameters, objects)
+        elif document_type == "ПЗУ1":
+            specialized = _extract_pzu_building_areas(page_no, text, filename, parameters, objects)
+        if specialized:
+            findings.extend(specialized)
+
         for param in parameters:
+            # На структурированных таблицах используем специализированный извлекатель,
+            # чтобы не создавать ошибочные привязки к соседним строкам.
+            if specialized and param.get("code") != "DOC_NAME":
+                continue
             # Идентификационные признаки извлекаются один раз на документ.
             if param.get("once_per_document") and param["code"] in identity_added:
                 continue
@@ -419,25 +547,110 @@ def normalize_unit(unit: str | None) -> str:
     return aliases.get(u, u)
 
 
-def _representative_by_document(items: list[Finding]) -> tuple[dict[str, Finding], dict[str, list[float]]]:
+def _quality_score(item: Finding) -> float:
+    """Оценка пригодности найденного значения для автоматической сверки."""
+    score = float(item.confidence)
+    method_bonus = {
+        "структурная строка/таблица": 0.08,
+        "идентификационный признак": 0.03,
+        "контекстный поиск": 0.0,
+    }
+    score += method_bonus.get(item.match_method, 0.0)
+    if item.structural_zone and item.structural_zone != "Основной текст":
+        score += 0.04
+    if item.review_note:
+        score -= 0.08
+    if item.object_hint == "Не определён":
+        score -= 0.20
+    return max(0.0, min(1.0, score))
+
+
+def _cluster_values(items: list[Finding], abs_tol: float, rel_tol: float) -> list[list[Finding]]:
+    clusters: list[list[Finding]] = []
+    for item in sorted(items, key=lambda x: float(x.value or 0)):
+        placed = False
+        for cluster in clusters:
+            ref = float(cluster[0].value)
+            if math.isclose(float(item.value), ref, abs_tol=abs_tol, rel_tol=rel_tol):
+                cluster.append(item)
+                placed = True
+                break
+        if not placed:
+            clusters.append([item])
+    return clusters
+
+
+def _representative_by_document(
+    items: list[Finding],
+    min_confidence: float,
+    abs_tol: float,
+    rel_tol: float,
+) -> tuple[dict[str, Finding], dict[str, list[Finding]], dict[str, list[Finding]]]:
+    """Выбирает одно подтверждённое значение на раздел.
+
+    Возвращает: представители, неоднозначные разделы, отброшенные слабые находки.
+    Низкоуверенные дубли не должны превращать корректный показатель в ложную
+    неоднозначность.
+    """
     by_doc: dict[str, list[Finding]] = {}
+    rejected: dict[str, list[Finding]] = {}
     for item in items:
-        if item.confidence < 0.72:
+        if _quality_score(item) < min_confidence:
+            rejected.setdefault(item.document_type, []).append(item)
             continue
         by_doc.setdefault(item.document_type, []).append(item)
 
     representatives: dict[str, Finding] = {}
-    ambiguous: dict[str, list[float]] = {}
+    ambiguous: dict[str, list[Finding]] = {}
     for doc_type, doc_items in by_doc.items():
-        values = sorted({round(float(i.value), 6) for i in doc_items if i.value is not None})
-        if len(values) == 1:
-            representatives[doc_type] = max(doc_items, key=lambda x: x.confidence)
-        elif len(values) > 1:
-            ambiguous[doc_type] = values
-    return representatives, ambiguous
+        clusters = _cluster_values(doc_items, abs_tol=abs_tol, rel_tol=rel_tol)
+        clusters.sort(
+            key=lambda group: (
+                max(_quality_score(x) for x in group),
+                len(group),
+            ),
+            reverse=True,
+        )
+        if not clusters:
+            continue
+        best = clusters[0]
+        # Второй кластер считается конкурирующим только при сопоставимом качестве.
+        if len(clusters) > 1:
+            best_score = max(_quality_score(x) for x in best)
+            second_score = max(_quality_score(x) for x in clusters[1])
+            if second_score >= max(min_confidence, best_score - 0.06):
+                ambiguous[doc_type] = [x for cluster in clusters for x in cluster]
+                continue
+        representatives[doc_type] = max(best, key=_quality_score)
+    return representatives, ambiguous, rejected
 
 
-def compare_findings(findings: list[Finding], tolerance: float = 0.01) -> list[dict]:
+def _comparison_rule(parameter: dict) -> dict:
+    return {
+        "min_confidence": float(parameter.get("comparison_min_confidence", 0.78)),
+        "abs_tolerance": float(parameter.get("comparison_abs_tolerance", 0.01)),
+        "rel_tolerance": float(parameter.get("comparison_rel_tolerance", 0.005)),
+        "documents": set(parameter.get("comparison_documents", [])),
+        "priority": parameter.get("priority", "Средний"),
+    }
+
+
+def _evidence_level(representatives: dict[str, Finding]) -> str:
+    if len(representatives) >= 3 and all(_quality_score(x) >= 0.88 for x in representatives.values()):
+        return "Высокая"
+    if len(representatives) >= 2 and all(_quality_score(x) >= 0.80 for x in representatives.values()):
+        return "Средняя"
+    return "Низкая"
+
+
+def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[dict]:
+    """Выполняет доказательную межраздельную сверку.
+
+    Сравниваются только значения, связанные с одним каноническим объектом,
+    характеристикой и нормализованной единицей. Для каждой характеристики
+    применяются собственные допуски и допустимые разделы.
+    """
+    parameter_map = {p.get("code"): p for p in parameters}
     groups: dict[tuple[str, str, str], list[Finding]] = {}
     for finding in findings:
         if finding.value is None or finding.object_hint == "Не определён":
@@ -448,59 +661,96 @@ def compare_findings(findings: list[Finding], tolerance: float = 0.01) -> list[d
 
     rows: list[dict] = []
     for (object_hint, code, unit), items in groups.items():
-        representatives, ambiguous = _representative_by_document(items)
-        if len(representatives) + len(ambiguous) < 2:
+        parameter = parameter_map.get(code, {})
+        rule = _comparison_rule(parameter)
+        eligible_items = [
+            x for x in items
+            if not rule["documents"] or x.document_type in rule["documents"]
+        ]
+        representatives, ambiguous, rejected = _representative_by_document(
+            eligible_items,
+            min_confidence=rule["min_confidence"],
+            abs_tol=rule["abs_tolerance"],
+            rel_tol=rule["rel_tolerance"],
+        )
+        involved = set(representatives) | set(ambiguous)
+        if len(involved) < 2:
             continue
 
-        if ambiguous:
-            status = "ТРЕБУЕТ УТОЧНЕНИЯ"
-            source_parts = []
-            for doc, values in sorted(ambiguous.items()):
-                source_parts.append(f"{doc}: найдено несколько значений {values}")
-            for doc, item in sorted(representatives.items()):
-                source_parts.append(f"{doc}, стр. {item.page}: {item.value_text}")
-            rows.append({
-                "object": object_hint,
-                "parameter_code": code,
-                "parameter_name": items[0].parameter_name,
-                "unit": unit,
-                "status": status,
-                "min_value": "",
-                "max_value": "",
-                "documents": ", ".join(sorted(set(representatives) | set(ambiguous))),
-                "sources": " | ".join(source_parts),
-                "comment": "В одном из разделов найдено несколько значений. Автоматическое сравнение не выполнялось.",
-            })
-            continue
-
-        if len(representatives) < 2:
-            continue
-        values = [float(item.value) for item in representatives.values() if item.value is not None]
-        min_value, max_value = min(values), max(values)
-        mismatch = not math.isclose(min_value, max_value, rel_tol=tolerance, abs_tol=tolerance)
-        rows.append({
+        check_code = f"CROSS-{code}-{re.sub(r'[^А-Яа-яA-Za-z0-9]+', '-', object_hint).strip('-')[:30]}"
+        base = {
+            "check_code": check_code,
             "object": object_hint,
             "parameter_code": code,
             "parameter_name": items[0].parameter_name,
             "unit": unit,
+            "priority": rule["priority"],
+            "evidence_level": _evidence_level(representatives),
+            "evidence_count": len(representatives),
+            "rejected_count": sum(len(v) for v in rejected.values()),
+        }
+
+        if ambiguous:
+            source_parts = []
+            for doc, doc_items in sorted(ambiguous.items()):
+                values = sorted({float(x.value) for x in doc_items if x.value is not None})
+                pages = sorted({x.page for x in doc_items})
+                source_parts.append(f"{doc}: значения {values}, стр. {pages}")
+            for doc, item in sorted(representatives.items()):
+                source_parts.append(f"{doc}, стр. {item.page}: {item.value_text}")
+            rows.append({
+                **base,
+                "status": "ТРЕБУЕТ УТОЧНЕНИЯ",
+                "min_value": "",
+                "max_value": "",
+                "difference": "",
+                "documents": ", ".join(sorted(involved)),
+                "document_values": " | ".join(source_parts),
+                "sources": " | ".join(source_parts),
+                "comment": "В одном из разделов есть несколько равноценных значений. Нужен выбор корректного источника.",
+            })
+            continue
+
+        values = [float(item.value) for item in representatives.values()]
+        min_value, max_value = min(values), max(values)
+        mismatch = not math.isclose(
+            min_value,
+            max_value,
+            rel_tol=rule["rel_tolerance"],
+            abs_tol=rule["abs_tolerance"],
+        )
+        difference = max_value - min_value
+        doc_values = " | ".join(
+            f"{doc}: {item.value:g} {unit or ''} (стр. {item.page}, уверенность {_quality_score(item):.0%})"
+            for doc, item in sorted(representatives.items())
+        )
+        rows.append({
+            **base,
             "status": "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ" if mismatch else "СОВПАДАЕТ",
             "min_value": min_value,
             "max_value": max_value,
+            "difference": difference,
             "documents": ", ".join(sorted(representatives)),
+            "document_values": doc_values,
             "sources": " | ".join(
                 f"{doc}, стр. {item.page}: {item.value_text}"
                 for doc, item in sorted(representatives.items())
             ),
             "comment": (
-                "Значения в разных разделах отличаются. Требуется подтвердить, что сравнивается один показатель."
-                if mismatch else "Одинаковое значение подтверждено в нескольких разделах."
+                "Подтверждённые значения в разделах отличаются сверх установленного допуска."
+                if mismatch else "Значение подтверждено минимум в двух разделах в пределах допуска."
             ),
         })
 
     order = {"ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ": 0, "ТРЕБУЕТ УТОЧНЕНИЯ": 1, "СОВПАДАЕТ": 2}
-    rows.sort(key=lambda row: (order.get(row["status"], 9), row["object"], row["parameter_name"]))
+    priority_order = {"Высокий": 0, "Средний": 1, "Низкий": 2}
+    rows.sort(key=lambda row: (
+        order.get(row["status"], 9),
+        priority_order.get(row.get("priority", "Средний"), 9),
+        row["object"],
+        row["parameter_name"],
+    ))
     return rows
-
 
 def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict], list[dict], list[dict]]:
     config_dir = Path(config_dir)
@@ -516,4 +766,4 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
         doc_findings = extract_findings(uploaded.name, doc_type, pages, parameters, objects)
         documents.append({"Файл": uploaded.name, "Тип документа": doc_type, "Страниц": len(pages), "Профиль анализа": _profile_name(doc_type), "Извлечено характеристик": len(doc_findings), "Высокая уверенность": sum(1 for x in doc_findings if x.confidence >= 0.82)})
         all_findings.extend(doc_findings)
-    return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings)
+    return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings, parameters)

@@ -160,6 +160,7 @@ DISPLAY_FINDING_COLUMNS = {
     "document_type": "Раздел",
     "page": "Страница",
     "object_hint": "Объект",
+    "genplan_position": "Позиция по генплану",
     "parameter_code": "Код характеристики",
     "parameter_name": "Характеристика",
     "value": "Числовое значение",
@@ -174,14 +175,21 @@ DISPLAY_FINDING_COLUMNS = {
 }
 
 DISPLAY_COMPARISON_COLUMNS = {
+    "check_code": "Код проверки",
     "object": "Объект",
     "parameter_code": "Код характеристики",
     "parameter_name": "Характеристика",
     "unit": "Ед. изм.",
+    "priority": "Приоритет",
     "status": "Результат проверки",
+    "evidence_level": "Надёжность доказательств",
+    "evidence_count": "Подтверждающих разделов",
+    "rejected_count": "Отброшено слабых находок",
     "min_value": "Минимальное значение",
     "max_value": "Максимальное значение",
+    "difference": "Разница",
     "documents": "Разделы",
+    "document_values": "Значения по разделам",
     "sources": "Источники",
     "comment": "Комментарий",
 }
@@ -222,6 +230,12 @@ def comparison_counts(comparisons_df: pd.DataFrame) -> tuple[int, int]:
     return mismatches, matches
 
 
+def clarification_count(comparisons_df: pd.DataFrame) -> int:
+    if comparisons_df.empty or "status" not in comparisons_df.columns:
+        return 0
+    return int((comparisons_df["status"] == "ТРЕБУЕТ УТОЧНЕНИЯ").sum())
+
+
 def valid_object_findings(findings_df: pd.DataFrame) -> pd.DataFrame:
     if findings_df.empty or "object_hint" not in findings_df.columns:
         return pd.DataFrame()
@@ -255,10 +269,10 @@ def build_object_summary(findings_df: pd.DataFrame, comparisons_df: pd.DataFrame
 
 def object_profile_for_user(findings_df: pd.DataFrame, object_name: str) -> pd.DataFrame:
     view = findings_df[findings_df["object_hint"] == object_name].copy()
-    columns = ["parameter_name", "value_text", "unit", "document_type", "page", "confidence", "context"]
+    columns = ["genplan_position", "parameter_name", "value_text", "unit", "document_type", "page", "confidence", "context"]
     available = [column for column in columns if column in view.columns]
     result = findings_for_user(view[available])
-    preferred = ["Характеристика", "Найденное значение", "Ед. изм.", "Раздел", "Страница", "Уверенность", "Фрагмент документа"]
+    preferred = ["Позиция по генплану", "Характеристика", "Найденное значение", "Ед. изм.", "Раздел", "Страница", "Уверенность", "Фрагмент документа"]
     return result[[column for column in preferred if column in result.columns]]
 
 
@@ -269,12 +283,13 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.4.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.5.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
                 ["Потенциальных расхождений", mismatch_count],
                 ["Совпадений", matched_count],
+                ["Требуют уточнения", clarification_count(comparisons_df)],
             ],
             columns=["Характеристика", "Значение"],
         )
@@ -319,7 +334,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.4.0")
+    st.caption("Demo Cloud v0.5.0")
 
 
 # ---------- Общая шапка ----------
@@ -330,7 +345,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.4.0</div>
+      <div class="ec-badge">Demo Cloud v0.5.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -641,7 +656,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.4.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.5.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** сформировать цифровой профиль проекта на уровне отдельных зданий и сооружений и предоставить карточку каждого распознанного объекта.

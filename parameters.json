@@ -1,76 +1,270 @@
 [
   {
-    "code":"DOC_NAME","name":"Наименование объекта","keywords":["площадка дробильно-сортировочного комплекса"],
-    "unit":null,"group":"Идентификация","once_per_document":true,"allow_contents":true
+    "code": "DOC_NAME",
+    "name": "Наименование объекта",
+    "keywords": [
+      "площадка дробильно-сортировочного комплекса"
+    ],
+    "unit": null,
+    "group": "Идентификация",
+    "once_per_document": true,
+    "allow_contents": true,
+    "comparison_documents": [],
+    "priority": "Низкий"
   },
   {
-    "code":"AREA_BUILD","name":"Площадь застройки","keywords":["площадь застройки"],
-    "value_patterns":[
+    "code": "AREA_BUILD",
+    "name": "Площадь застройки",
+    "keywords": [
+      "площадь застройки"
+    ],
+    "value_patterns": [
       "площадь\\s+застройки\\s*[,;:-]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>м\\s*[2²]|кв\\.?\\s*м)",
       "площадь\\s+застройки\\s*[,;:-]?\\s*(?P<unit>м\\s*[2²]|кв\\.?\\s*м)\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)"
     ],
-    "unit":"м²","group":"Геометрия","search_window":115,
-    "exclude_context":["площадь застройки, всего","площадь застройки земельного участка"]
+    "unit": "м²",
+    "group": "Геометрия",
+    "search_window": 115,
+    "exclude_context": [
+      "площадь застройки, всего",
+      "площадь застройки земельного участка"
+    ],
+    "comparison_documents": [
+      "ПЗ",
+      "ПЗУ1",
+      "АР1"
+    ],
+    "comparison_abs_tolerance": 0.1,
+    "comparison_rel_tolerance": 0.001,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"AREA_TOTAL","name":"Общая площадь","keywords":["общая площадь"],
-    "value_patterns":[
+    "code": "AREA_TOTAL",
+    "name": "Общая площадь",
+    "keywords": [
+      "общая площадь"
+    ],
+    "value_patterns": [
       "общая\\s+площадь\\s*[,;:-]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>м\\s*[2²]|кв\\.?\\s*м)",
       "общая\\s+площадь\\s*[,;:-]?\\s*(?P<unit>м\\s*[2²]|кв\\.?\\s*м)\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)"
     ],
-    "unit":"м²","group":"Геометрия","search_window":115
+    "unit": "м²",
+    "group": "Геометрия",
+    "search_window": 115,
+    "comparison_documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "comparison_abs_tolerance": 0.1,
+    "comparison_rel_tolerance": 0.001,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"VOLUME_BUILD","name":"Строительный объём","keywords":["строительный объем","строительный объём"],
-    "value_patterns":[
+    "code": "VOLUME_BUILD",
+    "name": "Строительный объём",
+    "keywords": [
+      "строительный объем",
+      "строительный объём"
+    ],
+    "value_patterns": [
       "строительный\\s+объ[её]м\\s*[,;:-]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>м\\s*[3³]|куб\\.?\\s*м)",
       "строительный\\s+объ[её]м\\s*[,;:-]?\\s*(?P<unit>м\\s*[3³]|куб\\.?\\s*м)\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)"
     ],
-    "unit":"м³","group":"Геометрия","search_window":115
+    "unit": "м³",
+    "group": "Геометрия",
+    "search_window": 115,
+    "comparison_documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "comparison_abs_tolerance": 1.0,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"HEIGHT_BUILD","name":"Высота здания (сооружения)",
-    "keywords":["высота здания","высота сооружения","высота объекта"],
-    "value_patterns":["высота\\s+(?:здания|сооружения|объекта)\\s*[,;:-]?\\s*(?P<value>\\d+(?:[.,]\\d+)?)\\s*(?P<unit>м)\\b"],
-    "unit":"м","group":"Геометрия","search_window":90,
-    "exclude_context":["высота помещения","высота этажа","высота подъема","высота ограждения"]
+    "code": "HEIGHT_BUILD",
+    "name": "Высота здания (сооружения)",
+    "keywords": [
+      "высота здания",
+      "высота сооружения",
+      "высота объекта"
+    ],
+    "value_patterns": [
+      "высота\\s+(?:здания|сооружения|объекта)\\s*[,;:-]?\\s*(?P<value>\\d+(?:[.,]\\d+)?)\\s*(?P<unit>м)\\b"
+    ],
+    "unit": "м",
+    "group": "Геометрия",
+    "search_window": 90,
+    "exclude_context": [
+      "высота помещения",
+      "высота этажа",
+      "высота подъема",
+      "высота ограждения"
+    ],
+    "comparison_documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "comparison_abs_tolerance": 0.05,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Средний",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"CAPACITY","name":"Производительность","keywords":["производительность"],
-    "value_patterns":[
+    "code": "CAPACITY",
+    "name": "Производительность",
+    "keywords": [
+      "производительность"
+    ],
+    "value_patterns": [
       "производительность\\s*[,;:-]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>тыс\\.?\\s*т/год|т/ч|т/сут|т/год|м\\s*[3³]/ч|л/с)",
       "производительность\\s*[,;:-]?\\s*(?P<unit>тыс\\.?\\s*т/год|т/ч|т/сут|т/год|м\\s*[3³]/ч|л/с)\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)"
     ],
-    "unit":null,"group":"Технология","search_window":125
+    "unit": null,
+    "group": "Технология",
+    "search_window": 125,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 0.01,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"RES_VOLUME","name":"Объём резервуара","keywords":["объем резервуара","объём резервуара"],
-    "value_patterns":["объ[её]м\\s+резервуара\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>м\\s*[3³])"],
-    "unit":"м³","group":"Водоснабжение","search_window":100
+    "code": "RES_VOLUME",
+    "name": "Объём резервуара",
+    "keywords": [
+      "объем резервуара",
+      "объём резервуара"
+    ],
+    "value_patterns": [
+      "объ[её]м\\s+резервуара\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>м\\s*[3³])"
+    ],
+    "unit": "м³",
+    "group": "Водоснабжение",
+    "search_window": 100,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 0.1,
+    "comparison_rel_tolerance": 0.001,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"POWER_KTP","name":"Мощность КТП","keywords":["мощность ктп","мощность трансформатора"],
-    "value_patterns":["(?:мощность\\s+(?:ктп|трансформатора))\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"],
-    "unit":null,"group":"Электроснабжение","search_window":100
+    "code": "POWER_KTP",
+    "name": "Мощность КТП",
+    "keywords": [
+      "мощность ктп",
+      "мощность трансформатора"
+    ],
+    "value_patterns": [
+      "(?:мощность\\s+(?:ктп|трансформатора))\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"
+    ],
+    "unit": null,
+    "group": "Электроснабжение",
+    "search_window": 100,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 1.0,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Высокий",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"POWER_INST","name":"Установленная мощность","keywords":["установленная мощность"],
-    "value_patterns":["установленная\\s+мощность\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"],
-    "unit":null,"group":"Электроснабжение","search_window":100
+    "code": "POWER_INST",
+    "name": "Установленная мощность",
+    "keywords": [
+      "установленная мощность"
+    ],
+    "value_patterns": [
+      "установленная\\s+мощность\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"
+    ],
+    "unit": null,
+    "group": "Электроснабжение",
+    "search_window": 100,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 0.1,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Средний",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"POWER_CALC","name":"Расчётная мощность","keywords":["расчетная мощность","расчётная мощность"],
-    "value_patterns":["расч[её]тная\\s+мощность\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"],
-    "unit":null,"group":"Электроснабжение","search_window":100
+    "code": "POWER_CALC",
+    "name": "Расчётная мощность",
+    "keywords": [
+      "расчетная мощность",
+      "расчётная мощность"
+    ],
+    "value_patterns": [
+      "расч[её]тная\\s+мощность\\s*[,;:= -]?\\s*(?P<value>\\d[\\d \\u00a0]*(?:[.,]\\d+)?)\\s*(?P<unit>ква|квт|мвт)"
+    ],
+    "unit": null,
+    "group": "Электроснабжение",
+    "search_window": 100,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 0.1,
+    "comparison_rel_tolerance": 0.002,
+    "priority": "Средний",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"STAFF","name":"Численность персонала","keywords":["численность работающих","количество работающих","численность персонала"],
-    "value_patterns":["(?:численность\\s+(?:работающих|персонала)|количество\\s+работающих)\\s*[,;:= -]?\\s*(?P<value>\\d+)\\s*(?P<unit>чел\\.?|человек(?:а)?)"],
-    "unit":"чел.","group":"Технология","search_window":100
+    "code": "STAFF",
+    "name": "Численность персонала",
+    "keywords": [
+      "численность работающих",
+      "количество работающих",
+      "численность персонала"
+    ],
+    "value_patterns": [
+      "(?:численность\\s+(?:работающих|персонала)|количество\\s+работающих)\\s*[,;:= -]?\\s*(?P<value>\\d+)\\s*(?P<unit>чел\\.?|человек(?:а)?)"
+    ],
+    "unit": "чел.",
+    "group": "Технология",
+    "search_window": 100,
+    "comparison_documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "comparison_abs_tolerance": 0.0,
+    "comparison_rel_tolerance": 0.0,
+    "priority": "Средний",
+    "comparison_min_confidence": 0.78
   },
   {
-    "code":"FLOORS","name":"Этажность","keywords":["этажность","число этажей"],
-    "value_patterns":["(?:этажность|число\\s+этажей)\\s*[,;:= -]?\\s*(?P<value>\\d+)\\s*(?P<unit>эт\\.?|этаж(?:а|ей)?)?"],
-    "unit":"эт.","group":"Геометрия","search_window":80
+    "code": "FLOORS",
+    "name": "Этажность",
+    "keywords": [
+      "этажность",
+      "число этажей"
+    ],
+    "value_patterns": [
+      "(?:этажность|число\\s+этажей)\\s*[,;:= -]?\\s*(?P<value>\\d+)\\s*(?P<unit>эт\\.?|этаж(?:а|ей)?)?"
+    ],
+    "unit": "эт.",
+    "group": "Геометрия",
+    "search_window": 80,
+    "comparison_documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "comparison_abs_tolerance": 0.0,
+    "comparison_rel_tolerance": 0.0,
+    "priority": "Средний",
+    "comparison_min_confidence": 0.78
   }
 ]

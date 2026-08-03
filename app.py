@@ -12,9 +12,9 @@ import streamlit as st
 # 1) analyzer.py и JSON в корне;
 # 2) modules/analyzer.py и config/*.json.
 try:
-    from analyzer import analyze_uploaded
+    from analyzer import Finding, analyze_uploaded, compare_findings, load_json
 except ModuleNotFoundError:
-    from modules.analyzer import analyze_uploaded
+    from modules.analyzer import Finding, analyze_uploaded, compare_findings, load_json
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
@@ -146,6 +146,8 @@ def init_state() -> None:
         "active_page": "Главная",
         "object_registry": None,
         "object_registry_confirmed": False,
+        "raw_result": None,
+        "registry_application_stats": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -328,6 +330,120 @@ def _name_similarity(left: str, right: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
+
+def _extract_genplan_position(value: str) -> str:
+    import re
+    text = str(value or "")
+    match = re.search(r"(?<!\d)(\d+(?:\.\d+){1,3})(?!\d)", text)
+    return match.group(1) if match else ""
+
+
+def _registry_aliases(row: pd.Series) -> list[str]:
+    aliases = [str(row.get("Наименование объекта", "") or "")]
+    raw = str(row.get("Исходные наименования", "") or "")
+    aliases.extend(x.strip() for x in raw.split("|") if x.strip())
+    return [x for x in aliases if x]
+
+
+def apply_confirmed_registry(findings_df: pd.DataFrame, registry_df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Применяет подтверждённый пользователем перечень к найденным характеристикам.
+
+    Сначала используется позиция по генплану, затем однозначное совпадение
+    наименования. Неуверенные связи не назначаются автоматически.
+    """
+    if findings_df.empty or registry_df.empty:
+        return findings_df.copy(), {"mapped": 0, "by_position": 0, "by_name": 0, "unmapped": len(findings_df)}
+
+    registry = registry_df.copy()
+    registry["Позиция по ГП"] = registry.get("Позиция по ГП", "").fillna("").astype(str).str.strip()
+    registry["Наименование объекта"] = registry["Наименование объекта"].fillna("").astype(str).str.strip()
+    position_map = {
+        row["Позиция по ГП"]: row["Наименование объекта"]
+        for _, row in registry.iterrows()
+        if row["Позиция по ГП"] and row["Наименование объекта"]
+    }
+    registry_records = []
+    for _, row in registry.iterrows():
+        registry_records.append({
+            "position": str(row.get("Позиция по ГП", "") or "").strip(),
+            "name": str(row.get("Наименование объекта", "") or "").strip(),
+            "aliases": _registry_aliases(row),
+        })
+
+    result = findings_df.copy()
+    stats = {"mapped": 0, "by_position": 0, "by_name": 0, "unmapped": 0}
+    methods = []
+    new_names = []
+    new_positions = []
+    for _, item in result.iterrows():
+        code = str(item.get("parameter_code", "") or "")
+        if code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
+            new_names.append(str(item.get("object_hint", "") or ""))
+            new_positions.append(str(item.get("genplan_position", "") or ""))
+            methods.append("реестровая находка")
+            continue
+        position = str(item.get("genplan_position", "") or "").strip()
+        source_name = str(item.get("object_hint", "") or "").strip()
+        if not position:
+            position = _extract_genplan_position(source_name) or _extract_genplan_position(str(item.get("context", "") or ""))
+        if position and position in position_map:
+            new_names.append(position_map[position])
+            new_positions.append(position)
+            methods.append("по позиции по генплану")
+            stats["mapped"] += 1
+            stats["by_position"] += 1
+            continue
+
+        scored = []
+        for rec in registry_records:
+            score = max((_name_similarity(source_name, alias) for alias in rec["aliases"]), default=0.0)
+            if score:
+                scored.append((score, rec))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        if scored and scored[0][0] >= 0.88 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.08):
+            rec = scored[0][1]
+            new_names.append(rec["name"])
+            new_positions.append(rec["position"] or position)
+            methods.append("по подтверждённому наименованию")
+            stats["mapped"] += 1
+            stats["by_name"] += 1
+        else:
+            new_names.append(source_name)
+            new_positions.append(position)
+            methods.append("не сопоставлено")
+            stats["unmapped"] += 1
+    result["object_hint"] = new_names
+    result["genplan_position"] = new_positions
+    result["registry_match_method"] = methods
+    return result, stats
+
+
+def recompute_comparisons(findings_df: pd.DataFrame) -> pd.DataFrame:
+    parameters = load_json(CONFIG_DIR / "parameters.json")
+    objects = []
+    for row in findings_df.to_dict("records"):
+        payload = {field: row.get(field) for field in Finding.__dataclass_fields__}
+        payload["page"] = int(payload.get("page") or 0)
+        payload["confidence"] = float(payload.get("confidence") or 0)
+        objects.append(Finding(**payload))
+    return pd.DataFrame(compare_findings(objects, parameters))
+
+
+def registry_coverage(registry_df: pd.DataFrame) -> pd.DataFrame:
+    if registry_df.empty:
+        return registry_df.copy()
+    result = registry_df.copy()
+    source_series = result.get("Источники", pd.Series("", index=result.index)).fillna("").astype(str)
+    for code in ["ПЗ", "ПЗУ1", "ПЗУ2", "АР1", "АР2", "ТХ1", "ТХ2"]:
+        result[code] = source_series.str.split(" · ").map(lambda items: "✓" if code in items else "")
+    result["Покрытие"] = result[["ПЗ", "ПЗУ1", "ПЗУ2", "АР1", "АР2", "ТХ1", "ТХ2"]].eq("✓").sum(axis=1)
+    result["Проверить"] = result.apply(
+        lambda r: "Нет позиции по ГП" if not str(r.get("Позиция по ГП", "")).strip()
+        else ("Только один источник" if int(r.get("Подтверждений", 0) or 0) < 2 else ""),
+        axis=1,
+    )
+    return result
+
 def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
         "Включить", "Позиция по ГП", "Наименование объекта", "Количество",
@@ -348,6 +464,9 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     candidates["preferred_name"] = candidates.apply(
         lambda r: str(r["object_hint"] or r["value_text"]).strip(), axis=1
     )
+    # Если позиция присутствует внутри наименования, переносим её в отдельное поле.
+    embedded_positions = candidates["preferred_name"].map(_extract_genplan_position)
+    candidates.loc[candidates["genplan_position"].eq("") & embedded_positions.ne(""), "genplan_position"] = embedded_positions
 
     # Шаг 1. Создаём опорные группы по позиции по генплану.
     positioned = candidates[candidates["genplan_position"].ne("")].copy()
@@ -458,7 +577,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.8.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.9.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -470,7 +589,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         )
         summary.to_excel(writer, sheet_name="Сводка", index=False)
         docs_df.to_excel(writer, sheet_name="Документы", index=False)
-        build_object_summary(findings_df, comparisons_df).to_excel(writer, sheet_name="Перечень объектов", index=False)
+        registry_coverage(registry_for_export(findings_df)).to_excel(writer, sheet_name="Перечень объектов", index=False)
         findings_for_user(characteristic_findings(findings_df)).to_excel(writer, sheet_name="Характеристики проекта", index=False)
         comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
 
@@ -509,7 +628,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.8.0")
+    st.caption("Demo Cloud v0.9.0")
 
 
 # ---------- Общая шапка ----------
@@ -520,7 +639,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.8.0</div>
+      <div class="ec-badge">Demo Cloud v0.9.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -581,12 +700,14 @@ if page == "Главная":
                 try:
                     with st.spinner("Анализируем документы и сопоставляем параметры…"):
                         result = analyze_uploaded(uploaded_files, CONFIG_DIR)
+                        st.session_state["raw_result"] = result
                         st.session_state["result"] = result
                         st.session_state["project_name"] = project_name.strip() or "Новый проект"
                         st.session_state["project_stage"] = project_stage
                         st.session_state["analysis_time"] = datetime.now()
                         st.session_state["object_registry"] = None
                         st.session_state["object_registry_confirmed"] = False
+                        st.session_state["registry_application_stats"] = None
                     st.success("Цифровой профиль проекта сформирован")
                     st.rerun()
                 except Exception as exc:
@@ -711,12 +832,31 @@ elif page == "Перечень объектов":
         c4.metric("Объединено автоматически", auto_merged)
         c5.metric("Требует внимания", review_count)
 
-        st.info("Записи без позиции по генплану автоматически присоединяются к позиции с совпадающим наименованием. Перед подтверждением проверьте только строки со статусом «Требует внимания».")
+        st.info("Записи без позиции по генплану автоматически присоединяются к позиции с совпадающим наименованием. После подтверждения перечень применяется к характеристикам и межраздельным проверкам.")
+        mapping_stats = st.session_state.get("registry_application_stats")
+        if registry_confirmed and mapping_stats:
+            s1, s2, s3, s4 = st.columns(4)
+            s1.metric("Связано характеристик", mapping_stats.get("mapped", 0))
+            s2.metric("По позиции ГП", mapping_stats.get("by_position", 0))
+            s3.metric("По наименованию", mapping_stats.get("by_name", 0))
+            s4.metric("Не сопоставлено", mapping_stats.get("unmapped", 0))
         attention = source_df[source_df["Статус"].astype(str).str.contains("уточн|подтверждения", case=False, na=False)] if "Статус" in source_df else pd.DataFrame()
         if not attention.empty:
             with st.expander(f"Сначала проверить: {len(attention)} строк", expanded=True):
                 preview_cols = ["Позиция по ГП", "Наименование объекта", "Источники", "Статус", "Способ объединения"]
                 st.dataframe(attention[[c for c in preview_cols if c in attention.columns]], use_container_width=True, hide_index=True)
+        coverage_view = registry_coverage(source_df)
+        with st.expander("Матрица присутствия объектов по разделам", expanded=False):
+            coverage_cols = [
+                "Позиция по ГП", "Наименование объекта", "Количество",
+                "ПЗ", "ПЗУ1", "ПЗУ2", "АР1", "АР2", "ТХ1", "ТХ2",
+                "Покрытие", "Проверить",
+            ]
+            st.dataframe(
+                coverage_view[[c for c in coverage_cols if c in coverage_view.columns]],
+                use_container_width=True, hide_index=True,
+            )
+
         edited = st.data_editor(
             source_df,
             key="object_registry_editor",
@@ -744,12 +884,27 @@ elif page == "Перечень объектов":
                 clean = clean[clean["Наименование объекта"].fillna("").astype(str).str.strip().ne("")]
                 st.session_state["object_registry"] = clean.to_dict("records")
                 st.session_state["object_registry_confirmed"] = True
-                st.success("Перечень объектов подтверждён и сохранён в текущей сессии")
+                # Подтверждённый перечень сразу применяется к характеристикам и проверкам.
+                base_result = st.session_state.get("raw_result") or st.session_state.get("result")
+                if base_result:
+                    base_docs, base_findings, _ = base_result
+                    mapped_findings, mapping_stats = apply_confirmed_registry(
+                        pd.DataFrame(base_findings), clean
+                    )
+                    updated_comparisons = recompute_comparisons(mapped_findings)
+                    st.session_state["result"] = (
+                        base_docs, mapped_findings.to_dict("records"), updated_comparisons.to_dict("records")
+                    )
+                    st.session_state["registry_application_stats"] = mapping_stats
+                st.success("Перечень подтверждён и применён к характеристикам и межраздельным проверкам")
                 st.rerun()
         with b2:
             if st.button("Сбросить правки", use_container_width=True):
                 st.session_state["object_registry"] = None
                 st.session_state["object_registry_confirmed"] = False
+                st.session_state["registry_application_stats"] = None
+                if st.session_state.get("raw_result"):
+                    st.session_state["result"] = st.session_state["raw_result"]
                 st.rerun()
         with b3:
             if registry_confirmed:
@@ -882,7 +1037,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.8.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.9.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** сформировать проверяемый перечень объектов из нескольких разделов и не допускать, чтобы ошибки распознавания автоматически превращались в замечания.

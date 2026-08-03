@@ -657,6 +657,66 @@ def _extract_pzu_building_areas(page_no: int, text: str, filename: str, paramete
         ))
     return result
 
+
+
+def _extract_structured_tep_rows(page_no: int, text: str, filename: str, document_type: str, parameters: list[dict], objects: list[dict]) -> list[Finding]:
+    """Извлекает ТЭП из вертикальных таблиц: показатель / единица / значение.
+
+    Используется как дополнительный источник для ПЗ, ПЗУ1, АР1 и ТХ1. Результат
+    принимается только при наличии структурного признака страницы и надёжной
+    привязки к объекту или позиции по генплану.
+    """
+    low=normalized_search_text(text)
+    tep_signal=("технико-экономические показатели" in low or sum(normalized_search_text(p.get("name", "")) in low for p in parameters if p.get("code") not in {"DOC_NAME"}) >= 3)
+    if not tep_signal or document_type not in {"ПЗ","ПЗУ1","АР1","ТХ1"}:
+        return []
+    lines=_line_spans(text)
+    page_object, heading=_page_section_object(text, document_type, objects)
+    results=[]
+    for param in parameters:
+        if param.get("code") in {"DOC_NAME","OBJECT_ENTRY","OBJECT_CANDIDATE"}:
+            continue
+        keywords=[normalized_search_text(k) for k in param.get("keywords",[])]
+        for idx,(start,end,line) in enumerate(lines):
+            line_low=normalized_search_text(line)
+            if not any(k in line_low for k in keywords):
+                continue
+            block_lines=[x[2] for x in lines[idx:min(len(lines),idx+5)]]
+            block="\n".join(block_lines)
+            vals=_extract_values_from_block(block,param)
+            if not vals:
+                # Табличный формат: ключ, единица, число на отдельных строках.
+                numeric=None
+                unit=param.get("unit") or ""
+                for candidate in block_lines[1:]:
+                    if numeric is None:
+                        m=re.search(r"(?<![\d.])(-?\d[\d \u00a0]*(?:[.,]\d+)?)(?![\d.])",candidate)
+                        if m:
+                            numeric=normalize_number(m.group(1))
+                    if re.search(r"м\s*[2²]|м\s*[3³]|квт|ква|т/ч|т/год|чел",candidate,flags=re.I):
+                        unit=candidate.strip()
+                if numeric is None:
+                    continue
+                vals=[(numeric,unit,f"{line} — {numeric:g} {unit}")]
+            for value,unit,value_text in vals[:1]:
+                obj=page_object
+                obj_conf=0.86 if obj!="Не определён" else 0.0
+                if obj=="Не определён":
+                    obj,obj_conf=detect_object(text,start,min(len(text),end+220),objects)
+                if obj=="Не определён":
+                    continue
+                results.append(Finding(
+                    document=filename, document_type=document_type, page=page_no,
+                    parameter_code=param["code"], parameter_name=param["name"],
+                    value=value, value_text=value_text, unit=unit,
+                    context=_context(text,start,min(len(text),end+220)),
+                    confidence=min(0.96,0.84+0.10*obj_conf), object_hint=obj,
+                    match_method="структурная строка ТЭП", review_note="",
+                    structural_zone=_structural_zone(text,document_type),
+                    extraction_profile=f"{document_type}: таблица ТЭП",
+                ))
+    return results
+
 def extract_findings(
     filename: str,
     document_type: str,
@@ -684,6 +744,8 @@ def extract_findings(
         elif document_type == "ПЗУ1":
             structured_metrics = _extract_pzu_building_areas(page_no, text, filename, parameters, objects)
             specialized.extend(structured_metrics)
+        # Дополнительный специализированный разбор вертикальных таблиц ТЭП.
+        specialized.extend(_extract_structured_tep_rows(page_no, text, filename, document_type, parameters, objects))
         if specialized:
             findings.extend(specialized)
 
@@ -823,6 +885,7 @@ def _quality_score(item: Finding) -> float:
     score = float(item.confidence)
     method_bonus = {
         "структурная строка/таблица": 0.08,
+        "структурная строка ТЭП": 0.09,
         "идентификационный признак": 0.03,
         "контекстный поиск": 0.0,
     }

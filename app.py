@@ -143,7 +143,7 @@ def init_state() -> None:
         "project_stage": "Проектная документация",
         "result": None,
         "analysis_time": None,
-        "active_page": "Главная",
+        "active_page": "Обзор",
         "object_registry": None,
         "object_registry_confirmed": False,
         "raw_result": None,
@@ -652,6 +652,75 @@ def review_metrics(review_df: pd.DataFrame) -> dict[str, int]:
         "included": int(review_df["Включить в отчёт"].fillna(False).astype(bool).sum()),
     }
 
+
+
+def parameter_metadata() -> dict[str, dict]:
+    try:
+        return {str(item.get("code")): item for item in load_json(CONFIG_DIR / "parameters.json")}
+    except Exception:
+        return {}
+
+
+def build_object_passport(object_name: str, genplan_position: str, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame) -> pd.DataFrame:
+    """Строит цифровой паспорт объекта: одна строка на характеристику, значения по разделам и итог сверки."""
+    profile = characteristic_findings(findings_df)
+    if profile.empty:
+        return pd.DataFrame()
+    by_name = profile["object_hint"].fillna("").astype(str).map(_norm_object_key).eq(_norm_object_key(object_name))
+    if genplan_position:
+        by_position = profile["genplan_position"].fillna("").astype(str).str.strip().eq(str(genplan_position).strip())
+    else:
+        by_position = pd.Series(False, index=profile.index)
+    rows = profile[by_name | by_position].copy()
+    if rows.empty:
+        return pd.DataFrame()
+    meta = parameter_metadata()
+    records=[]
+    for (code, name, unit), group in rows.groupby(["parameter_code","parameter_name","unit"], dropna=False):
+        values={}
+        sources=[]
+        confidence=[]
+        for doc, doc_group in group.groupby("document_type"):
+            best=doc_group.sort_values("confidence", ascending=False).iloc[0]
+            value_text=str(best.get("value_text","") or "")
+            values[str(doc)] = value_text
+            sources.append(f"{doc}, стр. {int(best.get('page',0) or 0)}")
+            confidence.append(float(best.get("confidence",0) or 0))
+        comp = comparisons_df[
+            comparisons_df.get("object", pd.Series(dtype=str)).fillna("").astype(str).map(_norm_object_key).eq(_norm_object_key(object_name)) &
+            comparisons_df.get("parameter_code", pd.Series(dtype=str)).fillna("").astype(str).eq(str(code))
+        ] if not comparisons_df.empty else pd.DataFrame()
+        status = str(comp.iloc[0].get("status")) if not comp.empty else ("НЕДОСТАТОЧНО ДАННЫХ" if len(values)<2 else "НЕ ПРОВЕРЕНО")
+        category = str(meta.get(str(code),{}).get("group") or "Прочие характеристики")
+        rec={
+            "Группа": category,
+            "Характеристика": str(name),
+            "Ед. изм.": UNIT_LABELS.get(str(unit).lower(), str(unit or "")),
+            "Статус": status,
+            "Источников": len(values),
+            "Уверенность": f"{max(confidence, default=0):.0%}",
+            "Источники": "; ".join(sources),
+        }
+        for doc in ["ПЗ","ПЗУ1","ПЗУ2","АР1","АР2","ТХ1","ТХ2"]:
+            rec[doc]=values.get(doc, "—")
+        records.append(rec)
+    result=pd.DataFrame(records)
+    order={"Идентификация":0,"Геометрия":1,"Технология":2,"Электроснабжение":3,"Водоснабжение":4,"Пожарная безопасность":5,"Прочие характеристики":9}
+    result["_order"]=result["Группа"].map(order).fillna(8)
+    return result.sort_values(["_order","Группа","Характеристика"]).drop(columns="_order")
+
+
+def object_profile_metrics(passport: pd.DataFrame) -> dict[str,int]:
+    if passport.empty:
+        return {"total":0,"confirmed":0,"mismatch":0,"insufficient":0}
+    statuses=passport["Статус"].fillna("").astype(str)
+    return {
+        "total":len(passport),
+        "confirmed":int(statuses.eq("СОВПАДАЕТ").sum()),
+        "mismatch":int(statuses.str.contains("РАСХОЖДЕНИЕ|УТОЧНЕНИЯ", regex=True).sum()),
+        "insufficient":int(statuses.str.contains("НЕДОСТАТОЧНО|НЕ ПРОВЕРЕНО", regex=True).sum()),
+    }
+
 def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame, review_df: pd.DataFrame | None = None) -> bytes:
     mismatch_count, matched_count = comparison_counts(comparisons_df)
     out = io.BytesIO()
@@ -659,7 +728,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.10.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.11.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -674,7 +743,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary.to_excel(writer, sheet_name="Сводка", index=False)
         docs_df.to_excel(writer, sheet_name="Документы", index=False)
         registry_coverage(registry_for_export(findings_df)).to_excel(writer, sheet_name="Перечень объектов", index=False)
-        findings_for_user(characteristic_findings(findings_df)).to_excel(writer, sheet_name="Характеристики проекта", index=False)
+        findings_for_user(characteristic_findings(findings_df)).to_excel(writer, sheet_name="Характеристики", index=False)
         comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
         if review_df is not None:
             export_review = review_df.drop(columns=["Ключ"], errors="ignore")
@@ -696,15 +765,11 @@ with st.sidebar:
     st.divider()
 
     pages = [
-        "Главная",
-        "Проект",
-        "Документы",
-        "Перечень объектов",
-        "Характеристики проекта",
+        "Обзор",
+        "Объекты",
         "Проверки",
-        "Реестр замечаний",
+        "Замечания",
         "Отчёт",
-        "О версии",
     ]
     page = st.radio("Навигация", pages, label_visibility="collapsed", key="active_page")
 
@@ -715,7 +780,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.10.0")
+    st.caption("Demo Cloud v0.11.0")
 
 
 # ---------- Общая шапка ----------
@@ -726,7 +791,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.10.0</div>
+      <div class="ec-badge">Demo Cloud v0.11.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -742,20 +807,20 @@ st.markdown(
     f"""<div class="ec-steps">
       <div class="ec-step {'done' if not docs_df.empty else 'active'}">01<strong>Документы</strong></div>
       <div class="ec-step {'done' if registry_confirmed else ('active' if not docs_df.empty else '')}">02<strong>Перечень объектов</strong></div>
-      <div class="ec-step {'done' if registry_confirmed and not characteristic_findings(findings_df).empty else ''}">03<strong>Характеристики</strong></div>
+      <div class="ec-step {'done' if registry_confirmed and not characteristic_findings(findings_df).empty else ''}">03<strong>Паспорта объектов</strong></div>
       <div class="ec-step {'done' if not comparisons_df.empty else ''}">04<strong>Проверки</strong></div>
     </div>""", unsafe_allow_html=True
 )
 
 # ---------- Главная ----------
-if page == "Главная":
-    st.markdown('<div class="ec-section-title">Рабочая панель</div>', unsafe_allow_html=True)
+if page == "Обзор":
+    st.markdown('<div class="ec-section-title">Обзор проекта</div>', unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Документов", len(docs_df), help="Количество документов в последнем анализе")
-    c2.metric("Извлечено характеристик", len(characteristic_findings(findings_df)), help="Количество найденных упоминаний характеристик")
+    c2.metric("Объектов", len(registry_df), help="Количество позиций в предварительном или подтверждённом перечне")
     c3.metric("Расхождений", mismatch_count, help="Потенциальные межраздельные расхождения")
-    c4.metric("Совпадений", matched_count, help="Сопоставленные одинаковые значения")
+    c4.metric("Подтверждено", matched_count, help="Характеристики, совпадающие между разделами")
 
     left, right = st.columns([1.55, 1])
     with left:
@@ -902,8 +967,8 @@ elif page == "Документы":
         st.caption("Тип раздела определяется по имени файла, шифру и содержанию первых страниц.")
 
 # ---------- Перечень объектов ----------
-elif page == "Перечень объектов":
-    st.markdown('<div class="ec-section-title">Перечень объектов</div>', unsafe_allow_html=True)
+elif page == "Объекты":
+    st.markdown('<div class="ec-section-title">Объекты и цифровые паспорта</div>', unsafe_allow_html=True)
     st.caption("Проверьте автоматически сформированный перечень до запуска содержательной сверки. Позиция по генплану является основным идентификатором.")
     candidate_registry = build_candidate_registry(findings_df)
     if candidate_registry.empty:
@@ -1026,10 +1091,27 @@ elif page == "Перечень объектов":
             by_name = profile["object_hint"].fillna("").astype(str).map(_norm_object_key) == _norm_object_key(selected)
             by_position = profile["genplan_position"].fillna("").astype(str).str.strip().eq(position) if position else pd.Series(False, index=profile.index)
             object_profile = profile[by_name | by_position]
-            if object_profile.empty:
+            passport = build_object_passport(selected, position, findings_df, comparisons_df)
+            if passport.empty:
                 st.info("Для объекта пока не удалось надёжно извлечь характеристики.")
             else:
-                st.dataframe(findings_for_user(object_profile), use_container_width=True, hide_index=True)
+                pm = object_profile_metrics(passport)
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Характеристик", pm["total"])
+                m2.metric("Подтверждено", pm["confirmed"])
+                m3.metric("Требует внимания", pm["mismatch"])
+                m4.metric("Недостаточно данных", pm["insufficient"])
+                st.markdown("#### Цифровой паспорт объекта")
+                st.dataframe(
+                    passport, use_container_width=True, hide_index=True,
+                    column_config={
+                        "Группа": st.column_config.TextColumn(width="medium"),
+                        "Характеристика": st.column_config.TextColumn(width="large"),
+                        "Источники": st.column_config.TextColumn(width="large"),
+                    },
+                )
+                with st.expander("Диагностика исходных извлечений", expanded=False):
+                    st.dataframe(findings_for_user(object_profile), use_container_width=True, hide_index=True)
 
 # ---------- Найденные данные ----------
 elif page == "Характеристики проекта":
@@ -1083,7 +1165,7 @@ elif page == "Проверки":
         st.warning("Автоматический результат является предварительным и требует подтверждения специалистом.")
 
 # ---------- Реестр замечаний ----------
-elif page == "Реестр замечаний":
+elif page == "Замечания":
     st.markdown('<div class="ec-section-title">Реестр предэкспертных замечаний</div>', unsafe_allow_html=True)
     st.caption("Автоматическая находка становится рабочим замечанием только после проверки специалистом.")
     review_df = current_review_register(comparisons_df)
@@ -1181,7 +1263,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.10.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.11.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** превратить автоматические результаты проверки в управляемый реестр предэкспертных замечаний.

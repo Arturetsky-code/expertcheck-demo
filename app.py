@@ -298,11 +298,42 @@ def characteristic_findings(findings_df: pd.DataFrame) -> pd.DataFrame:
 def _norm_object_key(value: str) -> str:
     import re
     value = str(value or "").lower().replace("ё", "е")
+    # Позиция по генплану не является частью наименования.
+    value = re.sub(r"^\s*(?:поз(?:иция)?\.?\s*)?4\.\d+(?:\.\d+){0,2}\s*[-–—.:)]*\s*", "", value)
+    # Удаляем частые служебные хвосты, попадающие из основных надписей.
+    value = re.sub(r"\b(?:богер|завьялов|некрасова|гуськов|потапенко|смирнова|васильев|бурда|долгушин)\b", " ", value)
+    value = re.sub(r"\bплощадка дробильно[- ]сортировочного комплекса\b.*$", "", value)
     return re.sub(r"[^а-яa-z0-9]+", "", value)
 
 
+def _object_tokens(value: str) -> set[str]:
+    import re
+    text = str(value or "").lower().replace("ё", "е")
+    text = re.sub(r"^\s*(?:поз(?:иция)?\.?\s*)?4\.\d+(?:\.\d+){0,2}\s*[-–—.:)]*\s*", "", text)
+    stop = {"здание", "сооружение", "площадка", "комплекс", "объект", "с", "и", "для", "на", "по"}
+    return {x for x in re.findall(r"[а-яa-z0-9]+", text) if len(x) > 2 and x not in stop}
+
+
+def _name_similarity(left: str, right: str) -> float:
+    a, b = _norm_object_key(left), _norm_object_key(right)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    if min(len(a), len(b)) >= 8 and (a in b or b in a):
+        return 0.94
+    ta, tb = _object_tokens(left), _object_tokens(right)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
 def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
-    columns = ["Включить", "Позиция по ГП", "Наименование объекта", "Количество", "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования"]
+    columns = [
+        "Включить", "Позиция по ГП", "Наименование объекта", "Количество",
+        "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы",
+        "Исходные наименования", "Способ объединения",
+    ]
     if findings_df.empty or "parameter_code" not in findings_df.columns:
         return pd.DataFrame(columns=columns)
     candidates = findings_df[findings_df["parameter_code"].isin(["OBJECT_ENTRY", "OBJECT_CANDIDATE"])].copy()
@@ -314,18 +345,65 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     candidates["genplan_position"] = candidates["genplan_position"].fillna("").astype(str).str.strip()
     candidates["object_hint"] = candidates["object_hint"].fillna("").astype(str).str.strip()
     candidates["value_text"] = candidates["value_text"].fillna("").astype(str).str.strip()
-    candidates["group_key"] = candidates.apply(
-        lambda row: f"GP:{row['genplan_position']}" if row["genplan_position"] else f"NM:{_norm_object_key(row['object_hint'] or row['value_text'])}", axis=1
+    candidates["preferred_name"] = candidates.apply(
+        lambda r: str(r["object_hint"] or r["value_text"]).strip(), axis=1
     )
+
+    # Шаг 1. Создаём опорные группы по позиции по генплану.
+    positioned = candidates[candidates["genplan_position"].ne("")].copy()
+    no_position = candidates[candidates["genplan_position"].eq("")].copy()
+    groups: dict[str, list[int]] = {}
+    for idx, row in positioned.iterrows():
+        groups.setdefault(f"GP:{row['genplan_position']}", []).append(idx)
+
+    # Шаг 2. Находки без позиции присоединяем к позиции по совпадению наименования.
+    # Это устраняет дубли вида «4.13 Здание проборазделки» / «Здание проборазделки».
+    merge_method: dict[str, str] = {key: "По позиции по генплану" for key in groups}
+    unassigned: list[int] = []
+    for idx, row in no_position.iterrows():
+        source_name = str(row["preferred_name"] or row["value_text"]).strip()
+        scored: list[tuple[float, str]] = []
+        for key, indices in groups.items():
+            names = []
+            for gi in indices:
+                gr = candidates.loc[gi]
+                names.extend([str(gr["object_hint"] or ""), str(gr["value_text"] or ""), str(gr["preferred_name"] or "")])
+            score = max((_name_similarity(source_name, name) for name in names if name), default=0.0)
+            if score > 0:
+                scored.append((score, key))
+        scored.sort(reverse=True)
+        if scored and scored[0][0] >= 0.88 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.08):
+            groups[scored[0][1]].append(idx)
+            merge_method[scored[0][1]] = "Позиция + совпадение наименования"
+        else:
+            unassigned.append(idx)
+
+    # Шаг 3. Оставшиеся находки без позиции группируем только между собой.
+    name_groups: dict[str, list[int]] = {}
+    for idx in unassigned:
+        row = candidates.loc[idx]
+        key_name = _norm_object_key(row["preferred_name"] or row["value_text"])
+        if not key_name:
+            key_name = f"row{idx}"
+        key = f"NM:{key_name}"
+        name_groups.setdefault(key, []).append(idx)
+        merge_method[key] = "Только по наименованию — требуется подтверждение"
+    groups.update(name_groups)
+
     rows = []
-    for _, group in candidates.groupby("group_key", sort=False):
+    for group_key, indices in groups.items():
+        group = candidates.loc[indices].copy()
         position = next((x for x in group["genplan_position"].tolist() if x), "")
-        ranked = group.assign(
-            pz_rank=(group["parameter_code"] == "OBJECT_ENTRY").astype(int),
-            name_len=group["value_text"].str.len(),
-        ).sort_values(["pz_rank", "confidence", "name_len"], ascending=False)
+        group["name_len"] = group["value_text"].str.len()
+        group["pz_rank"] = (group["parameter_code"] == "OBJECT_ENTRY").astype(int)
+        # Предпочитаем наименование из таблицы ПЗ, затем каноническое object_hint.
+        ranked = group.sort_values(["pz_rank", "confidence", "name_len"], ascending=False)
         best = ranked.iloc[0]
-        name = str(best["value_text"] or best["object_hint"]).strip()
+        pz_rows = ranked[ranked["parameter_code"] == "OBJECT_ENTRY"]
+        if not pz_rows.empty:
+            name = str(pz_rows.iloc[0]["value_text"] or pz_rows.iloc[0]["object_hint"]).strip()
+        else:
+            name = str(best["object_hint"] or best["value_text"]).strip()
         names = sorted({str(x).strip() for x in group["value_text"].tolist() if str(x).strip()})
         sections = sorted({str(x).strip() for x in group["document_type"].tolist() if str(x).strip()})
         pages = sorted({f"{r.document_type}: {int(r.page)}" for r in group.itertuples() if pd.notna(r.page)})
@@ -340,26 +418,32 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
             status = "Извлечено из ПЗ"
         else:
             status = "Требует подтверждения"
-        normalized_names = {_norm_object_key(x) for x in names if x}
+        normalized_names = {_norm_object_key(x) for x in names if _norm_object_key(x)}
         if position and len(normalized_names) >= 3:
+            # Разные варианты сами по себе не создают дубль, но требуют просмотра.
             status = "Требует уточнения наименования"
         rows.append({
             "Включить": True,
             "Позиция по ГП": position,
             "Наименование объекта": name,
             "Количество": quantity,
-            "Источники": ", ".join(sections),
+            "Источники": " · ".join(sections),
             "Подтверждений": len(sections),
             "Статус": status,
             "Уверенность": f"{float(group['confidence'].max()):.0%}",
             "Страницы": "; ".join(pages),
             "Исходные наименования": " | ".join(names),
+            "Способ объединения": merge_method.get(group_key, ""),
         })
     result = pd.DataFrame(rows, columns=columns)
     if not result.empty:
+        # Защитный финальный дедуп: одна позиция по ГП — одна строка.
+        with_pos = result[result["Позиция по ГП"].astype(str).str.strip().ne("")]
+        without_pos = result[result["Позиция по ГП"].astype(str).str.strip().eq("")]
+        with_pos = with_pos.sort_values(["Подтверждений", "Уверенность"], ascending=False).drop_duplicates("Позиция по ГП", keep="first")
+        result = pd.concat([with_pos, without_pos], ignore_index=True)
         result = result.sort_values(["Позиция по ГП", "Наименование объекта"], kind="stable").reset_index(drop=True)
     return result
-
 
 def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
     stored = st.session_state.get("object_registry")
@@ -374,7 +458,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.7.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.8.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -425,7 +509,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.7.0")
+    st.caption("Demo Cloud v0.8.0")
 
 
 # ---------- Общая шапка ----------
@@ -436,7 +520,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.7.0</div>
+      <div class="ec-badge">Demo Cloud v0.8.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -619,20 +703,27 @@ elif page == "Перечень объектов":
         physical_count = int(pd.to_numeric(source_df.get("Количество", pd.Series(dtype=float)), errors="coerce").fillna(1).sum())
         confirmed_count = int(source_df["Статус"].astype(str).str.startswith("Подтверждено").sum()) if "Статус" in source_df else 0
         review_count = int(source_df["Статус"].astype(str).str.contains("уточн|подтверждения", case=False).sum()) if "Статус" in source_df else 0
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Реестровых позиций", len(source_df))
+        auto_merged = int(source_df.get("Способ объединения", pd.Series(dtype=str)).astype(str).str.contains("совпадение наименования", case=False).sum())
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Позиций по ГП", int(source_df["Позиция по ГП"].astype(str).str.strip().ne("").sum()))
         c2.metric("Физических объектов", physical_count)
         c3.metric("Подтверждено", confirmed_count)
-        c4.metric("Требует внимания", review_count)
+        c4.metric("Объединено автоматически", auto_merged)
+        c5.metric("Требует внимания", review_count)
 
-        st.info("Можно исправлять наименование, позицию, количество и исключать ошибочные строки. Служебные поля источников оставлены только для контроля распознавания.")
+        st.info("Записи без позиции по генплану автоматически присоединяются к позиции с совпадающим наименованием. Перед подтверждением проверьте только строки со статусом «Требует внимания».")
+        attention = source_df[source_df["Статус"].astype(str).str.contains("уточн|подтверждения", case=False, na=False)] if "Статус" in source_df else pd.DataFrame()
+        if not attention.empty:
+            with st.expander(f"Сначала проверить: {len(attention)} строк", expanded=True):
+                preview_cols = ["Позиция по ГП", "Наименование объекта", "Источники", "Статус", "Способ объединения"]
+                st.dataframe(attention[[c for c in preview_cols if c in attention.columns]], use_container_width=True, hide_index=True)
         edited = st.data_editor(
             source_df,
             key="object_registry_editor",
             use_container_width=True,
             hide_index=True,
             num_rows="dynamic",
-            disabled=["Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования"],
+            disabled=["Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения"],
             column_config={
                 "Включить": st.column_config.CheckboxColumn("Включить", help="Использовать объект в цифровом профиле"),
                 "Позиция по ГП": st.column_config.TextColumn("Позиция по ГП", width="small"),
@@ -640,6 +731,7 @@ elif page == "Перечень объектов":
                 "Количество": st.column_config.NumberColumn("Количество", min_value=1, step=1, format="%d"),
                 "Источники": st.column_config.TextColumn("Источники", width="medium"),
                 "Исходные наименования": st.column_config.TextColumn("Исходные наименования", width="large"),
+                "Способ объединения": st.column_config.TextColumn("Как объединено", width="medium", help="Показывает, почему находки из разных разделов сведены в одну строку"),
             },
         )
         b1, b2, b3 = st.columns([1, 1, 2])
@@ -668,7 +760,7 @@ elif page == "Перечень объектов":
         st.markdown('<div class="ec-section-title">Диагностика источников</div>', unsafe_allow_html=True)
         with st.expander("Показать исходные находки по объектам"):
             raw = findings_df[findings_df["parameter_code"].isin(["OBJECT_ENTRY", "OBJECT_CANDIDATE"])].copy()
-            cols = ["document_type", "page", "genplan_position", "value_text", "confidence", "match_method", "context"]
+            cols = ["document_type", "page", "genplan_position", "value_text", "object_hint", "confidence", "match_method", "context"]
             raw = raw[[x for x in cols if x in raw.columns]]
             st.dataframe(findings_for_user(raw), use_container_width=True, hide_index=True)
 
@@ -790,7 +882,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.7.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.8.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** сформировать проверяемый перечень объектов из нескольких разделов и не допускать, чтобы ошибки распознавания автоматически превращались в замечания.

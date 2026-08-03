@@ -420,6 +420,42 @@ def _extract_quantity_from_name(name: str) -> int:
     return 1
 
 
+
+def _plausible_object_candidate(name: str, canonical: str | None = None) -> bool:
+    """Отсекает подписи, заголовки листов и технологические обозначения.
+
+    Для находки без словарного соответствия требования строже. Позиция из шифра
+    остаётся источником подтверждения, но не должна создавать объект с именем
+    вроде DN50, «Ситуационный план» или фамилиями исполнителей.
+    """
+    clean = re.sub(r"\s+", " ", str(name or "")).strip(" .;:-")
+    low = normalized_search_text(clean)
+    if not clean or len(clean) < 3 or len(clean) > 180:
+        return False
+    reject = (
+        "площадка дробильно-сортировочного комплекса", "ситуационный план",
+        "план на отм", "характеристика трубопроводов", "шкаф управления",
+        "спецификация", "экспликация помещений", "система аспирации",
+        "ведомость документов", "рабочие условия", "лист ",
+    )
+    if any(x in low for x in reject):
+        return False
+    if re.search(r"\b(?:dn\d+|л\.\d+|м\s*1:\d+|3\.5-5)\b", low):
+        return False
+    signatory_words = {"бурда", "некрасова", "долгушин", "богер", "завьялов", "гуськов", "потапенко", "смирнова", "васильев"}
+    tokens = set(re.findall(r"[а-яa-z]+", low))
+    if len(tokens & signatory_words) >= 2:
+        return False
+    if canonical:
+        return True
+    object_words = (
+        "здание", "сооруж", "станц", "эстакад", "комплекс", "навес",
+        "резервуар", "емкост", "ёмкост", "камера", "выгреб", "мачт",
+        "стена", "кпп", "оператор", "компрессор", "столов", "модуль",
+        "подстанц", "электрощитов", "огражден", "пункт обогрева",
+    )
+    return any(word in low for word in object_words)
+
 def _candidate_name_after_line(lines: list[str], index: int, max_lines: int = 4) -> str:
     collected: list[str] = []
     stop = re.compile(r"^(?:лист|изм\.?|том|раздел|часть|проектная документация|масштаб|м\s*1:|\d+\s*$)", flags=re.I)
@@ -456,7 +492,10 @@ def _extract_multisource_object_candidates(page_no: int, text: str, filename: st
         name = tail if len(tail) >= 3 else _candidate_name_after_line(lines, index, 5)
         if not name:
             continue
-        canonical = _canonical_from_text(name, objects) or name
+        canonical_match = _canonical_from_text(name, objects)
+        if not _plausible_object_candidate(name, canonical_match):
+            continue
+        canonical = canonical_match or name
         key = (position, normalized_search_text(canonical))
         if key in seen:
             continue
@@ -478,7 +517,10 @@ def _extract_multisource_object_candidates(page_no: int, text: str, filename: st
             name = _candidate_name_after_line(lines, index, 5)
             if not name:
                 continue
-            canonical = _canonical_from_text(name, objects) or name
+            canonical_match = _canonical_from_text(name, objects)
+            if not _plausible_object_candidate(name, canonical_match):
+                continue
+            canonical = canonical_match or name
             key = (position, normalized_search_text(canonical))
             if key in seen:
                 continue

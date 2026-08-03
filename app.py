@@ -167,6 +167,10 @@ DISPLAY_FINDING_COLUMNS = {
     "unit": "Ед. изм.",
     "confidence": "Уверенность",
     "context": "Фрагмент документа",
+    "match_method": "Способ извлечения",
+    "structural_zone": "Структурный блок",
+    "extraction_profile": "Профиль анализа",
+    "review_note": "Примечание",
 }
 
 DISPLAY_COMPARISON_COLUMNS = {
@@ -265,7 +269,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.3.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.4.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -315,7 +319,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.3.0")
+    st.caption("Demo Cloud v0.4.0")
 
 
 # ---------- Общая шапка ----------
@@ -326,7 +330,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.3.0</div>
+      <div class="ec-badge">Demo Cloud v0.4.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -637,7 +641,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.3.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.4.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** сформировать цифровой профиль проекта на уровне отдельных зданий и сооружений и предоставить карточку каждого распознанного объекта.

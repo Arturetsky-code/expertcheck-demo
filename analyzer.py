@@ -25,6 +25,8 @@ class Finding:
     object_hint: str
     match_method: str = "контекстный поиск"
     review_note: str = ""
+    structural_zone: str = ""
+    extraction_profile: str = "универсальный"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -145,6 +147,135 @@ def _value_candidates(segment: str, param: dict) -> list[tuple[re.Match, str]]:
     return matches
 
 
+
+def _line_spans(text: str) -> list[tuple[int, int, str]]:
+    """Возвращает строки страницы с абсолютными позициями в тексте."""
+    spans: list[tuple[int, int, str]] = []
+    pos = 0
+    for line in text.splitlines(keepends=True):
+        clean = line.strip()
+        start = pos
+        end = pos + len(line)
+        if clean:
+            spans.append((start, end, clean))
+        pos = end
+    return spans
+
+
+def _canonical_from_text(value: str, objects: list[dict]) -> str | None:
+    low = normalized_search_text(value)
+    candidates: list[tuple[int, str]] = []
+    for obj in objects:
+        for alias in obj.get("aliases", []):
+            a = normalized_search_text(alias)
+            if len(a) >= 4 and a in low:
+                candidates.append((len(a), obj["canonical"]))
+    return max(candidates)[1] if candidates else None
+
+
+def _page_section_object(text: str, document_type: str, objects: list[dict]) -> tuple[str, str]:
+    """Определяет объект и структурную зону страницы по заголовкам раздела.
+
+    Особенно полезно для АР1 и ТХ1: заголовок 1.14/1.5.1 обычно задаёт
+    объект для последующего текста, даже если название не повторяется рядом с ТЭП.
+    """
+    lines = _line_spans(text)
+    heading_patterns = []
+    if document_type in {"АР1", "ТХ1"}:
+        heading_patterns = [r"^\d+(?:\.\d+){1,3}\s+(.{3,160})$"]
+    elif document_type == "ПЗУ1":
+        heading_patterns = [r"^\d+(?:\.\d+)?\s+(.{3,160})$"]
+    elif document_type == "ПЗ":
+        heading_patterns = [r"^\d+(?:\.\d+)?\s+(.{3,160})$"]
+
+    for _, _, line in lines:
+        for pattern in heading_patterns:
+            m = re.match(pattern, line)
+            if not m:
+                continue
+            title = m.group(1).strip(" .")
+            obj = _canonical_from_text(title, objects)
+            if obj:
+                return obj, title
+    return "Не определён", ""
+
+
+def _structural_zone(text: str, document_type: str) -> str:
+    low = normalized_search_text(text)
+    zones = {
+        "ПЗ": [
+            ("Состав сложного объекта", ["сведения о сложном объекте", "входящих в состав сложного объекта"]),
+            ("Технико-экономические показатели", ["технико-экономические показатели"]),
+            ("Проектная мощность", ["сведения о проектной мощности"]),
+        ],
+        "ПЗУ1": [
+            ("ТЭП земельного участка", ["технико-экономические показатели земельного участка"]),
+            ("Планировочная организация", ["планировочной организации земельного участка"]),
+            ("Благоустройство", ["решений по благоустройству"]),
+        ],
+        "АР1": [
+            ("Архитектурные характеристики", ["технико-экономические показатели", "общая площадь", "площадь застройки"]),
+            ("Описание объекта", ["описание внешнего вида", "объемно-планировоч"]),
+        ],
+        "ТХ1": [
+            ("Технологические показатели", ["производительность", "технологического процесса"]),
+            ("Организация производства", ["организация производства"]),
+            ("Персонал", ["численность работающих", "количество работающих"]),
+        ],
+    }
+    for zone, tokens in zones.get(document_type, []):
+        if any(token in low for token in tokens):
+            return zone
+    return "Основной текст"
+
+
+def _profile_name(document_type: str) -> str:
+    return {
+        "ПЗ": "ПЗ: состав объекта и ТЭП",
+        "ПЗУ1": "ПЗУ: экспликация и показатели участка",
+        "ПЗУ2": "ПЗУ: графическая часть",
+        "АР1": "АР: характеристики зданий",
+        "АР2": "АР: графическая часть",
+        "ТХ1": "ТХ: технологические показатели",
+        "ТХ2": "ТХ: графическая часть",
+    }.get(document_type, "универсальный")
+
+
+def _document_parameter_allowed(param: dict, document_type: str, zone: str) -> bool:
+    """Мягкий фильтр применимости характеристики к профилю раздела."""
+    code = param.get("code")
+    preferred = {
+        "ПЗ": {"DOC_NAME", "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "CAPACITY", "RES_VOLUME", "POWER_KTP", "STAFF", "FLOORS"},
+        "ПЗУ1": {"DOC_NAME", "AREA_BUILD"},
+        "АР1": {"DOC_NAME", "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "FLOORS"},
+        "ТХ1": {"DOC_NAME", "CAPACITY", "STAFF", "POWER_KTP", "POWER_INST", "POWER_CALC", "RES_VOLUME"},
+    }
+    if document_type not in preferred:
+        return True
+    # Не запрещаем идентификацию; остальные нетипичные параметры допускаем только
+    # в явно релевантной структурной зоне, чтобы не терять редкие корректные значения.
+    if code in preferred[document_type]:
+        return True
+    return zone not in {"Основной текст", ""}
+
+
+def _line_oriented_match(text: str, keyword_start: int, param: dict) -> tuple[re.Match | None, str, int]:
+    """Ищет значение сначала в текущей и следующих строках таблицы.
+
+    PDF-таблицы часто извлекаются как три строки: показатель / единица / значение.
+    Возвращает match, метод и абсолютное смещение начала сегмента.
+    """
+    spans = _line_spans(text)
+    line_index = next((i for i, (s, e, _) in enumerate(spans) if s <= keyword_start < e), None)
+    if line_index is not None:
+        start = spans[line_index][0]
+        end = spans[min(len(spans) - 1, line_index + 4)][1]
+        segment = text[start:end]
+        candidates = _value_candidates(segment, param)
+        if candidates:
+            return candidates[0][0], "структурная строка/таблица", start
+    return None, "", 0
+
 def extract_findings(
     filename: str,
     document_type: str,
@@ -158,6 +289,9 @@ def extract_findings(
     for page_no, text in pages:
         low = normalized_search_text(text)
         contents_page = _page_is_contents(text)
+        page_object, page_heading = _page_section_object(text, document_type, objects)
+        zone = _structural_zone(text, document_type)
+        profile = _profile_name(document_type)
         for param in parameters:
             # Идентификационные признаки извлекаются один раз на документ.
             if param.get("once_per_document") and param["code"] in identity_added:
@@ -166,6 +300,8 @@ def extract_findings(
                 continue
             allowed_docs = param.get("document_types")
             if allowed_docs and document_type not in allowed_docs:
+                continue
+            if not _document_parameter_allowed(param, document_type, zone):
                 continue
 
             for keyword in param["keywords"]:
@@ -179,6 +315,8 @@ def extract_findings(
                     if not param.get("value_patterns") and not param.get("value_pattern"):
                         ctx = _context(text, km.start(), km.end())
                         object_hint, object_conf = detect_object(text, km.start(), km.end(), objects)
+                        if object_hint == "Не определён" and page_object != "Не определён":
+                            object_hint, object_conf = page_object, 0.82
                         confidence = 0.97 if page_no <= 2 else 0.82
                         findings.append(Finding(
                             document=filename,
@@ -193,16 +331,23 @@ def extract_findings(
                             confidence=confidence,
                             object_hint=object_hint,
                             match_method="идентификационный признак",
+                            structural_zone=zone if not page_heading else f"{zone}: {page_heading}",
+                            extraction_profile=profile,
                         ))
                         identity_added.add(param["code"])
                         break
 
-                    segment_end = min(len(text), km.end() + param.get("search_window", 180))
-                    segment = text[km.start():segment_end]
-                    candidates = _value_candidates(segment, param)
-                    if not candidates:
-                        continue
-                    vm, method = candidates[0]
+                    line_vm, line_method, line_offset = _line_oriented_match(text, km.start(), param)
+                    if line_vm is not None:
+                        vm, method, segment_offset = line_vm, line_method, line_offset
+                    else:
+                        segment_end = min(len(text), km.end() + param.get("search_window", 180))
+                        segment = text[km.start():segment_end]
+                        candidates = _value_candidates(segment, param)
+                        if not candidates:
+                            continue
+                        vm, method = candidates[0]
+                        segment_offset = km.start()
                     raw_value = vm.groupdict().get("value")
                     raw_unit = vm.groupdict().get("unit")
                     if raw_value is None:
@@ -210,11 +355,13 @@ def extract_findings(
                     value = normalize_number(raw_value)
                     if value is None:
                         continue
-                    absolute_end = km.start() + vm.end()
-                    absolute_value_start = km.start() + vm.start()
+                    absolute_end = segment_offset + vm.end()
+                    absolute_value_start = segment_offset + vm.start()
                     object_hint, object_conf = detect_object(text, km.start(), absolute_end, objects)
+                    if object_hint == "Не определён" and page_object != "Не определён":
+                        object_hint, object_conf = page_object, 0.82
 
-                    distance = vm.start()
+                    distance = max(0, absolute_value_start - km.start())
                     confidence = 0.96 if distance <= 55 else 0.88 if distance <= 110 else 0.76
                     if object_hint == "Не определён":
                         confidence -= 0.16
@@ -238,6 +385,8 @@ def extract_findings(
                         object_hint=object_hint,
                         match_method=method,
                         review_note="" if confidence >= 0.82 else "Проверить привязку значения к объекту",
+                        structural_zone=zone if not page_heading else f"{zone}: {page_heading}",
+                        extraction_profile=profile,
                     ))
 
     # Удаление дублей: одинаковое значение одного параметра на одной странице.
@@ -364,6 +513,7 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
         pages = read_pdf(uploaded.getvalue(), uploaded.name)
         first_text = "\n".join(text for _, text in pages[:3])
         doc_type = classify_document(uploaded.name, first_text, document_types)
-        documents.append({"Файл": uploaded.name, "Тип документа": doc_type, "Страниц": len(pages)})
-        all_findings.extend(extract_findings(uploaded.name, doc_type, pages, parameters, objects))
+        doc_findings = extract_findings(uploaded.name, doc_type, pages, parameters, objects)
+        documents.append({"Файл": uploaded.name, "Тип документа": doc_type, "Страниц": len(pages), "Профиль анализа": _profile_name(doc_type), "Извлечено характеристик": len(doc_findings), "Высокая уверенность": sum(1 for x in doc_findings if x.confidence >= 0.82)})
+        all_findings.extend(doc_findings)
     return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings)

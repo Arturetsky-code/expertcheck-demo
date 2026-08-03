@@ -165,12 +165,16 @@ def _line_spans(text: str) -> list[tuple[int, int, str]]:
 
 def _canonical_from_text(value: str, objects: list[dict]) -> str | None:
     low = normalized_search_text(value)
+    compact_low = re.sub(r"[^а-яa-z0-9]+", "", low)
     candidates: list[tuple[int, str]] = []
     for obj in objects:
         for alias in obj.get("aliases", []):
             a = normalized_search_text(alias)
-            if len(a) >= 4 and a in low:
-                candidates.append((len(a), obj["canonical"]))
+            compact_alias = re.sub(r"[^а-яa-z0-9]+", "", a)
+            direct = len(a) >= 4 and a in low
+            compact = len(compact_alias) >= 6 and compact_alias in compact_low
+            if direct or compact:
+                candidates.append((len(compact_alias), obj["canonical"]))
     return max(candidates)[1] if candidates else None
 
 
@@ -295,6 +299,113 @@ def _extract_values_from_block(block: str, parameter: dict) -> list[tuple[float,
     return result
 
 
+
+
+def _clean_object_name(lines: list[str]) -> str:
+    name = " ".join(line.strip(" .;:-") for line in lines if line.strip())
+    name = re.sub(r"\s+", " ", name).strip()
+    name = re.sub(r"\s*-\s*", "-", name)
+    return name
+
+
+def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects: list[dict]) -> list[Finding]:
+    """Извлекает полный реестр объектов из многостраничных таблиц ПЗ.
+
+    В отличие от прежнего алгоритма, не требует наличия объекта в objects.json:
+    позиция по генплану служит устойчивым идентификатором, а наименование
+    собирается из следующих строк до начала адреса, кода классификатора или
+    служебных граф таблицы. Благодаря этому учитываются все позиции таблицы,
+    включая сооружения, отсутствующие в первоначальном словаре.
+    """
+    low = normalized_search_text(text)
+    table_signals = (
+        "позиция\nпо\nгенплану" in low
+        or "позиция по генплану" in low
+        or ("наименование объекта" in low and "генплан" in low)
+        or ("наименование зданий" in low and "генплан" in low)
+    )
+    if not table_signals:
+        return []
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    pos_re = re.compile(r"^4\.\d+(?:\.\d+){0,2}$")
+    class_re = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}(?:\s|$)")
+    ordinal_re = re.compile(r"^\d{1,3}$")
+    stop_prefixes = (
+        "рф,", "забайкальский", "не принадлежит", "нормативная",
+        "принадлежит", "уровень", "класс", "коэф", "назначение",
+        "площадь застройки", "общая площадь", "строительный объем",
+        "строительный объём", "производительность", "протяженность",
+        "протяжённость", "объем", "объём", "напряжение", "высота",
+    )
+    header_tokens = {
+        "позиция", "по", "генплану", "наименование объекта",
+        "капитального", "строительства", "наименование зданий,",
+        "сооружений и вид", "строительства",
+    }
+
+    result: list[Finding] = []
+    for i, line in enumerate(lines):
+        if not pos_re.match(line):
+            continue
+        position = line
+        name_lines: list[str] = []
+        for candidate in lines[i + 1:i + 9]:
+            candidate_low = normalized_search_text(candidate)
+            if pos_re.match(candidate) or class_re.match(candidate):
+                break
+            if ordinal_re.match(candidate):
+                # Номер объекта может переноситься на следующую строку после знака №.
+                if name_lines and name_lines[-1].rstrip().endswith("№"):
+                    name_lines.append(candidate)
+                    continue
+                break
+            if candidate_low.startswith(stop_prefixes):
+                break
+            if candidate_low in header_tokens:
+                continue
+            # Коды классификатора иногда начинаются в той же строке после имени.
+            code_match = class_re.search(candidate)
+            if code_match:
+                before = candidate[:code_match.start()].strip()
+                if before:
+                    name_lines.append(before)
+                break
+            name_lines.append(candidate)
+            if len(" ".join(name_lines)) > 180:
+                break
+        raw_name = _clean_object_name(name_lines)
+        if not raw_name or len(raw_name) < 2:
+            continue
+        # Убираем случайно захваченные заголовки/служебные фразы.
+        bad = normalized_search_text(raw_name)
+        if any(token in bad for token in ["адрес объекта", "функциональное назначение", "технико-экономические показатели"]):
+            continue
+        canonical_match = _canonical_from_text(raw_name, objects)
+        # Сохраняем различия между однотипными нумерованными объектами.
+        # Иначе «Выгреб № 1» и «Выгреб № 2» схлопываются в один объект «Выгреб».
+        has_instance_marker = bool(re.search(r"(?:№\s*\d+|\bV\s*=\s*\d)", raw_name, flags=re.I))
+        canonical = raw_name if has_instance_marker else (canonical_match or raw_name)
+        result.append(Finding(
+            document=filename,
+            document_type="ПЗ",
+            page=page_no,
+            parameter_code="OBJECT_ENTRY",
+            parameter_name="Объект в составе проекта",
+            value=None,
+            value_text=raw_name,
+            unit=None,
+            context=f"Позиция {position}: {raw_name}",
+            confidence=0.995,
+            object_hint=canonical,
+            match_method="реестр объектов ПЗ по позиции генплана",
+            structural_zone="Состав сложного объекта",
+            extraction_profile="ПЗ: полный реестр объектов",
+            genplan_position=position,
+        ))
+    return result
+
+
 def _extract_pz_complex_table(page_no: int, text: str, filename: str, parameters: list[dict], objects: list[dict]) -> list[Finding]:
     """Извлекает строки таблицы состава сложного объекта ПЗ.
 
@@ -409,17 +520,21 @@ def extract_findings(
         profile = _profile_name(document_type)
 
         specialized: list[Finding] = []
+        structured_metrics: list[Finding] = []
         if document_type == "ПЗ":
-            specialized = _extract_pz_complex_table(page_no, text, filename, parameters, objects)
+            specialized.extend(_extract_pz_object_registry(page_no, text, filename, objects))
+            structured_metrics = _extract_pz_complex_table(page_no, text, filename, parameters, objects)
+            specialized.extend(structured_metrics)
         elif document_type == "ПЗУ1":
-            specialized = _extract_pzu_building_areas(page_no, text, filename, parameters, objects)
+            structured_metrics = _extract_pzu_building_areas(page_no, text, filename, parameters, objects)
+            specialized.extend(structured_metrics)
         if specialized:
             findings.extend(specialized)
 
         for param in parameters:
-            # На структурированных таблицах используем специализированный извлекатель,
-            # чтобы не создавать ошибочные привязки к соседним строкам.
-            if specialized and param.get("code") != "DOC_NAME":
+            # На таблицах с уже извлечёнными ТЭП используем специализированный извлекатель,
+            # но наличие реестровых записей OBJECT_ENTRY не блокирует обычный поиск характеристик.
+            if structured_metrics and param.get("code") != "DOC_NAME":
                 continue
             # Идентификационные признаки извлекаются один раз на документ.
             if param.get("once_per_document") and param["code"] in identity_added:
@@ -764,6 +879,19 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
         first_text = "\n".join(text for _, text in pages[:3])
         doc_type = classify_document(uploaded.name, first_text, document_types)
         doc_findings = extract_findings(uploaded.name, doc_type, pages, parameters, objects)
-        documents.append({"Файл": uploaded.name, "Тип документа": doc_type, "Страниц": len(pages), "Профиль анализа": _profile_name(doc_type), "Извлечено характеристик": len(doc_findings), "Высокая уверенность": sum(1 for x in doc_findings if x.confidence >= 0.82)})
+        object_positions = {
+            x.genplan_position for x in doc_findings
+            if x.parameter_code == "OBJECT_ENTRY" and x.genplan_position
+        }
+        characteristic_count = sum(1 for x in doc_findings if x.parameter_code != "OBJECT_ENTRY")
+        documents.append({
+            "Файл": uploaded.name,
+            "Тип документа": doc_type,
+            "Страниц": len(pages),
+            "Профиль анализа": _profile_name(doc_type),
+            "Объектов по реестру": len(object_positions),
+            "Извлечено характеристик": characteristic_count,
+            "Высокая уверенность": sum(1 for x in doc_findings if x.parameter_code != "OBJECT_ENTRY" and x.confidence >= 0.82),
+        })
         all_findings.extend(doc_findings)
     return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings, parameters)

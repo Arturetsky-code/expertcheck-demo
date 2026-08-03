@@ -255,7 +255,10 @@ def build_object_summary(findings_df: pd.DataFrame, comparisons_df: pd.DataFrame
             comparison_status[str(object_name)] = "Требует внимания" if has_mismatch else "Согласовано"
     rows = []
     for object_name, group in valid.groupby("object_hint"):
-        characteristics = group["parameter_name"].dropna().astype(str).nunique() if "parameter_name" in group else 0
+        characteristic_group = group
+        if "parameter_code" in group.columns:
+            characteristic_group = group[group["parameter_code"] != "OBJECT_ENTRY"]
+        characteristics = characteristic_group["parameter_name"].dropna().astype(str).nunique() if "parameter_name" in characteristic_group else 0
         sections = group["document_type"].dropna().astype(str).nunique() if "document_type" in group else 0
         rows.append({
             "Объект": object_name,
@@ -269,6 +272,8 @@ def build_object_summary(findings_df: pd.DataFrame, comparisons_df: pd.DataFrame
 
 def object_profile_for_user(findings_df: pd.DataFrame, object_name: str) -> pd.DataFrame:
     view = findings_df[findings_df["object_hint"] == object_name].copy()
+    if "parameter_code" in view.columns:
+        view = view[view["parameter_code"] != "OBJECT_ENTRY"]
     columns = ["genplan_position", "parameter_name", "value_text", "unit", "document_type", "page", "confidence", "context"]
     available = [column for column in columns if column in view.columns]
     result = findings_for_user(view[available])
@@ -283,7 +288,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.5.0"],
+                ["Версия ExpertCheck", "Demo Cloud v0.6.0"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -334,7 +339,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.5.0")
+    st.caption("Demo Cloud v0.6.0")
 
 
 # ---------- Общая шапка ----------
@@ -345,7 +350,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.5.0</div>
+      <div class="ec-badge">Demo Cloud v0.6.0</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -656,7 +661,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.5.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.6.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** сформировать цифровой профиль проекта на уровне отдельных зданий и сооружений и предоставить карточку каждого распознанного объекта.

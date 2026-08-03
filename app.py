@@ -218,6 +218,46 @@ def comparison_counts(comparisons_df: pd.DataFrame) -> tuple[int, int]:
     return mismatches, matches
 
 
+def valid_object_findings(findings_df: pd.DataFrame) -> pd.DataFrame:
+    if findings_df.empty or "object_hint" not in findings_df.columns:
+        return pd.DataFrame()
+    result = findings_df.copy()
+    result["object_hint"] = result["object_hint"].fillna("Не определён").astype(str)
+    return result[result["object_hint"].str.strip().ne("Не определён")]
+
+
+def build_object_summary(findings_df: pd.DataFrame, comparisons_df: pd.DataFrame) -> pd.DataFrame:
+    valid = valid_object_findings(findings_df)
+    if valid.empty:
+        return pd.DataFrame(columns=["Объект", "Характеристик", "Разделов", "Источников", "Статус"])
+    comparison_status = {}
+    if not comparisons_df.empty and {"object", "status"}.issubset(comparisons_df.columns):
+        for object_name, group in comparisons_df.groupby("object"):
+            has_mismatch = bool((group["status"] == "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ").any())
+            comparison_status[str(object_name)] = "Требует внимания" if has_mismatch else "Согласовано"
+    rows = []
+    for object_name, group in valid.groupby("object_hint"):
+        characteristics = group["parameter_name"].dropna().astype(str).nunique() if "parameter_name" in group else 0
+        sections = group["document_type"].dropna().astype(str).nunique() if "document_type" in group else 0
+        rows.append({
+            "Объект": object_name,
+            "Характеристик": characteristics,
+            "Разделов": sections,
+            "Источников": len(group),
+            "Статус": comparison_status.get(str(object_name), "Недостаточно данных для сверки"),
+        })
+    return pd.DataFrame(rows).sort_values(["Статус", "Объект"], kind="stable").reset_index(drop=True)
+
+
+def object_profile_for_user(findings_df: pd.DataFrame, object_name: str) -> pd.DataFrame:
+    view = findings_df[findings_df["object_hint"] == object_name].copy()
+    columns = ["parameter_name", "value_text", "unit", "document_type", "page", "confidence", "context"]
+    available = [column for column in columns if column in view.columns]
+    result = findings_for_user(view[available])
+    preferred = ["Характеристика", "Найденное значение", "Ед. изм.", "Раздел", "Страница", "Уверенность", "Фрагмент документа"]
+    return result[[column for column in preferred if column in result.columns]]
+
+
 def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame) -> bytes:
     mismatch_count, matched_count = comparison_counts(comparisons_df)
     out = io.BytesIO()
@@ -225,7 +265,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.2.1"],
+                ["Версия ExpertCheck", "Demo Cloud v0.2.2"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -236,6 +276,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         )
         summary.to_excel(writer, sheet_name="Сводка", index=False)
         docs_df.to_excel(writer, sheet_name="Документы", index=False)
+        build_object_summary(findings_df, comparisons_df).to_excel(writer, sheet_name="Объекты проекта", index=False)
         findings_for_user(findings_df).to_excel(writer, sheet_name="Характеристики проекта", index=False)
         comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
 
@@ -258,6 +299,7 @@ with st.sidebar:
         "Главная",
         "Проект",
         "Документы",
+        "Объекты проекта",
         "Характеристики проекта",
         "Проверки",
         "Несоответствия",
@@ -273,7 +315,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.2.1")
+    st.caption("Demo Cloud v0.2.2")
 
 
 # ---------- Общая шапка ----------
@@ -284,7 +326,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.2.1</div>
+      <div class="ec-badge">Demo Cloud v0.2.2</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -442,6 +484,64 @@ elif page == "Документы":
         st.dataframe(docs_df, use_container_width=True, hide_index=True)
         st.caption("Тип раздела определяется по имени файла, шифру и содержанию первых страниц.")
 
+# ---------- Объекты проекта ----------
+elif page == "Объекты проекта":
+    st.markdown('<div class="ec-section-title">Объекты проекта</div>', unsafe_allow_html=True)
+    object_summary = build_object_summary(findings_df, comparisons_df)
+    if object_summary.empty:
+        st.info("Объекты появятся после анализа документов. Для распознавания используются наименования из словаря и ближайший текстовый контекст.")
+    else:
+        total_objects = len(object_summary)
+        attention = int((object_summary["Статус"] == "Требует внимания").sum())
+        agreed = int((object_summary["Статус"] == "Согласовано").sum())
+        uncertain = int((object_summary["Статус"] == "Недостаточно данных для сверки").sum())
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Распознано объектов", total_objects)
+        c2.metric("Согласовано", agreed)
+        c3.metric("Требует внимания", attention)
+        c4.metric("Недостаточно данных", uncertain)
+
+        st.markdown('<div class="ec-section-title">Сводный перечень</div>', unsafe_allow_html=True)
+        st.dataframe(object_summary, use_container_width=True, hide_index=True)
+
+        st.markdown('<div class="ec-section-title">Карточка объекта</div>', unsafe_allow_html=True)
+        selected_object = st.selectbox("Выберите объект", object_summary["Объект"].tolist())
+        object_row = object_summary[object_summary["Объект"] == selected_object].iloc[0]
+        profile = findings_df[findings_df["object_hint"] == selected_object].copy()
+        sections = sorted(profile["document_type"].dropna().astype(str).unique().tolist()) if "document_type" in profile else []
+        status = object_row["Статус"]
+        status_class = "ec-status-danger" if status == "Требует внимания" else ("ec-status-ok" if status == "Согласовано" else "ec-status-warn")
+        left, right = st.columns([1.45, 1])
+        with left:
+            html = (
+                '<div class="ec-card">'
+                '<div class="ec-card-title">Наименование объекта</div>'
+                f'<div style="font-size:1.25rem;font-weight:750;color:#172033;">{selected_object}</div>'
+                f'<div class="ec-card-note">Разделы: {", ".join(sections) if sections else "не определены"}</div>'
+                '<hr style="border:none;border-top:1px solid #e5e9f0;margin:1rem 0;">'
+                '<div class="ec-card-title">Статус межраздельной сверки</div>'
+                f'<div class="{status_class}">{status}</div>'
+                '</div>'
+            )
+            st.markdown(html, unsafe_allow_html=True)
+        with right:
+            r1, r2 = st.columns(2)
+            r1.metric("Характеристик", int(object_row["Характеристик"]))
+            r2.metric("Источников", int(object_row["Источников"]))
+
+        st.markdown('<div class="ec-section-title">Характеристики и источники</div>', unsafe_allow_html=True)
+        object_table = object_profile_for_user(findings_df, selected_object)
+        st.dataframe(
+            object_table,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Фрагмент документа": st.column_config.TextColumn(width="large"),
+                "Страница": st.column_config.NumberColumn(format="%d"),
+            },
+        )
+        st.caption("Карточка формируется автоматически. Наименования объектов и привязка характеристик требуют проверки специалистом.")
+
 # ---------- Найденные данные ----------
 elif page == "Характеристики проекта":
     st.markdown('<div class="ec-section-title">Характеристики проекта</div>', unsafe_allow_html=True)
@@ -537,18 +637,18 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.2.1</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.2.2</div>', unsafe_allow_html=True)
     st.markdown(
         """
-        **Назначение версии:** полностью русифицировать пользовательский слой и представить извлечённые сведения как характеристики проекта, а не технические данные парсера.
+        **Назначение версии:** сформировать цифровой профиль проекта на уровне отдельных зданий и сооружений и предоставить карточку каждого распознанного объекта.
 
         **Что изменилось:**
-        - вкладка «Характеристики проекта» вместо технического названия;
-        - русские названия всех пользовательских колонок;
-        - единицы измерения приведены к инженерному виду: м², м³, кВА, кВт, чел.;
-        - вкладки «Проверки» и «Несоответствия» используют инженерную терминологию;
-        - Excel-отчёт полностью русифицирован;
-        - сохранена совместимость как с плоской структурой GitHub, так и с папками `modules` и `config`.
+        - добавлена вкладка «Объекты проекта»;
+        - формируется сводный перечень распознанных зданий и сооружений;
+        - для каждого объекта показываются разделы, характеристики, страницы и фрагменты документов;
+        - отображается предварительный статус межраздельной сверки объекта;
+        - перечень объектов включён в Excel-отчёт;
+        - сохранена полная русификация и совместимость с текущей структурой GitHub.
 
         **Ограничения Demo:**
         - анализируется текстовый слой PDF;

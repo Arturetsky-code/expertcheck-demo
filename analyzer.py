@@ -959,13 +959,22 @@ def _representative_by_document(
     return representatives, ambiguous, rejected
 
 
-def _comparison_rule(parameter: dict) -> dict:
+def _comparison_rule(parameter: dict, engineering_rule: dict | None = None) -> dict:
+    engineering_rule = engineering_rule or {}
     return {
-        "min_confidence": float(parameter.get("comparison_min_confidence", 0.78)),
-        "abs_tolerance": float(parameter.get("comparison_abs_tolerance", 0.01)),
-        "rel_tolerance": float(parameter.get("comparison_rel_tolerance", 0.005)),
-        "documents": set(parameter.get("comparison_documents", [])),
-        "priority": parameter.get("priority", "Средний"),
+        "rule_code": engineering_rule.get("code", ""),
+        "rule_name": engineering_rule.get("name", parameter.get("name", "Проверка характеристики")),
+        "category": engineering_rule.get("category", parameter.get("group", "Общие проверки")),
+        "check_type": engineering_rule.get("check_type", "Межраздельная сверка"),
+        "rationale": engineering_rule.get("rationale", "Проверка согласованности характеристики между разделами."),
+        "failure_message": engineering_rule.get("failure_message", "Значения различаются сверх установленного допуска."),
+        "success_message": engineering_rule.get("success_message", "Значение подтверждено несколькими разделами."),
+        "min_sources": int(engineering_rule.get("min_sources", 2)),
+        "min_confidence": float(engineering_rule.get("min_confidence", parameter.get("comparison_min_confidence", 0.78))),
+        "abs_tolerance": float(engineering_rule.get("abs_tolerance", parameter.get("comparison_abs_tolerance", 0.01))),
+        "rel_tolerance": float(engineering_rule.get("rel_tolerance", parameter.get("comparison_rel_tolerance", 0.005))),
+        "documents": set(engineering_rule.get("documents", parameter.get("comparison_documents", []))),
+        "priority": engineering_rule.get("priority", parameter.get("priority", "Средний")),
     }
 
 
@@ -977,7 +986,7 @@ def _evidence_level(representatives: dict[str, Finding]) -> str:
     return "Низкая"
 
 
-def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[dict]:
+def compare_findings(findings: list[Finding], parameters: list[dict], engineering_rules: list[dict] | None = None) -> list[dict]:
     """Выполняет доказательную межраздельную сверку.
 
     Сравниваются только значения, связанные с одним каноническим объектом,
@@ -985,6 +994,7 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
     применяются собственные допуски и допустимые разделы.
     """
     parameter_map = {p.get("code"): p for p in parameters}
+    engineering_rule_map = {r.get("parameter_code"): r for r in (engineering_rules or []) if r.get("enabled", True)}
     groups: dict[tuple[str, str, str], list[Finding]] = {}
     for finding in findings:
         if finding.parameter_code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} or finding.value is None or finding.object_hint == "Не определён":
@@ -996,7 +1006,7 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
     rows: list[dict] = []
     for (object_hint, code, unit), items in groups.items():
         parameter = parameter_map.get(code, {})
-        rule = _comparison_rule(parameter)
+        rule = _comparison_rule(parameter, engineering_rule_map.get(code))
         eligible_items = [
             x for x in items
             if not rule["documents"] or x.document_type in rule["documents"]
@@ -1008,10 +1018,10 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
             rel_tol=rule["rel_tolerance"],
         )
         involved = set(representatives) | set(ambiguous)
-        if len(involved) < 2:
+        if len(involved) < rule["min_sources"]:
             continue
 
-        check_code = f"CROSS-{code}-{re.sub(r'[^А-Яа-яA-Za-z0-9]+', '-', object_hint).strip('-')[:30]}"
+        check_code = rule["rule_code"] or f"CROSS-{code}-{re.sub(r'[^А-Яа-яA-Za-z0-9]+', '-', object_hint).strip('-')[:30]}"
         base = {
             "check_code": check_code,
             "object": object_hint,
@@ -1019,6 +1029,12 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
             "parameter_name": items[0].parameter_name,
             "unit": unit,
             "priority": rule["priority"],
+            "rule_name": rule["rule_name"],
+            "category": rule["category"],
+            "check_type": rule["check_type"],
+            "rationale": rule["rationale"],
+            "expected_documents": ", ".join(sorted(rule["documents"])),
+            "tolerance": f"абс. {rule["abs_tolerance"]:g}; отн. {rule["rel_tolerance"]:.3%}",
             "evidence_level": _evidence_level(representatives),
             "evidence_count": len(representatives),
             "rejected_count": sum(len(v) for v in rejected.values()),
@@ -1042,6 +1058,7 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
                 "document_values": " | ".join(source_parts),
                 "sources": " | ".join(source_parts),
                 "comment": "В одном из разделов есть несколько равноценных значений. Нужен выбор корректного источника.",
+                "explanation": f"Правило {check_code}: {rule['rationale']} В одном разделе обнаружены конкурирующие значения.",
             })
             continue
 
@@ -1070,9 +1087,11 @@ def compare_findings(findings: list[Finding], parameters: list[dict]) -> list[di
                 f"{doc}, стр. {item.page}: {item.value_text}"
                 for doc, item in sorted(representatives.items())
             ),
-            "comment": (
-                "Подтверждённые значения в разделах отличаются сверх установленного допуска."
-                if mismatch else "Значение подтверждено минимум в двух разделах в пределах допуска."
+            "comment": rule["failure_message"] if mismatch else rule["success_message"],
+            "explanation": (
+                f"Правило {check_code} «{rule['rule_name']}». {rule['rationale']} "
+                f"Сравнены разделы: {', '.join(sorted(representatives))}. "
+                f"Допуск: абсолютный {rule['abs_tolerance']:g}, относительный {rule['rel_tolerance']:.3%}."
             ),
         })
 
@@ -1091,6 +1110,8 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
     parameters = load_json(config_dir / "parameters.json")
     document_types = load_json(config_dir / "document_types.json")
     objects = load_json(config_dir / "objects.json")
+    rules_path = config_dir / "engineering_rules.json"
+    engineering_rules = load_json(rules_path) if rules_path.exists() else []
     documents = []
     all_findings: list[Finding] = []
     for uploaded in files:
@@ -1113,4 +1134,4 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
             "Высокая уверенность": sum(1 for x in doc_findings if x.parameter_code not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} and x.confidence >= 0.82),
         })
         all_findings.extend(doc_findings)
-    return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings, parameters)
+    return documents, [f.to_dict() for f in all_findings], compare_findings(all_findings, parameters, engineering_rules)

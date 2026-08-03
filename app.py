@@ -187,6 +187,13 @@ DISPLAY_FINDING_COLUMNS = {
 
 DISPLAY_COMPARISON_COLUMNS = {
     "check_code": "Код проверки",
+    "rule_name": "Правило проверки",
+    "category": "Категория",
+    "check_type": "Тип проверки",
+    "rationale": "Что проверяется",
+    "expected_documents": "Ожидаемые разделы",
+    "tolerance": "Допуск",
+    "explanation": "Объяснение результата",
     "object": "Объект",
     "parameter_code": "Код характеристики",
     "parameter_name": "Характеристика",
@@ -422,13 +429,15 @@ def apply_confirmed_registry(findings_df: pd.DataFrame, registry_df: pd.DataFram
 
 def recompute_comparisons(findings_df: pd.DataFrame) -> pd.DataFrame:
     parameters = load_json(CONFIG_DIR / "parameters.json")
+    rules_path = CONFIG_DIR / "engineering_rules.json"
+    engineering_rules = load_json(rules_path) if rules_path.exists() else []
     objects = []
     for row in findings_df.to_dict("records"):
         payload = {field: row.get(field) for field in Finding.__dataclass_fields__}
         payload["page"] = int(payload.get("page") or 0)
         payload["confidence"] = float(payload.get("confidence") or 0)
         objects.append(Finding(**payload))
-    return pd.DataFrame(compare_findings(objects, parameters))
+    return pd.DataFrame(compare_findings(objects, parameters, engineering_rules))
 
 
 def registry_coverage(registry_df: pd.DataFrame) -> pd.DataFrame:
@@ -597,6 +606,7 @@ def build_review_register(comparisons_df: pd.DataFrame, existing: list[dict] | N
     columns = [
         "Ключ", "Включить в отчёт", "Объект", "Характеристика", "Автоматический результат",
         "Рабочий статус", "Приоритет", "Ответственный раздел", "Комментарий проверяющего",
+        "Категория", "Правило проверки", "Объяснение системы",
         "Разделы-источники", "Значения по разделам", "Источники", "Код проверки",
     ]
     if comparisons_df.empty:
@@ -626,6 +636,9 @@ def build_review_register(comparisons_df: pd.DataFrame, existing: list[dict] | N
             "Приоритет": priority,
             "Ответственный раздел": str(old.get("Ответственный раздел") or "Не назначен"),
             "Комментарий проверяющего": str(old.get("Комментарий проверяющего") or ""),
+            "Категория": str(row.get("category", "") or ""),
+            "Правило проверки": str(row.get("rule_name", "") or ""),
+            "Объяснение системы": str(row.get("explanation", "") or row.get("rationale", "") or ""),
             "Разделы-источники": str(row.get("documents", "") or ""),
             "Значения по разделам": str(row.get("document_values", "") or ""),
             "Источники": str(row.get("sources", "") or ""),
@@ -659,6 +672,28 @@ def parameter_metadata() -> dict[str, dict]:
         return {str(item.get("code")): item for item in load_json(CONFIG_DIR / "parameters.json")}
     except Exception:
         return {}
+
+
+def engineering_rule_catalog() -> pd.DataFrame:
+    path = CONFIG_DIR / "engineering_rules.json"
+    if not path.exists():
+        return pd.DataFrame()
+    rows = []
+    for rule in load_json(path):
+        if not rule.get("enabled", True):
+            continue
+        rows.append({
+            "Код": rule.get("code", ""),
+            "Категория": rule.get("category", ""),
+            "Правило": rule.get("name", ""),
+            "Характеристика": rule.get("parameter_code", ""),
+            "Разделы": " ↔ ".join(rule.get("documents", [])),
+            "Минимум источников": rule.get("min_sources", 2),
+            "Допуск": f"абс. {float(rule.get('abs_tolerance', 0)):g}; отн. {float(rule.get('rel_tolerance', 0)):.3%}",
+            "Приоритет": rule.get("priority", "Средний"),
+            "Логика": rule.get("rationale", ""),
+        })
+    return pd.DataFrame(rows)
 
 
 def build_object_passport(object_name: str, genplan_position: str, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame) -> pd.DataFrame:
@@ -1157,12 +1192,44 @@ elif page == "Проверки":
     if comparisons_df.empty:
         st.info("Не найдено характеристик, которые удалось сопоставить минимум в двух разделах.")
     else:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Всего сравнений", len(comparisons_df))
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Выполнено проверок", len(comparisons_df))
         c2.metric("Совпадает", matched_count)
-        c3.metric("Требует проверки", mismatch_count)
-        st.dataframe(comparisons_for_user(comparisons_df), use_container_width=True, hide_index=True)
-        st.warning("Автоматический результат является предварительным и требует подтверждения специалистом.")
+        c3.metric("Расхождений", mismatch_count)
+        c4.metric("Требует уточнения", clarification_count(comparisons_df))
+
+        f1, f2, f3 = st.columns(3)
+        categories = sorted(comparisons_df.get("category", pd.Series(dtype=str)).dropna().astype(str).unique())
+        statuses = sorted(comparisons_df.get("status", pd.Series(dtype=str)).dropna().astype(str).unique())
+        objects_filter = sorted(comparisons_df.get("object", pd.Series(dtype=str)).dropna().astype(str).unique())
+        with f1:
+            selected_categories = st.multiselect("Категории", categories, default=categories)
+        with f2:
+            selected_statuses = st.multiselect("Результаты", statuses, default=statuses)
+        with f3:
+            selected_objects = st.multiselect("Объекты", objects_filter)
+        checks_view = comparisons_df.copy()
+        if selected_categories and "category" in checks_view:
+            checks_view = checks_view[checks_view["category"].isin(selected_categories)]
+        if selected_statuses and "status" in checks_view:
+            checks_view = checks_view[checks_view["status"].isin(selected_statuses)]
+        if selected_objects and "object" in checks_view:
+            checks_view = checks_view[checks_view["object"].isin(selected_objects)]
+
+        primary_cols = [
+            "check_code", "category", "rule_name", "object", "parameter_name",
+            "status", "priority", "document_values", "tolerance", "explanation"
+        ]
+        primary_cols = [c for c in primary_cols if c in checks_view.columns]
+        st.dataframe(comparisons_for_user(checks_view[primary_cols]), use_container_width=True, hide_index=True)
+
+        with st.expander("Каталог инженерных правил", expanded=False):
+            catalog = engineering_rule_catalog()
+            if catalog.empty:
+                st.info("Каталог правил не найден.")
+            else:
+                st.dataframe(catalog, use_container_width=True, hide_index=True)
+        st.warning("Автоматический результат является предварительным. Система показывает правило, источники, допуск и объяснение, но окончательное решение принимает специалист.")
 
 # ---------- Реестр замечаний ----------
 elif page == "Замечания":
@@ -1186,7 +1253,7 @@ elif page == "Замечания":
             key="review_register_editor",
             use_container_width=True,
             hide_index=True,
-            disabled=["Ключ", "Объект", "Характеристика", "Автоматический результат", "Разделы-источники", "Значения по разделам", "Источники", "Код проверки"],
+            disabled=["Ключ", "Объект", "Характеристика", "Автоматический результат", "Категория", "Правило проверки", "Объяснение системы", "Разделы-источники", "Значения по разделам", "Источники", "Код проверки"],
             column_config={
                 "Ключ": None,
                 "Включить в отчёт": st.column_config.CheckboxColumn("В отчёт", help="Включить запись в итоговый реестр замечаний"),
@@ -1197,6 +1264,9 @@ elif page == "Замечания":
                 "Приоритет": st.column_config.SelectboxColumn("Приоритет", options=REVIEW_PRIORITIES, required=True, width="small"),
                 "Ответственный раздел": st.column_config.SelectboxColumn("Ответственный раздел", options=REVIEW_SECTIONS, required=True, width="medium"),
                 "Комментарий проверяющего": st.column_config.TextColumn("Комментарий проверяющего", width="large"),
+                "Категория": st.column_config.TextColumn("Категория", width="medium"),
+                "Правило проверки": st.column_config.TextColumn("Правило проверки", width="large"),
+                "Объяснение системы": st.column_config.TextColumn("Объяснение системы", width="large"),
                 "Разделы-источники": st.column_config.TextColumn("Разделы", width="medium"),
                 "Значения по разделам": st.column_config.TextColumn("Значения по разделам", width="large"),
                 "Источники": st.column_config.TextColumn("Источники", width="large"),
@@ -1226,7 +1296,7 @@ elif page == "Замечания":
         saved_or_edited = edited_review
         included = saved_or_edited[saved_or_edited["Включить в отчёт"].fillna(False).astype(bool)]
         with st.expander(f"Предварительный итоговый реестр: {len(included)} записей", expanded=False):
-            cols = ["Объект", "Характеристика", "Рабочий статус", "Приоритет", "Ответственный раздел", "Комментарий проверяющего", "Значения по разделам"]
+            cols = ["Объект", "Категория", "Правило проверки", "Характеристика", "Рабочий статус", "Приоритет", "Ответственный раздел", "Комментарий проверяющего", "Значения по разделам"]
             st.dataframe(included[[c for c in cols if c in included.columns]], use_container_width=True, hide_index=True)
 
 # ---------- Отчёт ----------
@@ -1243,7 +1313,7 @@ elif page == "Отчёт":
             """
             <div class="ec-card">
                 <div style="font-size:1.05rem;font-weight:720;color:#172033;">Excel-отчёт ExpertCheck</div>
-                <div class="ec-card-note">Сводка, документы, подтверждённый перечень объектов, характеристики, автоматические проверки и управляемый реестр замечаний.</div>
+                <div class="ec-card-note">Сводка, документы, подтверждённый перечень объектов, цифровые паспорта, объяснимые инженерные проверки и управляемый реестр замечаний.</div>
             </div>
             """,
             unsafe_allow_html=True,

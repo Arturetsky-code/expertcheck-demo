@@ -1,0 +1,223 @@
+[
+  {
+    "code": "EC-R-001",
+    "name": "Соответствие площади застройки",
+    "category": "Технико-экономические показатели",
+    "parameter_code": "AREA_BUILD",
+    "documents": [
+      "ПЗ",
+      "ПЗУ1",
+      "АР1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.1,
+    "rel_tolerance": 0.001,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Площадь застройки одного объекта должна быть согласована между ПЗ, ПЗУ и АР.",
+    "failure_message": "Площадь застройки объекта различается между разделами сверх установленного допуска.",
+    "success_message": "Площадь застройки подтверждена минимум в двух разделах.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-002",
+    "name": "Соответствие общей площади",
+    "category": "Технико-экономические показатели",
+    "parameter_code": "AREA_TOTAL",
+    "documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.1,
+    "rel_tolerance": 0.001,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Общая площадь здания должна совпадать в ПЗ и архитектурных решениях.",
+    "failure_message": "Общая площадь здания различается между ПЗ и АР.",
+    "success_message": "Общая площадь подтверждена в ПЗ и АР.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-003",
+    "name": "Соответствие строительного объёма",
+    "category": "Технико-экономические показатели",
+    "parameter_code": "VOLUME_BUILD",
+    "documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 1.0,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Строительный объём должен быть согласован между ПЗ и АР.",
+    "failure_message": "Строительный объём объекта различается между разделами.",
+    "success_message": "Строительный объём подтверждён в двух разделах.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-004",
+    "name": "Соответствие высоты здания или сооружения",
+    "category": "Геометрические характеристики",
+    "parameter_code": "HEIGHT_BUILD",
+    "documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.05,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.8,
+    "priority": "Средний",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Высота одного объекта должна быть одинаково отражена в ПЗ и АР.",
+    "failure_message": "Высота объекта различается между ПЗ и АР.",
+    "success_message": "Высота объекта подтверждена в двух разделах.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-005",
+    "name": "Соответствие этажности",
+    "category": "Геометрические характеристики",
+    "parameter_code": "FLOORS",
+    "documents": [
+      "ПЗ",
+      "АР1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.0,
+    "rel_tolerance": 0.0,
+    "min_confidence": 0.8,
+    "priority": "Средний",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Этажность объекта должна совпадать в ПЗ и АР.",
+    "failure_message": "Этажность объекта указана по-разному.",
+    "success_message": "Этажность объекта согласована.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-006",
+    "name": "Соответствие производительности",
+    "category": "Технологические показатели",
+    "parameter_code": "CAPACITY",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.01,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Проектная производительность должна быть одинаково отражена в ПЗ и ТХ.",
+    "failure_message": "Производительность различается между ПЗ и ТХ.",
+    "success_message": "Производительность подтверждена в ПЗ и ТХ.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-007",
+    "name": "Соответствие численности персонала",
+    "category": "Технологические показатели",
+    "parameter_code": "STAFF",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.0,
+    "rel_tolerance": 0.0,
+    "min_confidence": 0.78,
+    "priority": "Средний",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Численность персонала должна быть согласована между ПЗ и ТХ.",
+    "failure_message": "Численность персонала различается между разделами.",
+    "success_message": "Численность персонала согласована.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-008",
+    "name": "Соответствие объёма резервуара",
+    "category": "Инженерное обеспечение",
+    "parameter_code": "RES_VOLUME",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.1,
+    "rel_tolerance": 0.001,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Объём резервуаров должен быть одинаково указан в общих и технологических решениях.",
+    "failure_message": "Объём резервуара различается между разделами.",
+    "success_message": "Объём резервуара подтверждён двумя источниками.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-009",
+    "name": "Соответствие мощности КТП",
+    "category": "Электроснабжение",
+    "parameter_code": "POWER_KTP",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 1.0,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.78,
+    "priority": "Высокий",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Мощность КТП должна быть согласована между общими и технологическими решениями.",
+    "failure_message": "Мощность КТП различается между разделами.",
+    "success_message": "Мощность КТП подтверждена двумя источниками.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-010",
+    "name": "Соответствие установленной мощности",
+    "category": "Электроснабжение",
+    "parameter_code": "POWER_INST",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.1,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.78,
+    "priority": "Средний",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Установленная мощность должна быть согласована между разделами.",
+    "failure_message": "Установленная мощность различается между разделами.",
+    "success_message": "Установленная мощность подтверждена двумя источниками.",
+    "enabled": true
+  },
+  {
+    "code": "EC-R-011",
+    "name": "Соответствие расчётной мощности",
+    "category": "Электроснабжение",
+    "parameter_code": "POWER_CALC",
+    "documents": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "min_sources": 2,
+    "abs_tolerance": 0.1,
+    "rel_tolerance": 0.002,
+    "min_confidence": 0.78,
+    "priority": "Средний",
+    "check_type": "Межраздельная сверка",
+    "rationale": "Расчётная мощность должна быть согласована между разделами.",
+    "failure_message": "Расчётная мощность различается между разделами.",
+    "success_message": "Расчётная мощность подтверждена двумя источниками.",
+    "enabled": true
+  }
+]

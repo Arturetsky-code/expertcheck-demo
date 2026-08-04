@@ -126,7 +126,7 @@ def _enrich_rules(comparisons: list[dict], registry: KnowledgeRegistry) -> None:
             item["explanation"] = engine.explain(rule, {"values": item.get("document_values", "")})
 
 
-def analyze_uploaded_core(files, config_dir):
+def analyze_uploaded_core(files, config_dir, progress_callback=None):
     """Переходный конвейер Core 2.1 Alpha 1.
 
     Legacy Analyzer пока выполняет проверенную предметную логику извлечения.
@@ -135,13 +135,24 @@ def analyze_uploaded_core(files, config_dir):
     """
     import legacy_analyzer as legacy
 
+    def progress(value: int, stage: str, detail: str = "") -> None:
+        if progress_callback:
+            try:
+                progress_callback(max(0, min(100, int(value))), stage, detail)
+            except Exception:
+                pass
+
+    progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
+
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
     pdf_files = [f for f in files if str(getattr(f, "name", "")).lower().endswith(".pdf")]
     xml_files = [f for f in files if str(getattr(f, "name", "")).lower().endswith(".xml")]
     if pdf_files:
+        progress(10, "Извлечение данных", f"Обрабатываем PDF: {len(pdf_files)}")
         documents, findings, comparisons = legacy.analyze_uploaded(pdf_files, config_dir)
     else:
         documents, findings, comparisons = [], [], []
+    progress(38, "Чтение XML", f"Структурированных файлов: {len(xml_files)}")
     xml_documents, xml_findings, xml_warnings = XmlEngine().parse_uploaded(xml_files)
     documents.extend(xml_documents)
     findings.extend(xml_findings)
@@ -152,6 +163,7 @@ def analyze_uploaded_core(files, config_dir):
     comparisons.extend(pdf_xml_checks)
     comparisons.extend(cross_section_checks)
 
+    progress(48, "Нормализация", "Приводим объекты, характеристики и единицы к единой модели")
     root = Path(config_dir)
     registry = KnowledgeRegistry(root / "knowledge")
     table_engine = TableEngine(
@@ -159,6 +171,7 @@ def analyze_uploaded_core(files, config_dir):
         registry.load_json("core/parameter_catalog.json", []),
     )
     document_types = {str(doc.get("Файл", "")): str(doc.get("Раздел", doc.get("Тип документа", ""))) for doc in documents}
+    progress(58, "Реестр объектов", "Извлекаем экспликации и позиции генерального плана")
     gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
     findings.extend(gp_findings)
     page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
@@ -189,6 +202,7 @@ def analyze_uploaded_core(files, config_dir):
         item["engineering_risk_reasons"] = risk["reasons"]
 
     # Реестр объектов строится отдельным движком и сопровождается журналом решений.
+    progress(70, "Консолидация реестра", "Сопоставляем ПЗ, генплан, XML и профильные разделы")
     object_registry, object_register_audit = build_registry(findings)
     consolidated_registry, reconciliation_audit = reconcile_register(findings)
     object_passports = build_object_passports(object_registry, findings, comparisons)
@@ -196,6 +210,7 @@ def analyze_uploaded_core(files, config_dir):
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
+    progress(82, "Межраздельная сверка", "Сравниваем инженерные характеристики и формируем объяснения")
     dem = build_dem(findings, project_name="Новый проект")
     validation_issues = ValidationEngine().validate(dem)
     relations = RelationEngine().build(dem)
@@ -207,6 +222,7 @@ def analyze_uploaded_core(files, config_dir):
     for filename, _page in page_tables:
         table_pages_by_doc[filename] += 1
 
+    progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
         item["core_version"] = "3.0-alpha4"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
@@ -260,4 +276,5 @@ def analyze_uploaded_core(files, config_dir):
         doc["object_passport_summary"] = object_passport_summary
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
+    progress(100, "Готово", "Проверка проекта завершена")
     return documents, findings, comparisons

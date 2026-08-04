@@ -24,8 +24,10 @@ except ModuleNotFoundError:
 
 try:
     from core.object_register_engine import build_registry as build_core_registry
+    from core.passport_engine import build_object_passports as build_core_passports
 except ModuleNotFoundError:
     build_core_registry = None
+    build_core_passports = None
 
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
 
@@ -500,6 +502,17 @@ def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
     if stored:
         return pd.DataFrame(stored)
     return build_candidate_registry(findings_df)
+
+
+def build_passports_for_ui(registry_df: pd.DataFrame, findings_df: pd.DataFrame, comparisons_df: pd.DataFrame):
+    if build_core_passports is None or registry_df.empty:
+        return []
+    return build_core_passports(
+        registry_df.to_dict("records"),
+        findings_df.to_dict("records"),
+        comparisons_df.to_dict("records"),
+    )
+
 
 
 REVIEW_STATUSES = [
@@ -1076,31 +1089,38 @@ elif page == "Объекты":
             with right:
                 srcs = selected_row.get("Источники", "—")
                 st.markdown(f"""<div class="ec-card"><div class="ec-card-title">Наименование объекта</div><div style="font-size:1.18rem;font-weight:750;color:#172033;">{selected}</div><div class="ec-card-note">Источники: {srcs}</div></div>""", unsafe_allow_html=True)
-            profile = characteristic_findings(findings_df)
             position = str(selected_row.get("Позиция по ГП") or "").strip()
+            passports = build_passports_for_ui(confirmed, findings_df, comparisons_df)
+            passport_obj = next((item for item in passports if item.position == position and item.name == selected), None)
+            profile = characteristic_findings(findings_df)
             by_name = profile["object_hint"].fillna("").astype(str).map(_norm_object_key) == _norm_object_key(selected)
             by_position = profile["genplan_position"].fillna("").astype(str).str.strip().eq(position) if position else pd.Series(False, index=profile.index)
             object_profile = profile[by_name | by_position]
-            passport = build_object_passport(selected, position, findings_df, comparisons_df)
-            if passport.empty:
-                st.info("Для объекта пока не удалось надёжно извлечь характеристики.")
+            if passport_obj is None:
+                st.info("Для объекта пока не удалось сформировать цифровой паспорт.")
             else:
-                pm = object_profile_metrics(passport)
+                st.markdown("#### Подтверждение по разделам")
+                matrix = pd.DataFrame([passport_obj.confirmation_matrix])
+                st.dataframe(matrix, use_container_width=True, hide_index=True)
+                chars = pd.DataFrame([item.to_dict() for item in passport_obj.characteristics])
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Характеристик", pm["total"])
-                m2.metric("Подтверждено", pm["confirmed"])
-                m3.metric("Требует внимания", pm["mismatch"])
-                m4.metric("Недостаточно данных", pm["insufficient"])
+                m1.metric("Характеристик", len(chars))
+                m2.metric("Связано извлечений", passport_obj.linked_findings)
+                m3.metric("Источников", len(passport_obj.registry_sources))
+                m4.metric("Полнота паспорта", f"{passport_obj.passport_completeness:.0f}%")
                 st.markdown("#### Цифровой паспорт объекта")
-                st.dataframe(
-                    passport, use_container_width=True, hide_index=True,
-                    column_config={
-                        "Группа": st.column_config.TextColumn(width="medium"),
-                        "Характеристика": st.column_config.TextColumn(width="large"),
-                        "Источники": st.column_config.TextColumn(width="large"),
-                    },
-                )
-                with st.expander("Диагностика исходных извлечений", expanded=False):
+                if chars.empty:
+                    st.info("Для объекта пока не удалось надёжно извлечь характеристики.")
+                else:
+                    display = chars.rename(columns={
+                        "parameter_name": "Характеристика", "unit": "Ед. изм.",
+                        "values_by_section": "Значения по разделам", "pages_by_section": "Страницы",
+                        "confidence": "Уверенность", "status": "Статус",
+                        "evidence_count": "Извлечений", "source_count": "Источников",
+                    })
+                    st.dataframe(display[[c for c in ["Характеристика", "Ед. изм.", "Значения по разделам", "Страницы", "Статус", "Уверенность", "Источников"] if c in display.columns]], use_container_width=True, hide_index=True)
+                with st.expander("Варианты наименования и диагностика", expanded=False):
+                    st.write("**Варианты наименования:**", "; ".join(passport_obj.aliases) or "не определены")
                     st.dataframe(findings_for_user(object_profile), use_container_width=True, hide_index=True)
 
 # ---------- Найденные данные ----------

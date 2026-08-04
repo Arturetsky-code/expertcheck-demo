@@ -21,6 +21,7 @@ from .passport_engine import build_object_passports, passport_summary
 from .general_plan_engine import GeneralPlanRegisterEngine
 from .register_reconciliation import reconcile_register
 from .project_profiles import ProjectProfileRegistry
+from .xml_engine import XmlEngine
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -132,8 +133,16 @@ def analyze_uploaded_core(files, config_dir):
     """
     import legacy_analyzer as legacy
 
-    # Важно: legacy возвращает документы, находки, сравнения именно в таком порядке.
-    documents, findings, comparisons = legacy.analyze_uploaded(files, config_dir)
+    # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
+    pdf_files = [f for f in files if str(getattr(f, "name", "")).lower().endswith(".pdf")]
+    xml_files = [f for f in files if str(getattr(f, "name", "")).lower().endswith(".xml")]
+    if pdf_files:
+        documents, findings, comparisons = legacy.analyze_uploaded(pdf_files, config_dir)
+    else:
+        documents, findings, comparisons = [], [], []
+    xml_documents, xml_findings, xml_warnings = XmlEngine().parse_uploaded(xml_files)
+    documents.extend(xml_documents)
+    findings.extend(xml_findings)
 
     root = Path(config_dir)
     registry = KnowledgeRegistry(root / "knowledge")
@@ -142,9 +151,9 @@ def analyze_uploaded_core(files, config_dir):
         registry.load_json("core/parameter_catalog.json", []),
     )
     document_types = {str(doc.get("Файл", "")): str(doc.get("Раздел", doc.get("Тип документа", ""))) for doc in documents}
-    gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(files, document_types)
+    gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
     findings.extend(gp_findings)
-    page_tables = _best_table_by_page(files, legacy, table_engine, document_types)
+    page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
 
     for item in findings:
         table_info = page_tables.get((item.get("document"), int(item.get("page") or 0)), {})
@@ -159,7 +168,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.4-sprint2-alpha2"
+        item["core_version"] = "3.0-alpha1"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -191,15 +200,16 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.4-sprint2-alpha2"
+        item["core_version"] = "3.0-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "2.4-sprint2-alpha2"
+        doc["core_version"] = "3.0-alpha1"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
+        doc["xml_engine_summary"] = {"files": len(xml_files), "findings": len(xml_findings), "warnings": xml_warnings}
         doc["quality_summary"] = quality_summary
         doc["dem_summary"] = dem.metadata
         doc["dem_model_quality"] = model_quality

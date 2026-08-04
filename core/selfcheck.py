@@ -7,7 +7,8 @@ REQUIRED_ROOT = [
     "document_types.json", "engineering_rules.json",
 ]
 REQUIRED_CORE = [
-    "__init__.py", "pipeline.py", "catalogs.py", "confidence.py",
+    "__init__.py", "pipeline.py",
+        "xml_engine.py", "catalogs.py", "confidence.py",
     "rule_engine.py", "semantic_engine.py", "table_engine.py",
         "model_quality.py",
         "relations.py",

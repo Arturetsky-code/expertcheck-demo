@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 # Поддержка обеих структур репозитория:
 # 1) analyzer.py и JSON в корне;
@@ -14,9 +19,8 @@ import streamlit as st
 try:
     from analyzer import Finding, analyze_uploaded, compare_findings, load_json
 except ModuleNotFoundError:
-    from analyzer import Finding, analyze_uploaded, compare_findings, load_json
+    from modules.analyzer import Finding, analyze_uploaded, compare_findings, load_json
 
-BASE_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
 
 st.set_page_config(

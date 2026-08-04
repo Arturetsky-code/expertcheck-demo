@@ -1,0 +1,189 @@
+[
+  {
+    "id": "DOC_NAME",
+    "name": "Наименование объекта",
+    "unit": null,
+    "aliases": [
+      "площадка дробильно-сортировочного комплекса"
+    ],
+    "group": "Идентификация",
+    "comparable_with": [],
+    "priority": "Низкий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "AREA_BUILD",
+    "name": "Площадь застройки",
+    "unit": "м²",
+    "aliases": [
+      "площадь застройки"
+    ],
+    "group": "Геометрия",
+    "comparable_with": [
+      "ПЗ",
+      "ПЗУ1",
+      "АР1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "AREA_TOTAL",
+    "name": "Общая площадь",
+    "unit": "м²",
+    "aliases": [
+      "общая площадь"
+    ],
+    "group": "Геометрия",
+    "comparable_with": [
+      "ПЗ",
+      "АР1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "VOLUME_BUILD",
+    "name": "Строительный объём",
+    "unit": "м³",
+    "aliases": [
+      "строительный объем",
+      "строительный объём"
+    ],
+    "group": "Геометрия",
+    "comparable_with": [
+      "ПЗ",
+      "АР1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "HEIGHT_BUILD",
+    "name": "Высота здания (сооружения)",
+    "unit": "м",
+    "aliases": [
+      "высота здания",
+      "высота сооружения",
+      "высота объекта"
+    ],
+    "group": "Геометрия",
+    "comparable_with": [
+      "ПЗ",
+      "АР1"
+    ],
+    "priority": "Средний",
+    "source": "legacy migration"
+  },
+  {
+    "id": "CAPACITY",
+    "name": "Производительность",
+    "unit": null,
+    "aliases": [
+      "производительность"
+    ],
+    "group": "Технология",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "RES_VOLUME",
+    "name": "Объём резервуара",
+    "unit": "м³",
+    "aliases": [
+      "объем резервуара",
+      "объём резервуара"
+    ],
+    "group": "Водоснабжение",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "POWER_KTP",
+    "name": "Мощность КТП",
+    "unit": null,
+    "aliases": [
+      "мощность ктп",
+      "мощность трансформатора"
+    ],
+    "group": "Электроснабжение",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Высокий",
+    "source": "legacy migration"
+  },
+  {
+    "id": "POWER_INST",
+    "name": "Установленная мощность",
+    "unit": null,
+    "aliases": [
+      "установленная мощность"
+    ],
+    "group": "Электроснабжение",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Средний",
+    "source": "legacy migration"
+  },
+  {
+    "id": "POWER_CALC",
+    "name": "Расчётная мощность",
+    "unit": null,
+    "aliases": [
+      "расчетная мощность",
+      "расчётная мощность"
+    ],
+    "group": "Электроснабжение",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Средний",
+    "source": "legacy migration"
+  },
+  {
+    "id": "STAFF",
+    "name": "Численность персонала",
+    "unit": "чел.",
+    "aliases": [
+      "численность работающих",
+      "количество работающих",
+      "численность персонала"
+    ],
+    "group": "Технология",
+    "comparable_with": [
+      "ПЗ",
+      "ТХ1"
+    ],
+    "priority": "Средний",
+    "source": "legacy migration"
+  },
+  {
+    "id": "FLOORS",
+    "name": "Этажность",
+    "unit": "эт.",
+    "aliases": [
+      "этажность",
+      "число этажей"
+    ],
+    "group": "Геометрия",
+    "comparable_with": [
+      "ПЗ",
+      "АР1"
+    ],
+    "priority": "Средний",
+    "source": "legacy migration"
+  }
+]

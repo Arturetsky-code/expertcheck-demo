@@ -489,6 +489,7 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
         "Включить", "Позиция по ГП", "Родительская позиция", "Наименование объекта", "Количество",
         "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы",
         "Исходные наименования", "Способ объединения", "Приоритет источника",
+        "В ПЗ", "В экспликации ГП", "На поле генплана", "Конфликт источников",
         "Решение инспектора", "Причины решения",
     ]
     if findings_df.empty or build_core_registry is None:
@@ -969,14 +970,15 @@ elif page == "Объекты":
         confirmed_count = int(source_df["Статус"].astype(str).str.startswith("Подтверждено").sum()) if "Статус" in source_df else 0
         review_count = int(source_df["Статус"].astype(str).str.contains("уточн|подтверждения", case=False).sum()) if "Статус" in source_df else 0
         auto_merged = int(source_df.get("Способ объединения", pd.Series(dtype=str)).astype(str).str.contains("совпадение наименования", case=False).sum())
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("Позиций по ГП", int(source_df["Позиция по ГП"].astype(str).str.strip().ne("").sum()))
         c2.metric("Физических объектов", physical_count)
         c3.metric("Подтверждено", confirmed_count)
         c4.metric("Объединено автоматически", auto_merged)
         c5.metric("Требует внимания", review_count)
+        c6.metric("Нет в ПЗ", int((source_df.get("В экспликации ГП", False).fillna(False).astype(bool) & ~source_df.get("В ПЗ", False).fillna(False).astype(bool)).sum()) if "В экспликации ГП" in source_df else 0)
 
-        st.info("Записи без позиции по генплану автоматически присоединяются к позиции с совпадающим наименованием. После подтверждения перечень применяется к характеристикам и межраздельным проверкам.")
+        st.info("Реестр консолидируется из ПЗ и генерального плана. Объект из экспликации ПЗУ2 включается даже при отсутствии в ПЗ и помечается для проверки.")
         mapping_stats = st.session_state.get("registry_application_stats")
         if registry_confirmed and mapping_stats:
             s1, s2, s3, s4 = st.columns(4)
@@ -1001,13 +1003,19 @@ elif page == "Объекты":
                 use_container_width=True, hide_index=True,
             )
 
+        with st.expander("Сверка ПЗ ↔ генеральный план", expanded=True):
+            compare_cols = ["Позиция по ГП", "Наименование объекта", "В ПЗ", "В экспликации ГП", "На поле генплана", "Конфликт источников", "Статус"]
+            compare_view = source_df[[c for c in compare_cols if c in source_df.columns]].copy()
+            st.dataframe(compare_view, use_container_width=True, hide_index=True)
+            st.caption("На текущем этапе поле чертежа проверяется по текстовому/векторному слою PDF. Графическое распознавание контуров будет отдельным этапом Drawing Engine.")
+
         edited = st.data_editor(
             source_df,
             key="object_registry_editor",
             use_container_width=True,
             hide_index=True,
             num_rows="dynamic",
-            disabled=["Статус количества", "Основание количества", "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения", "Приоритет источника", "Решение инспектора", "Причины решения"],
+            disabled=["Статус количества", "Основание количества", "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения", "Приоритет источника", "В ПЗ", "В экспликации ГП", "На поле генплана", "Конфликт источников", "Решение инспектора", "Причины решения"],
             column_config={
                 "Включить": st.column_config.CheckboxColumn("Включить", help="Использовать объект в цифровом профиле"),
                 "Позиция по ГП": st.column_config.TextColumn("Позиция по ГП", width="small"),
@@ -1217,7 +1225,7 @@ elif page == "Замечания":
         st.success("Потенциальные расхождения и неопределённые результаты для включения в реестр не найдены.")
     else:
         metrics = review_metrics(review_df)
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("Записей", metrics["total"])
         c2.metric("В работе", metrics["work"])
         c3.metric("Подтверждено", metrics["confirmed"])

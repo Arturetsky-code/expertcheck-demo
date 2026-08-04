@@ -18,6 +18,7 @@ from .knowledge_base import KnowledgeBase
 from .risk_engine import calculate_engineering_risk
 from .object_register_engine import build_registry
 from .passport_engine import build_object_passports, passport_summary
+from .general_plan_engine import GeneralPlanRegisterEngine
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -139,6 +140,8 @@ def analyze_uploaded_core(files, config_dir):
         registry.load_json("core/parameter_catalog.json", []),
     )
     document_types = {str(doc.get("Файл", "")): str(doc.get("Раздел", doc.get("Тип документа", ""))) for doc in documents}
+    gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(files, document_types)
+    findings.extend(gp_findings)
     page_tables = _best_table_by_page(files, legacy, table_engine, document_types)
 
     for item in findings:
@@ -154,7 +157,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.3-sprint1-alpha3"
+        item["core_version"] = "2.3-sprint1-alpha4"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -184,13 +187,13 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.3-sprint1-alpha3"
+        item["core_version"] = "2.3-sprint1-alpha4"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "2.3-sprint1-alpha3"
+        doc["core_version"] = "2.3-sprint1-alpha4"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["quality_summary"] = quality_summary
@@ -206,6 +209,12 @@ def analyze_uploaded_core(files, config_dir):
             "audit_candidates": len(object_register_audit),
         }
         doc["object_register_audit"] = object_register_audit
+        doc["general_plan_audit"] = general_plan_audit
+        doc["general_plan_summary"] = {
+            "entries": len(gp_findings),
+            "from_explication": sum(1 for row in gp_findings if row.get("general_plan_explication")),
+            "confirmed_on_drawing": sum(1 for row in gp_findings if row.get("general_plan_field")),
+        }
         doc["object_passports"] = [passport.to_dict() for passport in object_passports]
         doc["object_passport_summary"] = object_passport_summary
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)

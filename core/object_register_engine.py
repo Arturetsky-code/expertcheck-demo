@@ -47,6 +47,10 @@ class RegisterRecord:
     original_names: str
     merge_method: str
     source_priority: int
+    in_pz_registry: bool
+    in_general_plan_explication: bool
+    on_general_plan_drawing: bool
+    source_conflict: str
     inspector_decision: str
     inspector_reasons: str
 
@@ -67,6 +71,10 @@ class RegisterRecord:
             "Исходные наименования": self.original_names,
             "Способ объединения": self.merge_method,
             "Приоритет источника": self.source_priority,
+            "В ПЗ": self.in_pz_registry,
+            "В экспликации ГП": self.in_general_plan_explication,
+            "На поле генплана": self.on_general_plan_drawing,
+            "Конфликт источников": self.source_conflict,
             "Решение инспектора": self.inspector_decision,
             "Причины решения": self.inspector_reasons,
         }
@@ -255,6 +263,8 @@ class ObjectRegisterEngine:
             row.get("parameter_code") == "OBJECT_ENTRY" and row.get("document_type") == "ПЗ"
             for row in group
         )
+        in_gp_explication = any(bool(row.get("general_plan_explication")) for row in group)
+        on_gp_drawing = any(bool(row.get("general_plan_field")) for row in group)
         confidence = max(float(row.get("confidence") or 0) for row in group)
 
         explicit_quantity_rows = [
@@ -281,7 +291,11 @@ class ObjectRegisterEngine:
             quantity_status = "Не указано — принято 1"
             quantity_evidence = "В источниках не найдено явное количество"
 
-        if has_pz_registry and confirmations >= 2:
+        if has_pz_registry and in_gp_explication:
+            status = "Подтверждено ПЗ и генпланом"
+        elif in_gp_explication and not has_pz_registry:
+            status = "Обнаружено на генплане — отсутствует в ПЗ"
+        elif has_pz_registry and confirmations >= 2:
             status = "Подтверждено несколькими разделами"
         elif has_pz_registry:
             status = "Подтверждено реестром ПЗ"
@@ -294,6 +308,12 @@ class ObjectRegisterEngine:
             method = "Только по наименованию — требуется подтверждение"
         elif any(not row.get("_position") for row in group):
             method = "Позиция + однозначное совпадение наименования"
+        pz_names = {normalize_name(row.get("_name")) for row in group if row.get("document_type") == "ПЗ" and row.get("_name")}
+        gp_names = {normalize_name(row.get("_name")) for row in group if row.get("general_plan_explication") and row.get("_name")}
+        source_conflict = ""
+        if pz_names and gp_names and max(name_similarity(a, b) for a in pz_names for b in gp_names) < 0.78:
+            source_conflict = "Различаются наименования в ПЗ и экспликации генплана"
+
         reasons = [
             f"опорный источник: {best.get('document_type', 'не определён')}",
             f"источников подтверждения: {confirmations}",
@@ -319,6 +339,10 @@ class ObjectRegisterEngine:
             original_names=" | ".join(names),
             merge_method=method,
             source_priority=max(row.get("_source_weight", 0) for row in group),
+            in_pz_registry=has_pz_registry,
+            in_general_plan_explication=in_gp_explication,
+            on_general_plan_drawing=on_gp_drawing,
+            source_conflict=source_conflict,
             inspector_decision="принято в реестр",
             inspector_reasons="; ".join(reasons),
         )

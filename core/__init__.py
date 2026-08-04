@@ -15,3 +15,4 @@ __all__ = [
 from .object_register_engine import ObjectRegisterEngine, build_registry
 
 from .passport_engine import build_object_passports, passport_summary
+from .general_plan_engine import GeneralPlanRegisterEngine, GeneralPlanEntry

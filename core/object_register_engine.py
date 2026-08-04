@@ -37,6 +37,8 @@ class RegisterRecord:
     parent_position: str
     name: str
     quantity: int
+    quantity_status: str
+    quantity_evidence: str
     sources: str
     confirmations: int
     status: str
@@ -55,6 +57,8 @@ class RegisterRecord:
             "Родительская позиция": self.parent_position,
             "Наименование объекта": self.name,
             "Количество": self.quantity,
+            "Статус количества": self.quantity_status,
+            "Основание количества": self.quantity_evidence,
             "Источники": self.sources,
             "Подтверждений": self.confirmations,
             "Статус": self.status,
@@ -252,6 +256,31 @@ class ObjectRegisterEngine:
             for row in group
         )
         confidence = max(float(row.get("confidence") or 0) for row in group)
+
+        explicit_quantity_rows = [
+            row for row in group
+            if "определено явно" in str(row.get("review_note") or "").lower()
+        ]
+        preferred_quantity_rows = [
+            row for row in explicit_quantity_rows
+            if row.get("parameter_code") == "OBJECT_ENTRY" and row.get("document_type") == "ПЗ"
+        ] or explicit_quantity_rows
+        if preferred_quantity_rows:
+            quantity_values = [_quantity(row.get("value")) for row in preferred_quantity_rows]
+            quantity = quantity_values[0]
+            distinct_quantities = sorted(set(quantity_values))
+            if len(distinct_quantities) > 1:
+                quantity_status = "Требует проверки"
+            else:
+                quantity_status = "Подтверждено явным указанием"
+            quantity_evidence = " | ".join(
+                str(row.get("review_note") or "") for row in preferred_quantity_rows
+            )
+        else:
+            quantity = 1
+            quantity_status = "Не указано — принято 1"
+            quantity_evidence = "В источниках не найдено явное количество"
+
         if has_pz_registry and confirmations >= 2:
             status = "Подтверждено несколькими разделами"
         elif has_pz_registry:
@@ -268,6 +297,7 @@ class ObjectRegisterEngine:
         reasons = [
             f"опорный источник: {best.get('document_type', 'не определён')}",
             f"источников подтверждения: {confirmations}",
+            f"количество: {quantity_status}",
         ]
         if position:
             reasons.append("точная позиция используется как первичный ключ")
@@ -278,7 +308,9 @@ class ObjectRegisterEngine:
             position=position,
             parent_position=parent_position(position),
             name=best["_name"],
-            quantity=max(_quantity(row.get("value")) for row in group),
+            quantity=quantity,
+            quantity_status=quantity_status,
+            quantity_evidence=quantity_evidence,
             sources=", ".join(sources),
             confirmations=confirmations,
             status=status,

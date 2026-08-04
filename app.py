@@ -696,7 +696,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Core 2.2 Alpha 2"],
+                ["Версия ExpertCheck", "Core 2.3 Sprint 1 Alpha 3"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -728,7 +728,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 
 # ---------- Боковая навигация ----------
 with st.sidebar:
-    st.caption("Core 2.2 Alpha 2 · Object Register Engine")
+    st.caption("Core 2.3 Sprint 1 Alpha 3 · Object Register Engine")
     st.markdown("## ✓ ExpertCheck")
     st.caption("Предэкспертная проверка документации")
     st.divider()
@@ -749,7 +749,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Core 2.2 Alpha 2")
+    st.caption("Core 2.3 Sprint 1 Alpha 3")
 
 
 # ---------- Общая шапка ----------
@@ -760,7 +760,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Core 2.2 Alpha 2</div>
+      <div class="ec-badge">Core 2.3 Sprint 1 Alpha 3</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1007,12 +1007,14 @@ elif page == "Объекты":
             use_container_width=True,
             hide_index=True,
             num_rows="dynamic",
-            disabled=["Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения", "Приоритет источника", "Решение инспектора", "Причины решения"],
+            disabled=["Статус количества", "Основание количества", "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения", "Приоритет источника", "Решение инспектора", "Причины решения"],
             column_config={
                 "Включить": st.column_config.CheckboxColumn("Включить", help="Использовать объект в цифровом профиле"),
                 "Позиция по ГП": st.column_config.TextColumn("Позиция по ГП", width="small"),
                 "Наименование объекта": st.column_config.TextColumn("Наименование объекта", width="large", required=True),
                 "Количество": st.column_config.NumberColumn("Количество", min_value=1, step=1, format="%d"),
+                "Статус количества": st.column_config.TextColumn("Статус количества", width="medium"),
+                "Основание количества": st.column_config.TextColumn("Основание количества", width="large"),
                 "Источники": st.column_config.TextColumn("Источники", width="medium"),
                 "Исходные наименования": st.column_config.TextColumn("Исходные наименования", width="large"),
                 "Способ объединения": st.column_config.TextColumn("Как объединено", width="medium", help="Показывает, почему находки из разных разделов сведены в одну строку"),

@@ -12,6 +12,7 @@ def f(position, name, doc="ПЗ", code="OBJECT_ENTRY", page=1, qty=1):
         "page": page,
         "value": qty,
         "confidence": 0.99,
+        "review_note": f"Количество определено явно: {qty} шт." if qty != 1 else "",
     }
 
 
@@ -52,3 +53,13 @@ def test_quantity_preserved():
 def test_parent_position():
     assert parent_position("2.1.1") == "2.1"
     assert parent_position("2.1") == ""
+
+
+def test_quantity_conflict_is_reported():
+    rows = [
+        f("2.1.5", "Противопожарные резервуары", qty=3),
+        f("2.1.5", "Противопожарные резервуары", doc="ПЗ", qty=2),
+    ]
+    records, _ = build_registry(rows)
+    assert records[0]["Статус количества"] == "Требует проверки"
+    assert records[0]["Количество"] in {2, 3}

@@ -317,19 +317,49 @@ def _clean_object_name(lines: list[str]) -> str:
     return name
 
 
-def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects: list[dict]) -> list[Finding]:
-    """Извлекает полный реестр объектов из многостраничных таблиц ПЗ.
+def _split_position_line(line: str) -> tuple[str, str]:
+    """Возвращает позицию и текст после неё.
 
-    В отличие от прежнего алгоритма, не требует наличия объекта в objects.json:
-    позиция по генплану служит устойчивым идентификатором, а наименование
-    собирается из следующих строк до начала адреса, кода классификатора или
-    служебных граф таблицы. Благодаря этому учитываются все позиции таблицы,
-    включая сооружения, отсутствующие в первоначальном словаре.
+    Поддерживает как отдельную строку ``2.1.3``, так и строку
+    ``2.1.3 Комплектная трансформаторная подстанция``. Коды
+    классификатора вида 08.04.099.099 исключаются.
+    """
+    clean = re.sub(r"\s+", " ", str(line or "")).strip()
+    match = re.match(
+        r"^(?P<position>\d{1,3}(?:\.\d{1,3}){1,5})(?:\s*[-–—:]?\s+|$)(?P<tail>.*)$",
+        clean,
+    )
+    if not match:
+        return "", ""
+    position = match.group("position")
+    if not _looks_like_genplan_position(position):
+        return "", ""
+    return position, match.group("tail").strip()
+
+
+def _registry_position_anchors(lines: list[str]) -> list[tuple[int, str, str]]:
+    anchors: list[tuple[int, str, str]] = []
+    for index, line in enumerate(lines):
+        position, tail = _split_position_line(line)
+        if position:
+            anchors.append((index, position, tail))
+    return anchors
+
+
+def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects: list[dict]) -> list[Finding]:
+    """Извлекает реестр объектов из таблиц ПЗ по строковым якорям.
+
+    Основные отличия от предыдущей реализации:
+    * позиция может находиться отдельно или в одной строке с наименованием;
+    * границы записи определяются следующей реестровой позицией;
+    * дочерние позиции не поглощаются родительской строкой;
+    * количество фиксируется только при явном указании ``количество``/``шт.``;
+    * сохраняется диагностическая отметка о способе определения количества.
     """
     low = normalized_search_text(text)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    pos_re = _GENPLAN_POSITION_RE
-    position_count = sum(1 for line in lines if _looks_like_genplan_position(line))
+    anchors = _registry_position_anchors(lines)
+    position_count = len(anchors)
     table_signals = (
         "позиция\nпо\nгенплану" in low
         or "позиция по генплану" in low
@@ -337,36 +367,40 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
         or ("наименование зданий" in low and "генплан" in low)
         or (position_count >= 2 and any(token in low for token in ("площадь", "сооруж", "объект", "строитель")))
     )
-    if not table_signals:
+    if not table_signals or not anchors:
         return []
 
     class_re = re.compile(r"\b\d{2}\.\d{2}\.\d{3}\.\d{3}\b")
     ordinal_re = re.compile(r"^\d{1,3}$")
     stop_prefixes = (
-        "рф,", "забайкальский", "не принадлежит", "нормативная",
-        "принадлежит", "уровень", "класс", "коэф", "назначение",
-        "площадь застройки", "общая площадь", "строительный объем",
-        "строительный объём", "производительность", "протяженность",
-        "протяжённость", "объем", "объём", "напряжение", "высота",
+        "рф,", "российская федерация", "забайкальский", "не принадлежит",
+        "нормативная", "принадлежит", "уровень", "класс", "коэф",
+        "назначение", "площадь застройки", "общая площадь",
+        "строительный объем", "строительный объём", "производительность",
+        "протяженность", "протяжённость", "объем", "объём", "напряжение",
+        "высота", "адрес объекта", "функциональное назначение",
+        "технико-экономические показатели",
     )
     header_tokens = {
-        "позиция", "по", "генплану", "наименование объекта",
-        "капитального", "строительства", "наименование зданий,",
-        "сооружений и вид", "строительства",
+        "позиция", "по", "генплану", "наименование объекта", "капитального",
+        "строительства", "наименование зданий,", "сооружений и вид",
     }
 
     result: list[Finding] = []
-    for i, line in enumerate(lines):
-        if not _looks_like_genplan_position(line):
-            continue
-        position = line
+    for anchor_no, (line_index, position, inline_tail) in enumerate(anchors):
+        next_index = anchors[anchor_no + 1][0] if anchor_no + 1 < len(anchors) else len(lines)
+        row_lines = lines[line_index:next_index]
         name_lines: list[str] = []
-        for candidate in lines[i + 1:i + 9]:
+        if inline_tail:
+            name_lines.append(inline_tail)
+
+        scan_start = line_index + 1
+        for candidate in lines[scan_start:min(next_index, line_index + 12)]:
             candidate_low = normalized_search_text(candidate)
-            if _looks_like_genplan_position(candidate) or class_re.search(candidate):
+            nested_position, _ = _split_position_line(candidate)
+            if nested_position or class_re.search(candidate):
                 break
-            if ordinal_re.match(candidate):
-                # Номер объекта может переноситься на следующую строку после знака №.
+            if ordinal_re.fullmatch(candidate):
                 if name_lines and name_lines[-1].rstrip().endswith("№"):
                     name_lines.append(candidate)
                     continue
@@ -375,7 +409,6 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
                 break
             if candidate_low in header_tokens:
                 continue
-            # Коды классификатора иногда начинаются в той же строке после имени.
             code_match = class_re.search(candidate)
             if code_match:
                 before = candidate[:code_match.start()].strip()
@@ -383,28 +416,29 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
                     name_lines.append(before)
                 break
             name_lines.append(candidate)
-            if len(" ".join(name_lines)) > 180:
+            if len(" ".join(name_lines)) > 220:
                 break
+
         raw_name = _clean_object_name(name_lines)
         if not raw_name or len(raw_name) < 2:
             continue
-        # Убираем случайно захваченные заголовки/служебные фразы.
         bad = normalized_search_text(raw_name)
-        if any(token in bad for token in ["адрес объекта", "функциональное назначение", "технико-экономические показатели"]):
+        if any(token in bad for token in (
+            "адрес объекта", "функциональное назначение",
+            "технико-экономические показатели", "позиция по генплану",
+        )):
             continue
-        # Для количества используем всю строку таблицы до следующей позиции.
-        next_position_index = next(
-            (j for j in range(i + 1, len(lines)) if _looks_like_genplan_position(lines[j])),
-            len(lines),
-        )
-        row_block = " ".join(lines[i:next_position_index])
-        quantity = _extract_quantity_from_name(row_block)
 
+        row_block = " ".join(row_lines)
+        quantity, quantity_explicit, quantity_evidence = _extract_quantity_details(row_block)
         canonical_match = _canonical_from_text(raw_name, objects)
-        # Сохраняем различия между однотипными нумерованными объектами.
-        # Иначе «Выгреб № 1» и «Выгреб № 2» схлопываются в один объект «Выгреб».
         has_instance_marker = bool(re.search(r"(?:№\s*\d+|\bV\s*=\s*\d)", raw_name, flags=re.I))
         canonical = raw_name if has_instance_marker else (canonical_match or raw_name)
+        note = (
+            f"Количество определено явно: {quantity_evidence}"
+            if quantity_explicit
+            else "Количество в строке явно не указано; принято значение 1"
+        )
         result.append(Finding(
             document=filename,
             document_type="ПЗ",
@@ -414,28 +448,48 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
             value=float(quantity),
             value_text=raw_name,
             unit="шт.",
-            context=f"Позиция {position}: {raw_name}",
-            confidence=0.995,
+            context=f"Позиция {position}: {raw_name}. {quantity_evidence}".strip(),
+            confidence=0.995 if quantity_explicit else 0.985,
             object_hint=canonical,
-            match_method="реестр объектов ПЗ по позиции генплана",
+            match_method="реестр объектов ПЗ по строковым якорям позиции генплана",
+            review_note=note,
             structural_zone="Состав сложного объекта",
-            extraction_profile="ПЗ: полный реестр объектов",
+            extraction_profile="ПЗ: реестр объектов 3.1",
             genplan_position=position,
         ))
     return result
 
 
+def _extract_quantity_details(text: str) -> tuple[int, bool, str]:
+    """Определяет физическое количество и возвращает доказательство.
+
+    Значения площадей, объёмов и кодов не рассматриваются. Если в строке есть
+    несколько противоречащих явных количеств, выбирается первое и в доказательстве
+    сохраняется предупреждение — далее конфликт увидит Object Register Engine.
+    """
+    matches: list[tuple[int, str]] = []
+    patterns = (
+        r"(?:количеств[оа]|в количестве)\s*[:\-]?\s*(\d{1,3})(?:\s*(?:шт\.?|ед\.?))?",
+        r"(?<![\d.,])(?:число|кол-во)\s*[:\-]?\s*(\d{1,3})(?:\s*(?:шт\.?|ед\.?))?",
+        r"(?<![\d.,])(\d{1,3})\s*(?:шт\.?|ед\.?)(?:\b|$)",
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.I):
+            value = max(1, int(match.group(1)))
+            evidence = re.sub(r"\s+", " ", match.group(0)).strip()
+            if (value, evidence) not in matches:
+                matches.append((value, evidence))
+    if not matches:
+        return 1, False, ""
+    distinct = list(dict.fromkeys(value for value, _ in matches))
+    evidence = "; ".join(label for _, label in matches)
+    if len(distinct) > 1:
+        evidence += f"; обнаружены разные количества: {', '.join(map(str, distinct))}"
+    return matches[0][0], True, evidence
+
 
 def _extract_quantity_from_name(name: str) -> int:
-    for pattern in (
-        r"(?:количеств[оа]|в количестве)\s*[:\-]?\s*(\d{1,3})",
-        r"\b(\d{1,3})\s*(?:шт\.?|ед\.?)(?:\b|$)",
-    ):
-        match = re.search(pattern, name, flags=re.I)
-        if match:
-            return max(1, int(match.group(1)))
-    return 1
-
+    return _extract_quantity_details(name)[0]
 
 
 def _plausible_object_candidate(name: str, canonical: str | None = None) -> bool:

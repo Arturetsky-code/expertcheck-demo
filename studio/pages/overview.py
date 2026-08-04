@@ -15,7 +15,10 @@ def render(ctx):
             uploads=st.file_uploader('Комплект проекта',type=['pdf','xml','zip'],accept_multiple_files=True)
             prepared=[];edited=pd.DataFrame();confirmed=False;errors=[]
             if uploads:
+                upload_status=st.status('Подготавливаем загруженный комплект…',expanded=False)
+                upload_status.write('Проверяем архивы, форматы и внутреннюю структуру файлов.')
                 package=prepare_uploads(uploads);prepared=package.files;errors=package.errors
+                upload_status.update(label=f'Комплект подготовлен: {len(prepared)} файлов',state='complete',expanded=False)
                 for x in errors:st.error(x)
                 for x in package.warnings:st.warning(x)
                 if prepared:
@@ -28,8 +31,31 @@ def render(ctx):
                     confirmed=st.checkbox('Состав комплекта проверен',key='studio_package_confirmed')
             if st.button('Запустить проверку проекта',type='primary',use_container_width=True,disabled=not prepared or bool(errors) or not confirmed):
                 files=apply_document_type_overrides(prepared,edited.to_dict('records'))
-                with st.spinner('Строим цифровой профиль и выполняем межраздельную сверку…'):
-                    st.session_state.result=ctx.analyze(files,ctx.config_dir);st.session_state.project_name=name.strip() or 'Новый проект';st.session_state.analysis_time=datetime.now().isoformat(timespec='minutes')
+                progress_box=st.container()
+                with progress_box:
+                    st.markdown('<div class="ec-progress-panel"><div class="ec-progress-title">Анализ проектной документации</div><div class="ec-progress-detail">Не закрывайте страницу до завершения обработки.</div></div>',unsafe_allow_html=True)
+                    progress_bar=st.progress(0,text='Подготовка комплекта')
+                    stage_text=st.empty()
+                    detail_text=st.empty()
+                    file_text=st.caption(f'Документов в обработке: {len(files)}')
+                def update_progress(value,stage,detail=''):
+                    progress_bar.progress(value,text=f'{value}%')
+                    stage_text.markdown(f'**{stage}**')
+                    detail_text.caption(detail or 'Выполняется обработка проекта')
+                try:
+                    st.session_state.result=ctx.analyze(files,ctx.config_dir,progress_callback=update_progress)
+                    st.session_state.project_name=name.strip() or 'Новый проект'
+                    st.session_state.analysis_time=datetime.now().isoformat(timespec='minutes')
+                    progress_bar.progress(100,text='100%')
+                    stage_text.markdown('**Проверка завершена**')
+                    detail_text.caption('Результаты подготовлены. Открываем рабочее пространство проекта.')
+                except TypeError:
+                    # Совместимость с более ранним Core без callback.
+                    update_progress(15,'Подготовка комплекта','Запускаем обработку документов')
+                    st.session_state.result=ctx.analyze(files,ctx.config_dir)
+                    st.session_state.project_name=name.strip() or 'Новый проект'
+                    st.session_state.analysis_time=datetime.now().isoformat(timespec='minutes')
+                    update_progress(100,'Проверка завершена','Результаты подготовлены')
                 st.rerun()
         return
     quality_data=docs.iloc[0].get('dem_model_quality') if 'dem_model_quality' in docs else {};quality=int(round(float((quality_data or {}).get('model_quality_index',0))*100))

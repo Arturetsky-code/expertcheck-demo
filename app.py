@@ -823,6 +823,21 @@ if page == "Обзор":
                 e3.metric("Классов нарушений", len(evidence_summary.get("violation_types", [])))
                 st.caption("База используется как подтверждающий опыт. Она не заменяет инженерное решение и не задаёт отрасль проекта автоматически.")
 
+    if not docs_df.empty and "xml_engine_summary" in docs_df.columns:
+        xml_summary = docs_df.iloc[0].get("xml_engine_summary") or {}
+        if isinstance(xml_summary, dict) and int(xml_summary.get("files", 0) or 0) > 0:
+            with st.expander("Структурированная ПЗ XML", expanded=False):
+                x1, x2, x3, x4 = st.columns(4)
+                x1.metric("XML-файлов", int(xml_summary.get("files", 0)))
+                x2.metric("Извлечено сведений", int(xml_summary.get("findings", 0)))
+                x3.metric("Нормализовано характеристик", int(xml_summary.get("normalized_characteristics", 0)))
+                x4.metric("Проверок PDF ↔ XML", int(xml_summary.get("pdf_xml_checks", 0)))
+                mismatches = int(xml_summary.get("pdf_xml_mismatches", 0))
+                if mismatches:
+                    st.warning(f"Найдено потенциальных расхождений PDF ↔ XML: {mismatches}")
+                else:
+                    st.caption("Расхождения PDF ↔ XML не выявлены либо пока недостаточно сопоставимых данных.")
+
     left, right = st.columns([1.55, 1])
     with left:
         st.markdown('<div class="ec-section-title">Новый анализ</div>', unsafe_allow_html=True)
@@ -1344,7 +1359,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Cloud v0.11.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Core 3.0 Alpha 2</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** превратить автоматические результаты проверки в управляемый реестр предэкспертных замечаний.

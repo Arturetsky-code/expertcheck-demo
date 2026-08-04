@@ -23,6 +23,7 @@ from .register_reconciliation import reconcile_register
 from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
 from .cross_source_consistency import build_pdf_xml_checks
+from .cross_section_consistency import build_cross_section_checks
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -145,7 +146,11 @@ def analyze_uploaded_core(files, config_dir):
     documents.extend(xml_documents)
     findings.extend(xml_findings)
     pdf_xml_checks = build_pdf_xml_checks(findings)
+    cross_section_checks = build_cross_section_checks(findings)
+    # Core 3.0 Alpha 3 формирует собственную сводную межраздельную сверку.
+    # Legacy-проверки сохраняются, но дубли Core удаляются по коду/объекту/параметру.
     comparisons.extend(pdf_xml_checks)
+    comparisons.extend(cross_section_checks)
 
     root = Path(config_dir)
     registry = KnowledgeRegistry(root / "knowledge")
@@ -171,7 +176,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.0-alpha2"
+        item["core_version"] = "3.0-alpha3"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -203,13 +208,13 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "3.0-alpha2"
+        item["core_version"] = "3.0-alpha3"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.0-alpha2"
+        doc["core_version"] = "3.0-alpha3"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {
@@ -219,6 +224,9 @@ def analyze_uploaded_core(files, config_dir):
             "normalized_characteristics": sum(1 for f in xml_findings if f.get("parameter_code") not in {"XML_TEI", "OBJECT_CANDIDATE", "OBJECT_ENTRY", "PROJECT_NAME", "PROJECT_CODE", "PROJECT_YEAR", "ISSUE_AUTHOR", "CHIEF_ENGINEER", "RESOURCE", "CONSTRUCTION_TYPE", "RESPONSIBILITY_LEVEL", "FIRE_DANGER"}),
             "pdf_xml_checks": len(pdf_xml_checks),
             "pdf_xml_mismatches": sum(1 for row in pdf_xml_checks if row.get("status") == "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ"),
+            "cross_section_checks": len(cross_section_checks),
+            "cross_section_mismatches": sum(1 for row in cross_section_checks if row.get("status") in {"ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ", "КОНФЛИКТ ВНУТРИ РАЗДЕЛА"}),
+            "cross_section_unconfirmed": sum(1 for row in cross_section_checks if row.get("status") == "НЕДОСТАТОЧНО ДАННЫХ"),
         }
         doc["quality_summary"] = quality_summary
         doc["dem_summary"] = dem.metadata

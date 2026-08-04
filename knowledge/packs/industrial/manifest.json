@@ -1,0 +1,6 @@
+{
+  "code": "industrial",
+  "name": "industrial knowledge pack",
+  "enabled": true,
+  "contains": ["rules", "object_types", "parameters", "evidence"]
+}

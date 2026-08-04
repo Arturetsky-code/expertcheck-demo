@@ -1,13 +1,11 @@
 {
-  "core_version": "2.0-alpha",
-  "packs": [
-    "core",
-    "corporate",
-    "mining"
-  ],
+  "core_version": "2.4-sprint2-alpha1",
+  "packs": ["core", "industrial", "mining", "infrastructure", "corporate"],
+  "project_profiles": ["PROFILE-UNIVERSAL-INDUSTRIAL", "PROFILE-LINEAR", "PROFILE-MINING"],
   "principles": [
-    "ядро не зависит от конкретного проекта",
-    "знания хранятся вне кода",
-    "новая проверка добавляется как правило"
+    "ядро не зависит от отрасли или конкретного проекта",
+    "реестры источников консолидируются без назначения единственного источника истины",
+    "отраслевые знания подключаются пакетами",
+    "профиль проекта выбирает применимые пакеты, но не меняет Core"
   ]
 }

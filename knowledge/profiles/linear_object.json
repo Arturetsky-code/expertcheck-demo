@@ -1,0 +1,7 @@
+{
+  "code": "PROFILE-LINEAR",
+  "name": "Линейный объект",
+  "description": "Профиль для автомобильных дорог, трубопроводов, линий электропередачи и иных линейных объектов.",
+  "enabled_packs": ["core", "infrastructure"],
+  "applicability": ["линейный объект"]
+}

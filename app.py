@@ -25,9 +25,11 @@ except ModuleNotFoundError:
 try:
     from core.object_register_engine import build_registry as build_core_registry
     from core.passport_engine import build_object_passports as build_core_passports
+    from core.register_reconciliation import reconcile_register as build_consolidated_registry
 except ModuleNotFoundError:
     build_core_registry = None
     build_core_passports = None
+    build_consolidated_registry = None
 
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
 
@@ -497,6 +499,14 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     records, audit = build_core_registry(findings_df.to_dict("records"))
     st.session_state["object_register_audit"] = audit
     return pd.DataFrame(records, columns=columns)
+
+def consolidated_registry_for_ui(findings_df: pd.DataFrame) -> pd.DataFrame:
+    if findings_df.empty or build_consolidated_registry is None:
+        return pd.DataFrame()
+    records, audit = build_consolidated_registry(findings_df.to_dict("records"))
+    st.session_state["register_reconciliation_audit"] = audit
+    return pd.DataFrame(records)
+
 
 def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
     stored = st.session_state.get("object_registry")
@@ -1003,7 +1013,21 @@ elif page == "Объекты":
                 use_container_width=True, hide_index=True,
             )
 
-        with st.expander("Сверка ПЗ ↔ генеральный план", expanded=True):
+        consolidated_view = consolidated_registry_for_ui(findings_df)
+        with st.expander("Консолидированный реестр проекта", expanded=True):
+            if consolidated_view.empty:
+                st.info("Недостаточно данных для консолидации независимых реестров.")
+            else:
+                consolidated_cols = [
+                    "Позиция по ГП", "Наименование объекта", "Количество",
+                    "В ПЗ", "В генплане", "В разделах ПД", "В XML",
+                    "Количество источников", "Статус консолидации", "Конфликты",
+                    "Уверенность консолидации",
+                ]
+                st.dataframe(consolidated_view[[c for c in consolidated_cols if c in consolidated_view.columns]], use_container_width=True, hide_index=True)
+                st.caption("Консолидированный реестр не зависит от отрасли: Core сопоставляет позиции, наименования, количество и независимые источники. Отраслевые проверки подключаются отдельно через Knowledge Packs.")
+
+        with st.expander("Сверка ПЗ ↔ генеральный план", expanded=False):
             compare_cols = ["Позиция по ГП", "Наименование объекта", "В ПЗ", "В экспликации ГП", "На поле генплана", "Конфликт источников", "Статус"]
             compare_view = source_df[[c for c in compare_cols if c in source_df.columns]].copy()
             st.dataframe(compare_view, use_container_width=True, hide_index=True)

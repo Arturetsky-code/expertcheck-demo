@@ -19,6 +19,8 @@ from .risk_engine import calculate_engineering_risk
 from .object_register_engine import build_registry
 from .passport_engine import build_object_passports, passport_summary
 from .general_plan_engine import GeneralPlanRegisterEngine
+from .register_reconciliation import reconcile_register
+from .project_profiles import ProjectProfileRegistry
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -157,7 +159,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.3-sprint1-alpha4"
+        item["core_version"] = "2.4-sprint2-alpha1"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -171,8 +173,10 @@ def analyze_uploaded_core(files, config_dir):
 
     # Реестр объектов строится отдельным движком и сопровождается журналом решений.
     object_registry, object_register_audit = build_registry(findings)
+    consolidated_registry, reconciliation_audit = reconcile_register(findings)
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
+    project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
     dem = build_dem(findings, project_name="Новый проект")
@@ -187,13 +191,13 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.3-sprint1-alpha4"
+        item["core_version"] = "2.4-sprint2-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "2.3-sprint1-alpha4"
+        doc["core_version"] = "2.4-sprint2-alpha1"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["quality_summary"] = quality_summary
@@ -209,6 +213,15 @@ def analyze_uploaded_core(files, config_dir):
             "audit_candidates": len(object_register_audit),
         }
         doc["object_register_audit"] = object_register_audit
+        doc["consolidated_registry"] = consolidated_registry
+        doc["register_reconciliation_audit"] = reconciliation_audit
+        doc["consolidated_registry_summary"] = {
+            "records": len(consolidated_registry),
+            "confirmed_3plus": sum(1 for row in consolidated_registry if row.get("Количество источников", 0) >= 3),
+            "missing_in_pz": sum(1 for row in consolidated_registry if row.get("Статус консолидации") == "Есть на генплане — отсутствует в ПЗ"),
+            "source_conflicts": sum(1 for row in consolidated_registry if row.get("Конфликты")),
+        }
+        doc["project_profile_summary"] = project_profile_summary
         doc["general_plan_audit"] = general_plan_audit
         doc["general_plan_summary"] = {
             "entries": len(gp_findings),

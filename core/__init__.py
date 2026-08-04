@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "2.1-alpha1"
+__version__ = "2.4-sprint2-alpha2"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine
@@ -18,3 +18,5 @@ from .passport_engine import build_object_passports, passport_summary
 from .general_plan_engine import GeneralPlanRegisterEngine, GeneralPlanEntry
 from .register_reconciliation import RegisterReconciliationEngine, ReconciledObject, reconcile_register
 from .project_profiles import ProjectProfileRegistry, ProjectProfile
+
+from .object_identity import ObjectIdentityEngine, IdentityDecision

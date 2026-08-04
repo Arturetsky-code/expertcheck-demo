@@ -4,6 +4,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Iterable
 
 from .object_register_engine import normalize_position, normalize_name, name_similarity, parent_position
+from .object_identity import ObjectIdentityEngine
 
 SOURCE_GROUPS = {
     "PZ": {"ПЗ"},
@@ -36,6 +37,12 @@ class ReconciledObject:
     source_names: dict[str, list[str]]
     source_documents: dict[str, list[str]]
     confidence: float
+    identity_method: str
+    accepted_name_source: str
+    name_confidence: float
+    quantity_status: str
+    quantity_source: str
+    quantity_confidence: float
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -52,6 +59,12 @@ class ReconciledObject:
             "Статус консолидации": self.status,
             "Конфликты": self.conflicts,
             "Уверенность консолидации": self.confidence,
+            "Способ идентификации": self.identity_method,
+            "Источник принятого наименования": self.accepted_name_source,
+            "Уверенность наименования": self.name_confidence,
+            "Статус количества": self.quantity_status,
+            "Источник количества": self.quantity_source,
+            "Уверенность количества": self.quantity_confidence,
         })
         return data
 
@@ -89,6 +102,9 @@ class RegisterReconciliationEngine:
     существующую позицию при однозначном совпадении наименования.
     """
 
+    def __init__(self) -> None:
+        self.identity = ObjectIdentityEngine()
+
     def reconcile(self, findings: Iterable[dict[str, Any]]) -> tuple[list[ReconciledObject], list[dict[str, Any]]]:
         positioned: dict[str, list[dict[str, Any]]] = {}
         unpositioned: list[dict[str, Any]] = []
@@ -114,24 +130,22 @@ class RegisterReconciliationEngine:
         # однозначный позиционный кандидат. Иначе они сохраняются как кандидаты.
         standalone_groups: list[list[dict[str, Any]]] = []
         for item in unpositioned:
-            scores: list[tuple[float, str]] = []
-            for position, group in positioned.items():
-                score = max(name_similarity(item["_name"], row["_name"]) for row in group)
-                scores.append((score, position))
-            scores.sort(reverse=True)
-            top = scores[0] if scores else (0.0, "")
-            second = scores[1][0] if len(scores) > 1 else 0.0
-            if top[0] >= 0.9 and top[0] - second >= 0.08:
-                positioned[top[1]].append(item)
+            matched_position, decision, second = self.identity.best_position_match(item, positioned)
+            top_score = decision.score if decision else 0.0
+            if matched_position:
+                item["_identity_method"] = decision.method if decision else ""
+                positioned[matched_position].append(item)
                 audit.append({
                     "candidate": item["_name"], "position": "", "decision": "merged",
-                    "matched_position": top[1], "score": round(top[0], 3),
-                    "reason": "однозначное совпадение наименования с позиционной записью",
+                    "matched_position": matched_position, "score": round(top_score, 3),
+                    "second_score": round(second, 3),
+                    "identity_method": decision.method if decision else "",
+                    "reason": "; ".join(decision.reasons) if decision else "однозначное соответствие",
                 })
                 continue
             attached = False
             for group in standalone_groups:
-                score = max(name_similarity(item["_name"], row["_name"]) for row in group)
+                score = max(self.identity.compare(item["_name"], row["_name"]).score for row in group)
                 if score >= 0.95:
                     group.append(item)
                     attached = True
@@ -140,7 +154,7 @@ class RegisterReconciliationEngine:
                 standalone_groups.append([item])
             audit.append({
                 "candidate": item["_name"], "position": "", "decision": "standalone",
-                "matched_position": "", "score": round(top[0], 3),
+                "matched_position": "", "score": round(top_score, 3),
                 "reason": "нет однозначного позиционного соответствия",
             })
 
@@ -164,6 +178,7 @@ class RegisterReconciliationEngine:
                 chosen = max(by_source[source], key=lambda row: (float(row.get("confidence") or 0), len(row["_name"])))
                 break
         chosen = chosen or group[0]
+        chosen_source = SOURCE_LABELS.get(str(chosen.get("_group") or ""), str(chosen.get("_group") or ""))
 
         source_names = {
             SOURCE_LABELS.get(source, source): list(dict.fromkeys(row["_name"] for row in rows))
@@ -181,10 +196,28 @@ class RegisterReconciliationEngine:
             if min_score < 0.72:
                 conflicts.append("существенно различаются наименования источников")
 
-        quantities = {_quantity(row) for row in group if row.get("quantity") not in (None, "")}
-        quantity = max(quantities) if quantities else 1
+        quantity_rows = [row for row in group if row.get("quantity") not in (None, "")]
+        quantities = {_quantity(row) for row in quantity_rows}
+        quantity_priority = {"PZ": 100, "GENERAL_PLAN": 95, "XML": 95, "SECTIONS": 80}
+        explicit_rows = [row for row in quantity_rows if str(row.get("quantity_evidence") or row.get("quantity_reason") or "").strip()]
+        ranked_quantity_rows = explicit_rows or quantity_rows
+        if ranked_quantity_rows:
+            quantity_row = max(ranked_quantity_rows, key=lambda row: (quantity_priority.get(row.get("_group"), 0), float(row.get("confidence") or 0)))
+            quantity = _quantity(quantity_row)
+            quantity_source = SOURCE_LABELS.get(quantity_row.get("_group"), str(quantity_row.get("_group") or ""))
+            quantity_confidence = min(1.0, 0.72 + (0.18 if explicit_rows else 0.0) + (0.08 if len(quantities) == 1 else 0.0))
+        else:
+            quantity = 1
+            quantity_source = "По умолчанию"
+            quantity_confidence = 0.45
         if len(quantities) > 1:
             conflicts.append("различается физическое количество")
+            quantity_status = "Требует проверки"
+            quantity_confidence = min(quantity_confidence, 0.55)
+        elif quantity_rows:
+            quantity_status = "Подтверждено"
+        else:
+            quantity_status = "Не указано — принято 1"
 
         presence = {
             "PZ": bool(by_source.get("PZ")),
@@ -206,7 +239,11 @@ class RegisterReconciliationEngine:
         else:
             status = "Найдено только в одном источнике"
 
-        base_conf = min(1.0, 0.45 + 0.16 * count + (0.15 if position else 0.0) - 0.12 * len(conflicts))
+        identity_scores = [self.identity.compare(chosen["_name"], name).score for name in all_names]
+        name_confidence = round(sum(identity_scores) / max(1, len(identity_scores)), 3)
+        identity_methods = [str(row.get("_identity_method") or "") for row in group if row.get("_identity_method")]
+        identity_method = "exact_position" if position else (identity_methods[0] if identity_methods else "standalone_name")
+        base_conf = min(1.0, 0.40 + 0.15 * count + (0.16 if position else 0.0) + 0.12 * name_confidence - 0.12 * len(conflicts))
         return ReconciledObject(
             position=position,
             parent_position=parent_position(position),
@@ -222,6 +259,12 @@ class RegisterReconciliationEngine:
             source_names=source_names,
             source_documents=source_documents,
             confidence=round(max(0.0, base_conf), 3),
+            identity_method=identity_method,
+            accepted_name_source=chosen_source,
+            name_confidence=name_confidence,
+            quantity_status=quantity_status,
+            quantity_source=quantity_source,
+            quantity_confidence=round(quantity_confidence, 3),
         )
 
 

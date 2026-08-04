@@ -5,6 +5,8 @@ from typing import Any
 import re
 import xml.etree.ElementTree as ET
 
+from .normalization import canonical_parameter, normalize_measure, normalize_numeric
+
 
 @dataclass
 class XmlParseResult:
@@ -28,20 +30,23 @@ def _all_text(node: ET.Element, path: str) -> list[str]:
 
 
 def _float_value(value: str) -> float | None:
-    try:
-        return float(value.replace(" ", "").replace(",", "."))
-    except (ValueError, AttributeError):
-        return None
+    return normalize_numeric(value)
 
 
 def _split_tei_name(name: str) -> tuple[str, str]:
-    """Разделяет 'Общежитие, площадь застройки' на объект и характеристику."""
-    parts = [p.strip() for p in name.rsplit(",", 1)]
-    if len(parts) == 2 and any(k in parts[1].lower() for k in (
+    """Разделяет имя объекта и характеристику в XML 01.06/01.07.
+
+    В 01.07 обычно используется запятая, а в 01.06 — точка:
+    «Общежитие, площадь застройки» и «Пионерная дамба. Высота».
+    """
+    keywords = (
         "площад", "объем", "объём", "этаж", "высот", "длин", "мощност",
-        "производитель", "вместим", "количеств", "протяж"
-    )):
-        return parts[0], parts[1]
+        "производитель", "вместим", "количеств", "протяж", "диаметр", "класс"
+    )
+    for separator in (",", "."):
+        parts = [p.strip() for p in name.rsplit(separator, 1)]
+        if len(parts) == 2 and parts[0] and any(k in parts[1].lower() for k in keywords):
+            return parts[0], parts[1]
     return "Не определён", name
 
 
@@ -67,7 +72,7 @@ class BaseAdapter:
             "Наименование проекта": project_name,
             "Организация-разработчик": issue_org,
             "ГИП": signer,
-            "core_version": "3.0-alpha1",
+            "core_version": "3.0-alpha2",
         }
         findings: list[dict[str, Any]] = []
 
@@ -82,7 +87,9 @@ class BaseAdapter:
                 "parameter_name": parameter_name,
                 "value_text": str(value),
                 "value_num": _float_value(str(value)),
+                "value": _float_value(str(value)),
                 "unit": unit,
+                "document_type": "ПЗ XML",
                 "object_hint": object_hint,
                 "genplan_position": "",
                 "confidence": 1.0,
@@ -110,28 +117,90 @@ class BaseAdapter:
                 value = _text(tei, "Value")
                 measure = _text(tei, "Measure")
                 obj_name, characteristic = _split_tei_name(raw_name)
-                add("XML_TEI", characteristic, value, unit=measure, object_hint=obj_name, method="XML TEI")
+                normalized = canonical_parameter(characteristic)
+                # Частные короткие показатели уточняем по типу объекта.
+                characteristic_low = characteristic.lower().replace("ё", "е")
+                object_low = obj_name.lower().replace("ё", "е")
+                if normalized.code == "XML_TEI" and characteristic_low.strip() in {"объем", "объём", "вместимость"} and any(token in object_low for token in ("резервуар", "емкост", "ёмкост")):
+                    normalized = canonical_parameter("объем резервуара")
+                elif normalized.code == "XML_TEI" and characteristic_low.strip().startswith("высот"):
+                    normalized = canonical_parameter("высота сооружения")
+                normalized_unit, unit_confidence = normalize_measure(measure, normalized.unit)
+                if normalized.code == "FLOORS":
+                    normalized_unit, unit_confidence = "эт.", 1.0
+                add(normalized.code, normalized.name, value, unit=normalized_unit, object_hint=obj_name, method="XML TEI normalized")
+                if findings:
+                    findings[-1]["raw_parameter_name"] = raw_name
+                    findings[-1]["raw_measure"] = measure
+                    findings[-1]["normalization_confidence"] = round(min(normalized.confidence, unit_confidence or normalized.confidence), 3)
                 if obj_name != "Не определён":
                     add("OBJECT_CANDIDATE", "Кандидат объекта из ТЭП XML", obj_name, object_hint=obj_name, method="XML TEI object")
 
             power = object_node.find("PowerIndicator")
             if power is not None:
-                add("PROJECT_POWER", _text(power, "Name") or "Проектная мощность", _text(power, "Value"), unit=_text(power, "Measure"), object_hint=main_name, method="XML PowerIndicator")
+                power_name = _text(power, "Name") or "Проектная мощность"
+                normalized = canonical_parameter(power_name)
+                unit, unit_confidence = normalize_measure(_text(power, "Measure"), normalized.unit)
+                add(normalized.code if normalized.code != "XML_TEI" else "CAPACITY", normalized.name if normalized.code != "XML_TEI" else power_name, _text(power, "Value"), unit=unit, object_hint=main_name, method="XML PowerIndicator normalized")
+                if findings:
+                    findings[-1]["raw_parameter_name"] = power_name
+                    findings[-1]["raw_measure"] = _text(power, "Measure")
+                    findings[-1]["normalization_confidence"] = round(unit_confidence, 3)
 
             for resource in object_node.findall("./Resources/Resource"):
                 name = _text(resource, "Name")
-                add("RESOURCE", f"Потребность: {name}", _text(resource, "Value"), unit=_text(resource, "Measure"), object_hint=main_name, method="XML Resource")
+                unit, unit_confidence = normalize_measure(_text(resource, "Measure"))
+                add("RESOURCE", f"Потребность: {name}", _text(resource, "Value"), unit=unit, object_hint=main_name, method="XML Resource")
+                if findings:
+                    findings[-1]["raw_measure"] = _text(resource, "Measure")
+                    findings[-1]["normalization_confidence"] = round(unit_confidence, 3)
 
+        used_norms = _all_text(root, "./UsedNorms/UsedNorm")
+        initial_documents = [self._document_card(node) for node in root.findall("./ProjectInitialDocuments/Document")]
+        survey_documents = [self._document_card(node) for node in root.findall("./EngineeringSurveyDocuments/Document")]
+        project_sections = self._project_sections(root)
         document["xml_summary"] = {
             "schema_version": self.version,
             "findings": len(findings),
-            "tei_count": sum(1 for f in findings if f.get("parameter_code") == "XML_TEI"),
+            "tei_count": sum(1 for f in findings if f.get("match_method") == "XML TEI normalized"),
+            "normalized_tei_count": sum(1 for f in findings if f.get("parameter_code") not in {"XML_TEI", "OBJECT_CANDIDATE", "OBJECT_ENTRY", "PROJECT_NAME", "PROJECT_CODE", "PROJECT_YEAR", "ISSUE_AUTHOR", "CHIEF_ENGINEER"}),
             "object_candidates": len({f.get("object_hint") for f in findings if f.get("parameter_code") == "OBJECT_CANDIDATE"}),
-            "used_norms": len(root.findall("./UsedNorms/UsedNorm")),
-            "initial_documents": len(root.findall("./ProjectInitialDocuments/Document")),
-            "survey_documents": len(root.findall("./EngineeringSurveyDocuments/Document")),
+            "used_norms": len(used_norms),
+            "initial_documents": len(initial_documents),
+            "survey_documents": len(survey_documents),
+            "project_sections": len(project_sections),
         }
+        document["xml_used_norms"] = used_norms
+        document["xml_initial_documents"] = initial_documents
+        document["xml_survey_documents"] = survey_documents
+        document["xml_project_sections"] = project_sections
         return XmlParseResult(document=document, findings=findings)
+
+
+    def _document_card(self, node: ET.Element) -> dict[str, str]:
+        return {
+            "type": _text(node, "DocType"),
+            "name": _text(node, "DocName"),
+            "number": _text(node, "DocNumber"),
+            "date": _text(node, "DocDate"),
+            "issuer": _text(node, "DocIssueAuthor"),
+            "file": _text(node, "./File/FileName"),
+        }
+
+    def _project_sections(self, root: ET.Element) -> list[dict[str, Any]]:
+        sections: list[dict[str, Any]] = []
+        project_docs = root.find(".//ProjectDocumentation")
+        if project_docs is None:
+            return sections
+        for section in list(project_docs):
+            docs = []
+            for node in section.findall(".//Document"):
+                card = self._document_card(node)
+                card["files"] = _all_text(node, ".//FileName")
+                docs.append(card)
+            if docs:
+                sections.append({"section": section.tag, "documents": docs})
+        return sections
 
     def issue_org(self, root: ET.Element) -> str:
         raise NotImplementedError

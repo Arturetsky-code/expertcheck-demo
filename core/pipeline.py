@@ -22,6 +22,7 @@ from .general_plan_engine import GeneralPlanRegisterEngine
 from .register_reconciliation import reconcile_register
 from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
+from .cross_source_consistency import build_pdf_xml_checks
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -143,6 +144,8 @@ def analyze_uploaded_core(files, config_dir):
     xml_documents, xml_findings, xml_warnings = XmlEngine().parse_uploaded(xml_files)
     documents.extend(xml_documents)
     findings.extend(xml_findings)
+    pdf_xml_checks = build_pdf_xml_checks(findings)
+    comparisons.extend(pdf_xml_checks)
 
     root = Path(config_dir)
     registry = KnowledgeRegistry(root / "knowledge")
@@ -168,7 +171,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.0-alpha1"
+        item["core_version"] = "3.0-alpha2"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -200,16 +203,23 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "3.0-alpha1"
+        item["core_version"] = "3.0-alpha2"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.0-alpha1"
+        doc["core_version"] = "3.0-alpha2"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
-        doc["xml_engine_summary"] = {"files": len(xml_files), "findings": len(xml_findings), "warnings": xml_warnings}
+        doc["xml_engine_summary"] = {
+            "files": len(xml_files),
+            "findings": len(xml_findings),
+            "warnings": xml_warnings,
+            "normalized_characteristics": sum(1 for f in xml_findings if f.get("parameter_code") not in {"XML_TEI", "OBJECT_CANDIDATE", "OBJECT_ENTRY", "PROJECT_NAME", "PROJECT_CODE", "PROJECT_YEAR", "ISSUE_AUTHOR", "CHIEF_ENGINEER", "RESOURCE", "CONSTRUCTION_TYPE", "RESPONSIBILITY_LEVEL", "FIRE_DANGER"}),
+            "pdf_xml_checks": len(pdf_xml_checks),
+            "pdf_xml_mismatches": sum(1 for row in pdf_xml_checks if row.get("status") == "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ"),
+        }
         doc["quality_summary"] = quality_summary
         doc["dem_summary"] = dem.metadata
         doc["dem_model_quality"] = model_quality

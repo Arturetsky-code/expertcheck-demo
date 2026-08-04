@@ -8,7 +8,7 @@ REQUIRED_ROOT = [
 ]
 REQUIRED_CORE = [
     "__init__.py", "pipeline.py",
-        "xml_engine.py", "catalogs.py", "confidence.py",
+        "xml_engine.py", "normalization.py", "cross_source_consistency.py", "catalogs.py", "confidence.py",
     "rule_engine.py", "semantic_engine.py", "table_engine.py",
         "model_quality.py",
         "relations.py",

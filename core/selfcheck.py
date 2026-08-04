@@ -8,7 +8,11 @@ REQUIRED_ROOT = [
 ]
 REQUIRED_CORE = [
     "__init__.py", "pipeline.py", "catalogs.py", "confidence.py",
-    "rule_engine.py", "semantic_engine.py", "table_engine.py", "selfcheck.py",
+    "rule_engine.py", "semantic_engine.py", "table_engine.py",
+        "model_quality.py",
+        "relations.py",
+        "validation.py",
+        "dem.py", "selfcheck.py",
 ]
 REQUIRED_KNOWLEDGE = [
     "core/object_catalog.json", "core/parameter_catalog.json",

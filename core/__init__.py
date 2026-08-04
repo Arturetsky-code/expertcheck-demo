@@ -1,5 +1,13 @@
-"""ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
-from .pipeline import analyze_uploaded_core
-from .catalogs import KnowledgeRegistry
+"""ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__all__ = ["analyze_uploaded_core", "KnowledgeRegistry"]
+__version__ = "2.1-alpha1"
+
+from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
+from .validation import ValidationEngine
+from .relations import RelationEngine
+from .model_quality import calculate_model_quality
+
+__all__ = [
+    "DigitalEngineeringModel", "DEMObject", "DEMValue", "build_dem",
+    "ValidationEngine", "RelationEngine", "calculate_model_quality",
+]

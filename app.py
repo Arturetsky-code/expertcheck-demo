@@ -767,7 +767,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Demo Cloud v0.11.0"],
+                ["Версия ExpertCheck", "Core 2.1 Alpha 1"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -799,7 +799,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 
 # ---------- Боковая навигация ----------
 with st.sidebar:
-    st.caption("Core 2.0 Alpha · модульное ядро")
+    st.caption("Core 2.1 Alpha · цифровая инженерная модель")
     st.markdown("## ✓ ExpertCheck")
     st.caption("Предэкспертная проверка документации")
     st.divider()
@@ -820,7 +820,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Demo Cloud v0.11.0")
+    st.caption("Core 2.1 Alpha 1")
 
 
 # ---------- Общая шапка ----------
@@ -831,7 +831,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Demo Cloud v0.11.0</div>
+      <div class="ec-badge">Core 2.1 Alpha 1</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -861,6 +861,17 @@ if page == "Обзор":
     c2.metric("Объектов", len(registry_df), help="Количество позиций в предварительном или подтверждённом перечне")
     c3.metric("Расхождений", mismatch_count, help="Потенциальные межраздельные расхождения")
     c4.metric("Подтверждено", matched_count, help="Характеристики, совпадающие между разделами")
+
+    if not docs_df.empty and "dem_model_quality" in docs_df.columns:
+        dem_quality = docs_df.iloc[0].get("dem_model_quality") or {}
+        if isinstance(dem_quality, dict) and dem_quality:
+            with st.expander("Качество цифровой инженерной модели", expanded=False):
+                q1, q2, q3, q4 = st.columns(4)
+                q1.metric("Индекс модели", f"{float(dem_quality.get('model_quality_index', 0)):.0%}")
+                q2.metric("Привязка значений", f"{float(dem_quality.get('assignment_coverage', 0)):.0%}")
+                q3.metric("Позиции по ГП", f"{float(dem_quality.get('position_coverage', 0)):.0%}")
+                q4.metric("Проблемы модели", int(dem_quality.get('validation_issues', 0)))
+                st.caption("Индекс оценивает качество построенной модели, а не готовность проекта к экспертизе.")
 
     left, right = st.columns([1.55, 1])
     with left:

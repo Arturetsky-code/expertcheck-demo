@@ -10,6 +10,10 @@ from .rule_engine import RuleEngine
 from .semantic_engine import object_similarity
 from .table_engine import TableEngine
 from .quality import build_quality_summary
+from .dem import build_dem
+from .validation import ValidationEngine
+from .relations import RelationEngine
+from .model_quality import calculate_model_quality
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -113,11 +117,11 @@ def _enrich_rules(comparisons: list[dict], registry: KnowledgeRegistry) -> None:
 
 
 def analyze_uploaded_core(files, config_dir):
-    """Переходный конвейер Core 2.0 Alpha 4.
+    """Переходный конвейер Core 2.1 Alpha 1.
 
     Legacy Analyzer пока выполняет проверенную предметную логику извлечения.
-    Core 2.0 добавляет независимое распознавание таблиц, объяснимую уверенность,
-    семантическую привязку и метаданные каталога правил.
+    Core 2.1 дополнительно строит цифровую инженерную модель (DEM),
+    валидирует её полноту, строит доказуемые связи и рассчитывает индекс качества модели.
     """
     import legacy_analyzer as legacy
 
@@ -146,10 +150,17 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.0-alpha4"
+        item["core_version"] = "2.1-alpha1"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
+
+    # Цифровая инженерная модель строится только из извлечённых доказательств.
+    dem = build_dem(findings, project_name="Новый проект")
+    validation_issues = ValidationEngine().validate(dem)
+    relations = RelationEngine().build(dem)
+    model_quality = calculate_model_quality(dem, validation_issues)
+    quality_summary = build_quality_summary(findings)
 
     summary = registry.summary()
     table_pages_by_doc: dict[str, int] = defaultdict(int)
@@ -157,11 +168,19 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.0-alpha4"
+        item["core_version"] = "2.1-alpha1"
+        item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
+    for item in findings:
+        item["dem_object_count"] = dem.metadata.get("object_count", 0)
+        item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "2.0-alpha4"
+        doc["core_version"] = "2.1-alpha1"
         doc["knowledge_summary"] = summary
         doc["quality_summary"] = quality_summary
+        doc["dem_summary"] = dem.metadata
+        doc["dem_model_quality"] = model_quality
+        doc["dem_validation_issues"] = [issue.to_dict() for issue in validation_issues]
+        doc["dem_relations"] = [relation.to_dict() for relation in relations]
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     return documents, findings, comparisons

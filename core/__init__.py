@@ -11,3 +11,5 @@ __all__ = [
     "DigitalEngineeringModel", "DEMObject", "DEMValue", "build_dem",
     "ValidationEngine", "RelationEngine", "calculate_model_quality",
 ]
+
+from .object_register_engine import ObjectRegisterEngine, build_registry

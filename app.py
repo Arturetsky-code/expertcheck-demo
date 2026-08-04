@@ -21,6 +21,12 @@ try:
 except ModuleNotFoundError:
     from modules.analyzer import Finding, analyze_uploaded, compare_findings, load_json
 
+
+try:
+    from core.object_register_engine import build_registry as build_core_registry
+except ModuleNotFoundError:
+    build_core_registry = None
+
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
 
 st.set_page_config(
@@ -154,6 +160,7 @@ def init_state() -> None:
         "registry_application_stats": None,
         "review_register": None,
         "review_register_saved": False,
+        "object_register_audit": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -479,123 +486,14 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
         "Включить", "Позиция по ГП", "Родительская позиция", "Наименование объекта", "Количество",
         "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы",
-        "Исходные наименования", "Способ объединения",
+        "Исходные наименования", "Способ объединения", "Приоритет источника",
+        "Решение инспектора", "Причины решения",
     ]
-    if findings_df.empty or "parameter_code" not in findings_df.columns:
+    if findings_df.empty or build_core_registry is None:
         return pd.DataFrame(columns=columns)
-    candidates = findings_df[findings_df["parameter_code"].isin(["OBJECT_ENTRY", "OBJECT_CANDIDATE"])].copy()
-    if candidates.empty:
-        return pd.DataFrame(columns=columns)
-    for col in ["genplan_position", "object_hint", "value_text", "document_type", "document", "page", "confidence", "value"]:
-        if col not in candidates.columns:
-            candidates[col] = ""
-    candidates["genplan_position"] = candidates["genplan_position"].fillna("").astype(str).str.strip()
-    candidates["object_hint"] = candidates["object_hint"].fillna("").astype(str).str.strip()
-    candidates["value_text"] = candidates["value_text"].fillna("").astype(str).str.strip()
-    candidates["preferred_name"] = candidates.apply(
-        lambda r: str(r["object_hint"] or r["value_text"]).strip(), axis=1
-    )
-    # Если позиция присутствует внутри наименования, переносим её в отдельное поле.
-    embedded_positions = candidates["preferred_name"].map(_extract_genplan_position)
-    candidates.loc[candidates["genplan_position"].eq("") & embedded_positions.ne(""), "genplan_position"] = embedded_positions
-
-    # Шаг 1. Создаём опорные группы по позиции по генплану.
-    positioned = candidates[candidates["genplan_position"].ne("")].copy()
-    no_position = candidates[candidates["genplan_position"].eq("")].copy()
-    groups: dict[str, list[int]] = {}
-    for idx, row in positioned.iterrows():
-        groups.setdefault(f"GP:{row['genplan_position']}", []).append(idx)
-
-    # Шаг 2. Находки без позиции присоединяем к позиции по совпадению наименования.
-    # Это устраняет дубли вида «4.13 Здание проборазделки» / «Здание проборазделки».
-    merge_method: dict[str, str] = {key: "По позиции по генплану" for key in groups}
-    unassigned: list[int] = []
-    for idx, row in no_position.iterrows():
-        source_name = str(row["preferred_name"] or row["value_text"]).strip()
-        scored: list[tuple[float, str]] = []
-        for key, indices in groups.items():
-            names = []
-            for gi in indices:
-                gr = candidates.loc[gi]
-                names.extend([str(gr["object_hint"] or ""), str(gr["value_text"] or ""), str(gr["preferred_name"] or "")])
-            score = max((_name_similarity(source_name, name) for name in names if name), default=0.0)
-            if score > 0:
-                scored.append((score, key))
-        scored.sort(reverse=True)
-        if scored and scored[0][0] >= 0.88 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.08):
-            groups[scored[0][1]].append(idx)
-            merge_method[scored[0][1]] = "Позиция + совпадение наименования"
-        else:
-            unassigned.append(idx)
-
-    # Шаг 3. Оставшиеся находки без позиции группируем только между собой.
-    name_groups: dict[str, list[int]] = {}
-    for idx in unassigned:
-        row = candidates.loc[idx]
-        key_name = _norm_object_key(row["preferred_name"] or row["value_text"])
-        if not key_name:
-            key_name = f"row{idx}"
-        key = f"NM:{key_name}"
-        name_groups.setdefault(key, []).append(idx)
-        merge_method[key] = "Только по наименованию — требуется подтверждение"
-    groups.update(name_groups)
-
-    rows = []
-    for group_key, indices in groups.items():
-        group = candidates.loc[indices].copy()
-        position = next((x for x in group["genplan_position"].tolist() if x), "")
-        group["name_len"] = group["value_text"].str.len()
-        group["pz_rank"] = (group["parameter_code"] == "OBJECT_ENTRY").astype(int)
-        # Предпочитаем наименование из таблицы ПЗ, затем каноническое object_hint.
-        ranked = group.sort_values(["pz_rank", "confidence", "name_len"], ascending=False)
-        best = ranked.iloc[0]
-        pz_rows = ranked[ranked["parameter_code"] == "OBJECT_ENTRY"]
-        if not pz_rows.empty:
-            name = str(pz_rows.iloc[0]["value_text"] or pz_rows.iloc[0]["object_hint"]).strip()
-        else:
-            name = str(best["object_hint"] or best["value_text"]).strip()
-        names = sorted({str(x).strip() for x in group["value_text"].tolist() if str(x).strip()})
-        sections = sorted({str(x).strip() for x in group["document_type"].tolist() if str(x).strip()})
-        pages = sorted({f"{r.document_type}: {int(r.page)}" for r in group.itertuples() if pd.notna(r.page)})
-        quantities = [int(float(x)) for x in group["value"].tolist() if pd.notna(x) and str(x) != ""]
-        quantity = max(quantities) if quantities else 1
-        has_pz = bool((group["parameter_code"] == "OBJECT_ENTRY").any())
-        if has_pz and len(sections) >= 2:
-            status = "Подтверждено"
-        elif len(sections) >= 2:
-            status = "Подтверждено несколькими разделами"
-        elif has_pz:
-            status = "Извлечено из ПЗ"
-        else:
-            status = "Требует подтверждения"
-        normalized_names = {_norm_object_key(x) for x in names if _norm_object_key(x)}
-        if position and len(normalized_names) >= 3:
-            # Разные варианты сами по себе не создают дубль, но требуют просмотра.
-            status = "Требует уточнения наименования"
-        rows.append({
-            "Включить": True,
-            "Позиция по ГП": position,
-            "Родительская позиция": _parent_genplan_position(position),
-            "Наименование объекта": name,
-            "Количество": quantity,
-            "Источники": " · ".join(sections),
-            "Подтверждений": len(sections),
-            "Статус": status,
-            "Уверенность": f"{float(group['confidence'].max()):.0%}",
-            "Страницы": "; ".join(pages),
-            "Исходные наименования": " | ".join(names),
-            "Способ объединения": merge_method.get(group_key, ""),
-        })
-    result = pd.DataFrame(rows, columns=columns)
-    if not result.empty:
-        # Защитный финальный дедуп: одна позиция по ГП — одна строка.
-        with_pos = result[result["Позиция по ГП"].astype(str).str.strip().ne("")]
-        without_pos = result[result["Позиция по ГП"].astype(str).str.strip().eq("")]
-        with_pos = with_pos.sort_values(["Подтверждений", "Уверенность"], ascending=False).drop_duplicates("Позиция по ГП", keep="first")
-        result = pd.concat([with_pos, without_pos], ignore_index=True)
-        result["_sort_key"] = result["Позиция по ГП"].map(_position_sort_key)
-        result = result.sort_values(["_sort_key", "Наименование объекта"], kind="stable").drop(columns=["_sort_key"]).reset_index(drop=True)
-    return result
+    records, audit = build_core_registry(findings_df.to_dict("records"))
+    st.session_state["object_register_audit"] = audit
+    return pd.DataFrame(records, columns=columns)
 
 def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
     stored = st.session_state.get("object_registry")
@@ -799,7 +697,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         )
         summary.to_excel(writer, sheet_name="Сводка", index=False)
         docs_df.to_excel(writer, sheet_name="Документы", index=False)
-        registry_coverage(registry_for_export(findings_df)).to_excel(writer, sheet_name="Перечень объектов", index=False)
+        registry_coverage(registry_for_export(findings_df)).to_excel(writer, sheet_name="Реестр объектов", index=False)
         findings_for_user(characteristic_findings(findings_df)).to_excel(writer, sheet_name="Характеристики", index=False)
         comparisons_for_user(comparisons_df).to_excel(writer, sheet_name="Проверки", index=False)
         if review_df is not None:
@@ -864,7 +762,7 @@ registry_confirmed = bool(st.session_state.get("object_registry_confirmed"))
 st.markdown(
     f"""<div class="ec-steps">
       <div class="ec-step {'done' if not docs_df.empty else 'active'}">01<strong>Документы</strong></div>
-      <div class="ec-step {'done' if registry_confirmed else ('active' if not docs_df.empty else '')}">02<strong>Перечень объектов</strong></div>
+      <div class="ec-step {'done' if registry_confirmed else ('active' if not docs_df.empty else '')}">02<strong>Реестр объектов</strong></div>
       <div class="ec-step {'done' if registry_confirmed and not characteristic_findings(findings_df).empty else ''}">03<strong>Паспорта объектов</strong></div>
       <div class="ec-step {'done' if not comparisons_df.empty else ''}">04<strong>Проверки</strong></div>
     </div>""", unsafe_allow_html=True
@@ -1045,13 +943,13 @@ elif page == "Документы":
         st.dataframe(docs_df, use_container_width=True, hide_index=True)
         st.caption("Тип раздела определяется по имени файла, шифру и содержанию первых страниц.")
 
-# ---------- Перечень объектов ----------
+# ---------- Реестр объектов ----------
 elif page == "Объекты":
     st.markdown('<div class="ec-section-title">Объекты и цифровые паспорта</div>', unsafe_allow_html=True)
     st.caption("Проверьте автоматически сформированный перечень до запуска содержательной сверки. Позиция по генплану является основным идентификатором.")
     candidate_registry = build_candidate_registry(findings_df)
     if candidate_registry.empty:
-        st.info("Перечень объектов пока не сформирован. Загрузите ПЗ, ПЗУ, АР и ТХ на главной странице.")
+        st.info("Реестр объектов пока не сформирован. Загрузите ПЗ, ПЗУ, АР и ТХ на главной странице.")
     else:
         source_df = pd.DataFrame(st.session_state["object_registry"]) if st.session_state.get("object_registry") else candidate_registry
         physical_count = int(pd.to_numeric(source_df.get("Количество", pd.Series(dtype=float)), errors="coerce").fillna(1).sum())
@@ -1096,7 +994,7 @@ elif page == "Объекты":
             use_container_width=True,
             hide_index=True,
             num_rows="dynamic",
-            disabled=["Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения"],
+            disabled=["Источники", "Подтверждений", "Статус", "Уверенность", "Страницы", "Исходные наименования", "Способ объединения", "Приоритет источника", "Решение инспектора", "Причины решения"],
             column_config={
                 "Включить": st.column_config.CheckboxColumn("Включить", help="Использовать объект в цифровом профиле"),
                 "Позиция по ГП": st.column_config.TextColumn("Позиция по ГП", width="small"),
@@ -1145,8 +1043,21 @@ elif page == "Объекты":
             else:
                 st.warning("До подтверждения результаты по объектам считаются предварительными.")
 
-        st.markdown('<div class="ec-section-title">Диагностика источников</div>', unsafe_allow_html=True)
-        with st.expander("Показать исходные находки по объектам"):
+        st.markdown('<div class="ec-section-title">Инспектор реестра</div>', unsafe_allow_html=True)
+        st.caption("Режим показывает каждую кандидатную строку, принятое решение и основание объединения или отклонения.")
+        audit_data = st.session_state.get("object_register_audit") or []
+        with st.expander(f"Показать журнал решений ({len(audit_data)})", expanded=False):
+            if audit_data:
+                audit_df = pd.DataFrame(audit_data).rename(columns={
+                    "document": "Файл", "document_type": "Раздел", "page": "Страница",
+                    "position": "Позиция", "name": "Кандидат", "decision": "Решение",
+                    "reasons": "Причины", "matched_position": "Связано с позицией",
+                    "match_score": "Оценка совпадения", "merge_method": "Способ объединения",
+                })
+                st.dataframe(audit_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("Журнал решений пока пуст.")
+        with st.expander("Показать исходные объектные находки", expanded=False):
             raw = findings_df[findings_df["parameter_code"].isin(["OBJECT_ENTRY", "OBJECT_CANDIDATE"])].copy()
             cols = ["document_type", "page", "genplan_position", "value_text", "object_hint", "confidence", "match_method", "context"]
             raw = raw[[x for x in cols if x in raw.columns]]
@@ -1357,7 +1268,7 @@ elif page == "Отчёт":
             """
             <div class="ec-card">
                 <div style="font-size:1.05rem;font-weight:720;color:#172033;">Excel-отчёт ExpertCheck</div>
-                <div class="ec-card-note">Сводка, документы, подтверждённый перечень объектов, цифровые паспорта, объяснимые инженерные проверки и управляемый реестр замечаний.</div>
+                <div class="ec-card-note">Сводка, документы, подтверждённый реестр объектов, цифровые паспорта, объяснимые инженерные проверки и управляемый реестр замечаний.</div>
             </div>
             """,
             unsafe_allow_html=True,

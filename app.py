@@ -459,9 +459,25 @@ def registry_coverage(registry_df: pd.DataFrame) -> pd.DataFrame:
     )
     return result
 
+def _parent_genplan_position(position: str) -> str:
+    parts = [part for part in str(position or "").strip().split(".") if part]
+    return ".".join(parts[:-1]) if len(parts) > 2 else ""
+
+
+def _position_sort_key(position: str) -> tuple:
+    parts = str(position or "").strip().split(".")
+    key = []
+    for part in parts:
+        try:
+            key.append((0, int(part)))
+        except ValueError:
+            key.append((1, part))
+    return tuple(key)
+
+
 def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
-        "Включить", "Позиция по ГП", "Наименование объекта", "Количество",
+        "Включить", "Позиция по ГП", "Родительская позиция", "Наименование объекта", "Количество",
         "Источники", "Подтверждений", "Статус", "Уверенность", "Страницы",
         "Исходные наименования", "Способ объединения",
     ]
@@ -559,6 +575,7 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
         rows.append({
             "Включить": True,
             "Позиция по ГП": position,
+            "Родительская позиция": _parent_genplan_position(position),
             "Наименование объекта": name,
             "Количество": quantity,
             "Источники": " · ".join(sections),
@@ -576,7 +593,8 @@ def build_candidate_registry(findings_df: pd.DataFrame) -> pd.DataFrame:
         without_pos = result[result["Позиция по ГП"].astype(str).str.strip().eq("")]
         with_pos = with_pos.sort_values(["Подтверждений", "Уверенность"], ascending=False).drop_duplicates("Позиция по ГП", keep="first")
         result = pd.concat([with_pos, without_pos], ignore_index=True)
-        result = result.sort_values(["Позиция по ГП", "Наименование объекта"], kind="stable").reset_index(drop=True)
+        result["_sort_key"] = result["Позиция по ГП"].map(_position_sort_key)
+        result = result.sort_values(["_sort_key", "Наименование объекта"], kind="stable").drop(columns=["_sort_key"]).reset_index(drop=True)
     return result
 
 def registry_for_export(findings_df: pd.DataFrame) -> pd.DataFrame:
@@ -767,7 +785,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Core 2.2 Alpha 1"],
+                ["Версия ExpertCheck", "Core 2.2 Alpha 2"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -799,7 +817,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 
 # ---------- Боковая навигация ----------
 with st.sidebar:
-    st.caption("Core 2.2 Alpha · инженерная база знаний")
+    st.caption("Core 2.2 Alpha 2 · Object Register Engine")
     st.markdown("## ✓ ExpertCheck")
     st.caption("Предэкспертная проверка документации")
     st.divider()
@@ -820,7 +838,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Core 2.2 Alpha 1")
+    st.caption("Core 2.2 Alpha 2")
 
 
 # ---------- Общая шапка ----------
@@ -831,7 +849,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Core 2.2 Alpha 1</div>
+      <div class="ec-badge">Core 2.2 Alpha 2</div>
     </div>
     """,
     unsafe_allow_html=True,

@@ -301,6 +301,15 @@ def _extract_values_from_block(block: str, parameter: dict) -> list[tuple[float,
 
 
 
+_GENPLAN_POSITION_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){1,4}$")
+_CLASSIFIER_CODE_RE = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}$")
+
+
+def _looks_like_genplan_position(value: str) -> bool:
+    clean = re.sub(r"\s+", "", str(value or ""))
+    return bool(_GENPLAN_POSITION_RE.fullmatch(clean)) and not bool(_CLASSIFIER_CODE_RE.fullmatch(clean))
+
+
 def _clean_object_name(lines: list[str]) -> str:
     name = " ".join(line.strip(" .;:-") for line in lines if line.strip())
     name = re.sub(r"\s+", " ", name).strip()
@@ -319,8 +328,8 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
     """
     low = normalized_search_text(text)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    pos_re = re.compile(r"^4\.\d+(?:\.\d+){0,2}$")
-    position_count = sum(1 for line in lines if pos_re.match(line))
+    pos_re = _GENPLAN_POSITION_RE
+    position_count = sum(1 for line in lines if _looks_like_genplan_position(line))
     table_signals = (
         "позиция\nпо\nгенплану" in low
         or "позиция по генплану" in low
@@ -331,7 +340,7 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
     if not table_signals:
         return []
 
-    class_re = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}(?:\s|$)")
+    class_re = re.compile(r"\b\d{2}\.\d{2}\.\d{3}\.\d{3}\b")
     ordinal_re = re.compile(r"^\d{1,3}$")
     stop_prefixes = (
         "рф,", "забайкальский", "не принадлежит", "нормативная",
@@ -348,13 +357,13 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
 
     result: list[Finding] = []
     for i, line in enumerate(lines):
-        if not pos_re.match(line):
+        if not _looks_like_genplan_position(line):
             continue
         position = line
         name_lines: list[str] = []
         for candidate in lines[i + 1:i + 9]:
             candidate_low = normalized_search_text(candidate)
-            if pos_re.match(candidate) or class_re.match(candidate):
+            if _looks_like_genplan_position(candidate) or class_re.search(candidate):
                 break
             if ordinal_re.match(candidate):
                 # Номер объекта может переноситься на следующую строку после знака №.
@@ -383,6 +392,14 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
         bad = normalized_search_text(raw_name)
         if any(token in bad for token in ["адрес объекта", "функциональное назначение", "технико-экономические показатели"]):
             continue
+        # Для количества используем всю строку таблицы до следующей позиции.
+        next_position_index = next(
+            (j for j in range(i + 1, len(lines)) if _looks_like_genplan_position(lines[j])),
+            len(lines),
+        )
+        row_block = " ".join(lines[i:next_position_index])
+        quantity = _extract_quantity_from_name(row_block)
+
         canonical_match = _canonical_from_text(raw_name, objects)
         # Сохраняем различия между однотипными нумерованными объектами.
         # Иначе «Выгреб № 1» и «Выгреб № 2» схлопываются в один объект «Выгреб».
@@ -394,9 +411,9 @@ def _extract_pz_object_registry(page_no: int, text: str, filename: str, objects:
             page=page_no,
             parameter_code="OBJECT_ENTRY",
             parameter_name="Объект в составе проекта",
-            value=None,
+            value=float(quantity),
             value_text=raw_name,
-            unit=None,
+            unit="шт.",
             context=f"Позиция {position}: {raw_name}",
             confidence=0.995,
             object_hint=canonical,
@@ -476,7 +493,7 @@ def _extract_multisource_object_candidates(page_no: int, text: str, filename: st
     result: list[Finding] = []
     seen: set[tuple[str, str]] = set()
     code_re = re.compile(
-        r"(?:RAM-[A-ZА-Я0-9.\-]*?-ПД-)(?P<pos>4\.\d+(?:\.\d+){0,2})-(?:АР2|ТХ2|КР|ИОС\d*(?:\.\d+)?)",
+        r"(?:RAM-[A-ZА-Я0-9.\-]*?-ПД-)(?P<pos>\d{1,3}(?:\.\d{1,3}){1,4})-(?:АР2|ТХ2|КР|ИОС\d*(?:\.\d+)?)",
         flags=re.I,
     )
     if document_type in {"АР2", "ТХ2"}:
@@ -511,7 +528,7 @@ def _extract_multisource_object_candidates(page_no: int, text: str, filename: st
             genplan_position=position,
         ))
 
-    position_lines = [(i, line) for i, line in enumerate(lines) if re.fullmatch(r"4\.\d+(?:\.\d+){0,2}", line)]
+    position_lines = [(i, line) for i, line in enumerate(lines) if _looks_like_genplan_position(line)]
     if document_type == "ПЗУ1" and len(position_lines) >= 2:
         for index, position in position_lines:
             name = _candidate_name_after_line(lines, index, 5)

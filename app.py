@@ -795,6 +795,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 
 # ---------- Боковая навигация ----------
 with st.sidebar:
+    st.caption("Core 2.0 Alpha · модульное ядро")
     st.markdown("## ✓ ExpertCheck")
     st.caption("Предэкспертная проверка документации")
     st.divider()
@@ -1333,7 +1334,7 @@ elif page == "Отчёт":
 
 # ---------- О версии ----------
 elif page == "О версии":
-    st.markdown('<div class="ec-section-title">ExpertCheck Demo Cloud v0.11.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ec-section-title">ExpertCheck Cloud v0.11.0</div>', unsafe_allow_html=True)
     st.markdown(
         """
         **Назначение версии:** превратить автоматические результаты проверки в управляемый реестр предэкспертных замечаний.
@@ -1358,4 +1359,4 @@ elif page == "О версии":
     )
 
 st.divider()
-st.caption("ExpertCheck Demo — экспериментальный инструмент. Результаты требуют профессиональной проверки.")
+st.caption("ExpertCheck — экспериментальный инструмент. Результаты требуют профессиональной проверки.")

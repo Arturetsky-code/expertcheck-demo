@@ -1,0 +1,1304 @@
+[
+  {
+    "id": "CORP-GP-001",
+    "source_ref": "1",
+    "title": "Схема планировочной организации земельного участка",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-002",
+    "source_ref": "1.1",
+    "title": "Схема планировочной организации земельного участка соответствует ЗнП",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-003",
+    "source_ref": "1.2",
+    "title": "В условных обозначениях показаны границы (защитных лесов, водоохранных зон, О...",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-004",
+    "source_ref": "1.3",
+    "title": "На ситуационном плане нанесены границы разрешенной застройки согласно ГПЗУ",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-005",
+    "source_ref": "1.4",
+    "title": "Схема планировочной организации соответствует данным инженерных изысканий",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-006",
+    "source_ref": "1.5",
+    "title": "Технико-экономические показатели в части  площадей застройки соответствуют да...",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-007",
+    "source_ref": "1.6",
+    "title": "Технико-экономические показатели в части  площадей земельных участков соответ...",
+    "section": "",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-008",
+    "source_ref": "2.1",
+    "title": "Название листа в ОД соответствует названию листа в штампе на чертеже",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-009",
+    "source_ref": "2.2",
+    "title": "Правильность заполнения ведомости ссылочных документов (применяемые на проект...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-010",
+    "source_ref": "2.3",
+    "title": "Правильность заполнения ведомости прилагаемых документов (наименование соотве...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-011",
+    "source_ref": "2.4",
+    "title": "Правильность заполнения ведомости основных комплектов чертежей (согласно титу...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-012",
+    "source_ref": "2.5",
+    "title": "Наличие детальных требований к грунтам отсыпки (Купл, вид грунта, допустимая ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-013",
+    "source_ref": "2.6",
+    "title": "Правильность заполнения общих указаний (согласно шаблона на общие указания)",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-014",
+    "source_ref": "2.7",
+    "title": "Пояснительная записка",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-015",
+    "source_ref": "2.8",
+    "title": "Проверить документацию на актуальность шаблонов на сайте проекта",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-016",
+    "source_ref": "2.9",
+    "title": "Проверить наименование объекта, титула/подтитула, марки комплекта согласно ти...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-017",
+    "source_ref": "2.10",
+    "title": "Правильность заполнения основной надписи (штамп)",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-018",
+    "source_ref": "2.11",
+    "title": "Правильность заполнения графы инв. №",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-019",
+    "source_ref": "2.12",
+    "title": "Правильность записи имени файла",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-020",
+    "source_ref": "2.13",
+    "title": "Разделы пояснительной записки выполнены строго в соответсвии с требованиями П...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-021",
+    "source_ref": "2.14",
+    "title": "Актуальность ссылок на НТД",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-022",
+    "source_ref": "2.15",
+    "title": "В пояснительной записке должно быть описано следующее (подробное описание пр...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-023",
+    "source_ref": "2.16",
+    "title": "Общее для всех чертежей",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-024",
+    "source_ref": "2.17",
+    "title": "Проверить документацию на актуальность шаблонов на сайте проекта",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-025",
+    "source_ref": "2.18",
+    "title": "Проверить наименование объекта, титула/подтитула, марки комплекта согласно ти...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-026",
+    "source_ref": "2.19",
+    "title": "Правильность заполнения основной надписи (штамп)",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-027",
+    "source_ref": "2.20",
+    "title": "Проверить имя файла под основной надписью",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-028",
+    "source_ref": "2.21",
+    "title": "Проверить инвентарный номер документа",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-029",
+    "source_ref": "2.22",
+    "title": "Актуальность ссылок на НТД",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-030",
+    "source_ref": "2.23",
+    "title": "Проверка орфографии",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-031",
+    "source_ref": "2.24",
+    "title": "Показана условная граница проектируемой площадки, занесена в условные обознач...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-032",
+    "source_ref": "2.25",
+    "title": "Проверить, чтобы на всех сооружениях были проставлены экспликационные номера",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-033",
+    "source_ref": "2.26",
+    "title": "В экспликации  проверить координаты квадрата сетки",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-034",
+    "source_ref": "2.27",
+    "title": "Наличие и правильность направления стрелки «Север»",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-035",
+    "source_ref": "2.28",
+    "title": "Прочитать внимательно примечания на всех листах, наличие актуальных ссылок на...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-036",
+    "source_ref": "2.29",
+    "title": "При разделении генплана на несколько листов, проверить наличие линии совмещен...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-037",
+    "source_ref": "2.30",
+    "title": "Наименование чертежа и масштаб соответствует наименованию в основной надписи,...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-038",
+    "source_ref": "2.31",
+    "title": "Проверить состав условных обозначений, соответствие масштабов, толщины, цвето...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-039",
+    "source_ref": "2.32",
+    "title": "Проверить наименование чертежей графической части в следующем формате: «Схема...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-040",
+    "source_ref": "2.33",
+    "title": "Разбивочный план",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-041",
+    "source_ref": "2.34",
+    "title": "Проверить противопожарные расстояния между зданиями и сооружениями согласно  ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-042",
+    "source_ref": "2.35",
+    "title": "Проверить наличие необходимых противопожарных проездов согласно ФЗ \"Техническ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-043",
+    "source_ref": "2.36",
+    "title": "Проверить ширину проезжей части и обочин согласно СП 37.13330.2012",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-044",
+    "source_ref": "2.37",
+    "title": "Проверить наличие координат по двум крайним пересечением осей зданий, осей ав...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-045",
+    "source_ref": "2.38",
+    "title": "Проверить наличие углов поворота между осями автодорог",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-046",
+    "source_ref": "2.39",
+    "title": "Проверить наличие радиусов закруглений по краю проезжей части автодорог",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-047",
+    "source_ref": "2.40",
+    "title": "Проверить наличие отметок нуля по всем зданиям, установкам, обордюренным площ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-048",
+    "source_ref": "2.41",
+    "title": "Проверить наличие пешеходных дорожек ко всем входам, площадкам обслуживания и...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-049",
+    "source_ref": "2.42",
+    "title": "У зданий и сооружений проверить наличие отмостки, лестницы и площадки у входо...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-050",
+    "source_ref": "2.43",
+    "title": "Проверить конструкцию дорожной одежды согласно расчета",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-051",
+    "source_ref": "2.44",
+    "title": "Проверить наличие характерных сечений и правильность их отрисовки",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-052",
+    "source_ref": "2.45",
+    "title": "Проверить границу рубки леса/расчистки от мелколесья, координаты границы",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-053",
+    "source_ref": "2.46",
+    "title": "Проверить наличие границы места допустимого размещения зданий, строений и соо...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-054",
+    "source_ref": "2.47",
+    "title": "Проверить факт выдачи актуального генерального плана с расположением всех зда...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-055",
+    "source_ref": "2.48",
+    "title": "План организации рельефа",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-056",
+    "source_ref": "2.49",
+    "title": "Проверить наличие отметок по четырем углам зданий (по двум углам при не больш...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-057",
+    "source_ref": "2.50",
+    "title": "Наличие точек перелома и уклоноуказателей",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-058",
+    "source_ref": "2.51",
+    "title": "Проверить наличие отметок нуля по всем зданиям, установкам, обордюренным площ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-059",
+    "source_ref": "2.52",
+    "title": "Проверить подписи проектных горизонталей, направление уклона (бергштрихи)",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-060",
+    "source_ref": "2.53",
+    "title": "Проверить поперечные и продольные уклоны автодорог на соответствие требования...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-061",
+    "source_ref": "2.54",
+    "title": "Проверить обеспечен ли водоотвод по всей площадке проектирования",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-062",
+    "source_ref": "2.55",
+    "title": "Проверить факт выдачи актуального генерального плана с указанием отметок верт...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-063",
+    "source_ref": "2.56",
+    "title": "Сводный план инженерных сетей",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-064",
+    "source_ref": "2.57",
+    "title": "Проверить расстояние между сетями и от сетей до зданий и сооружений согласно ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-065",
+    "source_ref": "2.58",
+    "title": "Проверить наличие координат по всем инженерным сетям, колодцам, лафетным ство...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-066",
+    "source_ref": "2.59",
+    "title": "Проверить в условных обозначениях наличие всех сетей, встречающихся на чертежах",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-067",
+    "source_ref": "2.60",
+    "title": "Проверить, чтобы в примечаниях были прописаны ссылки на все комплекты инженер...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-068",
+    "source_ref": "2.61",
+    "title": "Проверить факт выдачи актуального генерального плана с расположением всех зда...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-069",
+    "source_ref": "2.62",
+    "title": "План покрытий и благоустройства",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-070",
+    "source_ref": "2.63",
+    "title": "Схема транспортных и пешеходных потоков",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-071",
+    "source_ref": "2.64",
+    "title": "Схема организации дорожного движения",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-072",
+    "source_ref": "2.65",
+    "title": "На чертеже должна быть ведомость дорожек, тротуаров и площадок, согласно  ГОС...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-073",
+    "source_ref": "2.66",
+    "title": "В ведомости указаны типы покрытий, которые должны соответствовать типам покры...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-074",
+    "source_ref": "2.67",
+    "title": "Площади покрытий в ведомости на чертеже, в ведомости объемов работ и специфик...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-075",
+    "source_ref": "2.68",
+    "title": "Проверить наличие привязки и ширины тротуаров",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-076",
+    "source_ref": "2.69",
+    "title": "Наличие позиционных номеров малых архитектурных форм (урна, скамья и т.д.), а...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-077",
+    "source_ref": "2.70",
+    "title": "План земляных масс, ведомость объемов земмасс",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-078",
+    "source_ref": "2.71",
+    "title": "Проверить привязку квадратов сетки",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-079",
+    "source_ref": "2.72",
+    "title": "На чертеже должны быть нанесены основные сооружения, ограждение, откосы",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-080",
+    "source_ref": "2.73",
+    "title": "Отметки проставлены по границе подсчетов объемов работ",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-081",
+    "source_ref": "2.74",
+    "title": "Ведомость объемов земляных масс соответствует ГОСТ 21.508-2020 и в ней учтены...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-082",
+    "source_ref": "2.75",
+    "title": "Объемы грунта указанные в ведомости земляных масс на чертеже должны соответст...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-083",
+    "source_ref": "2.76",
+    "title": "Ситуационный план",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-084",
+    "source_ref": "2.77",
+    "title": "Проверить наличие на чертеже: - границы земельного участка для проектирования...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-085",
+    "source_ref": "2.78",
+    "title": "Проверено отсутствие противоречий между ПЗУ, ТХ, АР и наружными инженерными с...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-086",
+    "source_ref": "2.79",
+    "title": "Обеспечены нормативные радиусы поворота и габариты для пожарной и технологиче...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-087",
+    "source_ref": "2.80",
+    "title": "Все пересечения и сближения с существующими и проектируемыми инженерными сетя...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-088",
+    "source_ref": "2.81",
+    "title": "Планировочные отметки увязаны с решениями по водоотведению, исключены бессточ...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-089",
+    "source_ref": "2.82",
+    "title": "Проверена полнота ведомостей объемов работ и отсутствие расхождений с чертежа...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-090",
+    "source_ref": "2.83",
+    "title": "Предусмотрены мероприятия по обеспечению безопасной эксплуатации откосов, нас...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-091",
+    "source_ref": "2.84",
+    "title": "Проверено соответствие условных обозначений, ссылок на листы и маркировки тре...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-092",
+    "source_ref": "2.85",
+    "title": "Проверено отсутствие типовых замечаний ГГЭ: несогласованность координат, отме...",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-GP-093",
+    "source_ref": "3",
+    "title": "Результаты",
+    "section": "Общие данные",
+    "source": "Чек-лист №13 Генеральный план",
+    "automation": "ручная",
+    "scope": [
+      "ПЗУ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  }
+]

@@ -1,0 +1,301 @@
+[
+  {
+    "id": "OBJ-00001",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Операторская",
+    "aliases": [
+      "операторская"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00002",
+    "class": "BUILDING",
+    "type": "COMPRESSOR_STATION",
+    "name": "Компрессорная",
+    "aliases": [
+      "компрессорная"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00003",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Здание с кабинетом начальника",
+    "aliases": [
+      "здание с кабинетом начальника",
+      "кабинет начальника"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00004",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Здание с кабинетом заместителя начальника",
+    "aliases": [
+      "здание с кабинетом заместителя начальника",
+      "кабинет заместителя начальника"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00005",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Раскомандировочная-учебный класс",
+    "aliases": [
+      "раскомандировочная-учебный класс",
+      "раскомандировочная"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00006",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Сантехнический модуль",
+    "aliases": [
+      "сантехнический модуль"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00007",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Столовая",
+    "aliases": [
+      "столовая"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00008",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Модуль раздевалки",
+    "aliases": [
+      "модуль раздевалки",
+      "модуль-раздевалка"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00009",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Модуль обеспыливания",
+    "aliases": [
+      "модуль обеспыливания"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00010",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Здание проборазделки",
+    "aliases": [
+      "здание проборазделки",
+      "проборазделка"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00011",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Здание энергослужб",
+    "aliases": [
+      "здание энергослужб"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00012",
+    "class": "BUILDING",
+    "type": "TRANSFORMER_SUBSTATION",
+    "name": "Комплектная трансформаторная подстанция",
+    "aliases": [
+      "комплектная трансформаторная подстанция",
+      "ктп"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00013",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Электрощитовая",
+    "aliases": [
+      "электрощитовая"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00014",
+    "class": "STRUCTURE",
+    "type": "GENERIC",
+    "name": "Эстакада кабельная",
+    "aliases": [
+      "эстакада кабельная",
+      "кабельная эстакада"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00015",
+    "class": "BUILDING",
+    "type": "PUMP_STATION",
+    "name": "Насосная станция ППВ",
+    "aliases": [
+      "насосная станция производственно-противопожарного водоснабжения с резервуарами",
+      "насосная станция производственно-противопожарного водоснабжения",
+      "насосная станция ппв",
+      "насосная ппв"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00016",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "КПП",
+    "aliases": [
+      "контрольно-пропускной пункт",
+      "кпп"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00017",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Технологический комплекс",
+    "aliases": [
+      "технологический комплекс"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00018",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Навес системы подачи извести",
+    "aliases": [
+      "навес системы подачи извести"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00019",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Пункт обогрева",
+    "aliases": [
+      "пункт обогрева"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00020",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Выгреб",
+    "aliases": [
+      "выгреб"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00021",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Приёмная камера К1",
+    "aliases": [
+      "приемная камера к1",
+      "приёмная камера к1"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  },
+  {
+    "id": "OBJ-00022",
+    "class": "BUILDING",
+    "type": "GENERIC",
+    "name": "Мачты освещения",
+    "aliases": [
+      "мачты освещения",
+      "мачта освещения"
+    ],
+    "expected_parameters": [],
+    "scope": [
+      "core"
+    ]
+  }
+]

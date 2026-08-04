@@ -1,0 +1,1360 @@
+[
+  {
+    "id": "CORP-TH-001",
+    "source_ref": "1",
+    "title": "Предоставлено ТЗ на разработку проектной документации",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-002",
+    "source_ref": "1.1",
+    "title": "Содержание раздела 6 \"Технологические решения\" соответствует Постановлению Пр...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-003",
+    "source_ref": "1.2",
+    "title": "Предоставлено Технологическое задание на разработку смежных разделов (Исходны...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-004",
+    "source_ref": "1.3",
+    "title": "Соответствие технических решений требованиям нормативно-технической документа...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-005",
+    "source_ref": "1.4",
+    "title": "Достаточность объема разработанной документации комплекта/раздела в целом",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-006",
+    "source_ref": "1.5",
+    "title": "Отсутствие коллизий, технических ошибок (несоответствий) внутри выпускаемого ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-007",
+    "source_ref": "1.6",
+    "title": "Корректность предоставленных расчётов/приложений и соответствие методов расчё...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-008",
+    "source_ref": "1.7",
+    "title": "Актуальность НТД указанном в разделе. Список НТД является полным и достаточным",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-009",
+    "source_ref": "1.8",
+    "title": "Проверка правильности выбора оборудования",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-010",
+    "source_ref": "1.9",
+    "title": "Проверка соответствия базовому инжинирингу (при наличии)",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-011",
+    "source_ref": "1.10",
+    "title": "Введение",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-012",
+    "source_ref": "2",
+    "title": "Заверение проектной организации в соответствии разработанной проектной докуме...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-013",
+    "source_ref": "2.1",
+    "title": "I. Характеристика принятой технологической схемы производства в целом и харак...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-014",
+    "source_ref": "2.2",
+    "title": "Краткие сведения о проектируемом объекте, включая основные технические характ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-015",
+    "source_ref": "2.3",
+    "title": "II. Обоснование потребности в основных видах ресурсов для технологических нуж...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-016",
+    "source_ref": "2.4",
+    "title": "Предоставлены виды, количество (объемы) и перечень потребителей основных видо...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-017",
+    "source_ref": "2.5",
+    "title": "Предоставлена итоговая потребность (объемы) основных видов ресурсов по объект...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-018",
+    "source_ref": "2.6",
+    "title": "III. Описание мест расположения приборов учета используемых в производственно...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-019",
+    "source_ref": "2.7",
+    "title": "Предоставлены места расположения приборов учета в соответствии с о смежными р...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-020",
+    "source_ref": "2.8",
+    "title": "IV. Описание источников поступления сырья и материалов - для объектов произво...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-021",
+    "source_ref": "2.9",
+    "title": "Предоставлено описание производственных процессов для производства продукции ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-022",
+    "source_ref": "2.10",
+    "title": "Предоставлены проектные решения по типу автомобильной/ж.д. техники для достав...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-023",
+    "source_ref": "2.11",
+    "title": "V. Описание требований к параметрам и качественным характеристикам продукции ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-024",
+    "source_ref": "2.12",
+    "title": "Предоставлены перечни требований к характеристикам продукции в соответствии с...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-025",
+    "source_ref": "2.13",
+    "title": "VI. Обоснование показателей и характеристик принятых технологических процессо...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-026",
+    "source_ref": "2.14",
+    "title": "Предоставлен перечень применяемого технологического оборудования с его технич...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-027",
+    "source_ref": "2.15",
+    "title": "Представлено описание и обоснование применяемого технологического оборудовани...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-028",
+    "source_ref": "2.16",
+    "title": "VII. Обоснование количества и типов вспомогательного оборудования, в том числ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-029",
+    "source_ref": "2.17",
+    "title": "Предоставлены сведения и перечень применяемого на объекте вспомогательного об...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-030",
+    "source_ref": "2.18",
+    "title": "Предоставлены расчеты и обоснование типа и характеристик применяемого техноло...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-031",
+    "source_ref": "2.19",
+    "title": "VIII. Перечень мероприятий по обеспечению выполнения требований, предъявляемы...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-032",
+    "source_ref": "2.20",
+    "title": "Предоставлены сведения об объекте проектирования согласно Федеральному закону...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-033",
+    "source_ref": "2.21",
+    "title": "Предоставлены сведения о соответствии применяемого на объекте проектирования ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-034",
+    "source_ref": "2.22",
+    "title": "Приведен перечень мероаприятий обеспечивающих безопасную эксплуатацию оборудо...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-035",
+    "source_ref": "2.23",
+    "title": "Приведен перечень категорий производственных помещений, зданий и наружных уст...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-036",
+    "source_ref": "2.24",
+    "title": "Приведены требования к зданиям и сооружениям для объектов производственного н...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-037",
+    "source_ref": "2.25",
+    "title": "IX. Сведения о расчетной численности, профессионально-квалификационном состав...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-038",
+    "source_ref": "2.26",
+    "title": "Приведен перечень ИТР и рабочих по профессиям по зданиям и сооружениям на про...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-039",
+    "source_ref": "2.27",
+    "title": "X. Перечень мероприятий, обеспечивающих соблюдение требований по охране труда...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-040",
+    "source_ref": "2.28",
+    "title": "Представлен перечень мероприятий обеспечивающих соблюдение требований по охра...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-041",
+    "source_ref": "2.29",
+    "title": "XI. Перечень мероприятий, направленных на предупреждение вредного воздействия...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-042",
+    "source_ref": "2.30",
+    "title": "Предоставлен перечень мероприятий на предупреждения вредного воздействия прои...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-043",
+    "source_ref": "2.31",
+    "title": "XII. Описание автоматизированных систем, используемых в производственном проц...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-044",
+    "source_ref": "2.32",
+    "title": "Предоставлено описание автоматизированных систем в соответствии с о смежным р...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-045",
+    "source_ref": "2.33",
+    "title": "XIII. Результаты расчетов о количестве и составе вредных выбросов в атмосферу...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-046",
+    "source_ref": "2.34",
+    "title": "Предоставлены  расчеты о количестве и составе выбросов в атмосферу в соответс...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-047",
+    "source_ref": "2.35",
+    "title": "XIV. Перечень мероприятий по предотвращению (сокращению) выбросов и сбросов в...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-048",
+    "source_ref": "2.36",
+    "title": "Предоставлен перечень мероприятий по предотвращению выбросов ВВ в окружающую ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-049",
+    "source_ref": "2.37",
+    "title": "Предоставлены решения по аспирации (при наличии)",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-050",
+    "source_ref": "2.38",
+    "title": "XV. Cведения о виде, составе и планируемом объеме отходов производства, подле...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-051",
+    "source_ref": "2.39",
+    "title": "Предоставлены сведения о виде, составе объеме отходов производства и их харак...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-052",
+    "source_ref": "2.40",
+    "title": "XVI. Перечень мероприятий по обеспечению соблюдения установленных требований ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-053",
+    "source_ref": "2.41",
+    "title": "XVII. Обоснование выбора функционально-технологических, конструктивных и инже...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-054",
+    "source_ref": "2.42",
+    "title": "Представлены проектные решения направленные на обеспечение энергоэффективност...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-055",
+    "source_ref": "2.43",
+    "title": "XVIII.Описание и обоснование проектных решений, направленных на соблюдение тр...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-056",
+    "source_ref": "2.44",
+    "title": "Представлены обоснованные проектные решения согласно требованиям технологичес...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-057",
+    "source_ref": "2.45",
+    "title": "XIX. Описание и обоснование проектных решений при реализации требований, пред...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-058",
+    "source_ref": "2.46",
+    "title": "Предоставлены обоснование транспортной безопасности в рамках Федерального зак...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-059",
+    "source_ref": "2.47",
+    "title": "Описаны мероприятия по сохранности при передаче промпродуктов в плавильное от...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-060",
+    "source_ref": "2.48",
+    "title": "XX. Графическая часть",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-061",
+    "source_ref": "2.49",
+    "title": "Ведомость графической части согласно приложения В ГОСТ Р 21.101-2026",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-062",
+    "source_ref": "2.50",
+    "title": "Принципиальные схемы технологических процессов от места поступления сырья и м...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-063",
+    "source_ref": "2.51",
+    "title": "Технологические планировки по корпусам (цехам) с указанием мест размещения ос...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-064",
+    "source_ref": "2.52",
+    "title": "Спецификация оборудования",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-065",
+    "source_ref": "2.53",
+    "title": "Схема грузопотоков",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-066",
+    "source_ref": "2.54",
+    "title": "Схема с указанием мест расположения приборов учета используемых в производств...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-067",
+    "source_ref": "2.55",
+    "title": "Схема автоматизированного управления технологическими процессами",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-068",
+    "source_ref": "2.56",
+    "title": "XXI. Проверка исходных данных и расчетных обоснований",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-069",
+    "source_ref": "2.57",
+    "title": "Проверено соответствие принятых технологических решений актуальным инженерным...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-070",
+    "source_ref": "2.58",
+    "title": "Проверена актуальность исходных данных, технических условий, технологических ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-071",
+    "source_ref": "2.59",
+    "title": "Представлены расчеты производительности основного и вспомогательного оборудов...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-072",
+    "source_ref": "2.60",
+    "title": "Проверены материальные, водные, энергетические и иные технологические балансы...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-073",
+    "source_ref": "2.61",
+    "title": "Проверено соответствие расчетной производительности проектной мощности объект...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-074",
+    "source_ref": "2.62",
+    "title": "XXII. Компоновка технологического оборудования",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-075",
+    "source_ref": "2.63",
+    "title": "Проверена возможность безопасной эксплуатации, осмотра и технического обслужи...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-076",
+    "source_ref": "2.64",
+    "title": "Проверены ремонтные и монтажные зоны, возможность демонтажа и замены оборудов...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-077",
+    "source_ref": "2.65",
+    "title": "Нагрузки от технологического оборудования, места опирания, крепления, проемы ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-078",
+    "source_ref": "2.66",
+    "title": "XXIII. Аварийные режимы и резервирование",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-079",
+    "source_ref": "2.67",
+    "title": "Описаны действия оборудования и персонала при аварийной остановке, прекращени...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-080",
+    "source_ref": "2.68",
+    "title": "Предусмотрены необходимые технологические блокировки, сигнализация и резервир...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-081",
+    "source_ref": "2.69",
+    "title": "Предусмотрены решения по локализации аварийных проливов, просыпей и выбросов,...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-082",
+    "source_ref": "2.70",
+    "title": "XXIV. Технологические трубопроводы и коммуникации",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-083",
+    "source_ref": "2.71",
+    "title": "Проверено соответствие технологических трубопроводов принципиальным схемам: н...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-084",
+    "source_ref": "2.72",
+    "title": "Проверены точки подключения технологических коммуникаций к смежным системам, ...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-085",
+    "source_ref": "2.73",
+    "title": "XXV. Увязка со смежными разделами проектной документации",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-086",
+    "source_ref": "2.74",
+    "title": "Проверено соответствие технологических решений пояснительной записке, генерал...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-087",
+    "source_ref": "2.75",
+    "title": "Проверено соответствие потребителей, нагрузок, точек подключения и алгоритмов...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-088",
+    "source_ref": "2.76",
+    "title": "Проверено соответствие решений разделам промышленной и пожарной безопасности,...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-089",
+    "source_ref": "2.77",
+    "title": "Проверено отсутствие противоречий между текстовой и графической частями, техн...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-090",
+    "source_ref": "2.78",
+    "title": "XXVI. Эксплуатация, техническое обслуживание и ремонт",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-091",
+    "source_ref": "2.79",
+    "title": "Представлены требования к эксплуатации, периодичности технического обслуживан...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-092",
+    "source_ref": "2.80",
+    "title": "Проверена возможность безопасного выполнения ремонтных работ, очистки, промыв...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-093",
+    "source_ref": "2.81",
+    "title": "XXVII. Контроль типовых замечаний государственной экспертизы",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-094",
+    "source_ref": "2.82",
+    "title": "Проверена актуальность нормативных документов и корректность ссылок на обязат...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-095",
+    "source_ref": "2.83",
+    "title": "Все оборудование, механизмы, емкости и технологические коммуникации, указанны...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-096",
+    "source_ref": "2.84",
+    "title": "Проверено отсутствие расхождений по количеству, характеристикам, маркам, прои...",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "автоматическая/частичная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  },
+  {
+    "id": "CORP-TH-097",
+    "source_ref": "3.18",
+    "title": "Результаты",
+    "section": "",
+    "source": "Чек-лист №14 Технологические решения",
+    "automation": "ручная",
+    "scope": [
+      "ТХ"
+    ],
+    "enabled": true,
+    "priority": "Средний",
+    "rule_kind": "checklist_requirement"
+  }
+]

@@ -9,3 +9,13 @@ Studio is now separated from Core and organized by responsibility:
 - `studio/pages/` — independent workspaces: Overview, Documents, Objects, Checks, Issues.
 
 Core modules remain unchanged and may later be exposed through an API or another frontend.
+
+
+## Studio 2.0 Alpha 1
+
+- новая палитра Engineering Workspace;
+- тёмная фиксированная боковая панель без SVG и шрифтовых иконок;
+- устранены декоративные HTML-элементы под аналитическим режимом;
+- добавлен пошаговый индикатор обработки проекта;
+- загрузка через стандартный Streamlit uploader остаётся без точного побайтового прогресса;
+- Core сообщает Studio стадии анализа через необязательный progress callback.

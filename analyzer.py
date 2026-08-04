@@ -11,7 +11,7 @@ except ModuleNotFoundError as exc:
         "Убедитесь, что папки core и knowledge находятся в корне GitHub-репозитория рядом с app.py."
     ) from exc
 
-def analyze_uploaded(files, config_dir):
-    return analyze_uploaded_core(files, config_dir)
+def analyze_uploaded(files, config_dir, progress_callback=None):
+    return analyze_uploaded_core(files, config_dir, progress_callback=progress_callback)
 
 __all__ = ["Finding", "load_json", "compare_findings", "analyze_uploaded"]

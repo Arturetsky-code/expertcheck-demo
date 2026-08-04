@@ -14,7 +14,7 @@ import streamlit as st
 try:
     from analyzer import Finding, analyze_uploaded, compare_findings, load_json
 except ModuleNotFoundError:
-    from modules.analyzer import Finding, analyze_uploaded, compare_findings, load_json
+    from analyzer import Finding, analyze_uploaded, compare_findings, load_json
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR

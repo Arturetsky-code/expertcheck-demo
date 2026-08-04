@@ -1188,7 +1188,8 @@ def analyze_uploaded(files: Iterable, config_dir: str | Path) -> tuple[list[dict
     for uploaded in files:
         pages = read_pdf(uploaded.getvalue(), uploaded.name)
         first_text = "\n".join(text for _, text in pages[:3])
-        doc_type = classify_document(uploaded.name, first_text, document_types)
+        declared_type = str(getattr(uploaded, "declared_document_type", "") or "").strip()
+        doc_type = declared_type if declared_type and declared_type != "Не определён" else classify_document(uploaded.name, first_text, document_types)
         doc_findings = extract_findings(uploaded.name, doc_type, pages, parameters, objects)
         object_positions = {
             x.genplan_position for x in doc_findings

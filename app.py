@@ -26,10 +26,18 @@ try:
     from core.object_register_engine import build_registry as build_core_registry
     from core.passport_engine import build_object_passports as build_core_passports
     from core.register_reconciliation import reconcile_register as build_consolidated_registry
+    from core.project_upload import (
+        DOCUMENT_TYPE_OPTIONS,
+        apply_document_type_overrides,
+        prepare_uploads,
+    )
 except ModuleNotFoundError:
     build_core_registry = None
     build_core_passports = None
     build_consolidated_registry = None
+    DOCUMENT_TYPE_OPTIONS = ["Не определён"]
+    apply_document_type_overrides = None
+    prepare_uploads = None
 
 CONFIG_DIR = BASE_DIR / "config" if (BASE_DIR / "config").exists() else BASE_DIR
 
@@ -852,22 +860,90 @@ if page == "Обзор":
                 index=0,
             )
             uploaded_files = st.file_uploader(
-                "Загрузите PDF или XML-документы",
-                type=["pdf", "xml"],
+                "Загрузите комплект проекта",
+                type=["pdf", "xml", "zip"],
                 accept_multiple_files=True,
-                help="Для демонстрации рекомендуется загрузить ПЗ, ПЗУ1, АР1 и ТХ1 с текстовым слоем.",
+                help=(
+                    "Можно загрузить PDF и XML отдельно либо один ZIP-архив со вложенными папками. "
+                    "Перед анализом ExpertCheck покажет состав комплекта и позволит исправить типы документов."
+                ),
             )
+
+            prepared_files = []
+            edited_inventory = pd.DataFrame()
+            upload_errors: list[str] = []
+            package_confirmed = False
+            if uploaded_files and prepare_uploads is not None:
+                preparation = prepare_uploads(uploaded_files)
+                prepared_files = preparation.files
+                upload_errors = preparation.errors
+
+                for error in preparation.errors:
+                    st.error(error)
+                for warning in preparation.warnings:
+                    st.warning(warning)
+
+                if prepared_files:
+                    summary = preparation.package_summary
+                    u1, u2, u3 = st.columns(3)
+                    u1.metric("Файлов в комплекте", int(summary.get("files", 0)))
+                    u2.metric("Общий объём", f"{float(summary.get('total_bytes', 0)) / 1024 / 1024:.1f} МБ")
+                    u3.metric(
+                        "XML-схемы",
+                        ", ".join(summary.get("identity", {}).get("xml_schemas", [])) or "—",
+                    )
+
+                    st.markdown("**Предварительный состав комплекта**")
+                    inventory_df = pd.DataFrame(preparation.inventory)
+                    edited_inventory = st.data_editor(
+                        inventory_df,
+                        hide_index=True,
+                        use_container_width=True,
+                        disabled=["ID", "Файл", "Формат", "Семейство", "Размер, МБ", "Источник", "Статус"],
+                        column_config={
+                            "Предполагаемый раздел": st.column_config.SelectboxColumn(
+                                "Предполагаемый раздел",
+                                options=DOCUMENT_TYPE_OPTIONS,
+                                required=True,
+                                help="Исправьте тип документа до запуска анализа, если он определён неверно.",
+                            ),
+                            "Размер, МБ": st.column_config.NumberColumn(format="%.2f"),
+                        },
+                        key="project_upload_inventory_editor",
+                    )
+
+                    completeness = summary.get("completeness", {})
+                    present = completeness.get("present", {})
+                    with st.expander("Доступные проверки и ограничения комплекта", expanded=True):
+                        cols = st.columns(len(present) or 1)
+                        for idx, (section, is_present) in enumerate(present.items()):
+                            cols[idx].metric(section, "Найден" if is_present else "Нет")
+                        for check in completeness.get("available_checks", []):
+                            st.success(check, icon="✓")
+                        for limitation in completeness.get("limitations", []):
+                            st.info(limitation, icon="ℹ️")
+
+                    package_confirmed = st.checkbox(
+                        "Состав комплекта проверен. Запустить анализ с указанными типами документов.",
+                        value=False,
+                        key="project_upload_confirmed",
+                    )
+                else:
+                    st.info("В загрузке не найдено поддерживаемых PDF или XML-документов.")
+
             run = st.button(
                 "Построить цифровой профиль проекта",
                 type="primary",
-                disabled=not uploaded_files,
+                disabled=not prepared_files or bool(upload_errors) or not package_confirmed,
                 use_container_width=True,
             )
 
             if run:
                 try:
+                    inventory_records = edited_inventory.to_dict("records") if not edited_inventory.empty else []
+                    analysis_files = apply_document_type_overrides(prepared_files, inventory_records)
                     with st.spinner("Анализируем документы и сопоставляем параметры…"):
-                        result = analyze_uploaded(uploaded_files, CONFIG_DIR)
+                        result = analyze_uploaded(analysis_files, CONFIG_DIR)
                         st.session_state["raw_result"] = result
                         st.session_state["result"] = result
                         st.session_state["project_name"] = project_name.strip() or "Новый проект"

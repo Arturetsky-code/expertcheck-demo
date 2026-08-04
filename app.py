@@ -837,8 +837,8 @@ if page == "Обзор":
                 index=0,
             )
             uploaded_files = st.file_uploader(
-                "Загрузите PDF-документы",
-                type=["pdf"],
+                "Загрузите PDF или XML-документы",
+                type=["pdf", "xml"],
                 accept_multiple_files=True,
                 help="Для демонстрации рекомендуется загрузить ПЗ, ПЗУ1, АР1 и ТХ1 с текстовым слоем.",
             )

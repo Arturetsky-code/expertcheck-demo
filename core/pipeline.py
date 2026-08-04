@@ -14,6 +14,8 @@ from .dem import build_dem
 from .validation import ValidationEngine
 from .relations import RelationEngine
 from .model_quality import calculate_model_quality
+from .knowledge_base import KnowledgeBase
+from .risk_engine import calculate_engineering_risk
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -150,10 +152,17 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.1-alpha1"
+        item["core_version"] = "2.2-alpha1"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
+    knowledge_base = KnowledgeBase(root / "knowledge")
+    for item in comparisons:
+        knowledge_base.enrich_comparison(item)
+        risk = calculate_engineering_risk(item)
+        item["engineering_risk_score"] = risk["score"]
+        item["engineering_risk_level"] = risk["level"]
+        item["engineering_risk_reasons"] = risk["reasons"]
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
     dem = build_dem(findings, project_name="Новый проект")
@@ -168,14 +177,15 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.1-alpha1"
+        item["core_version"] = "2.2-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "2.1-alpha1"
+        doc["core_version"] = "2.2-alpha1"
         doc["knowledge_summary"] = summary
+        doc["evidence_base_summary"] = knowledge_base.summary()
         doc["quality_summary"] = quality_summary
         doc["dem_summary"] = dem.metadata
         doc["dem_model_quality"] = model_quality

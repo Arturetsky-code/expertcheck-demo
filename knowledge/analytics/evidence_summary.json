@@ -1,0 +1,312 @@
+{
+  "generated_at": "2026-08-04",
+  "projects_count": 10,
+  "remarks_count": 1254,
+  "violation_types": [
+    {
+      "code": "VI-002",
+      "name": "Отсутствующий документ или приложение",
+      "remarks_count": 506,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-999",
+      "name": "Требует экспертной классификации",
+      "remarks_count": 250,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-006",
+      "name": "Неполнота содержания раздела",
+      "remarks_count": 233,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-010",
+      "name": "Промышленная и технологическая безопасность",
+      "remarks_count": 228,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-003",
+      "name": "Недостаточное обоснование или расчёт",
+      "remarks_count": 176,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-009",
+      "name": "Неполнота инженерных изысканий",
+      "remarks_count": 166,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-012",
+      "name": "Несогласованность текстовой и графической частей",
+      "remarks_count": 164,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-008",
+      "name": "Недостаточность исходных данных и технических условий",
+      "remarks_count": 69,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-001",
+      "name": "Межраздельная несогласованность",
+      "remarks_count": 67,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-005",
+      "name": "Недостоверные или ошибочные сведения",
+      "remarks_count": 50,
+      "projects_count": 10
+    },
+    {
+      "code": "VI-007",
+      "name": "Нарушение оформления, подписания или датирования",
+      "remarks_count": 22,
+      "projects_count": 7
+    },
+    {
+      "code": "VI-011",
+      "name": "Несогласованность заявления и административных сведений",
+      "remarks_count": 12,
+      "projects_count": 5
+    },
+    {
+      "code": "VI-004",
+      "name": "Неактуальная или некорректная нормативная ссылка",
+      "remarks_count": 7,
+      "projects_count": 6
+    }
+  ],
+  "sections": [
+    {
+      "section": "Раздел 4. Здания, строения и сооружения, входящие в инфраструктуру линейного объ",
+      "remarks_count": 146
+    },
+    {
+      "section": "ИЭИ",
+      "remarks_count": 130
+    },
+    {
+      "section": "ТХ",
+      "remarks_count": 120
+    },
+    {
+      "section": "КР",
+      "remarks_count": 104
+    },
+    {
+      "section": "ИГИ",
+      "remarks_count": 90
+    },
+    {
+      "section": "ПОС",
+      "remarks_count": 87
+    },
+    {
+      "section": "ИГМИ",
+      "remarks_count": 73
+    },
+    {
+      "section": "ООС",
+      "remarks_count": 69
+    },
+    {
+      "section": "ИГДИ",
+      "remarks_count": 59
+    },
+    {
+      "section": "ПЗУ",
+      "remarks_count": 56
+    },
+    {
+      "section": "ПБ",
+      "remarks_count": 53
+    },
+    {
+      "section": "ПЗ",
+      "remarks_count": 50
+    },
+    {
+      "section": "ГОЧС",
+      "remarks_count": 25
+    },
+    {
+      "section": "Обследования состояния грунтов оснований зданий и сооружений, их строительных ко",
+      "remarks_count": 21
+    },
+    {
+      "section": "Проектная документация",
+      "remarks_count": 19
+    },
+    {
+      "section": "ЭС",
+      "remarks_count": 18
+    },
+    {
+      "section": "ОВ",
+      "remarks_count": 17
+    },
+    {
+      "section": "Система водоотведения",
+      "remarks_count": 14
+    },
+    {
+      "section": "Система водоснабжения",
+      "remarks_count": 13
+    },
+    {
+      "section": "ДПБ",
+      "remarks_count": 13
+    },
+    {
+      "section": "Раздел 4. Конструктивные и объемно-планировочные решения",
+      "remarks_count": 13
+    },
+    {
+      "section": "Раздел 8. Требования к обеспечению безопасной эксплуатации линейного объекта",
+      "remarks_count": 11
+    },
+    {
+      "section": "АР",
+      "remarks_count": 8
+    },
+    {
+      "section": "Система газоснабжения",
+      "remarks_count": 6
+    },
+    {
+      "section": "Раздел 7. Проект организации работ по сносу или демонтажу объектов капитального ",
+      "remarks_count": 6
+    },
+    {
+      "section": "Задание на проектирование",
+      "remarks_count": 5
+    },
+    {
+      "section": "Задание на выполнение инженерных изысканий",
+      "remarks_count": 5
+    },
+    {
+      "section": "Требования безопасной эксплуатации объектов капитального строительства",
+      "remarks_count": 5
+    },
+    {
+      "section": "Сети связи",
+      "remarks_count": 4
+    },
+    {
+      "section": "Раздел 10. Требования к обеспечению безопасной эксплуатации объектов капитальног",
+      "remarks_count": 3
+    },
+    {
+      "section": "Раздел 6. Проект организации работ по сносу (демонтажу) линейного объекта",
+      "remarks_count": 3
+    },
+    {
+      "section": "Иные сведения, в том числе информационная модель",
+      "remarks_count": 3
+    },
+    {
+      "section": "Заявление",
+      "remarks_count": 2
+    },
+    {
+      "section": "Утвержденный и зарегистрированный в установленном порядке градостроительный план",
+      "remarks_count": 1
+    },
+    {
+      "section": "Раздел 5. Сведения об инженерном оборудовании, о сетях и системах инженерно-техн",
+      "remarks_count": 1
+    },
+    {
+      "section": "Обоснование безопасности опасного производственного объекта, с приложением завер",
+      "remarks_count": 1
+    }
+  ],
+  "parameter_evidence": [
+    {
+      "parameter_code": "DOC_COMPLETENESS",
+      "remarks_count": 494,
+      "projects_count": 10,
+      "project_ids": [
+        "2024_02_01-097",
+        "2024_08_15-063",
+        "2024_10_09-111",
+        "2024_12_28-065",
+        "2025_01_10-054",
+        "2025_06_30-118",
+        "2025_08_13-019",
+        "2025_09_18-086",
+        "2025_10_17-071",
+        "2026_01_30-013"
+      ]
+    },
+    {
+      "parameter_code": "OBJECT_LIST",
+      "remarks_count": 21,
+      "projects_count": 9,
+      "project_ids": [
+        "2024_02_01-097",
+        "2024_08_15-063",
+        "2024_10_09-111",
+        "2024_12_28-065",
+        "2025_01_10-054",
+        "2025_08_13-019",
+        "2025_09_18-086",
+        "2025_10_17-071",
+        "2026_01_30-013"
+      ]
+    },
+    {
+      "parameter_code": "NORMATIVE_REFERENCES",
+      "remarks_count": 7,
+      "projects_count": 6,
+      "project_ids": [
+        "2024_02_01-097",
+        "2024_12_28-065",
+        "2025_01_10-054",
+        "2025_08_13-019",
+        "2025_09_18-086",
+        "2026_01_30-013"
+      ]
+    },
+    {
+      "parameter_code": "CAPACITY",
+      "remarks_count": 2,
+      "projects_count": 2,
+      "project_ids": [
+        "2025_01_10-054",
+        "2025_08_13-019"
+      ]
+    },
+    {
+      "parameter_code": "AREA_BUILD",
+      "remarks_count": 1,
+      "projects_count": 1,
+      "project_ids": [
+        "2024_02_01-097"
+      ]
+    },
+    {
+      "parameter_code": "AREA_TOTAL",
+      "remarks_count": 1,
+      "projects_count": 1,
+      "project_ids": [
+        "2024_02_01-097"
+      ]
+    },
+    {
+      "parameter_code": "STAFF",
+      "remarks_count": 1,
+      "projects_count": 1,
+      "project_ids": [
+        "2025_06_30-118"
+      ]
+    }
+  ]
+}

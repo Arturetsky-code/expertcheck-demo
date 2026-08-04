@@ -767,7 +767,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
         summary = pd.DataFrame(
             [
                 ["Проект", project_name],
-                ["Версия ExpertCheck", "Core 2.1 Alpha 1"],
+                ["Версия ExpertCheck", "Core 2.2 Alpha 1"],
                 ["Дата проверки", datetime.now().strftime("%d.%m.%Y %H:%M")],
                 ["Документов", len(docs_df)],
                 ["Извлечено характеристик", len(findings_df)],
@@ -799,7 +799,7 @@ def make_excel(project_name: str, docs_df: pd.DataFrame, findings_df: pd.DataFra
 
 # ---------- Боковая навигация ----------
 with st.sidebar:
-    st.caption("Core 2.1 Alpha · цифровая инженерная модель")
+    st.caption("Core 2.2 Alpha · инженерная база знаний")
     st.markdown("## ✓ ExpertCheck")
     st.caption("Предэкспертная проверка документации")
     st.divider()
@@ -820,7 +820,7 @@ with st.sidebar:
         st.success("Анализ завершён")
     else:
         st.info("Документы не проверены")
-    st.caption("Core 2.1 Alpha 1")
+    st.caption("Core 2.2 Alpha 1")
 
 
 # ---------- Общая шапка ----------
@@ -831,7 +831,7 @@ st.markdown(
         <div class="ec-brand">Expert<span>Check</span></div>
         <div class="ec-subtitle">Интеллектуальная система предэкспертной проверки проектной документации</div>
       </div>
-      <div class="ec-badge">Core 2.1 Alpha 1</div>
+      <div class="ec-badge">Core 2.2 Alpha 1</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -872,6 +872,16 @@ if page == "Обзор":
                 q3.metric("Позиции по ГП", f"{float(dem_quality.get('position_coverage', 0)):.0%}")
                 q4.metric("Проблемы модели", int(dem_quality.get('validation_issues', 0)))
                 st.caption("Индекс оценивает качество построенной модели, а не готовность проекта к экспертизе.")
+
+    if not docs_df.empty and "evidence_base_summary" in docs_df.columns:
+        evidence_summary = docs_df.iloc[0].get("evidence_base_summary") or {}
+        if isinstance(evidence_summary, dict) and evidence_summary:
+            with st.expander("Инженерная база знаний", expanded=False):
+                e1, e2, e3 = st.columns(3)
+                e1.metric("Проектов-источников", int(evidence_summary.get("projects_count", 0)))
+                e2.metric("Замечаний в базе", int(evidence_summary.get("remarks_count", 0)))
+                e3.metric("Классов нарушений", len(evidence_summary.get("violation_types", [])))
+                st.caption("База используется как подтверждающий опыт. Она не заменяет инженерное решение и не задаёт отрасль проекта автоматически.")
 
     left, right = st.columns([1.55, 1])
     with left:

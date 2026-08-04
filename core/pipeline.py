@@ -9,9 +9,10 @@ from .confidence import calculate_confidence
 from .rule_engine import RuleEngine
 from .semantic_engine import object_similarity
 from .table_engine import TableEngine
+from .quality import build_quality_summary
 
 
-def _best_table_by_page(files, legacy, table_engine: TableEngine) -> dict[tuple[str, int], dict[str, Any]]:
+def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
     """Распознаёт тип инженерной таблицы для каждой страницы документа.
 
     Возвращает только лучший кандидат на страницу, чтобы не перегружать находки
@@ -24,7 +25,7 @@ def _best_table_by_page(files, legacy, table_engine: TableEngine) -> dict[tuple[
         except Exception:
             continue
         for page_no, text in pages:
-            candidates = table_engine.detect(text)
+            candidates = table_engine.detect(text, document_types.get(uploaded.name, ""))
             if not candidates:
                 continue
             best = candidates[0]
@@ -32,6 +33,7 @@ def _best_table_by_page(files, legacy, table_engine: TableEngine) -> dict[tuple[
                 "table_type": best.table_type,
                 "table_score": best.score,
                 "table_evidence": "; ".join(best.evidence),
+                "table_structured_rows": [row.to_dict() for row in best.structured_rows],
             }
     return result
 
@@ -111,7 +113,7 @@ def _enrich_rules(comparisons: list[dict], registry: KnowledgeRegistry) -> None:
 
 
 def analyze_uploaded_core(files, config_dir):
-    """Переходный конвейер Core 2.0 Alpha 3.
+    """Переходный конвейер Core 2.0 Alpha 4.
 
     Legacy Analyzer пока выполняет проверенную предметную логику извлечения.
     Core 2.0 добавляет независимое распознавание таблиц, объяснимую уверенность,
@@ -124,8 +126,12 @@ def analyze_uploaded_core(files, config_dir):
 
     root = Path(config_dir)
     registry = KnowledgeRegistry(root / "knowledge")
-    table_engine = TableEngine(registry.load_json("core/table_catalog.json", []))
-    page_tables = _best_table_by_page(files, legacy, table_engine)
+    table_engine = TableEngine(
+        registry.load_json("core/table_catalog.json", []),
+        registry.load_json("core/parameter_catalog.json", []),
+    )
+    document_types = {str(doc.get("Файл", "")): str(doc.get("Раздел", doc.get("Тип документа", ""))) for doc in documents}
+    page_tables = _best_table_by_page(files, legacy, table_engine, document_types)
 
     for item in findings:
         table_info = page_tables.get((item.get("document"), int(item.get("page") or 0)), {})
@@ -140,7 +146,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "2.0-alpha3"
+        item["core_version"] = "2.0-alpha4"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -151,10 +157,11 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "2.0-alpha3"
+        item["core_version"] = "2.0-alpha4"
     for doc in documents:
-        doc["core_version"] = "2.0-alpha3"
+        doc["core_version"] = "2.0-alpha4"
         doc["knowledge_summary"] = summary
+        doc["quality_summary"] = quality_summary
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     return documents, findings, comparisons

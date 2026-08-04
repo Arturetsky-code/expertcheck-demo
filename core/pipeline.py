@@ -176,7 +176,7 @@ def analyze_uploaded_core(files, config_dir):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.0-alpha3"
+        item["core_version"] = "3.0-alpha4"
 
     _enrich_semantics(findings)
     _enrich_rules(comparisons, registry)
@@ -208,13 +208,13 @@ def analyze_uploaded_core(files, config_dir):
         table_pages_by_doc[filename] += 1
 
     for item in comparisons:
-        item["core_version"] = "3.0-alpha3"
+        item["core_version"] = "3.0-alpha4"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.0-alpha3"
+        doc["core_version"] = "3.0-alpha4"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {

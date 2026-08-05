@@ -46,6 +46,10 @@ def render(ctx):
                     st.session_state.result=ctx.analyze(files,ctx.config_dir,progress_callback=update_progress)
                     st.session_state.project_name=name.strip() or 'Новый проект'
                     st.session_state.analysis_time=datetime.now().isoformat(timespec='minutes')
+                    st.session_state.completeness_user_confirmed=False
+                    st.session_state.completeness_decisions={}
+                    st.session_state.completeness_user_confirmed=False
+                    st.session_state.completeness_decisions={}
                     progress_bar.progress(100,text='100%')
                     stage_text.markdown('**Проверка завершена**')
                     detail_text.caption('Результаты подготовлены. Открываем рабочее пространство проекта.')
@@ -60,11 +64,12 @@ def render(ctx):
         return
     quality_data=docs.iloc[0].get('dem_model_quality') if 'dem_model_quality' in docs else {};quality=int(round(float((quality_data or {}).get('model_quality_index',0))*100))
     hero(st.session_state.project_name,'Проверка завершена. Ниже показаны результаты, влияющие на инженерное решение.',f'Индекс цифровой модели: {quality}% · Последняя проверка: {st.session_state.analysis_time or "—"}')
-    cols=st.columns(4)
+    cols=st.columns(5)
     with cols[0]:card('Документы',len(docs),'PDF и XML в комплекте')
     with cols[1]:card('Объекты',len(registry),'Позиции консолидированного реестра')
     with cols[2]:card('Требуют внимания',metrics['bad']+metrics['warn'],'Расхождения и неподтверждённые сведения','bad' if metrics['bad'] else 'warn')
     with cols[3]:card('Подтверждено',metrics['ok'],'Согласованные проверки','ok')
+    with cols[4]:card('Комплектность','Подтверждена' if st.session_state.get('completeness_user_confirmed') else 'Не подтверждена','Откройте раздел «Комплектность»','ok' if st.session_state.get('completeness_user_confirmed') else 'warn')
     section('Состояние проекта','Краткая сводка без служебных полей.')
     left,right=st.columns([1.45,1])
     with left:

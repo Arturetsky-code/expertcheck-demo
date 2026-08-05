@@ -8,9 +8,11 @@ from studio.components import card, empty, section
 
 
 def _cross_checks(ctx, df: pd.DataFrame):
-    section('Межраздельные сверки','Сопоставление инженерных характеристик выполняется только по подтвержденным объектам.')
-    if df.empty:
-        return empty('Сопоставимые сведения не найдены.')
+    section('Межраздельные сверки','Сопоставление выполняется только после ручного подтверждения состава проекта.')
+    if not st.session_state.get('object_registry_confirmed'):
+        st.warning('Сначала откройте раздел «Объекты», исключите лишние позиции и подтвердите состав проекта.')
+        return
+    if df.empty:return empty('После подтверждения состава сопоставимые сведения не найдены.')
     statuses=sorted(df.get('status',pd.Series(dtype=str)).dropna().astype(str).unique())
     c1,c2=st.columns([1,2]); selected=c1.multiselect('Статус',statuses,default=statuses,key='cross_status'); q=c2.text_input('Поиск',key='cross_search'); view=df.copy()
     if selected and 'status' in view:view=view[view.status.isin(selected)]
@@ -22,32 +24,47 @@ def _cross_checks(ctx, df: pd.DataFrame):
 
 
 def _checklists(ctx, docs, findings, comparisons):
-    section('Проверка по корпоративным чек-листам','Пункты разделены на автоматические, частично автоматические и ручные. Ручные пункты не выдаются за выполненные системой.')
+    section('Проверка по чек-листу','Выберите раздел, соответствующий корпоративный чек-лист и запустите отдельную проверку.')
     engine=ChecklistEngine(ctx.config_dir/'knowledge'/'checklist_catalog.json')
-    results=engine.evaluate(docs.to_dict('records'),comparisons.to_dict('records'),findings.to_dict('records'))
-    if not results:return empty('Каталог чек-листов не загружен.')
+    if not engine.items:return empty('Каталог чек-листов не загружен.')
+    sections=engine.sections()
+    c1,c2=st.columns(2)
+    section_name=c1.selectbox('Раздел проектной документации',sections,key='checklist_section')
+    files=engine.checklist_files(section_name)
+    if not files:return st.info('Для выбранного раздела чек-лист не найден.')
+    checklist=c2.selectbox('Чек-лист',files,key='checklist_file')
+    mode=st.radio('Режим проверки',['Быстрая','Полная','Экспертная'],horizontal=True,key='checklist_mode',help='Быстрая — автоматизируемые пункты; Полная — A и B; Экспертная — все пункты, включая ручные.')
+    if st.button('Запустить проверку по чек-листу',type='primary',width='content'):
+        st.session_state.checklist_run={'section':section_name,'source_file':checklist,'mode':mode}
+        st.session_state.checklist_user_results={}
+        st.rerun()
+    run=st.session_state.get('checklist_run')
+    if not run or run.get('source_file')!=checklist or run.get('section')!=section_name:
+        st.info('Выберите параметры и нажмите «Запустить проверку по чек-листу».')
+        return
+    results=engine.evaluate(docs.to_dict('records'),comparisons.to_dict('records'),findings.to_dict('records'),source_file=checklist,section=section_name)
+    levels={'Быстрая':{'A'},'Полная':{'A','B'},'Экспертная':{'A','B','C'}}[mode]
+    results=[r for r in results if r.get('automation_level') in levels]
+    if not results:return empty('Для выбранного режима в чек-листе нет пунктов.')
     summary=engine.summary(results)
-    c1,c2,c3,c4=st.columns(4)
-    with c1: card('Всего пунктов',summary['total'],'Интегрировано из 15 чек-листов')
-    with c2: card('Автоматически',summary['automatic'],'Есть структурированные доказательства','ok')
-    with c3: card('Подготовлено',summary['prepared'],'Нужна оценка специалиста','warn')
-    with c4: card('Ручная проверка',summary['manual'],'Инженерное решение обязательно','info')
+    a,b,c,d=st.columns(4)
+    with a:card('Пунктов',summary['total'],'В выбранном режиме')
+    with b:card('Автоматически',summary['automatic'],'Есть связанные доказательства','ok')
+    with c:card('К подтверждению',summary['prepared'],'Нужна оценка специалиста','warn')
+    with d:card('Ручных',summary['manual'],'Инженерное решение','info')
     df=pd.DataFrame(results)
-    source_options=sorted(df['source_file'].unique())
-    f1,f2,f3=st.columns([1.5,1,1])
-    source=f1.selectbox('Чек-лист',source_options)
-    levels=f2.multiselect('Уровень автоматизации',['A','B','C'],default=['A','B','C'])
-    statuses=sorted(df['status'].unique())
-    selected=f3.multiselect('Результат',statuses,default=statuses)
-    view=df[(df.source_file==source)&df.automation_level.isin(levels)&df.status.isin(selected)]
-    show=['item_no','sheet','question','automation_level','status','evidence','priority','where_to_check','risk']
-    labels={'item_no':'№','sheet':'Вкладка','question':'Контрольный вопрос','automation_level':'Тип','status':'Результат','evidence':'Основание','priority':'Приоритет','where_to_check':'Где сверить','risk':'Риск / замечание'}
-    st.dataframe(view[[c for c in show if c in view]].rename(columns=labels),width='stretch',hide_index=True,height=520)
-    st.caption('A — автоматизируемый пункт; B — система подготавливает доказательства; C — обязательная ручная инженерная проверка.')
+    df['Решение пользователя']='Не рассмотрено'; df['Комментарий']=''
+    show=df.rename(columns={'item_no':'№','sheet':'Вкладка','question':'Контрольный вопрос','automation_level':'Тип','status':'Результат системы','evidence':'Основание','priority':'Приоритет','where_to_check':'Где сверить','risk':'Риск / замечание'})
+    cols=[c for c in ['№','Вкладка','Контрольный вопрос','Тип','Результат системы','Основание','Где сверить','Решение пользователя','Комментарий'] if c in show]
+    edited=st.data_editor(show[cols],hide_index=True,width='stretch',height=560,disabled=[c for c in cols if c not in {'Решение пользователя','Комментарий'}],column_config={'Решение пользователя':st.column_config.SelectboxColumn(options=['Не рассмотрено','Соответствует','Не соответствует','Не применимо','Требуется уточнение'])},key=f"checklist_editor_{checklist}_{section_name}_{mode}")
+    if st.button('Сохранить результаты чек-листа',width='content'):
+        st.session_state.checklist_user_results[f'{section_name}|{checklist}|{mode}']=edited.to_dict('records')
+        st.success('Результаты проверки по чек-листу сохранены в текущей сессии.')
+    st.caption('Система не считает ручной пункт выполненным без решения пользователя. Автоматические результаты являются предварительными и должны иметь структурированное доказательство.')
 
 
 def render(ctx):
     docs,findings,comparisons=ctx.data[:3]
     tabs=st.tabs(['Межраздельные сверки','Чек-листы'])
-    with tabs[0]: _cross_checks(ctx,comparisons)
-    with tabs[1]: _checklists(ctx,docs,findings,comparisons)
+    with tabs[0]:_cross_checks(ctx,comparisons)
+    with tabs[1]:_checklists(ctx,docs,findings,comparisons)

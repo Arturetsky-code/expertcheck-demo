@@ -86,6 +86,10 @@ def _upload(ctx):
             st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
             st.session_state.completeness_user_confirmed = False
             st.session_state.completeness_decisions = {}
+            st.session_state.object_registry_confirmed = False
+            st.session_state.object_assembly_rows = []
+            st.session_state.checklist_run = None
+            st.session_state.checklist_user_results = {}
             update_progress(100, 'Проверка завершена', 'Открываем рабочее пространство проекта')
             st.rerun()
 

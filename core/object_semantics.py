@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .normalization import normalize_text
+from .knowledge_engine import default_knowledge_engine
 
 # Единые коды Core для исторических обозначений legacy-анализатора.
 PARAMETER_CODE_ALIASES: dict[str, str] = {
@@ -22,7 +23,8 @@ ENGINEERING_PARAMETERS = {
     "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "FLOORS",
     "CAPACITY", "RES_VOLUME", "POWER_KTP", "POWER_INSTALLED",
     "POWER_CALCULATED", "PERSONNEL", "LENGTH", "QUANTITY",
-    "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT",
+    "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT", "TEMPERATURE",
+    "VOLUME", "DEPTH", "WIDTH",
 }
 
 FILE_EXTENSIONS = (".pdf", ".xml", ".sig", ".zip", ".rar", ".7z", ".dwg", ".dxf", ".docx", ".xlsx")
@@ -170,13 +172,21 @@ _TYPE_RULES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 
 
 def classify_object(name: Any) -> ObjectTypeDecision:
+    # Основная классификация выполняется библиотекой Knowledge Engine.
+    profile = default_knowledge_engine().classify(name)
+    if profile.code != "GENERIC_OBJECT":
+        return ObjectTypeDecision(
+            profile.code, profile.name, profile.confidence,
+            tuple(f"профиль Knowledge Engine: {alias}" for alias in profile.matched_aliases),
+        )
+    # Legacy-правила остаются резервным механизмом для обратной совместимости.
     low = normalize_text(name)
     for code, title, aliases in _TYPE_RULES:
         matches = [alias for alias in aliases if alias in low]
         if matches:
-            confidence = min(0.98, 0.82 + 0.04 * len(matches))
-            return ObjectTypeDecision(code, title, confidence, tuple(f"признак: {m}" for m in matches))
-    return ObjectTypeDecision("GENERIC_OBJECT", "Инженерный объект", 0.45, ("тип не определён однозначно",))
+            confidence = min(0.92, 0.78 + 0.03 * len(matches))
+            return ObjectTypeDecision(code, title, confidence, tuple(f"legacy-признак: {m}" for m in matches))
+    return ObjectTypeDecision("GENERIC_OBJECT", "Инженерный объект", 0.35, ("тип не определён однозначно",))
 
 
 # required — почти всегда ожидается; expected — обычно приводится; conditional — только при применимости.
@@ -224,6 +234,9 @@ def parameter_applicability(object_type: str, parameter_code: Any) -> str:
 
 
 def expected_parameters(object_type: str, include_conditional: bool = False) -> list[str]:
+    library_values = default_knowledge_engine().expected_properties(object_type)
+    if library_values:
+        return library_values
     mapping = _APPLICABILITY.get(object_type, _APPLICABILITY["GENERIC_OBJECT"])
     accepted = {"required", "expected", "conditional"} if include_conditional else {"required", "expected"}
     return [code for code, status in mapping.items() if status in accepted]

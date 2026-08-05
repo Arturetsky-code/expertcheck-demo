@@ -22,6 +22,7 @@ PARAMETER_CODE_ALIASES: dict[str, str] = {
 ENGINEERING_PARAMETERS = {
     "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "FLOORS",
     "CAPACITY", "RES_VOLUME", "POWER_KTP", "POWER_INSTALLED",
+    "PRESSURE", "TEMPERATURE", "DIAMETER", "FLOW_RATE", "VOLTAGE", "DEPTH",
     "POWER_CALCULATED", "PERSONNEL", "LENGTH", "QUANTITY",
     "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT", "TEMPERATURE",
     "VOLUME", "DEPTH", "WIDTH",
@@ -35,6 +36,23 @@ SERVICE_PATTERNS = (
     r"\bведомость документов\b", r"\bсодержание\b", r"\bоглавление\b",
 )
 PROJECT_CODE_RE = re.compile(r"\b(?:RAM|РД|ПД|СТРМ|[A-ZА-Я]{2,8})[-_.][A-ZА-Я0-9._-]{5,}\b", re.I)
+
+DOCUMENT_CODE_PATTERN = re.compile(
+    r"(?:^|[\s_\-])(?:ПЗ|ПЗУ\d*|АР\d*|КР\d*|ТХ\d*|ИОС\d*(?:\.\d+)?|ПОС|ПОД|ООС|ПБ|ОДИ|ЭЭ|СМ|ППО|ТКР|ИЛО)(?:$|[\s_\-.])",
+    re.I,
+)
+DOCUMENT_LIST_ROW_RE = re.compile(
+    r"^(?:\d+[.)]?\s+)?(?:раздел|подраздел|часть|том|книга|приложение|лист|документ|отчет|отчёт)\b",
+    re.I,
+)
+DOCUMENT_FILE_RE = re.compile(r"[^\s]+\.(?:pdf|xml|sig|zip|docx?|xlsx?|dwg|dxf)$", re.I)
+DOCUMENT_CONTEXT_TOKENS = (
+    "состав проектной документации", "перечень проектной документации",
+    "ведомость основного комплекта", "ведомость рабочих чертежей",
+    "ведомость прилагаемых документов", "содержание тома", "оглавление",
+    "перечень документов", "наименование документа", "обозначение документа",
+    "номер тома", "шифр документа", "состав раздела", "состав тома",
+)
 
 
 def canonical_parameter_code(value: Any) -> str:
@@ -54,6 +72,10 @@ def is_service_object_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     document = str(item.get("document") or "").strip()
     method = normalize_text(item.get("match_method") or "")
     zone = normalize_text(item.get("structural_zone") or "")
+    context = normalize_text(" ".join(str(item.get(k) or "") for k in (
+        "context", "structural_zone", "table_type", "table_evidence",
+        "match_method", "parameter_name", "extraction_profile",
+    )))
 
     if not raw:
         return True, ["пустое наименование"]
@@ -71,6 +93,26 @@ def is_service_object_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("источник находки — метаданные файла")
     if any(token in zone for token in ("титульный лист", "ведомость документов", "содержание")):
         reasons.append("находка расположена в служебной зоне")
+    if DOCUMENT_FILE_RE.search(raw):
+        reasons.append("строка является именем файла")
+    if DOCUMENT_LIST_ROW_RE.search(low):
+        reasons.append("строка похожа на позицию перечня документов")
+    if any(title == low or (title in low and len(low) < len(title) + 25) for title in DOCUMENT_TITLES):
+        reasons.append("наименование является названием раздела или документа")
+    if any(token in context for token in DOCUMENT_CONTEXT_TOKENS):
+        reasons.append("контекст относится к перечню документов")
+    # Шифр + марка раздела без сильного объектного контекста — это документ, а не объект.
+    if DOCUMENT_CODE_PATTERN.search(raw) and not str(item.get("genplan_position") or "").strip():
+        engineering_context = any(token in context for token in (
+            "состав сложного объекта", "экспликация зданий", "экспликация сооружений",
+            "объектная строка тэп", "таблица тэп объекта", "позиция по генплану",
+        ))
+        if not engineering_context:
+            reasons.append("обнаружена марка/шифр раздела проектной документации")
+    # Наименования из document/source metadata не могут быть объектами.
+    source_kind = normalize_text(item.get("source_kind") or item.get("record_kind") or "")
+    if source_kind in {"document", "file", "metadata", "project_metadata"}:
+        reasons.append("запись относится к документу или метаданным")
 
     # Очень длинные строки с типовыми реквизитами обычно являются названием проекта/титулом.
     if len(raw) > 220:
@@ -124,8 +166,16 @@ def object_candidate_evidence(item: dict[str, Any]) -> tuple[int, list[str]]:
         return 0, ["запись классифицирована как документ"]
 
     if code == "OBJECT_ENTRY" and str(item.get("document_type") or "") == "ПЗ":
-        reasons.append("официальная строка состава объекта в ПЗ")
-        return 3, reasons
+        # OBJECT_ENTRY от legacy-парсера считается официальным только в подтвержденной
+        # объектной зоне. Это блокирует строки состава ПД, ошибочно размеченные как объекты.
+        if any(token in context for token in (
+            "состав сложного объекта", "перечень объектов", "объекты капитального строительства",
+            "позиция по генплану", "реестр объектов пз", "таблица состава объекта",
+        )):
+            reasons.append("официальная строка состава объекта в ПЗ")
+            return 3, reasons
+        reasons.append("OBJECT_ENTRY вне подтвержденной объектной зоны")
+        return 1, reasons
     if bool(item.get("general_plan_explication")):
         reasons.append("строка экспликации генерального плана")
         return 3, reasons
@@ -216,8 +266,15 @@ _APPLICABILITY: dict[str, dict[str, str]] = {
         "PERSONNEL": "expected", "QUANTITY": "conditional", "AREA_BUILD": "conditional",
     },
     "PIPELINE": {
-        "LENGTH": "required", "DIAMETER": "expected", "PRESSURE": "expected", "CAPACITY": "conditional", "LINE_COUNT": "conditional",
+        "LENGTH": "required", "DIAMETER": "expected", "PRESSURE": "expected", "CAPACITY": "conditional", "FLOW_RATE": "expected", "TEMPERATURE": "conditional", "LINE_COUNT": "conditional",
     },
+    "COMPRESSOR_STATION": {"CAPACITY": "required", "POWER_INSTALLED": "required", "POWER_CALCULATED": "expected", "PRESSURE": "required", "FLOW_RATE": "expected", "TEMPERATURE": "conditional", "QUANTITY": "expected", "AREA_BUILD": "conditional", "HEIGHT_BUILD": "conditional"},
+    "PROCESSING_PLANT": {"CAPACITY": "required", "POWER_INSTALLED": "expected", "PRESSURE": "expected", "FLOW_RATE": "expected", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "QUANTITY": "conditional", "AREA_BUILD": "conditional"},
+    "OIL_TREATMENT_UNIT": {"CAPACITY": "required", "POWER_INSTALLED": "expected", "PRESSURE": "expected", "FLOW_RATE": "expected", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "QUANTITY": "conditional", "AREA_BUILD": "conditional"},
+    "WELL": {"DEPTH": "required", "CAPACITY": "expected", "PRESSURE": "expected", "DIAMETER": "conditional", "QUANTITY": "conditional"},
+    "SEPARATOR": {"CAPACITY": "expected", "PRESSURE": "required", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "DIAMETER": "conditional", "HEIGHT_BUILD": "conditional", "QUANTITY": "expected"},
+    "METERING_UNIT": {"CAPACITY": "expected", "FLOW_RATE": "required", "PRESSURE": "expected", "DIAMETER": "conditional", "QUANTITY": "conditional"},
+    "FLARE_SYSTEM": {"CAPACITY": "expected", "PRESSURE": "conditional", "FLOW_RATE": "expected", "HEIGHT_BUILD": "required", "DIAMETER": "conditional", "QUANTITY": "conditional"},
     "ROAD": {"LENGTH": "required", "QUANTITY": "conditional"},
     "LINEAR_STRUCTURE": {"LENGTH": "expected", "CAPACITY": "conditional", "POWER_INSTALLED": "conditional", "QUANTITY": "conditional"},
     "HYDRAULIC_STRUCTURE": {"HEIGHT_BUILD": "expected", "LENGTH": "expected", "CAPACITY": "conditional", "RES_VOLUME": "conditional"},

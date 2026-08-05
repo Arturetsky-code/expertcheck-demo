@@ -27,6 +27,7 @@ from .cross_section_consistency import build_cross_section_checks
 from .object_semantics import enrich_findings_with_object_semantics, is_service_object_candidate, object_candidate_evidence
 from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
+from .universal_registry_extractor import UniversalRegistryExtractor
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -182,6 +183,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     progress(58, "Реестр объектов", "Извлекаем экспликации и позиции генерального плана")
     gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
     findings.extend(gp_findings)
+    universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
+        pdf_files, document_types, legacy.read_pdf
+    )
+    findings.extend(universal_registry_findings)
     page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
 
     for item in findings:
@@ -197,7 +202,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.1-k1-alpha1"
+        item["core_version"] = "3.1-k1-alpha2"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -240,16 +245,17 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "3.1-k1-alpha1"
+        item["core_version"] = "3.1-k1-alpha2"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.1-k1-alpha1"
+        doc["core_version"] = "3.1-k1-alpha2"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
+        doc["universal_registry_audit"] = universal_registry_audit
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {
             "files": len(xml_files),

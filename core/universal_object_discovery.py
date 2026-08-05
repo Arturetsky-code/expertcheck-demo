@@ -33,8 +33,6 @@ def discover_object_candidates(findings: list[dict[str, Any]]) -> tuple[list[dic
             audit.append({"name": name, "decision": "отклонено", "reasons": "; ".join(reasons)})
             continue
         profile = engine.classify(name)
-        if profile.code == "GENERIC_OBJECT" or profile.confidence < 0.68:
-            continue
         position = str(item.get("genplan_position") or "").strip()
         key = (position, normalize_text(name))
         grouped[key].append(item)
@@ -43,7 +41,13 @@ def discover_object_candidates(findings: list[dict[str, Any]]) -> tuple[list[dic
     for (position, _), rows in grouped.items():
         sections = {str(x.get("document_type") or x.get("section") or "") for x in rows if x.get("document_type") or x.get("section")}
         profile = engine.classify(rows[0].get("object_hint") or rows[0].get("semantic_anchor_name"))
-        strong_context = any(any(token in normalize_text(x.get("structural_zone") or x.get("table_type") or "") for token in ("тэп", "экспликац", "состав объекта")) for x in rows)
+        strong_context = any(any(token in normalize_text(" ".join(str(x.get(k) or "") for k in ("structural_zone", "table_type", "table_evidence", "match_method", "context"))) for token in (
+            "объектная строка тэп", "таблица тэп", "экспликац", "состав сложного объекта",
+            "позиция по генплану", "технологические показатели", "характеристика трубопровода",
+        )) for x in rows)
+        # Неизвестный отраслевой объект допускается при сильном инженерном контексте
+        # или подтверждении минимум двумя независимыми разделами. Классификация может
+        # остаться GENERIC_OBJECT — это лучше, чем потерять реальный объект нефтегаза.
         accepted = bool(position) or len(sections) >= 2 or strong_context
         audit.append({
             "name": rows[0].get("object_hint") or rows[0].get("semantic_anchor_name"),
@@ -65,8 +69,8 @@ def discover_object_candidates(findings: list[dict[str, Any]]) -> tuple[list[dic
             "document": str(source.get("document") or ""),
             "document_type": str(source.get("document_type") or source.get("section") or ""),
             "page": source.get("page"),
-            "confidence": max(0.72, profile.confidence),
-            "core2_confidence": max(0.72, profile.confidence),
+            "confidence": max(0.72, profile.confidence if profile.code != "GENERIC_OBJECT" else 0.74),
+            "core2_confidence": max(0.72, profile.confidence if profile.code != "GENERIC_OBJECT" else 0.74),
             "match_method": "Universal Object Discovery: подтверждение по инженерным характеристикам",
             "structural_zone": "объект подтвержден ТЭП в нескольких источниках" if len(sections) >= 2 else "объектная строка инженерной таблицы",
             "record_kind": "project_object",

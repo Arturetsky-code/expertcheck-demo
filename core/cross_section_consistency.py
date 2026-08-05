@@ -24,6 +24,12 @@ TOLERANCES: dict[str, tuple[float, float, str]] = {
     "PERSONNEL": (0.0, 0.0, "Средний"),
     "LENGTH": (0.1, 0.001, "Средний"),
     "QUANTITY": (0.0, 0.0, "Высокий"),
+    "PRESSURE": (0.01, 0.005, "Высокий"),
+    "TEMPERATURE": (1.0, 0.01, "Средний"),
+    "DIAMETER": (1.0, 0.002, "Высокий"),
+    "FLOW_RATE": (0.01, 0.005, "Высокий"),
+    "VOLTAGE": (0.01, 0.002, "Высокий"),
+    "DEPTH": (0.1, 0.001, "Средний"),
 }
 
 SECTION_FAMILIES = (
@@ -57,6 +63,12 @@ EXPECTED_SECTION_HINTS: dict[str, tuple[str, ...]] = {
     "PERSONNEL": ("ПЗ", "ТХ"),
     "LENGTH": ("ПЗ", "ПЗУ", "ТХ"),
     "QUANTITY": ("ПЗ", "ПЗУ", "ТХ"),
+    "PRESSURE": ("ПЗ", "ТХ", "ИОС"),
+    "TEMPERATURE": ("ПЗ", "ТХ"),
+    "DIAMETER": ("ПЗ", "ПЗУ", "ТХ", "ИОС"),
+    "FLOW_RATE": ("ПЗ", "ТХ", "ИОС"),
+    "VOLTAGE": ("ПЗ", "ТХ", "ИОС1"),
+    "DEPTH": ("ПЗ", "ПЗУ", "ТХ", "КР"),
 }
 
 

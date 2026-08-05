@@ -5,6 +5,7 @@ from typing import Any, Iterable
 
 from .object_register_engine import normalize_position, normalize_name, name_similarity, parent_position
 from .object_identity import ObjectIdentityEngine
+from .object_semantics import is_service_object_candidate, object_candidate_evidence
 
 SOURCE_GROUPS = {
     "PZ": {"ПЗ"},
@@ -117,6 +118,16 @@ class RegisterReconciliationEngine:
             name = _name(item)
             if not normalize_name(name):
                 continue
+            service, service_reasons = is_service_object_candidate(item)
+            strength, evidence_reasons = object_candidate_evidence(item)
+            if service or strength <= 0:
+                audit.append({
+                    "candidate": name, "position": normalize_position(item.get("genplan_position")),
+                    "decision": "rejected", "matched_position": "", "score": 0.0,
+                    "reason": "; ".join(service_reasons or evidence_reasons),
+                })
+                continue
+            item["_object_evidence_strength"] = strength
             item["_name"] = name
             item["_position"] = normalize_position(item.get("genplan_position"))
             item["_group"] = _source_group(item)
@@ -162,7 +173,17 @@ class RegisterReconciliationEngine:
         for position in sorted(positioned, key=lambda x: tuple(int(p) for p in x.split("."))):
             records.append(self._build(positioned[position], position))
         for group in standalone_groups:
-            records.append(self._build(group, ""))
+            sections = {str(row.get("document_type") or "") for row in group if row.get("document_type")}
+            strength = max(int(row.get("_object_evidence_strength") or 0) for row in group)
+            if strength >= 2 or len(sections) >= 2:
+                records.append(self._build(group, ""))
+            else:
+                for row in group:
+                    audit.append({
+                        "candidate": row.get("_name", ""), "position": "", "decision": "rejected",
+                        "matched_position": "", "score": 0.0,
+                        "reason": "безпозиционный кандидат не подтвержден независимыми разделами",
+                    })
         return records, audit
 
     def _build(self, group: list[dict[str, Any]], position: str) -> ReconciledObject:

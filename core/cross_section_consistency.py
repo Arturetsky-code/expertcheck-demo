@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Any
 
 from .normalization import normalize_text
+from .object_semantics import canonical_parameter_code, classify_object, parameter_applicability
 from .object_identity import ObjectIdentityEngine
 
 # Абсолютный допуск, относительный допуск, приоритет проверки.
@@ -79,8 +80,8 @@ def numeric_value(item: dict[str, Any]) -> float | None:
 
 
 def _usable(item: dict[str, Any]) -> bool:
-    code = str(item.get("parameter_code") or "")
-    obj = str(item.get("object_hint") or "").strip()
+    code = canonical_parameter_code(item.get("parameter_code"))
+    obj = str(item.get("semantic_anchor_name") or item.get("object_hint") or "").strip()
     return (
         code in TOLERANCES
         and numeric_value(item) is not None
@@ -190,7 +191,9 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
     usable = [item for item in findings if _usable(item)]
     by_code: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in usable:
-        by_code[str(item.get("parameter_code"))].append(item)
+        code = canonical_parameter_code(item.get("parameter_code"))
+        item["parameter_code"] = code
+        by_code[code].append(item)
 
     rows: list[dict[str, Any]] = []
     for code, code_items in by_code.items():
@@ -237,6 +240,10 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 status = "НЕДОСТАТОЧНО ДАННЫХ"
 
             name = _representative_name(object_items)
+            object_type = classify_object(name).code
+            applicability = parameter_applicability(object_type, code)
+            if applicability == "not_applicable":
+                continue
             position = next((str(x.get("genplan_position") or "") for x in object_items if x.get("genplan_position")), "")
             parameter_name = str(next((x.get("parameter_name") for x in object_items if x.get("parameter_name")), code))
             unit = str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
@@ -270,6 +277,8 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 "genplan_position": position,
                 "parameter_code": code,
                 "parameter_name": parameter_name,
+                "object_type_code": object_type,
+                "parameter_applicability": applicability,
                 "unit": unit,
                 "priority": priority,
                 "rule_name": "Межраздельная согласованность характеристик",

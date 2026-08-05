@@ -5,6 +5,8 @@ from dataclasses import dataclass, asdict
 from difflib import SequenceMatcher
 from typing import Any, Iterable
 
+from .object_semantics import is_service_object_candidate, classify_object
+
 POSITION_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){1,5}$")
 CLASSIFIER_RE = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}$")
 
@@ -53,6 +55,9 @@ class RegisterRecord:
     source_conflict: str
     inspector_decision: str
     inspector_reasons: str
+    object_type_code: str = "GENERIC_OBJECT"
+    object_type_name: str = "Инженерный объект"
+    object_type_confidence: float = 0.0
 
     def to_ui_dict(self) -> dict[str, Any]:
         return {
@@ -77,6 +82,9 @@ class RegisterRecord:
             "Конфликт источников": self.source_conflict,
             "Решение инспектора": self.inspector_decision,
             "Причины решения": self.inspector_reasons,
+            "Тип объекта": self.object_type_name,
+            "Код типа объекта": self.object_type_code,
+            "Уверенность типа": self.object_type_confidence,
         }
 
 
@@ -136,6 +144,9 @@ def _is_valid_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     code = str(item.get("parameter_code") or "")
     if code not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
         return False, ["не является объектной находкой"]
+    service, service_reasons = is_service_object_candidate(item)
+    if service:
+        return False, service_reasons
     if not name or len(normalize_name(name)) < 2:
         return False, ["пустое или слишком короткое наименование"]
     low = name.lower()
@@ -323,6 +334,7 @@ class ObjectRegisterEngine:
             reasons.append("точная позиция используется как первичный ключ")
         if has_pz_registry:
             reasons.append("присутствует строка официального реестра ПЗ")
+        type_decision = classify_object(best["_name"])
         return RegisterRecord(
             include=True,
             position=position,
@@ -345,6 +357,9 @@ class ObjectRegisterEngine:
             source_conflict=source_conflict,
             inspector_decision="принято в реестр",
             inspector_reasons="; ".join(reasons),
+            object_type_code=type_decision.code,
+            object_type_name=type_decision.name,
+            object_type_confidence=type_decision.confidence,
         )
 
 

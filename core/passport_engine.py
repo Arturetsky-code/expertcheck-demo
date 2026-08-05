@@ -4,6 +4,8 @@ from dataclasses import dataclass, asdict
 from typing import Any, Iterable
 import re
 
+from .object_semantics import classify_object, expected_parameters, canonical_parameter_code
+
 OBJECT_CODES = {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}
 SOURCE_GROUPS = {
     "ПЗ": "ПЗ",
@@ -66,6 +68,10 @@ class ObjectPassport:
     linked_findings: int
     unlinked_findings: int
     passport_completeness: float
+    object_type_code: str = "GENERIC_OBJECT"
+    object_type_name: str = "Инженерный объект"
+    expected_parameter_codes: list[str] | None = None
+    missing_expected_parameter_codes: list[str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -146,7 +152,7 @@ def build_object_passports(
 
         grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for item in linked:
-            code = _clean(item.get("parameter_code"))
+            code = canonical_parameter_code(_clean(item.get("parameter_code")))
             pname = _clean(item.get("parameter_name"))
             if not code and not pname:
                 continue
@@ -202,6 +208,11 @@ def build_object_passports(
         char_factor = confirmed_chars / len(characteristics) if characteristics else 0.0
         completeness = round((0.55 * source_factor + 0.45 * char_factor) * 100, 1)
 
+        type_decision = classify_object(name)
+        present_codes = {canonical_parameter_code(item.parameter_code) for item in characteristics}
+        expected_codes = expected_parameters(type_decision.code)
+        missing_codes = [code for code in expected_codes if code not in present_codes]
+
         passports.append(ObjectPassport(
             position=position,
             parent_position=parent,
@@ -215,6 +226,10 @@ def build_object_passports(
             linked_findings=len(linked),
             unlinked_findings=0,
             passport_completeness=completeness,
+            object_type_code=type_decision.code,
+            object_type_name=type_decision.name,
+            expected_parameter_codes=expected_codes,
+            missing_expected_parameter_codes=missing_codes,
         ))
     return passports
 

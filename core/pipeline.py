@@ -24,6 +24,7 @@ from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
 from .cross_source_consistency import build_pdf_xml_checks
 from .cross_section_consistency import build_cross_section_checks
+from .object_semantics import enrich_findings_with_object_semantics
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -156,6 +157,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     xml_documents, xml_findings, xml_warnings = XmlEngine().parse_uploaded(xml_files)
     documents.extend(xml_documents)
     findings.extend(xml_findings)
+    enrich_findings_with_object_semantics(findings)
     pdf_xml_checks = build_pdf_xml_checks(findings)
     cross_section_checks = build_cross_section_checks(findings)
     # Core 3.0 Alpha 3 формирует собственную сводную межраздельную сверку.
@@ -189,9 +191,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.0-alpha4"
+        item["core_version"] = "3.0-alpha5"
 
     _enrich_semantics(findings)
+    enrich_findings_with_object_semantics(findings)
+    # Пересобираем сводную сверку после добавления генплана и семантических якорей.
+    comparisons = [row for row in comparisons if str(row.get("category")) != "Межраздельная сверка"]
+    cross_section_checks = build_cross_section_checks(findings)
+    comparisons.extend(cross_section_checks)
     _enrich_rules(comparisons, registry)
     knowledge_base = KnowledgeBase(root / "knowledge")
     for item in comparisons:
@@ -224,13 +231,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "3.0-alpha4"
+        item["core_version"] = "3.0-alpha5"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.0-alpha4"
+        doc["core_version"] = "3.0-alpha5"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {

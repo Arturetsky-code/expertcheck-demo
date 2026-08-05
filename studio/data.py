@@ -2,6 +2,7 @@ from __future__ import annotations
 import io
 from datetime import datetime
 import pandas as pd
+from core.report_engine import build_decision_report
 
 def frames(result):
     if not result: return pd.DataFrame(),pd.DataFrame(),pd.DataFrame()
@@ -35,9 +36,23 @@ def passports(docs):
 
 def excel_report(project, version, docs, findings, comparisons):
     out=io.BytesIO()
+    report=build_decision_report(docs.to_dict('records'),comparisons.to_dict('records'))
+    summary=report['summary']
+    summary_rows=[
+        ['Проект',project],['Версия',version],['Дата проверки',datetime.now().strftime('%d.%m.%Y %H:%M')],
+        ['Комплектность',summary['completeness']],['Документов',summary['documents']],['Объектов',summary['objects']],
+        ['Проверено характеристик',summary['checks']],['Совпадает',summary['confirmed']],
+        ['Требует внимания',summary['requires_attention']],['Высокий приоритет',summary['high_priority']],
+    ]
+    problems=pd.DataFrame(report['problems']).rename(columns={'object':'Объект','parameter':'Характеристика','status':'Статус','priority':'Приоритет','values':'Значения','explanation':'Пояснение','sources':'Источники'})
+    recommendations=pd.DataFrame({'Рекомендация':report['recommendations']})
     with pd.ExcelWriter(out,engine='openpyxl') as w:
-        pd.DataFrame([['Проект',project],['Версия',version],['Дата проверки',datetime.now().strftime('%d.%m.%Y %H:%M')],['Документов',len(docs)],['Инженерных характеристик',len(engineer_findings(findings))],['Проверок',len(comparisons)]],columns=['Показатель','Значение']).to_excel(w,sheet_name='Сводка',index=False)
-        docs.to_excel(w,sheet_name='Документы',index=False);registry(docs).to_excel(w,sheet_name='Реестр объектов',index=False);engineer_findings(findings).to_excel(w,sheet_name='Характеристики',index=False);comparisons.to_excel(w,sheet_name='Сверки',index=False)
+        pd.DataFrame(summary_rows,columns=['Показатель','Значение']).to_excel(w,sheet_name='Сводка',index=False)
+        problems.to_excel(w,sheet_name='Требует внимания',index=False)
+        recommendations.to_excel(w,sheet_name='Рекомендации',index=False)
+        registry(docs).to_excel(w,sheet_name='Реестр объектов',index=False)
+        comparisons.to_excel(w,sheet_name='Все сверки',index=False)
+        docs.to_excel(w,sheet_name='Документы',index=False)
         for ws in w.book.worksheets:
             ws.freeze_panes='A2';ws.auto_filter.ref=ws.dimensions
             for cells in ws.columns:

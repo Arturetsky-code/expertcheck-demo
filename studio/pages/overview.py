@@ -5,6 +5,7 @@ import streamlit as st
 from studio.components import hero,card,section
 from studio.data import status_group,excel_report
 from core.project_upload import DOCUMENT_TYPE_OPTIONS,apply_document_type_overrides,prepare_uploads
+from core.report_engine import build_decision_report
 
 def render(ctx):
     docs,findings,comparisons,registry,passports,metrics,eng=ctx.data
@@ -63,23 +64,31 @@ def render(ctx):
                 st.rerun()
         return
     quality_data=docs.iloc[0].get('dem_model_quality') if 'dem_model_quality' in docs else {};quality=int(round(float((quality_data or {}).get('model_quality_index',0))*100))
-    hero(st.session_state.project_name,'Проверка завершена. Ниже показаны результаты, влияющие на инженерное решение.',f'Индекс цифровой модели: {quality}% · Последняя проверка: {st.session_state.analysis_time or "—"}')
+    report=build_decision_report(docs.to_dict('records'),comparisons.to_dict('records'))
+    summary=report['summary']
+    hero(st.session_state.project_name,'Проверка завершена. Сначала показаны только результаты, требующие инженерного решения.',f'Индекс цифровой модели: {quality}% · Последняя проверка: {st.session_state.analysis_time or "—"}')
     cols=st.columns(5)
-    with cols[0]:card('Документы',len(docs),'PDF и XML в комплекте')
-    with cols[1]:card('Объекты',len(registry),'Позиции консолидированного реестра')
-    with cols[2]:card('Требуют внимания',metrics['bad']+metrics['warn'],'Расхождения и неподтверждённые сведения','bad' if metrics['bad'] else 'warn')
-    with cols[3]:card('Подтверждено',metrics['ok'],'Согласованные проверки','ok')
-    with cols[4]:card('Комплектность','Подтверждена' if st.session_state.get('completeness_user_confirmed') else 'Не подтверждена','Откройте раздел «Комплектность»','ok' if st.session_state.get('completeness_user_confirmed') else 'warn')
-    section('Состояние проекта','Краткая сводка без служебных полей.')
-    left,right=st.columns([1.45,1])
-    with left:
-        p=comparisons.copy()
-        if not p.empty and 'status' in p:p['_group']=p['status'].map(status_group);p=p[p['_group'].isin(['bad','warn'])]
-        if p.empty:st.success('Существенные расхождения не выявлены либо недостаточно сопоставимых данных.')
-        else:
-            for _,r in p.head(8).iterrows():
-                st.markdown(f"**{r.get('object') or 'Объект не определён'} · {r.get('parameter_name') or r.get('rule_name') or 'Проверка'}**  \n{r.get('document_values') or r.get('documents') or ''}  \n`{r.get('status') or 'Требует проверки'}`")
-    with right:
-        st.info(f"Инженерных характеристик: **{len(eng)}**\n\nМежраздельных проверок: **{metrics['total']}**\n\nРеестровых позиций: **{len(registry)}**")
+    with cols[0]:card('Комплектность','Подтверждена' if st.session_state.get('completeness_user_confirmed') else 'Не подтверждена','Состав по ПП №87','ok' if st.session_state.get('completeness_user_confirmed') else 'warn')
+    with cols[1]:card('Объекты',summary['objects'],'Подтверждённый реестр проекта')
+    with cols[2]:card('Проверено',summary['checks'],'Инженерных сопоставлений')
+    with cols[3]:card('Совпадает',summary['confirmed'],'Подтверждённые значения','ok')
+    with cols[4]:card('Требует внимания',summary['requires_attention'],f"Высокий риск: {summary['high_priority']}",'bad' if summary['high_priority'] else 'warn')
+    section('Что требует внимания','Показаны только расхождения и сведения без достаточного подтверждения.')
+    problems=report['problems']
+    if not problems:
+        st.success('Существенные расхождения не выявлены либо пока недостаточно сопоставимых данных.')
+    else:
+        for idx,item in enumerate(problems[:10],1):
+            with st.container(border=True):
+                st.markdown(f"**{idx}. {item['object']} · {item['parameter']}**")
+                st.caption(f"{item['priority']} приоритет · {item['status']}")
+                if item['values']: st.write(item['values'])
+                st.write(item['explanation'])
+    with st.expander('Рекомендации по результатам проверки'):
+        for text in report['recommendations'] or ['Дополнительные действия не сформированы.']:
+            st.write('• '+text)
+    c1,c2=st.columns(2)
+    with c1:
         if st.button('Новая проверка',use_container_width=True):st.session_state.result=None;st.session_state.analysis_time=None;st.rerun()
+    with c2:
         st.download_button('Скачать отчёт Excel',data=excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons),file_name='ExpertCheck_report.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',use_container_width=True)

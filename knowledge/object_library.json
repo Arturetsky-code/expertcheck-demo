@@ -1,0 +1,22 @@
+{
+  "version": "1.0-alpha1",
+  "profiles": [
+    {"code":"BUILDING","name":"Здание","aliases":["здание","корпус","общежитие","столовая","склад","кпп","операторная","котельная","лаборатория","административное здание"],"properties":["AREA_BUILD","AREA_TOTAL","VOLUME_BUILD","HEIGHT_BUILD","FLOORS","PERSONNEL"]},
+    {"code":"PUMP_STATION","name":"Насосная станция","aliases":["насосная станция","насосная","пульпонасосная","дожимная насосная станция","днс"],"properties":["CAPACITY","POWER_INSTALLED","POWER_CALCULATED","AREA_BUILD","AREA_TOTAL","HEIGHT_BUILD","FLOORS","QUANTITY"]},
+    {"code":"COMPRESSOR_STATION","name":"Компрессорная станция","aliases":["компрессорная станция","компрессорная","дкс","укпг компрессорная"],"properties":["CAPACITY","POWER_INSTALLED","POWER_CALCULATED","PRESSURE","QUANTITY","AREA_BUILD","HEIGHT_BUILD"]},
+    {"code":"OIL_TREATMENT_UNIT","name":"Установка подготовки нефти или газа","aliases":["установка подготовки нефти","упн","установка комплексной подготовки газа","укпг","установка подготовки газа","установка сепарации"],"properties":["CAPACITY","POWER_INSTALLED","PRESSURE","TEMPERATURE","QUANTITY","AREA_BUILD"]},
+    {"code":"WELL","name":"Скважина","aliases":["нефтяная скважина","газовая скважина","добывающая скважина","нагнетательная скважина","скважина","куст скважин"],"properties":["CAPACITY","PRESSURE","DEPTH","QUANTITY"]},
+    {"code":"SEPARATOR","name":"Сепаратор","aliases":["сепаратор","нефтегазовый сепаратор","газосепаратор"],"properties":["CAPACITY","PRESSURE","VOLUME","QUANTITY","DIAMETER","HEIGHT_BUILD"]},
+    {"code":"METERING_UNIT","name":"Узел учета","aliases":["узел учета","узел учёта","узел замера","замерная установка","агзу","гзу"],"properties":["CAPACITY","PRESSURE","QUANTITY","POWER_INSTALLED"]},
+    {"code":"FLARE_SYSTEM","name":"Факельная установка","aliases":["факельная установка","факельная система","факел","факельный ствол"],"properties":["CAPACITY","HEIGHT_BUILD","PRESSURE","QUANTITY"]},
+    {"code":"PIPELINE","name":"Трубопровод","aliases":["трубопровод","нефтепровод","газопровод","водовод","пульпопровод","коллектор","шлейф","выкидная линия"],"properties":["LENGTH","DIAMETER","PRESSURE","CAPACITY","LINE_COUNT","QUANTITY"]},
+    {"code":"RESERVOIR","name":"Резервуар или емкость","aliases":["резервуар","ёмкость","емкость","бак","рвс","ргс","дренажная емкость"],"properties":["RES_VOLUME","VOLUME","DIAMETER","HEIGHT_BUILD","QUANTITY"]},
+    {"code":"TRANSFORMER_STATION","name":"Трансформаторная подстанция","aliases":["ктп","трансформаторная подстанция","подстанция"],"properties":["POWER_KTP","POWER_INSTALLED","POWER_CALCULATED","VOLTAGE","QUANTITY","AREA_BUILD"]},
+    {"code":"DIESEL_POWER","name":"Дизельная электростанция","aliases":["дэс","дизельная электростанция","дизель-генератор"],"properties":["POWER_INSTALLED","POWER_CALCULATED","VOLTAGE","QUANTITY","AREA_BUILD"]},
+    {"code":"TECHNOLOGICAL_COMPLEX","name":"Технологический комплекс","aliases":["технологический комплекс","дробильный комплекс","фабрика","цех","установка","комплекс переработки"],"properties":["CAPACITY","POWER_INSTALLED","POWER_CALCULATED","QUANTITY","AREA_BUILD","PERSONNEL"]},
+    {"code":"ROAD","name":"Автомобильная дорога","aliases":["автомобильная дорога","автодорога","подъездная дорога","проезд"],"properties":["LENGTH","WIDTH","CAPACITY","QUANTITY"]},
+    {"code":"HYDRAULIC_STRUCTURE","name":"Гидротехническое сооружение","aliases":["дамба","пруд","хвостохранилище","водосброс","гидроотвал","канал"],"properties":["LENGTH","HEIGHT_BUILD","VOLUME","CAPACITY","AREA_BUILD"]},
+    {"code":"PLATFORM","name":"Площадка","aliases":["площадка","карта кучного выщелачивания","карта складирования"],"properties":["AREA_BUILD","CAPACITY","QUANTITY"]},
+    {"code":"STRUCTURE","name":"Сооружение","aliases":["сооружение","эстакада","мачта","опора","навес","ограждение","подпорная стена"],"properties":["LENGTH","HEIGHT_BUILD","AREA_BUILD","QUANTITY"]}
+  ]
+}

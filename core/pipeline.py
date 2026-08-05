@@ -19,6 +19,10 @@ from .risk_engine import calculate_engineering_risk
 from .object_register_engine import build_registry
 from .passport_engine import build_object_passports, passport_summary
 from .general_plan_engine import GeneralPlanRegisterEngine
+from .general_plan_reconciliation import (
+    anchor_findings_to_general_plan, build_general_plan_document_checks,
+    build_general_plan_field_checks,
+)
 from .register_reconciliation import reconcile_register
 from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
@@ -186,6 +190,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     progress(58, "Реестр объектов", "Извлекаем экспликации и позиции генерального плана")
     gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
     findings.extend(gp_findings)
+    general_plan_anchor_audit = anchor_findings_to_general_plan(findings, gp_findings)
     if UniversalRegistryExtractor is not None:
         universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
             pdf_files, document_types, legacy.read_pdf
@@ -211,17 +216,24 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.1-k1-alpha2"
+        item["core_version"] = "3.2-gp-alpha2"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
     findings.extend(discovered_objects)
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
+    # Генплан является опорным реестром: повторно и консервативно привязываем ТЭП
+    # после универсального поиска объектов, затем строим проверки состава.
+    general_plan_anchor_audit.extend(anchor_findings_to_general_plan(findings, gp_findings))
+    general_plan_field_checks = build_general_plan_field_checks(gp_findings, general_plan_audit)
+    general_plan_document_checks, general_plan_coverage = build_general_plan_document_checks(findings, gp_findings)
     # Пересобираем сводную сверку после добавления генплана и семантических якорей.
     comparisons = [row for row in comparisons if str(row.get("category")) != "Межраздельная сверка"]
     cross_section_checks = build_cross_section_checks(findings)
     comparisons.extend(cross_section_checks)
+    comparisons.extend(general_plan_field_checks)
+    comparisons.extend(general_plan_document_checks)
     _enrich_rules(comparisons, registry)
     knowledge_base = KnowledgeBase(root / "knowledge")
     for item in comparisons:
@@ -254,13 +266,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "3.1-k1-alpha2"
+        item["core_version"] = "3.2-gp-alpha2"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.1-k1-alpha2"
+        doc["core_version"] = "3.2-gp-alpha2"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -300,10 +312,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         }
         doc["project_profile_summary"] = project_profile_summary
         doc["general_plan_audit"] = general_plan_audit
+        doc["general_plan_anchor_audit"] = general_plan_anchor_audit
+        doc["general_plan_coverage"] = general_plan_coverage
         doc["general_plan_summary"] = {
             "entries": len(gp_findings),
             "from_explication": sum(1 for row in gp_findings if row.get("general_plan_explication")),
             "confirmed_on_drawing": sum(1 for row in gp_findings if row.get("general_plan_field")),
+            "requires_field_review": sum(1 for row in gp_findings if row.get("general_plan_explication") and not row.get("general_plan_field")),
+            "objects_checked_in_documents": len(general_plan_coverage),
+            "missing_in_pz": sum(1 for row in general_plan_coverage if row.get("missing_in_pz")),
         }
         doc["object_passports"] = [passport.to_dict() for passport in object_passports]
         doc["object_passport_summary"] = object_passport_summary

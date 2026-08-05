@@ -45,7 +45,7 @@ def render(ctx):
     with m3:
         card('Требуют проверки', conflicts, 'Конфликты и неподтверждённые позиции', 'warn' if conflicts else 'ok')
 
-    main = ['Позиция по ГП', 'Наименование объекта', 'Количество', 'Количество источников', 'Статус консолидации', 'Конфликты']
+    main = ['Позиция по ГП', 'Наименование объекта', 'Тип объекта', 'Количество', 'Количество источников', 'Статус консолидации', 'Конфликты']
     st.dataframe(view[[c for c in main if c in view]], use_container_width=True, hide_index=True, height=420)
 
     if not passports:
@@ -58,7 +58,7 @@ def render(ctx):
 
     cols = st.columns(4)
     with cols[0]:
-        card('Позиция', passport.get('position') or '—', 'По генеральному плану')
+        card('Позиция', passport.get('position') or '—', passport.get('object_type_name') or 'Тип не определён')
     with cols[1]:
         card('Количество', passport.get('quantity', 1), 'Физических экземпляров')
     with cols[2]:
@@ -76,6 +76,19 @@ def render(ctx):
         else:
             source_rows = [{'Раздел': str(sources), 'Статус': 'Подтвержден'}]
         st.dataframe(pd.DataFrame(source_rows), use_container_width=True, hide_index=True)
+
+
+    expected = passport.get('expected_parameter_codes') or []
+    missing = passport.get('missing_expected_parameter_codes') or []
+    if expected:
+        section('Ожидаемые характеристики', 'Набор параметров выбран по распознанному типу объекта.')
+        e1, e2 = st.columns(2)
+        with e1:
+            st.caption('Ожидаются')
+            st.write(', '.join(expected))
+        with e2:
+            st.caption('Пока не найдены')
+            st.write(', '.join(missing) if missing else 'Все ожидаемые характеристики найдены')
 
     ch = pd.DataFrame(passport.get('characteristics', []))
     if ch.empty:

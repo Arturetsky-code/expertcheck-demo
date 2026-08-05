@@ -62,3 +62,6 @@ code{font-family:"Cascadia Mono","Consolas",monospace}
 
 def apply_design() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
+
+# Studio 2.0 Alpha 2 workspace refinements are intentionally appended so that
+# deployments upgrading from Alpha 1 keep the same base theme.

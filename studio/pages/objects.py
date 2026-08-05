@@ -15,7 +15,7 @@ def _status_text(row: pd.Series) -> str:
 
 def render(ctx):
     registry, passports = ctx.data[3], ctx.data[4]
-    section('Реестр объектов', 'Консолидированный перечень по ПЗ, генеральному плану, XML и профильным разделам.')
+    section('Подтвержденный реестр объектов', 'В основной перечень включаются только проектируемые и реконструируемые объекты с сильными структурными доказательствами.')
     if registry.empty:
         return empty('Реестр объектов ещё не сформирован.')
 
@@ -46,7 +46,16 @@ def render(ctx):
         card('Требуют проверки', conflicts, 'Конфликты и неподтверждённые позиции', 'warn' if conflicts else 'ok')
 
     main = ['Позиция по ГП', 'Наименование объекта', 'Тип объекта', 'Количество', 'Количество источников', 'Статус консолидации', 'Конфликты']
-    st.dataframe(view[[c for c in main if c in view]], width='stretch', hide_index=True, height=420)
+    extra=['Статус проектирования','Доверие к объекту']
+    st.dataframe(view[[c for c in main+extra if c in view]], width='stretch', hide_index=True, height=420)
+
+    if not ctx.data[0].empty and 'consolidated_candidates' in ctx.data[0].columns:
+        candidates=pd.DataFrame(ctx.data[0].iloc[0].get('consolidated_candidates') or [])
+        if not candidates.empty:
+            with st.expander(f'Кандидаты, не включенные в основной реестр ({len(candidates)})'):
+                st.caption('Эти записи не участвуют в подсчете объектов, сверке ТЭП и формировании замечаний до подтверждения.')
+                ccols=['Позиция по ГП','Наименование объекта','Статус проектирования','Доверие к объекту','Статус консолидации','Источники']
+                st.dataframe(candidates[[c for c in ccols if c in candidates]],width='stretch',hide_index=True)
 
     if not passports:
         return

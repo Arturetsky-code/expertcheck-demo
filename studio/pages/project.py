@@ -106,15 +106,21 @@ def _dashboard(ctx):
         f"Объекты: {summary['objects']}",
         f"ТЭП: {summary['checks']}",
     )
+    object_gate=bool(st.session_state.get('object_registry_confirmed'))
     cols = st.columns(4)
     with cols[0]:
         card('Комплектность', 'Подтверждена' if confirmed else 'Требует решения', 'Состав проектной документации', 'ok' if confirmed else 'warn')
     with cols[1]:
-        card('Объекты', summary['objects'], 'Подтверждённый реестр')
+        card('Состав объектов', 'Подтверждён' if object_gate else 'Требует проверки', 'Quality Gate перед сверкой', 'ok' if object_gate else 'warn')
     with cols[2]:
-        card('Проверено ТЭП', summary['checks'], f"Совпадает: {summary['confirmed']}", 'ok')
+        card('Межраздельная сверка', summary['checks'] if object_gate else 'Заблокирована', f"Совпадает: {summary['confirmed']}" if object_gate else 'Сначала подтвердите объекты', 'ok' if object_gate else 'info')
     with cols[3]:
-        card('Требует внимания', summary['requires_attention'], f"Высокий риск: {summary['high_priority']}", 'bad' if summary['high_priority'] else 'warn')
+        card('Требует внимания', summary['requires_attention'] if object_gate else '—', f"Высокий риск: {summary['high_priority']}" if object_gate else 'Выводы ещё не формируются', 'bad' if object_gate and summary['high_priority'] else 'warn')
+    section('Quality Gate','ExpertCheck формирует выводы только после подтверждения состава проектируемых объектов.')
+    q1,q2,q3=st.columns(3)
+    with q1: card('1. Документы','Готово',f'Загружено: {len(docs)}','ok')
+    with q2: card('2. Объекты','Готово' if object_gate else 'Требуется', 'Пользовательское подтверждение', 'ok' if object_gate else 'warn')
+    with q3: card('3. Сверка ТЭП','Доступна' if object_gate else 'Заблокирована','Только по Trusted Object Registry','ok' if object_gate else 'info')
 
     tab_summary, tab_documents, tab_completeness = st.tabs(['Сводка', 'Документы', 'Комплектность'])
     with tab_summary:

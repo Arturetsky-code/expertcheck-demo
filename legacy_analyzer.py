@@ -639,10 +639,25 @@ def _extract_pz_complex_table(page_no: int, text: str, filename: str, parameters
     больше не связываются с соседним объектом по расстоянию.
     """
     low = normalized_search_text(text)
-    if "позиция" not in low or not re.search(r"по\s+генплану", low) or "технико-экономические" not in low:
-        return []
-    markers = list(re.finditer(r"(?m)^(?P<pos>4\.\d+(?:\.\d+)?)\s*$", text))
-    if not markers:
+    # Таблица часто продолжается на следующих страницах без повторения шапки
+    # «Позиция по генплану / ТЭП». Поэтому структурный режим включаем не только
+    # по заголовку, но и по совокупности признаков: несколько позиционных маркеров
+    # и несколько инженерных показателей на одной странице.
+    markers = list(re.finditer(r"(?m)^(?P<pos>\d+(?:\.\d+){1,3})\s*$", text))
+    metric_signals = sum(
+        1 for token in (
+            "площадь застройки", "общая площадь", "строительный объем",
+            "строительный объём", "протяженность", "протяжённость",
+            "мощность", "производительность", "высота", "этажность",
+            "объем", "объём", "давление", "диаметр"
+        ) if token in low
+    )
+    explicit_header = (
+        "позиция" in low and re.search(r"по\s+генплану", low)
+        and "технико-экономические" in low
+    )
+    continued_table = len(markers) >= 2 and metric_signals >= 2
+    if not markers or not (explicit_header or continued_table):
         return []
     result: list[Finding] = []
     wanted = ["AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "CAPACITY", "HEIGHT_BUILD", "RES_VOLUME", "POWER_KTP", "POWER_INST", "POWER_CALC", "FLOORS", "PRESSURE", "TEMPERATURE", "DIAMETER", "LENGTH", "FLOW_RATE", "VOLTAGE", "DEPTH"]

@@ -5,72 +5,111 @@ import streamlit as st
 
 from studio.components import card, empty, section
 
+VISIBLE_EDITOR_COLS = [
+    'Включить','Позиция по ГП','Наименование объекта','Статус проектирования','Доверие',
+    'Количество доказательств','Основание включения','Блокировка','Решение пользователя','Комментарий пользователя'
+]
+
+
+def _render_evidence(rows: list[dict]) -> None:
+    section('Доказательства происхождения','Каждый объект должен иметь проверяемую ссылку на документ, страницу, раздел или таблицу.')
+    labels=[]; mapping={}
+    for row in rows:
+        label=f"{row.get('Позиция по ГП') or '—'} · {row.get('Наименование объекта') or 'Без наименования'}"
+        labels.append(label); mapping[label]=row
+    selected=st.selectbox('Объект или кандидат',labels,key='evidence_object_selector')
+    row=mapping[selected]
+    evidence=row.get('_evidence') or []
+    if not evidence:
+        st.warning('Для позиции не сохранено структурированное доказательство. Рекомендуется не включать её автоматически.')
+        return
+    for idx,ev in enumerate(evidence,1):
+        status='Отклонённый источник' if ev.get('forbidden') else 'Допустимое доказательство'
+        title=f"{idx}. {ev.get('document_type') or 'Документ'} · стр. {ev.get('page') or '—'} · {status}"
+        with st.expander(title,expanded=idx==1):
+            st.write({
+                'Файл':ev.get('document') or '—',
+                'Раздел/пункт':ev.get('section') or '—',
+                'Таблица':ev.get('table') or '—',
+                'Строка таблицы':ev.get('row') or '—',
+                'Тип источника':ev.get('source_type_label') or '—',
+                'Статус проектирования':ev.get('lifecycle') or '—',
+                'Уверенность':ev.get('confidence') if ev.get('confidence')!='' else '—',
+                'Фрагмент':ev.get('quote') or '—',
+            })
+            if ev.get('forbidden'):
+                st.error(f"Источник запрещён для создания объекта: {ev.get('forbidden_reason')}")
+
 
 def _assembly_editor() -> None:
-    section('Мастер формирования состава проекта','Проверьте кандидатов, исключите файлы, служебные строки, существующие и перспективные объекты. Межраздельная сверка запускается только после подтверждения этого перечня.')
+    section('Мастер формирования состава проекта','Система формирует кандидатов и показывает доказательства. Пользователь исключает лишнее; только затем разрешается межраздельная сверка.')
     rows=st.session_state.get('object_assembly_rows') or []
     if not rows:
         st.info('Кандидаты объектов не извлечены.')
         return
     df=pd.DataFrame(rows)
+    display_cols=[c for c in VISIBLE_EDITOR_COLS if c in df.columns]
     edited=st.data_editor(
-        df,
-        hide_index=True,
-        width='stretch',
-        height=480,
-        disabled=[c for c in df.columns if c not in {'Включить'}],
-        column_config={'Включить':st.column_config.CheckboxColumn('Включить в состав проекта')},
-        key='object_assembly_editor',
+        df[display_cols], hide_index=True, width='stretch', height=500,
+        disabled=[c for c in display_cols if c not in {'Включить','Решение пользователя','Комментарий пользователя'}],
+        column_config={
+            'Включить':st.column_config.CheckboxColumn('Включить в состав проекта'),
+            'Решение пользователя':st.column_config.SelectboxColumn('Причина решения',options=[
+                'Не задано','Подтверждённый объект','Имя файла или документ','Существующий объект',
+                'Перспективный объект','Оборудование внутри объекта','Дублирующая запись',
+                'Ошибочно распознанный текст','Другое'
+            ]),
+        }, key='object_assembly_editor',
     )
-    chosen=int(edited['Включить'].fillna(False).sum())
-    excluded=len(edited)-chosen
+    updated=[]
+    for original,edit in zip(rows,edited.to_dict('records')):
+        merged=dict(original); merged.update(edit); updated.append(merged)
+    chosen=int(edited['Включить'].fillna(False).sum()); excluded=len(edited)-chosen
     c1,c2,c3=st.columns(3)
     with c1: card('Кандидатов',len(edited),'Все найденные сущности')
     with c2: card('Будет включено',chosen,'После подтверждения','ok' if chosen else 'warn')
     with c3: card('Исключено',excluded,'Не участвуют в сверке','info')
-    changed=edited.to_dict('records') != rows
-    if changed and st.session_state.get('object_registry_confirmed'):
-        st.warning('Перечень изменён. Подтвердите его повторно, чтобы обновить межраздельную сверку.')
+    if updated != rows and st.session_state.get('object_registry_confirmed'):
+        st.warning('Перечень изменён. Подтвердите его повторно.')
         st.session_state.object_registry_confirmed=False
     b1,b2=st.columns([1,2])
     if b1.button('Сохранить и подтвердить состав',type='primary',width='stretch'):
-        st.session_state.object_assembly_rows=edited.to_dict('records')
-        st.session_state.object_registry_confirmed=True
-        st.success('Состав проекта подтверждён. Межраздельная сверка выполняется только по выбранным объектам.')
-        st.rerun()
+        unresolved=[r for r in updated if r.get('Включить') and (not r.get('Количество доказательств') or r.get('Блокировка'))]
+        if unresolved:
+            st.error(f'Нельзя подтвердить состав: {len(unresolved)} включённых позиций не имеют допустимого доказательства либо основаны на запрещённом источнике.')
+        else:
+            st.session_state.object_assembly_rows=updated
+            st.session_state.object_registry_confirmed=True
+            st.success('Состав проекта подтверждён. Сверка будет выполнена только по выбранным объектам.')
+            st.rerun()
     if b2.button('Сбросить ручные решения',width='content'):
         for row in st.session_state.object_assembly_rows:
             row['Включить']=row.get('Автоматическое решение')=='Предложено включить'
-        st.session_state.object_registry_confirmed=False
-        st.rerun()
+            row['Решение пользователя']='Не задано'; row['Комментарий пользователя']=''
+        st.session_state.object_registry_confirmed=False; st.rerun()
+    _render_evidence(updated)
 
 
 def render(ctx):
     _assembly_editor()
     if not st.session_state.get('object_registry_confirmed'):
-        st.info('Подтвердите состав проекта выше. До этого реестр, паспорта и сверки скрыты, чтобы система не формировала выводы по ложным объектам.')
+        st.info('Подтвердите состав проекта выше. До этого паспорта и межраздельные сверки недоступны.')
         return
-
     registry, passports = ctx.data[3], ctx.data[4]
-    section('Подтверждённый реестр объектов', 'В реестре остаются только позиции, выбранные пользователем в мастере состава проекта.')
-    if registry.empty:
-        return empty('После ручной проверки в состав проекта не включено ни одного объекта.')
-
-    position_col = next((c for c in ['Позиция по ГП', 'position', 'Позиция'] if c in registry.columns), None)
-    name_col = next((c for c in ['Наименование объекта', 'name', 'Объект'] if c in registry.columns), None)
-    quantity_col = next((c for c in ['Количество', 'quantity'] if c in registry.columns), None)
-    f1,f2=st.columns([1,2]); query=f2.text_input('Поиск по позиции или наименованию')
+    section('Подтверждённый реестр объектов','Только позиции с допустимыми доказательствами, подтверждённые пользователем.')
+    if registry.empty:return empty('В состав проекта не включено ни одного объекта.')
+    quantity_col=next((c for c in ['Количество','quantity'] if c in registry.columns),None)
+    query=st.text_input('Поиск по позиции или наименованию')
     view=registry.copy()
     if query:view=view[view.astype(str).apply(lambda c:c.str.contains(query,case=False,na=False)).any(axis=1)]
     total_physical=int(pd.to_numeric(registry[quantity_col],errors='coerce').fillna(1).sum()) if quantity_col else len(registry)
     m1,m2=st.columns(2)
-    with m1: card('Реестровые позиции',len(registry),'Подтверждены пользователем','ok')
-    with m2: card('Физические объекты',total_physical,'С учётом количества экземпляров','info')
+    with m1:card('Реестровые позиции',len(registry),'Подтверждены пользователем','ok')
+    with m2:card('Физические объекты',total_physical,'С учётом количества','info')
     main=['Позиция по ГП','Наименование объекта','Тип объекта','Количество','Количество источников','Статус проектирования','Доверие к объекту']
     st.dataframe(view[[c for c in main if c in view]],width='stretch',hide_index=True,height=400)
-
     if not passports:return
-    section('Цифровой паспорт объекта','Характеристики и источники выбранного подтверждённого объекта.')
+    section('Цифровой паспорт объекта','Характеристики и источники выбранного объекта.')
     labels=[f"{p.get('position','') or '—'} · {p.get('name','') or 'Объект без наименования'}" for p in passports]
     selected=st.selectbox('Объект',labels); passport=passports[labels.index(selected)]
     cols=st.columns(4)

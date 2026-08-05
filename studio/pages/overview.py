@@ -25,12 +25,12 @@ def render(ctx):
                 if prepared:
                     s=package.package_summary;c1,c2,c3=st.columns(3);c1.metric('Файлов',int(s.get('files',0)));c2.metric('Общий объём',f"{float(s.get('total_bytes',0))/1048576:.1f} МБ");c3.metric('XML',', '.join(s.get('identity',{}).get('xml_schemas',[])) or 'нет')
                     section('Состав комплекта','Проверьте классификацию документов до запуска анализа.')
-                    edited=st.data_editor(pd.DataFrame(package.inventory),hide_index=True,use_container_width=True,disabled=['ID','Файл','Формат','Семейство','Размер, МБ','Источник','Статус'],column_config={'Предполагаемый раздел':st.column_config.SelectboxColumn('Раздел',options=DOCUMENT_TYPE_OPTIONS,required=True)},key='studio_upload_inventory')
+                    edited=st.data_editor(pd.DataFrame(package.inventory),hide_index=True,width='stretch',disabled=['ID','Файл','Формат','Семейство','Размер, МБ','Источник','Статус'],column_config={'Предполагаемый раздел':st.column_config.SelectboxColumn('Раздел',options=DOCUMENT_TYPE_OPTIONS,required=True)},key='studio_upload_inventory')
                     comp=s.get('completeness',{});available=comp.get('available_checks',[]);limits=comp.get('limitations',[])
                     if available:st.success('Доступно: '+'; '.join(available))
                     if limits:st.info('Ограничения: '+'; '.join(limits))
                     confirmed=st.checkbox('Состав комплекта проверен',key='studio_package_confirmed')
-            if st.button('Запустить проверку проекта',type='primary',use_container_width=True,disabled=not prepared or bool(errors) or not confirmed):
+            if st.button('Запустить проверку проекта',type='primary',width='stretch',disabled=not prepared or bool(errors) or not confirmed):
                 files=apply_document_type_overrides(prepared,edited.to_dict('records'))
                 progress_box=st.container()
                 with progress_box:
@@ -89,6 +89,6 @@ def render(ctx):
             st.write('• '+text)
     c1,c2=st.columns(2)
     with c1:
-        if st.button('Новая проверка',use_container_width=True):st.session_state.result=None;st.session_state.analysis_time=None;st.rerun()
+        if st.button('Новая проверка',width='stretch'):st.session_state.result=None;st.session_state.analysis_time=None;st.rerun()
     with c2:
-        st.download_button('Скачать отчёт Excel',data=excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons),file_name='ExpertCheck_report.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',use_container_width=True)
+        st.download_button('Скачать отчёт Excel',data=excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons),file_name='ExpertCheck_report.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')

@@ -44,7 +44,7 @@ def render(ctx):
     edit = pd.DataFrame(base)[["Код", "Раздел", "Обязательность", "Обнаружен", "Найденные части", "Решение пользователя", "Обоснование", "Примечание"]]
     edited = st.data_editor(
         edit,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         disabled=["Код", "Раздел", "Обязательность", "Обнаружен", "Найденные части", "Примечание"],
         column_config={
@@ -75,7 +75,7 @@ def render(ctx):
         c = st.checkbox("Документы относятся к одному проекту и одной редакции", key="confirm_same_revision")
         d = st.checkbox("Выбран правильный профиль объекта", key="confirm_profile")
         confirm_enabled = a and b and c and d
-        if st.button("Подтвердить состав проекта", type="primary", disabled=not confirm_enabled, use_container_width=True):
+        if st.button("Подтвердить состав проекта", type="primary", disabled=not confirm_enabled, width='stretch'):
             st.session_state.completeness_user_confirmed = True
             st.session_state.completeness_confirmation = {
                 "profile": profile,
@@ -91,4 +91,4 @@ def render(ctx):
 
     if st.session_state.expert_mode:
         with st.expander("Матрица итоговых статусов"):
-            st.dataframe(pd.DataFrame(matrix), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(matrix), width='stretch', hide_index=True)

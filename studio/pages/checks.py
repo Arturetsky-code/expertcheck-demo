@@ -11,4 +11,4 @@ def render(ctx):
     cols=['object','parameter_name','status','documents','document_values','explanation']
     if st.session_state.expert_mode:cols+=['check_code','priority','evidence_count','sources','engineering_risk_level']
     labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','documents':'Разделы','document_values':'Значения','explanation':'Объяснение','check_code':'Код','priority':'Приоритет','evidence_count':'Подтверждений','sources':'Источники','engineering_risk_level':'Риск'}
-    st.dataframe(view[[c for c in cols if c in view]].rename(columns=labels),use_container_width=True,hide_index=True)
+    st.dataframe(view[[c for c in cols if c in view]].rename(columns=labels),width='stretch',hide_index=True)

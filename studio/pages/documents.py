@@ -66,11 +66,11 @@ def render(ctx):
             if value is not None:
                 details.append({'Показатель': label, 'Значение': value})
         if details:
-            st.dataframe(pd.DataFrame(details), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(details), width='stretch', hide_index=True)
         else:
             st.info('Для документа доступны только основные сведения о составе комплекта.')
 
         if st.session_state.expert_mode:
             with st.expander('Диагностика документа'):
                 diagnostic = pd.DataFrame({'Поле': selected.index.astype(str), 'Значение': selected.astype(str).values})
-                st.dataframe(diagnostic, use_container_width=True, hide_index=True)
+                st.dataframe(diagnostic, width='stretch', hide_index=True)

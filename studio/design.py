@@ -58,6 +58,12 @@ div[data-testid="stDataFrame"],div[data-testid="stDataEditor"]{border:1px solid 
 div[data-testid="stMetric"]{background:#fff;border:1px solid var(--ec-line);border-radius:13px;padding:.85rem .95rem}
 .stProgress>div>div>div>div{background:var(--ec-brand)}
 code{font-family:"Cascadia Mono","Consolas",monospace}
+
+.ec-project-bar{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#fff;border:1px solid var(--ec-line);border-radius:16px;padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 3px 14px rgba(25,39,52,.04)}
+.ec-project-name{font-size:1.2rem;font-weight:780}.ec-project-state{font-size:.8rem;color:var(--ec-muted);margin-top:.12rem}
+.ec-status-chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.45rem}.ec-status-chip{background:#F3F6FA;border:1px solid #DCE4EB;border-radius:999px;padding:.32rem .62rem;font-size:.75rem;color:#44566A;font-weight:650}
+.ec-timeline{background:#fff;border:1px solid var(--ec-line);border-radius:14px;padding:.45rem 1rem}.ec-timeline-row{display:flex;gap:.75rem;align-items:flex-start;padding:.72rem 0;border-bottom:1px solid #EDF1F4}.ec-timeline-row:last-child{border-bottom:0}.ec-timeline-dot{width:9px;height:9px;border-radius:50%;background:var(--ec-brand);margin-top:.32rem;box-shadow:0 0 0 4px #EAF1FC}.ec-timeline-row strong{display:block;font-size:.86rem}.ec-timeline-row span{display:block;color:var(--ec-muted);font-size:.74rem;margin-top:.08rem}
+[data-testid="stTabs"] button{font-weight:650}.stTabs [data-baseweb="tab-list"]{gap:.35rem}.stTabs [data-baseweb="tab"]{background:#fff;border:1px solid var(--ec-line);border-radius:9px;padding:.45rem .85rem}.stTabs [aria-selected="true"]{background:#EAF1FC!important;color:#245AC4!important}
 </style>'''
 
 def apply_design() -> None:

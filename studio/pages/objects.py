@@ -46,7 +46,7 @@ def render(ctx):
         card('Требуют проверки', conflicts, 'Конфликты и неподтверждённые позиции', 'warn' if conflicts else 'ok')
 
     main = ['Позиция по ГП', 'Наименование объекта', 'Тип объекта', 'Количество', 'Количество источников', 'Статус консолидации', 'Конфликты']
-    st.dataframe(view[[c for c in main if c in view]], use_container_width=True, hide_index=True, height=420)
+    st.dataframe(view[[c for c in main if c in view]], width='stretch', hide_index=True, height=420)
 
     if not passports:
         return
@@ -75,7 +75,7 @@ def render(ctx):
             source_rows = [{'Раздел': x, 'Статус': 'Подтвержден'} for x in sources]
         else:
             source_rows = [{'Раздел': str(sources), 'Статус': 'Подтвержден'}]
-        st.dataframe(pd.DataFrame(source_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(source_rows), width='stretch', hide_index=True)
 
 
     expected = passport.get('expected_parameter_codes') or []
@@ -103,7 +103,7 @@ def render(ctx):
     visible = ['Характеристика', 'Ед. изм.', 'Значения по разделам', 'Статус', 'Источников']
     if st.session_state.expert_mode:
         visible += ['Уверенность', 'pages_by_section', 'evidence_count']
-    st.dataframe(ch[[c for c in visible if c in ch]], use_container_width=True, hide_index=True)
+    st.dataframe(ch[[c for c in visible if c in ch]], width='stretch', hide_index=True)
 
     aliases = passport.get('name_variants') or passport.get('aliases') or []
     if aliases and st.session_state.expert_mode:

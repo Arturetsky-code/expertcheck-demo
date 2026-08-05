@@ -1,9 +1,8 @@
-from . import overview,documents,completeness,objects,checks,issues
+from . import project, objects, checks, issues, reports
 PAGES={
-    'Обзор':overview.render,
-    'Документы':documents.render,
-    'Комплектность':completeness.render,
-    'Объекты':objects.render,
-    'Сверки':checks.render,
-    'Замечания':issues.render,
+    'Проект': project.render,
+    'Объекты': objects.render,
+    'Проверки': checks.render,
+    'Замечания': issues.render,
+    'Отчёты': reports.render,
 }

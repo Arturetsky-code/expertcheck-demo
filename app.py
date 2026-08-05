@@ -17,7 +17,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='Studio 3.0 Alpha 3 · Core 3.1.1 · Knowledge Engine 1.0 Alpha 2'
+VERSION='Studio 3.0 Alpha 4 · Core 3.2 Quality · General Plan Intelligence Alpha 1'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{}}.items():

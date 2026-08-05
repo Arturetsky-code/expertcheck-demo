@@ -31,6 +31,7 @@ from .cross_section_consistency import build_cross_section_checks
 from .object_semantics import enrich_findings_with_object_semantics, is_service_object_candidate, object_candidate_evidence
 from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
+from .trusted_project_model import annotate_findings, filter_registry
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -172,6 +173,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     documents.extend(xml_documents)
     findings.extend(xml_findings)
     enrich_findings_with_object_semantics(findings)
+    trusted_object_audit = annotate_findings(findings)
     pdf_xml_checks = build_pdf_xml_checks(findings)
     cross_section_checks = build_cross_section_checks(findings)
     # Core 3.0 Alpha 3 формирует собственную сводную межраздельную сверку.
@@ -216,13 +218,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.2-gp-alpha2"
+        item["core_version"] = "4.0-quality-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
     findings.extend(discovered_objects)
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
+    trusted_object_audit.extend(annotate_findings(findings))
     # Генплан является опорным реестром: повторно и консервативно привязываем ТЭП
     # после универсального поиска объектов, затем строим проверки состава.
     general_plan_anchor_audit.extend(anchor_findings_to_general_plan(findings, gp_findings))
@@ -245,8 +248,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     # Реестр объектов строится отдельным движком и сопровождается журналом решений.
     progress(70, "Консолидация реестра", "Сопоставляем ПЗ, генплан, XML и профильные разделы")
-    object_registry, object_register_audit = build_registry(findings)
-    consolidated_registry, reconciliation_audit = reconcile_register(findings)
+    raw_object_registry, object_register_audit = build_registry(findings)
+    raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
+    object_registry, object_candidates = filter_registry(raw_object_registry, findings)
+    consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
@@ -266,13 +271,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "3.2-gp-alpha2"
+        item["core_version"] = "4.0-quality-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.2-gp-alpha2"
+        doc["core_version"] = "4.0-quality-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -302,6 +307,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
             "audit_candidates": len(object_register_audit),
         }
         doc["object_register_audit"] = object_register_audit
+        doc["trusted_object_audit"] = trusted_object_audit
+        doc["object_candidates"] = object_candidates
+        doc["consolidated_candidates"] = consolidated_candidates
         doc["consolidated_registry"] = consolidated_registry
         doc["register_reconciliation_audit"] = reconciliation_audit
         doc["consolidated_registry_summary"] = {

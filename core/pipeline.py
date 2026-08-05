@@ -27,7 +27,10 @@ from .cross_section_consistency import build_cross_section_checks
 from .object_semantics import enrich_findings_with_object_semantics, is_service_object_candidate, object_candidate_evidence
 from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
-from .universal_registry_extractor import UniversalRegistryExtractor
+try:
+    from .universal_registry_extractor import UniversalRegistryExtractor
+except ModuleNotFoundError:
+    UniversalRegistryExtractor = None
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -183,10 +186,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     progress(58, "Реестр объектов", "Извлекаем экспликации и позиции генерального плана")
     gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
     findings.extend(gp_findings)
-    universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
-        pdf_files, document_types, legacy.read_pdf
-    )
-    findings.extend(universal_registry_findings)
+    if UniversalRegistryExtractor is not None:
+        universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
+            pdf_files, document_types, legacy.read_pdf
+        )
+        findings.extend(universal_registry_findings)
+    else:
+        universal_registry_findings, universal_registry_audit = [], [{
+            "decision": "пропущено",
+            "reason": "Модуль universal_registry_extractor.py отсутствует в репозитории"
+        }]
     page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
 
     for item in findings:

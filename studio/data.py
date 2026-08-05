@@ -4,6 +4,7 @@ from datetime import datetime
 import pandas as pd
 from core.report_engine import build_decision_report
 from core.evidence_registry import build_evidence_index
+from core.object_intelligence import build_object_decisions
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -45,8 +46,10 @@ def raw_passports(docs):
     return docs.iloc[0].get('object_passports') or []
 
 def assembly_rows(docs, findings=None):
-    evidence_index=build_evidence_index((findings.to_dict('records') if hasattr(findings,'to_dict') else findings) or [])
-    return build_assembly_rows(raw_registry(docs).to_dict('records'), raw_candidates(docs).to_dict('records'), evidence_index)
+    finding_rows=(findings.to_dict('records') if hasattr(findings,'to_dict') else findings) or []
+    evidence_index=build_evidence_index(finding_rows)
+    intelligence=build_object_decisions(finding_rows)
+    return build_assembly_rows(raw_registry(docs).to_dict('records'), raw_candidates(docs).to_dict('records'), evidence_index, intelligence)
 
 def apply_project_assembly(docs, passports, comparisons, state_rows, confirmed):
     if not confirmed:

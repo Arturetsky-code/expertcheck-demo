@@ -1,6 +1,6 @@
-# ExpertCheck Studio 2.1 Alpha 1
+# ExpertCheck Studio 2.1 Alpha 2
 
-## Knowledge Engine 1.0 Alpha 1
+## Knowledge Engine 1.0 Alpha 2
 
 Цель платформы: автоматизированная проверка проектной документации для любых объектов капитального строительства.
 
@@ -15,9 +15,9 @@
 
 Версии компонентов:
 
-- Studio 2.1 Alpha 1;
+- Studio 2.1 Alpha 2;
 - Core 3.1;
-- Knowledge Engine 1.0 Alpha 1.
+- Knowledge Engine 1.0 Alpha 2.
 
 ## Studio 2.0 Alpha 2
 

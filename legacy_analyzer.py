@@ -250,10 +250,10 @@ def _document_parameter_allowed(param: dict, document_type: str, zone: str) -> b
     """Мягкий фильтр применимости характеристики к профилю раздела."""
     code = param.get("code")
     preferred = {
-        "ПЗ": {"DOC_NAME", "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "CAPACITY", "RES_VOLUME", "POWER_KTP", "STAFF", "FLOORS"},
-        "ПЗУ1": {"DOC_NAME", "AREA_BUILD"},
+        "ПЗ": {"DOC_NAME", "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "CAPACITY", "RES_VOLUME", "POWER_KTP", "STAFF", "FLOORS", "PRESSURE", "TEMPERATURE", "DIAMETER", "LENGTH", "FLOW_RATE", "VOLTAGE", "DEPTH"},
+        "ПЗУ1": {"DOC_NAME", "AREA_BUILD", "LENGTH", "DIAMETER", "HEIGHT_BUILD", "DEPTH"},
         "АР1": {"DOC_NAME", "AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "HEIGHT_BUILD", "FLOORS"},
-        "ТХ1": {"DOC_NAME", "CAPACITY", "STAFF", "POWER_KTP", "POWER_INST", "POWER_CALC", "RES_VOLUME"},
+        "ТХ1": {"DOC_NAME", "CAPACITY", "STAFF", "POWER_KTP", "POWER_INST", "POWER_CALC", "RES_VOLUME", "PRESSURE", "TEMPERATURE", "DIAMETER", "LENGTH", "FLOW_RATE", "VOLTAGE", "DEPTH"},
     }
     if document_type not in preferred:
         return True
@@ -645,7 +645,7 @@ def _extract_pz_complex_table(page_no: int, text: str, filename: str, parameters
     if not markers:
         return []
     result: list[Finding] = []
-    wanted = ["AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "CAPACITY", "HEIGHT_BUILD", "RES_VOLUME"]
+    wanted = ["AREA_BUILD", "AREA_TOTAL", "VOLUME_BUILD", "CAPACITY", "HEIGHT_BUILD", "RES_VOLUME", "POWER_KTP", "POWER_INST", "POWER_CALC", "FLOORS", "PRESSURE", "TEMPERATURE", "DIAMETER", "LENGTH", "FLOW_RATE", "VOLTAGE", "DEPTH"]
     for i, marker in enumerate(markers):
         end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
         block = text[marker.start():end]
@@ -764,7 +764,7 @@ def _extract_structured_tep_rows(page_no: int, text: str, filename: str, documen
                         m=re.search(r"(?<![\d.])(-?\d[\d \u00a0]*(?:[.,]\d+)?)(?![\d.])",candidate)
                         if m:
                             numeric=normalize_number(m.group(1))
-                    if re.search(r"м\s*[2²]|м\s*[3³]|квт|ква|т/ч|т/год|чел",candidate,flags=re.I):
+                    if re.search(r"м\s*[2²]|м\s*[3³]|квт|ква|мвт|т/ч|т/сут|т/год|м3/ч|м3/сут|л/с|мпа|кпа|бар|мм|см|кв|°c|град|чел|эт",candidate,flags=re.I):
                         unit=candidate.strip()
                 if numeric is None:
                     continue

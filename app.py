@@ -17,7 +17,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='Studio 3.0 Alpha 2 · Core 3.1.1 · Knowledge Engine 1.0 Alpha 2'
+VERSION='Studio 3.0 Alpha 3 · Core 3.1.1 · Knowledge Engine 1.0 Alpha 2'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{}}.items():
@@ -36,12 +36,6 @@ with st.sidebar:
         key='interface_mode_toggle',
     )
     st.caption('Рабочий режим' if not st.session_state.expert_mode else 'Отображаются технические данные')
-    with st.expander('Дополнительно'):
-        if st.session_state.result and st.button('Новая проверка',width='stretch'):
-            st.session_state.result=None
-            st.session_state.analysis_time=None
-            st.session_state.page='Проект'
-            st.rerun()
     st.caption(VERSION)
 header(VERSION)
 docs,findings,comparisons=frames(st.session_state.result)

@@ -19,7 +19,7 @@ def display_name(row: dict[str, Any]) -> str:
     return str(row.get('Наименование объекта') or row.get('Объект') or row.get('name') or '').strip()
 
 
-def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[dict[str, Any]], evidence_index: dict[str, list[dict[str, Any]]] | None = None) -> list[dict[str, Any]]:
+def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[dict[str, Any]], evidence_index: dict[str, list[dict[str, Any]]] | None = None, intelligence_decisions: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for source, default_include in ((trusted, True), (candidates, False)):
@@ -36,6 +36,11 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             valid_evidence = [e for e in evidence if not e.get('forbidden')]
             auto_blocked = obvious_file or (bool(evidence) and not valid_evidence)
             source_preview = '; '.join(compact_source(e) for e in valid_evidence[:3])
+            intel=(intelligence_decisions or {}).get(key,{})
+            if intel.get('decision') == 'blocked':
+                auto_blocked=True
+            if intel.get('decision') == 'review':
+                default_include=False
             rows.append({
                 'Ключ': key,
                 'Включить': bool(default_include and not auto_blocked),
@@ -51,6 +56,12 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
                 'Комментарий пользователя': '',
                 '_evidence': evidence,
                 'Автоматическое решение': 'Предложено включить' if default_include and not auto_blocked else 'Не включён автоматически',
+                'Решение Object Intelligence': intel.get('decision',''),
+                'Доверие Object Intelligence': intel.get('confidence',''),
+                'Обоснование Object Intelligence': intel.get('reason',''),
+                'Независимых документов': intel.get('independent_documents',0),
+                'Официальных источников': intel.get('official_sources',0),
+                'Канонический источник': compact_source(intel.get('canonical_source')) if intel.get('canonical_source') else '',
             })
     return rows
 

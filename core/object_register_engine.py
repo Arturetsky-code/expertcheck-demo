@@ -5,7 +5,7 @@ from dataclasses import dataclass, asdict
 from difflib import SequenceMatcher
 from typing import Any, Iterable
 
-from .object_semantics import is_service_object_candidate, classify_object
+from .object_semantics import is_service_object_candidate, classify_object, object_candidate_evidence
 
 POSITION_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){1,5}$")
 CLASSIFIER_RE = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}$")
@@ -147,6 +147,10 @@ def _is_valid_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     service, service_reasons = is_service_object_candidate(item)
     if service:
         return False, service_reasons
+    evidence_strength, evidence_reasons = object_candidate_evidence(item)
+    if evidence_strength <= 0:
+        return False, evidence_reasons
+    item["_object_evidence_strength"] = evidence_strength
     if not name or len(normalize_name(name)) < 2:
         return False, ["пустое или слишком короткое наименование"]
     low = name.lower()
@@ -157,6 +161,7 @@ def _is_valid_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     )
     if any(token in low for token in bad_tokens):
         return False, ["служебный заголовок или название чертежа"]
+    reasons.extend(evidence_reasons)
     if position:
         reasons.append("найдена точная позиция по генплану")
     if code == "OBJECT_ENTRY":
@@ -230,7 +235,8 @@ class ObjectRegisterEngine:
                 audit_row["merge_method"] = "однозначное совпадение наименования с реестровой позицией"
                 audit_row["reasons"] += "; присоединено к позиции по однозначному совпадению"
             else:
-                # Группируем только почти идентичные безпозиционные записи.
+                # Безпозиционный кандидат сам по себе не создаёт объект. Он должен
+                # иметь сильное основание либо подтверждаться минимум двумя независимыми разделами.
                 attached = False
                 for group in standalone:
                     score = max(name_similarity(item["_name"], row["_name"]) for row in group)
@@ -241,13 +247,22 @@ class ObjectRegisterEngine:
                         break
                 if not attached:
                     standalone.append([item])
-                audit_row["reasons"] += "; нет однозначной реестровой позиции"
+                audit_row["reasons"] += "; ожидается подтверждение независимым источником"
 
         records: list[RegisterRecord] = []
         for position in sorted(positioned, key=self._position_sort_key):
             records.append(self._make_record(positioned[position], position))
         for group in standalone:
-            records.append(self._make_record(group, ""))
+            sections = {str(row.get("document_type") or "") for row in group if row.get("document_type")}
+            max_strength = max(int(row.get("_object_evidence_strength") or 0) for row in group)
+            official = any(row.get("parameter_code") == "OBJECT_ENTRY" for row in group)
+            if official or max_strength >= 2 or len(sections) >= 2:
+                records.append(self._make_record(group, ""))
+            else:
+                for row in group:
+                    a = audit[row["_candidate_id"]]
+                    a["decision"] = "отклонено"
+                    a["reasons"] += "; недостаточно оснований для включения в подтверждённый реестр"
         return records, audit
 
     @staticmethod

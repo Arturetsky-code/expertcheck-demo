@@ -24,7 +24,7 @@ from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
 from .cross_source_consistency import build_pdf_xml_checks
 from .cross_section_consistency import build_cross_section_checks
-from .object_semantics import enrich_findings_with_object_semantics
+from .object_semantics import enrich_findings_with_object_semantics, is_service_object_candidate, object_candidate_evidence
 
 
 def _best_table_by_page(files, legacy, table_engine: TableEngine, document_types: dict[str, str]) -> dict[tuple[str, int], dict[str, Any]]:
@@ -58,6 +58,10 @@ def _semantic_anchors(findings: list[dict]) -> list[dict]:
     seen: set[tuple[str, str]] = set()
     for item in findings:
         if item.get("parameter_code") not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
+            continue
+        service, _ = is_service_object_candidate(item)
+        strength, _ = object_candidate_evidence(item)
+        if service or strength <= 0:
             continue
         name = str(item.get("object_hint") or item.get("value_text") or "").strip()
         position = str(item.get("genplan_position") or "").strip()
@@ -191,7 +195,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "3.0-alpha5"
+        item["core_version"] = "3.0-alpha6"
 
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
@@ -231,13 +235,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "3.0-alpha5"
+        item["core_version"] = "3.0-alpha6"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "3.0-alpha5"
+        doc["core_version"] = "3.0-alpha6"
         doc["knowledge_summary"] = summary
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {

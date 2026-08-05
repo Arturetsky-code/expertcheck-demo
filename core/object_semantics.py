@@ -78,6 +78,73 @@ def is_service_object_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     return bool(reasons), reasons
 
 
+
+DOCUMENT_REGISTER_TOKENS = (
+    "состав проектной документации", "перечень разделов проектной документации",
+    "ведомость документов", "ведомость ссылочных и прилагаемых документов",
+    "содержание тома", "содержание", "перечень файлов",
+    "исходно разрешительная документация", "исходно-разрешительная документация",
+    "инженерные изыскания", "проектная документация",
+)
+
+DOCUMENT_TITLES = (
+    "пояснительная записка", "схема планировочной организации земельного участка",
+    "архитектурные решения", "объемно планировочные и архитектурные решения",
+    "объёмно планировочные и архитектурные решения", "конструктивные решения",
+    "технологические решения", "проект организации строительства",
+    "проект организации работ по сносу", "мероприятия по обеспечению пожарной безопасности",
+    "мероприятия по охране окружающей среды", "система электроснабжения",
+    "система водоснабжения", "система водоотведения", "отопление вентиляция и кондиционирование",
+    "сети связи", "смета на строительство", "иная документация",
+    "технический отчет по результатам инженерных изысканий",
+)
+
+def object_candidate_evidence(item: dict[str, Any]) -> tuple[int, list[str]]:
+    """Возвращает силу положительных оснований включения кандидата в реестр.
+
+    3 — официальный объектный источник; 2 — сильное инженерное подтверждение;
+    1 — слабый текстовый кандидат; 0 — документ/служебная запись.
+    """
+    reasons: list[str] = []
+    raw = str(item.get("value_text") or item.get("object_hint") or "").strip()
+    low = normalize_text(raw)
+    context = normalize_text(" ".join(str(item.get(k) or "") for k in (
+        "context", "structural_zone", "table_type", "table_evidence", "match_method", "parameter_name"
+    )))
+    code = str(item.get("parameter_code") or "")
+    position = str(item.get("genplan_position") or "").strip()
+
+    if any(token in context for token in DOCUMENT_REGISTER_TOKENS):
+        return 0, ["строка находится в перечне/ведомости документов"]
+    if any(title == low or (title in low and len(low) < len(title) + 25) for title in DOCUMENT_TITLES):
+        return 0, ["наименование является названием раздела или документа"]
+    if item.get("record_kind") == "document":
+        return 0, ["запись классифицирована как документ"]
+
+    if code == "OBJECT_ENTRY" and str(item.get("document_type") or "") == "ПЗ":
+        reasons.append("официальная строка состава объекта в ПЗ")
+        return 3, reasons
+    if bool(item.get("general_plan_explication")):
+        reasons.append("строка экспликации генерального плана")
+        return 3, reasons
+    if position and bool(item.get("general_plan_field")):
+        reasons.append("позиция обнаружена на поле генерального плана")
+        return 3, reasons
+    if "xml object node" in context or (code == "OBJECT_ENTRY" and item.get("source_kind") == "xml"):
+        reasons.append("структурированный объектный узел XML")
+        return 3, reasons
+    if position:
+        reasons.append("присутствует корректная позиция по генплану")
+        return 2, reasons
+    if any(token in context for token in ("таблица тэп", "объектная строка тэп", "экспликация зданий", "состав сложного объекта")):
+        reasons.append("объектная строка инженерной таблицы")
+        return 2, reasons
+    if code == "OBJECT_CANDIDATE":
+        reasons.append("текстовый кандидат без сильного объектного основания")
+        return 1, reasons
+    return 0, ["положительное объектное основание отсутствует"]
+
+
 @dataclass(frozen=True)
 class ObjectTypeDecision:
     code: str

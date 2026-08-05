@@ -182,6 +182,9 @@ def object_candidate_evidence(item: dict[str, Any]) -> tuple[int, list[str]]:
     if position and bool(item.get("general_plan_field")):
         reasons.append("позиция обнаружена на поле генерального плана")
         return 3, reasons
+    if bool(item.get("general_plan_named_label")):
+        reasons.append("инженерная выноска обнаружена на поле генерального плана")
+        return 2, reasons
     if "xml object node" in context or (code == "OBJECT_ENTRY" and item.get("source_kind") == "xml"):
         reasons.append("структурированный объектный узел XML")
         return 3, reasons

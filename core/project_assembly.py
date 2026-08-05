@@ -4,6 +4,7 @@ import re
 from typing import Any, Iterable
 
 from .normalization import normalize_text
+from .evidence_registry import evidence_for_row, compact_source, is_forbidden_evidence
 
 _FILE_RE = re.compile(r"(?:\.pdf|\.xml|\.sig|\.zip|\.docx?|\.xlsx?)$", re.I)
 
@@ -18,7 +19,7 @@ def display_name(row: dict[str, Any]) -> str:
     return str(row.get('Наименование объекта') or row.get('Объект') or row.get('name') or '').strip()
 
 
-def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[dict[str, Any]], evidence_index: dict[str, list[dict[str, Any]]] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for source, default_include in ((trusted, True), (candidates, False)):
@@ -30,15 +31,26 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             seen.add(key)
             name = display_name(row)
             obvious_file = bool(_FILE_RE.search(name))
+            evidence = evidence_for_row(row, evidence_index or {})
+            forbidden_evidence = [e for e in evidence if e.get('forbidden')]
+            valid_evidence = [e for e in evidence if not e.get('forbidden')]
+            auto_blocked = obvious_file or (bool(evidence) and not valid_evidence)
+            source_preview = '; '.join(compact_source(e) for e in valid_evidence[:3])
             rows.append({
                 'Ключ': key,
-                'Включить': bool(default_include and not obvious_file),
+                'Включить': bool(default_include and not auto_blocked),
                 'Позиция по ГП': row.get('Позиция по ГП') or row.get('Позиция') or '',
                 'Наименование объекта': name,
                 'Статус проектирования': row.get('Статус проектирования') or 'Не определён',
                 'Доверие': row.get('Доверие к объекту', ''),
-                'Источники': row.get('Источники') or row.get('Количество источников') or '',
-                'Автоматическое решение': 'Предложено включить' if default_include and not obvious_file else 'Не включён автоматически',
+                'Источники': source_preview or row.get('Источники') or row.get('Количество источников') or '',
+                'Количество доказательств': len(valid_evidence),
+                'Основание включения': source_preview or ('Надёжное доказательство не найдено' if not valid_evidence else ''),
+                'Блокировка': '; '.join(e.get('forbidden_reason','') for e in forbidden_evidence[:2]) if auto_blocked else '',
+                'Решение пользователя': 'Не задано',
+                'Комментарий пользователя': '',
+                '_evidence': evidence,
+                'Автоматическое решение': 'Предложено включить' if default_include and not auto_blocked else 'Не включён автоматически',
             })
     return rows
 

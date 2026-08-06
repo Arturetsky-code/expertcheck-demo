@@ -46,3 +46,10 @@ def test_groq_403_diagnostic_mentions_permissions():
     from core.ai_gateway import AIResult
     message = diagnostic_message(AIResult(False, 'Groq', error='blocked', status_code=403))
     assert 'Model permissions' in message
+
+
+def test_cloudflare_1010_is_not_reported_as_model_permission():
+    from core.ai_gateway import AIResult
+    message = diagnostic_message(AIResult(False, 'Groq', error='error code: 1010', status_code=403))
+    assert 'Cloudflare' in message
+    assert 'не ошибка API-ключа' in message

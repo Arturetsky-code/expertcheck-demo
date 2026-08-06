@@ -7,6 +7,7 @@ from typing import Any
 import fitz
 
 from .normalization import normalize_text
+from .position_rules import normalize_genplan_position
 
 OFFICIAL_REGISTER_MARKERS = (
     'состав сложного объекта', 'сведения о составе объекта', 'экспликация зданий и сооружений',
@@ -149,8 +150,7 @@ def _object_findings_from_table(
         position = ''
         if pos_idx is not None and pos_idx < len(row):
             candidate = _clean_cell(row[pos_idx])
-            if POSITION_RE.match(candidate):
-                position = candidate
+            position = normalize_genplan_position(candidate, allow_integer=True)
         evidence = f'Таблица, строка {row_no}: ' + ' | '.join(row)
         findings.append({
             'document': filename, 'document_type': doc_type, 'page': page_no,

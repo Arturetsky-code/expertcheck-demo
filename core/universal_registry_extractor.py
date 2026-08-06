@@ -5,6 +5,7 @@ from typing import Any
 
 from .normalization import normalize_text
 from .object_semantics import is_service_object_candidate
+from .position_rules import normalize_genplan_position
 
 _POSITION = re.compile(r"^\s*(?P<pos>\d{1,3}(?:\.\d{1,3}){1,5})\s*(?:[-–—:]\s*)?(?P<name>.*)$")
 _ORDINAL = re.compile(r"^\s*(?P<num>\d{1,3})[.)]?\s*$")
@@ -126,7 +127,10 @@ class UniversalRegistryExtractor:
                 for i, line in enumerate(lines):
                     match = _POSITION.match(line)
                     if match and not _CLASSIFIER.fullmatch(match.group("pos")):
-                        position = match.group("pos")
+                        position = normalize_genplan_position(match.group("pos"), allow_integer=False)
+                        if not position:
+                            audit.append({"document": filename, "page": page_no, "position": match.group("pos"), "decision": "skip", "reason": "значение похоже на дату или служебный номер"})
+                            continue
                         tail = match.group("name").strip()
                         name = tail if _valid_name(tail, filename, page_context) else _collect_name(lines, i + 1, filename, page_context)
                         if not name:

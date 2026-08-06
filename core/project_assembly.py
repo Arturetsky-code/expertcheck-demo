@@ -5,12 +5,13 @@ from typing import Any, Iterable
 
 from .normalization import normalize_text
 from .evidence_registry import evidence_for_row, compact_source, is_forbidden_evidence
+from .position_rules import normalize_genplan_position
 
 _FILE_RE = re.compile(r"(?:\.pdf|\.xml|\.sig|\.zip|\.docx?|\.xlsx?)$", re.I)
 
 
 def object_key(row: dict[str, Any]) -> str:
-    position = str(row.get('Позиция по ГП') or row.get('Позиция') or row.get('position') or '').strip()
+    position = normalize_genplan_position(row.get('Позиция по ГП') or row.get('Позиция') or row.get('position'), allow_integer=True)
     name = normalize_text(row.get('Наименование объекта') or row.get('Объект') or row.get('name') or '')
     return f"{position}|{name}"
 
@@ -49,7 +50,7 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             rows.append({
                 'Ключ': key,
                 'Включить': bool(default_include and not auto_blocked),
-                'Позиция по ГП': row.get('Позиция по ГП') or row.get('Позиция') or '',
+                'Позиция по ГП': normalize_genplan_position(row.get('Позиция по ГП') or row.get('Позиция'), allow_integer=True),
                 'Наименование объекта': name,
                 'Статус проектирования': row.get('Статус проектирования') or 'Не определён',
                 'Доверие': row.get('Доверие к объекту', ''),

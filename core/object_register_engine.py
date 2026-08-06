@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 from typing import Any, Iterable
 
 from .object_semantics import is_service_object_candidate, classify_object, object_candidate_evidence
+from .position_rules import normalize_genplan_position
 
 POSITION_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){1,5}$")
 CLASSIFIER_RE = re.compile(r"^\d{2}\.\d{2}\.\d{3}\.\d{3}$")
@@ -89,10 +90,7 @@ class RegisterRecord:
 
 
 def normalize_position(value: Any) -> str:
-    clean = re.sub(r"\s+", "", str(value or "").strip())
-    if POSITION_RE.fullmatch(clean) and not CLASSIFIER_RE.fullmatch(clean):
-        return clean
-    return ""
+    return normalize_genplan_position(value, allow_integer=False)
 
 
 def parent_position(position: str) -> str:

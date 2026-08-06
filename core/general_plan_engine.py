@@ -6,6 +6,8 @@ from typing import Any, Iterable
 
 import fitz
 
+from .position_rules import normalize_genplan_position
+
 # Позиции генплана бывают как целыми (1, 2, 5), так и составными (3.1, 4.13).
 # Координаты, пикетаж и длинные числовые значения не считаются позициями.
 POSITION_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){0,5}$")
@@ -90,19 +92,7 @@ def _normalize_text(value: str) -> str:
 
 
 def _clean_position(value: str) -> str:
-    value = re.sub(r"\s+", "", str(value or "").strip()).replace(",", ".")
-    if not POSITION_RE.fullmatch(value) or CLASSIFIER_RE.fullmatch(value):
-        return ""
-    # Защита от отметок/координат: целая позиция должна быть <= 999; составные части <= 999.
-    try:
-        parts = [int(x) for x in value.split(".")]
-    except ValueError:
-        return ""
-    if any(part > 999 for part in parts):
-        return ""
-    if len(parts) == 3 and 1 <= parts[0] <= 31 and 1 <= parts[1] <= 12 and 20 <= parts[2] <= 99:
-        return ""
-    return value
+    return normalize_genplan_position(value, allow_integer=True)
 
 
 def _clean_name(value: str) -> str:

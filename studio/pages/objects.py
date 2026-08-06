@@ -33,16 +33,21 @@ def _render_evidence(rows: list[dict]) -> None:
         status='Отклонённый источник' if ev.get('forbidden') else 'Допустимое доказательство'
         title=f"{idx}. {ev.get('document_type') or 'Документ'} · стр. {ev.get('page') or '—'} · {status}"
         with st.expander(title,expanded=idx==1):
-            st.write({
-                'Файл':ev.get('document') or '—',
-                'Раздел/пункт':ev.get('section') or '—',
-                'Таблица':ev.get('table') or '—',
-                'Строка таблицы':ev.get('row') or '—',
-                'Тип источника':ev.get('source_type_label') or '—',
-                'Статус проектирования':ev.get('lifecycle') or '—',
-                'Уверенность':ev.get('confidence') if ev.get('confidence')!='' else '—',
-                'Фрагмент':ev.get('quote') or '—',
-            })
+            left, right = st.columns(2)
+            with left:
+                st.markdown(f"**Файл:** {ev.get('document') or '—'}")
+                st.markdown(f"**Раздел / пункт:** {ev.get('section') or '—'}")
+                st.markdown(f"**Таблица:** {ev.get('table') or '—'}")
+                st.markdown(f"**Строка таблицы:** {ev.get('row') or '—'}")
+            with right:
+                st.markdown(f"**Тип источника:** {ev.get('source_type_label') or '—'}")
+                st.markdown(f"**Статус проектирования:** {ev.get('lifecycle') or '—'}")
+                confidence = ev.get('confidence') if ev.get('confidence') not in ('', None) else '—'
+                st.markdown(f"**Уверенность:** {confidence}")
+            quote = str(ev.get('quote') or '').strip()
+            if quote:
+                st.markdown('**Фрагмент документа:**')
+                st.info(quote)
             if ev.get('forbidden'):
                 st.error(f"Источник запрещён для создания объекта: {ev.get('forbidden_reason')}")
 

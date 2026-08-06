@@ -1,6 +1,9 @@
 from __future__ import annotations
 import io
-from datetime import datetime
+import json
+import math
+import re
+from datetime import datetime, date
 import pandas as pd
 from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
@@ -62,6 +65,79 @@ def apply_project_assembly(docs, passports, comparisons, state_rows, confirmed):
 
 def registry(docs): return raw_registry(docs)
 def passports(docs): return raw_passports(docs)
+
+_ILLEGAL_XML_CHARS = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
+_EXCEL_MAX_TEXT = 32000
+
+
+def _excel_safe_value(value):
+    """Convert arbitrary diagnostic values to valid, compact XLSX cell values."""
+    if value is None:
+        return ''
+    if isinstance(value, float):
+        return '' if math.isnan(value) or math.isinf(value) else value
+    if isinstance(value, (int, bool)):
+        return value
+    if isinstance(value, (datetime, date)):
+        return value
+    if isinstance(value, (dict, list, tuple, set)):
+        try:
+            value = json.dumps(value, ensure_ascii=False, default=str, separators=(',', ': '))
+        except Exception:
+            value = str(value)
+    text = _ILLEGAL_XML_CHARS.sub('', str(value)).replace('\x00', '').strip()
+    # Do not allow project text to be interpreted as an Excel formula.
+    if text.startswith(('=', '+', '-', '@')):
+        text = "'" + text
+    return text[:_EXCEL_MAX_TEXT]
+
+
+def _excel_safe_frame(frame: pd.DataFrame, *, columns: list[str] | None = None, max_rows: int | None = None) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return pd.DataFrame(columns=columns or [])
+    result = frame.copy()
+    if columns is not None:
+        available = [column for column in columns if column in result.columns]
+        result = result[available]
+    if max_rows is not None:
+        result = result.head(max_rows)
+    result.columns = [_excel_safe_value(column) for column in result.columns]
+    for column in result.columns:
+        result[column] = result[column].map(_excel_safe_value)
+    return result
+
+
+def _compact_technical_frames(docs, findings, comparisons, report):
+    registry_columns = [
+        'Позиция по ГП','Наименование объекта','Статус проектирования','Статус',
+        'Источники','Страницы','Уверенность','Решение инспектора','Причины решения',
+    ]
+    comparison_columns = [
+        'check_id','object','parameter','status','priority','values_by_section',
+        'explanation','sources','genplan_position','strong_evidence_count',
+    ]
+    document_columns = [
+        'document','document_type','page_count','size_mb','status','completeness_status',
+        'processing_error','document_profile',
+    ]
+    finding_columns = [
+        'document','document_type','page','section_title','table_title','table_row',
+        'parameter_code','parameter_name','object_hint','genplan_position','value_text',
+        'unit','confidence','binding_status','match_method','structural_zone',
+    ]
+    object_columns = [
+        'Ключ','Позиция по ГП','Наименование объекта','Статус проектирования',
+        'Основание включения','Блокировка','Решение пользователя','Комментарий пользователя',
+    ]
+    return {
+        'Тех_реестр': _excel_safe_frame(registry(docs), columns=registry_columns, max_rows=5000),
+        'Тех_сверки': _excel_safe_frame(comparisons, columns=comparison_columns, max_rows=10000),
+        'Тех_документы': _excel_safe_frame(docs, columns=document_columns, max_rows=3000),
+        'Тех_извлечение': _excel_safe_frame(engineer_findings(findings), columns=finding_columns, max_rows=10000),
+        'Тех_исключённые': _excel_safe_frame(pd.DataFrame(report.get('excluded_objects') or []), columns=object_columns, max_rows=5000),
+        'Тех_спорные': _excel_safe_frame(pd.DataFrame(report.get('unresolved_objects') or []), columns=object_columns, max_rows=5000),
+    }
+
 
 def _safe_sheet_name(name: str) -> str:
     for ch in '[]:*?/\\':
@@ -183,8 +259,15 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
     recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
 
+    summary_df = _excel_safe_frame(pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']))
+    risks_df = _excel_safe_frame(risks_df)
+    problems_df = _excel_safe_frame(problems_df)
+    object_df = _excel_safe_frame(object_df)
+    checklist_problem_df = _excel_safe_frame(checklist_problem_df)
+    recommendations_df = _excel_safe_frame(recommendations_df)
+
     with pd.ExcelWriter(out, engine='openpyxl') as writer:
-        pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']).to_excel(writer, sheet_name='Резюме', index=False)
+        summary_df.to_excel(writer, sheet_name='Резюме', index=False)
         if not risks_df.empty:
             risks_df.to_excel(writer, sheet_name='Ключевые риски', index=False)
         if not problems_df.empty:
@@ -196,21 +279,27 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         recommendations_df.to_excel(writer, sheet_name='План действий', index=False)
 
         if report_kind == 'technical':
-            registry(docs).to_excel(writer, sheet_name='Тех_реестр объектов', index=False)
-            comparisons.to_excel(writer, sheet_name='Тех_все сверки', index=False)
-            docs.to_excel(writer, sheet_name='Тех_документы', index=False)
-            if hasattr(findings, 'empty') and not findings.empty:
-                findings.to_excel(writer, sheet_name='Тех_извлечённые данные', index=False)
-            if report.get('excluded_objects'):
-                pd.DataFrame(report['excluded_objects']).to_excel(writer, sheet_name='Тех_исключённые объекты', index=False)
-            if report.get('unresolved_objects'):
-                pd.DataFrame(report['unresolved_objects']).to_excel(writer, sheet_name='Тех_спорные объекты', index=False)
+            # Compact technical appendix: only reproducible engineering fields, without
+            # raw nested payloads, full page text or internal Python structures.
+            for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
+                if not frame.empty:
+                    frame.to_excel(writer, sheet_name=_safe_sheet_name(sheet_name), index=False)
 
         _style_workbook(writer.book, report_kind)
         writer.book.properties.title = f'ExpertCheck — {project}'
         writer.book.properties.subject = 'Автоматизированная проверка проектной документации'
         writer.book.properties.creator = 'ExpertCheck'
-    return out.getvalue()
+        writer.book.active = 0
+        try:
+            writer.book.calculation.fullCalcOnLoad = True
+            writer.book.calculation.forceFullCalc = True
+        except Exception:
+            pass
+    payload = out.getvalue()
+    # Validate container signature before returning it to Streamlit.
+    if not payload.startswith(b'PK'):
+        raise ValueError('Не удалось сформировать корректный XLSX-файл.')
+    return payload
 
 
 def excel_report(project, version, docs, findings, comparisons):

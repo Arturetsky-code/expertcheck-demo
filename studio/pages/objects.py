@@ -4,11 +4,16 @@ import pandas as pd
 import streamlit as st
 
 from studio.components import card, empty, section
+from studio.ai_presenter import render_ai_result, render_unstructured_ai_text
 from core.ai_gateway import analyze_object_fragment, diagnostic_message, provider_for_role
 
 VISIBLE_EDITOR_COLS = [
-    'Включить','Позиция по ГП','Наименование объекта','Статус проектирования','Доверие',
-    'Количество доказательств','Независимых документов','Официальных источников','Решение Object Intelligence','Доверие Object Intelligence','Канонический источник','Обоснование Object Intelligence','Основание включения','Блокировка','Решение пользователя','Комментарий пользователя'
+    'Включить','Позиция по ГП','Наименование объекта','Статус проектирования',
+    'Доверие Object Intelligence','Канонический источник','Решение пользователя','Комментарий пользователя'
+]
+TECHNICAL_COLS = [
+    'Количество доказательств','Независимых документов','Официальных источников',
+    'Решение Object Intelligence','Обоснование Object Intelligence','Основание включения','Блокировка'
 ]
 
 
@@ -69,21 +74,17 @@ def _render_ai_review(rows: list[dict]) -> None:
         if result.ok and data:
             st.session_state.ai_object_reviews[label]=data
         elif result.ok:
-            st.warning('AI вернул ответ, который не удалось преобразовать в структурированное решение.')
-            st.code(result.text)
+            st.warning('AI вернул ответ без ожидаемой структуры.')
+            render_unstructured_ai_text(result.text)
         else:
             st.error(diagnostic_message(result))
     review=st.session_state.get('ai_object_reviews',{}).get(label)
     if review:
-        st.write({
-            'Классификация AI':review.get('entity_type'), 'Статус проектирования':review.get('design_status'),
-            'Самостоятельный объект':review.get('independent_object'), 'Уверенность':review.get('confidence'),
-            'Рекомендация':review.get('recommended_action'), 'Обоснование':review.get('reason'),
-        })
+        render_ai_result(review, title='Рекомендация AI по кандидату')
         st.caption('Результат AI является рекомендацией и не меняет состав проекта автоматически.')
 
 def _assembly_editor() -> None:
-    section('Мастер формирования состава проекта','Система формирует кандидатов и показывает доказательства. Пользователь исключает лишнее; только затем разрешается межраздельная сверка.')
+    section('Состав объектов','Проверьте только спорные позиции. Надёжно подтверждённые объекты уже отмечены системой.')
     rows=st.session_state.get('object_assembly_rows') or []
     if not rows:
         st.info('Кандидаты объектов не извлечены.')
@@ -91,7 +92,7 @@ def _assembly_editor() -> None:
     df=pd.DataFrame(rows)
     display_cols=[c for c in VISIBLE_EDITOR_COLS if c in df.columns]
     edited=st.data_editor(
-        df[display_cols], hide_index=True, width='stretch', height=500,
+        df[display_cols], hide_index=True, width='stretch', height=430,
         disabled=[c for c in display_cols if c not in {'Включить','Решение пользователя','Комментарий пользователя'}],
         column_config={
             'Включить':st.column_config.CheckboxColumn('Включить в состав проекта'),
@@ -102,6 +103,13 @@ def _assembly_editor() -> None:
             ]),
         }, key='object_assembly_editor',
     )
+
+    if st.session_state.get('expert_mode'):
+        tech_cols=[c for c in TECHNICAL_COLS if c in df.columns]
+        if tech_cols:
+            with st.expander('Техническая диагностика определения объектов'):
+                st.dataframe(df[['Позиция по ГП','Наименование объекта']+tech_cols], hide_index=True, width='stretch')
+
     updated=[]
     for original,edit in zip(rows,edited.to_dict('records')):
         merged=dict(original); merged.update(edit); updated.append(merged)
@@ -128,8 +136,11 @@ def _assembly_editor() -> None:
             row['Включить']=row.get('Автоматическое решение')=='Предложено включить'
             row['Решение пользователя']='Не задано'; row['Комментарий пользователя']=''
         st.session_state.object_registry_confirmed=False; st.rerun()
-    _render_evidence(updated)
-    _render_ai_review(updated)
+    tab_sources,tab_ai=st.tabs(['Источники объектов','AI-анализ спорных позиций'])
+    with tab_sources:
+        _render_evidence(updated)
+    with tab_ai:
+        _render_ai_review(updated)
 
 
 def render(ctx):

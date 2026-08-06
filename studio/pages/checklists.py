@@ -6,6 +6,7 @@ import streamlit as st
 from core.checklist_engine import ChecklistEngine
 from core.ai_gateway import analyze_checklist_evidence, analyze_checklist_batch, diagnostic_message, provider_for_role
 from studio.components import card, empty, section
+from studio.ai_presenter import render_ai_result, render_unstructured_ai_text
 
 
 def _document_options(docs: pd.DataFrame) -> list[str]:
@@ -27,21 +28,20 @@ def render(ctx):
     engine=ChecklistEngine(ctx.config_dir/'knowledge'/'checklist_catalog.json')
     if not engine.items:return empty('Каталог чек-листов не загружен.')
 
-    left,right=st.columns(2,gap='large')
-    with left:
-        st.markdown('### Чек-лист')
-        checklist_files=engine.checklist_files()
-        checklist=st.selectbox('Выберите чек-лист',checklist_files,key='workspace_checklist_file')
-        recommended=engine.primary_section(checklist)
-        st.caption(f'Рекомендуемый раздел: {recommended}')
-    with right:
-        st.markdown('### Документация')
-        sections=engine.sections()
-        selected_section=st.selectbox('Выберите раздел ПД',sections,index=sections.index(recommended) if recommended in sections else 0,key='workspace_checklist_section')
-        document_labels=_document_options(docs)
-        matching=[x for x in document_labels if x.startswith(selected_section+' ·')]
-        selected_docs=st.multiselect('Документы для проверки',document_labels,default=matching,key='workspace_checklist_documents')
-        if not selected_docs: st.warning('Выберите хотя бы один документ.')
+    with st.container(border=True):
+        left,right=st.columns(2,gap='large')
+        with left:
+            checklist_files=engine.checklist_files()
+            checklist=st.selectbox('Чек-лист',checklist_files,key='workspace_checklist_file')
+            recommended=engine.primary_section(checklist)
+            st.caption(f'Рекомендуемый раздел: {recommended}')
+        with right:
+            sections=engine.sections()
+            selected_section=st.selectbox('Раздел ПД',sections,index=sections.index(recommended) if recommended in sections else 0,key='workspace_checklist_section')
+            document_labels=_document_options(docs)
+            matching=[x for x in document_labels if x.startswith(selected_section+' ·')]
+            selected_docs=st.multiselect('Документы',document_labels,default=matching,key='workspace_checklist_documents')
+            if not selected_docs: st.warning('Выберите хотя бы один документ.')
 
     mode=st.radio('Режим проверки',['Быстрая','Полная','Экспертная'],horizontal=True,key='workspace_checklist_mode')
     if st.button('Проверить выбранный раздел',type='primary',width='stretch',disabled=not selected_docs):
@@ -129,12 +129,12 @@ def render(ctx):
         rows.append({'Позиция по чек-листу':position,'Соответствие':value})
         details[position]=r
     show=pd.DataFrame(rows)
-    st.dataframe(show,hide_index=True,width='stretch',height=620,column_config={
+    st.dataframe(show,hide_index=True,width='stretch',height=480,column_config={
         'Позиция по чек-листу':st.column_config.TextColumn(width='large'),
         'Соответствие':st.column_config.TextColumn(width='small'),
     })
 
-    st.markdown('#### Пояснение по выбранной позиции')
+    st.markdown('#### Детали выбранного пункта')
     selectable=[x for x in show['Позиция по чек-листу'].tolist() if details[x].get('status')!='Раздел']
     if selectable:
         selected=st.selectbox('Позиция',selectable,key=f'checklist_detail_{checklist}_{selected_section}_{mode}')
@@ -158,13 +158,11 @@ def render(ctx):
                 if result.ok and data:
                     st.session_state.ai_checklist_reviews[selected]=data
                 elif result.ok:
-                    st.warning('AI вернул неструктурированный ответ.'); st.code(result.text)
+                    st.warning('AI вернул ответ без ожидаемой структуры.'); render_unstructured_ai_text(result.text)
                 else:
                     st.error(diagnostic_message(result))
             ai_review=st.session_state.get('ai_checklist_reviews',{}).get(selected)
             if ai_review:
-                st.write({'AI-оценка':ai_review.get('result'),'Уверенность':ai_review.get('confidence'),'Обоснование':ai_review.get('reason')})
-                if ai_review.get('covered'): st.success('Подтверждено: '+ '; '.join(map(str,ai_review.get('covered'))))
-                if ai_review.get('missing'): st.warning('Не найдено: '+ '; '.join(map(str,ai_review.get('missing'))))
+                render_ai_result(ai_review, title='AI-анализ пункта чек-листа')
                 st.caption('AI-оценка не заменяет решение специалиста и не меняет результат автоматически.')
         st.caption('Автоматический ответ «Да/Нет» формируется только при наличии структурированных доказательств. В остальных случаях система честно оставляет пункт на проверку специалисту.')

@@ -8,20 +8,50 @@ from studio.components import card, empty, section
 
 def render(ctx):
     df=ctx.data[2]
-    section('Межраздельная сверка','Сравнение характеристик выполняется только по подтверждённому пользователем составу объектов.')
+    section('Межраздельная сверка','Сначала показаны только результаты, требующие внимания. Совпадения доступны отдельной вкладкой.')
     if not st.session_state.get('object_registry_confirmed'):
-        st.warning('Quality Gate не пройден. Откройте раздел «Объекты», исключите лишние позиции и подтвердите состав проекта.')
-        a,b,c=st.columns(3)
-        with a: card('Шаг 1','Завершён','Документация загружена','ok')
-        with b: card('Шаг 2','Требуется','Подтвердить перечень объектов','warn')
-        with c: card('Шаг 3','Заблокирован','Сверка ТЭП')
+        st.warning('Сначала подтвердите состав объектов.')
         return
-    if df.empty:return empty('После подтверждения состава сопоставимые сведения не найдены.')
-    statuses=sorted(df.get('status',pd.Series(dtype=str)).dropna().astype(str).unique())
-    c1,c2=st.columns([1,2]); selected=c1.multiselect('Статус',statuses,default=statuses,key='cross_status'); q=c2.text_input('Поиск',key='cross_search'); view=df.copy()
-    if selected and 'status' in view:view=view[view.status.isin(selected)]
-    if q:view=view[view.astype(str).apply(lambda c:c.str.contains(q,case=False,na=False)).any(axis=1)]
-    cols=['object','parameter_name','status','documents','document_values','explanation']
-    if st.session_state.expert_mode:cols+=['check_code','priority','evidence_count','sources','engineering_risk_level']
-    labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','documents':'Разделы','document_values':'Значения','explanation':'Объяснение','check_code':'Код','priority':'Приоритет','evidence_count':'Подтверждений','sources':'Источники','engineering_risk_level':'Риск'}
-    st.dataframe(view[[c for c in cols if c in view]].rename(columns=labels),width='stretch',hide_index=True)
+    if df.empty:
+        return empty('Для подтверждённых объектов сопоставимые характеристики не найдены.')
+
+    status=df.get('status',pd.Series(dtype=str)).fillna('').astype(str)
+    bad_mask=status.str.contains('РАСХОЖД|КОНФЛИКТ',case=False,regex=True)
+    warn_mask=status.str.contains('НЕДОСТАТОЧ|УТОЧ|НЕ ПРОВЕР',case=False,regex=True)
+    ok_mask=status.str.contains('СОВПАД',case=False,regex=True)
+    a,b,c,d=st.columns(4)
+    with a: card('Проверок',len(df),'Всего сопоставленных характеристик')
+    with b: card('Совпадает',int(ok_mask.sum()),'Подтверждено разделами','ok')
+    with c: card('Требует проверки',int(warn_mask.sum()),'Недостаточно доказательств','warn')
+    with d: card('Расхождения',int(bad_mask.sum()),'Приоритетная проверка','bad')
+
+    tab_attention,tab_all=st.tabs(['Требует внимания','Все результаты'])
+    for tab,base_view in ((tab_attention,df[bad_mask|warn_mask].copy()),(tab_all,df.copy())):
+        with tab:
+            q=st.text_input('Поиск по объекту или характеристике',key=f'cross_search_{"attention" if tab is tab_attention else "all"}')
+            view=base_view
+            if q:
+                view=view[view.astype(str).apply(lambda c:c.str.contains(q,case=False,na=False)).any(axis=1)]
+            if view.empty:
+                st.success('Результатов, требующих внимания, нет.')
+                continue
+            compact=['object','parameter_name','status','document_values']
+            labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','document_values':'Значения по разделам'}
+            st.dataframe(view[[c for c in compact if c in view]].rename(columns=labels),width='stretch',hide_index=True,height=430)
+            choices=[]; mapping={}
+            for idx,row in view.iterrows():
+                label=f"{row.get('object') or 'Объект'} · {row.get('parameter_name') or 'Показатель'} · {row.get('status') or ''}"
+                choices.append(label); mapping[label]=row
+            selected=st.selectbox('Открыть подробности',choices,key=f'cross_detail_{"attention" if tab is tab_attention else "all"}')
+            row=mapping[selected]
+            with st.container(border=True):
+                st.markdown(f"**{row.get('object') or 'Объект'} — {row.get('parameter_name') or 'Показатель'}**")
+                st.write(row.get('explanation') or 'Пояснение отсутствует.')
+                st.markdown(f"**Значения:** {row.get('document_values') or '—'}")
+                if row.get('sources'):
+                    with st.expander('Показать источники'):
+                        st.write(row.get('sources'))
+                if st.session_state.get('expert_mode'):
+                    with st.expander('Техническая диагностика'):
+                        fields=['check_code','priority','evidence_count','independent_section_count','engineering_risk_level','tolerance']
+                        st.write({f:row.get(f) for f in fields if f in row})

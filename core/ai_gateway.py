@@ -33,7 +33,7 @@ class AIProvider:
         raise NotImplementedError
 
     @staticmethod
-    def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 20, method: str = 'POST') -> tuple[int, dict[str, Any]]:
+    def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 8, method: str = 'POST') -> tuple[int, dict[str, Any]]:
         data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode('utf-8')
         request = urllib.request.Request(
             url,
@@ -60,11 +60,11 @@ class AIProvider:
             return 0, {'error': {'message': str(exc)}}
 
     @classmethod
-    def _post(cls, url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 20) -> tuple[int, dict[str, Any]]:
+    def _post(cls, url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 8) -> tuple[int, dict[str, Any]]:
         return cls._request(url, headers, payload, timeout, 'POST')
 
     @classmethod
-    def _get(cls, url: str, headers: dict[str, str], timeout: int = 15) -> tuple[int, dict[str, Any]]:
+    def _get(cls, url: str, headers: dict[str, str], timeout: int = 6) -> tuple[int, dict[str, Any]]:
         return cls._request(url, headers, None, timeout, 'GET')
 
 
@@ -112,12 +112,15 @@ class GroqProvider(AIProvider):
 
     def __init__(self, api_key: str, model: str):
         super().__init__(self._clean_key(api_key), model)
+        self._available_models_cache: list[str] | None = None
 
     @property
     def headers(self) -> dict[str, str]:
         return {'Authorization': f'Bearer {self.api_key}'}
 
     def available_models(self) -> tuple[AIResult, list[str]]:
+        if self._available_models_cache is not None:
+            return AIResult(True, self.name, text='Список моделей получен из кэша.', status_code=200), list(self._available_models_cache)
         if not self.api_key:
             return AIResult(False, self.name, error='API-ключ Groq не задан.'), []
         status, body = self._get('https://api.groq.com/openai/v1/models', self.headers)
@@ -125,6 +128,7 @@ class GroqProvider(AIProvider):
             message = (((body.get('error') or {}).get('message')) or str(body))
             return AIResult(False, self.name, error=message, status_code=status), []
         models = [str(item.get('id', '')).strip() for item in (body.get('data') or []) if item.get('id')]
+        self._available_models_cache = list(models)
         return AIResult(True, self.name, text='Список моделей получен.', status_code=status), models
 
     def _candidate_models(self, available: list[str]) -> list[str]:
@@ -229,10 +233,10 @@ class DeepSeekProvider(AIProvider):
         if 'JSON' in system.upper():
             payload['response_format'] = {'type': 'json_object'}
         headers = {'Authorization': f'Bearer {self.api_key}'}
-        status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=25)
+        status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=8)
         if status == 400 and 'response_format' in payload:
             payload.pop('response_format', None)
-            status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=25)
+            status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=8)
         if status != 200:
             message = (((body.get('error') or {}).get('message')) or str(body))
             return AIResult(False, self.name, error=message, status_code=status, model=model)

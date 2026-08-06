@@ -289,6 +289,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         comparisons,
         provider=ai_options.get("provider"),
         level=str(ai_options.get("level") or "off"),
+        progress_callback=progress,
     )
     # Rebuild registries because AI may block obvious service candidates.
     if ai_pipeline_audit.get("object_reviews_received"):
@@ -296,6 +297,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
         object_registry, object_candidates = filter_registry(raw_object_registry, findings)
         consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
+    progress(80, 'Паспорта объектов', 'Формируем итоговый реестр и цифровые паспорта')
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()

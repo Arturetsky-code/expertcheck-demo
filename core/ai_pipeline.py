@@ -39,7 +39,7 @@ def review_object_candidates(
     provider: AIProvider | None,
     findings: list[dict[str, Any]],
     *,
-    limit: int = 16,
+    limit: int = 8,
 ) -> tuple[AIResult | None, dict[str, dict[str, Any]], int]:
     if provider is None:
         return None, {}, 0
@@ -115,7 +115,7 @@ def review_ambiguous_comparisons(
     provider: AIProvider | None,
     comparisons: list[dict[str, Any]],
     *,
-    limit: int = 12,
+    limit: int = 6,
 ) -> tuple[AIResult | None, dict[str, dict[str, Any]], int]:
     if provider is None:
         return None, {}, 0
@@ -180,12 +180,15 @@ def run_ai_pipeline(
     *,
     provider: AIProvider | None,
     level: str = "helper",
+    progress_callback=None,
 ) -> dict[str, Any]:
     normalized = str(level or "off").strip().lower()
     audit = AIPipelineAudit(enabled=provider is not None and normalized != "off", level=normalized, provider=getattr(provider, "name", ""), errors=[])
     if not audit.enabled:
         return audit.to_dict()
 
+    if progress_callback:
+        progress_callback(75, 'AI-анализ объектов', 'Проверяем только неоднозначные позиции; при недоступности API Core продолжит работу')
     result, reviews, sent = review_object_candidates(provider, findings)
     audit.object_candidates_sent = sent
     if result and not result.ok:
@@ -193,6 +196,8 @@ def run_ai_pipeline(
     audit.object_reviews_received = apply_object_reviews(findings, reviews)
 
     if normalized in {"extended", "maximum", "расширенный", "максимальный"}:
+        if progress_callback:
+            progress_callback(78, 'AI-контроль ТЭП', 'Проверяем неоднозначные привязки показателей')
         result2, reviews2, sent2 = review_ambiguous_comparisons(provider, comparisons)
         audit.property_checks_sent = sent2
         if result2 and not result2.ok:

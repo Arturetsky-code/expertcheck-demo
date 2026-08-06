@@ -78,6 +78,35 @@ class GeminiProvider(AIProvider):
         return AIResult(True, self.name, text=text, status_code=status, model=model)
 
 
+class GroqProvider(AIProvider):
+    name = 'Groq'
+
+    def generate(self, prompt: str, system: str = '') -> AIResult:
+        if not self.api_key:
+            return AIResult(False, self.name, error='API-ключ Groq не задан.', model=self.model)
+        model = self.model or 'llama-3.3-70b-versatile'
+        messages=[]
+        if system:
+            messages.append({'role': 'system', 'content': system})
+        messages.append({'role': 'user', 'content': prompt})
+        payload = {
+            'model': model, 'messages': messages, 'temperature': 0.1,
+            'max_tokens': 1600, 'response_format': {'type': 'json_object'} if 'JSON' in system.upper() else None,
+        }
+        if payload['response_format'] is None:
+            payload.pop('response_format')
+        headers = {'Authorization': f'Bearer {self.api_key}'}
+        status, body = self._post('https://api.groq.com/openai/v1/chat/completions', headers, payload)
+        if status != 200:
+            message = (((body.get('error') or {}).get('message')) or str(body))
+            return AIResult(False, self.name, error=message, status_code=status, model=model)
+        try:
+            text = body['choices'][0]['message']['content']
+        except (KeyError, IndexError, TypeError):
+            return AIResult(False, self.name, error='Groq вернул ответ без текста.', status_code=status, model=model)
+        return AIResult(True, self.name, text=text, status_code=status, model=model)
+
+
 class OpenRouterProvider(AIProvider):
     name = 'OpenRouter'
 
@@ -106,6 +135,31 @@ class OpenRouterProvider(AIProvider):
         return AIResult(True, self.name, text=text, status_code=status, model=model)
 
 
+
+class FailoverProvider(AIProvider):
+    name = 'Автоматический резерв'
+
+    def __init__(self, providers: list[AIProvider]):
+        super().__init__('', '')
+        self.providers = [p for p in providers if p and p.api_key]
+
+    def test_connection(self) -> AIResult:
+        return self.generate('Ответьте одним словом: OK')
+
+    def generate(self, prompt: str, system: str = '') -> AIResult:
+        if not self.providers:
+            return AIResult(False, self.name, error='Не задан ни один API-ключ для резервного режима.')
+        errors=[]
+        for provider in self.providers:
+            result=provider.generate(prompt, system)
+            if result.ok:
+                return result
+            errors.append(f'{provider.name}: {diagnostic_message(result)}')
+            if result.status_code not in {0, 408, 429, 500, 502, 503, 504}:
+                break
+        return AIResult(False, self.name, error='; '.join(errors))
+
+
 def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | None:
     provider_key = (provider or '').strip().lower()
     def get(name: str, default: str = '') -> str:
@@ -120,6 +174,18 @@ def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | N
         return GeminiProvider(get('GEMINI_API_KEY'), get('GEMINI_MODEL', 'gemini-2.5-flash'))
     if provider_key == 'openrouter':
         return OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free'))
+    if provider_key == 'groq':
+        return GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile'))
+    if provider_key in {'авто: openrouter → groq', 'auto-openrouter-groq'}:
+        return FailoverProvider([
+            OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
+            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile')),
+        ])
+    if provider_key in {'авто: groq → openrouter', 'auto-groq-openrouter'}:
+        return FailoverProvider([
+            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile')),
+            OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
+        ])
     return None
 
 

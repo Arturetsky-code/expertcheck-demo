@@ -101,7 +101,7 @@ def render(ctx) -> None:
             help='AI анализирует только выбранные структурированные фрагменты. Он не изменяет реестр и результаты без подтверждения пользователя.',
             key='settings_ai_assisted_extraction',
         )
-        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY и GROQ_MODEL. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
+        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
         if st.button('Сохранить AI-настройки', width='content'):
             st.session_state.external_ai_provider = provider
             st.session_state.ai_assisted_extraction = assisted
@@ -118,7 +118,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемый режим: «Авто: Groq → OpenRouter». В Cognitive режиме AI вызывается только для спорных кандидатов и смысловых пунктов чек-листа.')
+        st.info('Рекомендуемый режим: «Авто: Groq → OpenRouter». Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

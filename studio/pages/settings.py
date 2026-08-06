@@ -11,7 +11,7 @@ def _reset_project() -> None:
     st.session_state.project_name = 'Новый проект'
     st.session_state.completeness_user_confirmed = False
     st.session_state.completeness_decisions = {}
-    st.session_state.page = 'Проект'
+    st.session_state['_navigate_to'] = 'Проект'
 
 
 def render(ctx) -> None:

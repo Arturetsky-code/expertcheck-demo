@@ -100,7 +100,9 @@ def _upload(ctx):
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
             update_progress(100, 'Проверка завершена', 'Переходим к подтверждению состава объектов')
-            st.session_state.page = 'Состав объектов'
+            # The sidebar radio with key 'page' already exists in this run.
+            # Defer navigation until the next rerun to comply with Streamlit state rules.
+            st.session_state['_navigate_to'] = 'Состав объектов'
             st.rerun()
 
 

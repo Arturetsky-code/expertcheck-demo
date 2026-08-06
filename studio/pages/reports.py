@@ -32,6 +32,11 @@ def render(ctx):
         assembly,
         checklist,
     )
+    risk_decisions = st.session_state.get('risk_user_decisions') or {}
+    for risk in risks:
+        decision = risk_decisions.get(risk.get('risk_id')) or {}
+        risk['user_status'] = decision.get('status', 'Не рассмотрено')
+        risk['user_comment'] = decision.get('comment', '')
     report = build_structured_report(
         st.session_state.project_name,
         docs.to_dict('records'),

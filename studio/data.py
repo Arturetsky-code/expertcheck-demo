@@ -242,6 +242,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Возможное замечание': r.get('possible_remark'),
         'Рекомендуемое действие': r.get('recommendation'),
         'Источники': r.get('sources'),
+        'Сценарий базы': r.get('scenario_id'),
+        'Повторяемость': r.get('recurrence'),
+        'Проекты-аналоги': ', '.join(r.get('analog_projects') or []),
+        'Решение пользователя': r.get('user_status') or 'Не рассмотрено',
+        'Комментарий пользователя': r.get('user_comment') or '',
     } for r in report['risks'] if r.get('level') in ({'Высокий','Средний'} if report_kind != 'technical' else {'Высокий','Средний','Низкий'})])
 
     problems_df = pd.DataFrame(report['problems']).rename(columns={

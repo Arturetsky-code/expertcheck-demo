@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .normalization import normalize_text
+from .checklist_compiler import compile_item
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -164,6 +165,7 @@ class ChecklistEngine:
             if section and section not in required and 'ALL' not in required: continue
             q=str(item.get('question') or '').strip()
             low=normalize_text(q)
+            compiled=compile_item(item)
             applicable=self._matches_doc(required,doc_types)
             evidence=''
             if item.get('is_heading'):
@@ -173,25 +175,32 @@ class ChecklistEngine:
                 status='Нет данных'
                 evidence='Выбранный раздел или документ не соответствует пункту чек-листа.'
             else:
-                codes=self._comparison_codes(q)
-                if codes:
+                codes=set(compiled.parameter_codes)
+                if compiled.rule_type in {'numeric_crosscheck','parameter_evidence'} and codes:
                     status,evidence=self._comparison_status(comparisons,codes,selected_doc_names)
                     if status is None:
-                        status='Требует проверки'; evidence='Для параметра не найден достаточный структурированный результат.'
-                elif any(x in low for x in MANUAL_PATTERNS):
-                    status='Требует проверки'; evidence='Пункт требует инженерной оценки содержания и качества решений.'
-                elif any(x in low for x in PRESENCE_PATTERNS):
-                    # Use significant words from the checklist item, not generic full-text matching.
-                    words=[w for w in re.findall(r'[а-яa-z0-9]{4,}',low) if w not in {'наличие','проверить','соответствие','раздела','проектной','документации','требованиям','должен','должна','должны'}]
-                    matched=[w for w in words if w in blob]
-                    threshold=1 if len(words)<=3 else 2
+                        # A parameter may be present in one selected document but not yet cross-comparable.
+                        present=[f for f in selected_findings if str(f.get('parameter_code') or '').upper() in codes]
+                        if present and compiled.rule_type=='parameter_evidence':
+                            status='Да'; evidence=f'Найдено структурированных значений: {len(present)}. Источник: выбранный раздел.'
+                        else:
+                            status='Требует проверки'; evidence='Для параметра не найден достаточный структурированный результат.'
+                elif compiled.rule_type=='presence':
+                    matched=[w for w in compiled.evidence_terms if w in blob]
+                    threshold=max(1,min(3,(len(compiled.evidence_terms)+2)//3))
                     if len(matched)>=threshold:
-                        status='Да'; evidence='В выбранном разделе найдены релевантные структурированные признаки: '+', '.join(matched[:5])+'.'
+                        status='Да'; evidence='Найдены релевантные признаки: '+', '.join(matched[:6])+'.'
                     else:
-                        status='Требует проверки'; evidence='Наличие требуемого решения не подтверждено структурированными данными.'
+                        status='Нет'; evidence='В выбранном разделе не найдено достаточных доказательств требуемого содержания.'
+                elif compiled.rule_type=='semantic_review':
+                    matched=[w for w in compiled.evidence_terms if w in blob]
+                    if matched:
+                        status='Требует проверки'; evidence='Найдены потенциально релевантные фрагменты: '+', '.join(matched[:6])+'. Нужна смысловая оценка.'
+                    else:
+                        status='Нет'; evidence='Релевантные фрагменты по смысловым признакам не найдены.'
                 else:
                     status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
-            results.append({**item,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled.to_dict(),'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def summary(self, results: Iterable[dict[str,Any]]):

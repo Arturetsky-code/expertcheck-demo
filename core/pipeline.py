@@ -32,6 +32,7 @@ from .object_semantics import enrich_findings_with_object_semantics, is_service_
 from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
 from .trusted_project_model import annotate_findings, filter_registry
+from .cognitive_document_intelligence import CognitiveDocumentIntelligence
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -203,6 +204,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
             "decision": "пропущено",
             "reason": "Модуль universal_registry_extractor.py отсутствует в репозитории"
         }]
+    # Cognitive Document Intelligence extracts whole table rows and binds properties to the same object row.
+    cognitive_findings, cognitive_page_structures, cognitive_audit = CognitiveDocumentIntelligence().extract_uploaded(
+        pdf_files, document_types
+    )
+    findings.extend(cognitive_findings)
     page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
 
     for item in findings:
@@ -218,7 +224,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "4.0-quality-alpha1"
+        item["core_version"] = "5.0-cognitive-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -271,17 +277,24 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "4.0-quality-alpha1"
+        item["core_version"] = "5.0-cognitive-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "4.0-quality-alpha1"
+        doc["core_version"] = "5.0-cognitive-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
         doc["universal_registry_audit"] = universal_registry_audit
+        doc["cognitive_document_intelligence"] = {
+            "pages": cognitive_page_structures,
+            "audit": cognitive_audit,
+            "findings": len(cognitive_findings),
+            "official_register_objects": sum(1 for x in cognitive_findings if x.get("parameter_code") in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}),
+            "row_locked_properties": sum(1 for x in cognitive_findings if x.get("binding_status") == "ROW_LOCKED"),
+        }
         doc["evidence_base_summary"] = knowledge_base.summary()
         doc["xml_engine_summary"] = {
             "files": len(xml_files),

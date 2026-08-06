@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -206,3 +207,37 @@ def diagnostic_message(result: AIResult) -> str:
     if code == 0:
         return 'Сетевая ошибка: ' + result.error
     return f'Ошибка API{f" HTTP {code}" if code else ""}: {result.error}'
+
+
+def _extract_json(text: str) -> dict[str, Any] | list[Any] | None:
+    raw = str(text or '').strip()
+    if raw.startswith('```'):
+        raw = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw, flags=re.I | re.S)
+    try:
+        return json.loads(raw)
+    except Exception:
+        start_candidates=[i for i in (raw.find('{'),raw.find('[')) if i>=0]
+        if not start_candidates:
+            return None
+        start=min(start_candidates)
+        end=max(raw.rfind('}'),raw.rfind(']'))
+        if end<=start:
+            return None
+        try:
+            return json.loads(raw[start:end+1])
+        except Exception:
+            return None
+
+
+def analyze_object_fragment(provider: AIProvider, fragment: dict[str, Any]) -> tuple[AIResult, dict[str, Any] | None]:
+    system = '''Вы — модуль классификации инженерных сущностей. Верните только JSON без Markdown.\nСхема: {"entity_type":"project_object|equipment|document_service|context_object|unknown","design_status":"projected|reconstructed|existing|prospective|unknown","independent_object":true|false,"confidence":0.0,"reason":"...","recommended_action":"include|review|exclude"}. Не выдумывайте сведения и опирайтесь только на переданный фрагмент.'''
+    prompt = 'Классифицируйте фрагмент проектной документации:\n' + json.dumps(fragment, ensure_ascii=False, indent=2)
+    result = provider.generate(prompt, system)
+    return result, _extract_json(result.text) if result.ok else None
+
+
+def analyze_checklist_evidence(provider: AIProvider, item: dict[str, Any], evidence: list[dict[str, Any]]) -> tuple[AIResult, dict[str, Any] | None]:
+    system = '''Вы — инженерный модуль проверки пункта чек-листа. Верните только JSON без Markdown.\nСхема: {"result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}. Не подменяйте инженерное решение предположением.'''
+    payload={'checklist_item':item,'evidence':evidence[:20]}
+    result=provider.generate(json.dumps(payload,ensure_ascii=False,indent=2),system)
+    return result, _extract_json(result.text) if result.ok else None

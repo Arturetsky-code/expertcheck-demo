@@ -33,6 +33,7 @@ from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
 from .trusted_project_model import annotate_findings, filter_registry
 from .cognitive_document_intelligence import CognitiveDocumentIntelligence
+from .ai_pipeline import run_ai_pipeline
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -143,7 +144,7 @@ def _enrich_rules(comparisons: list[dict], registry: KnowledgeRegistry) -> None:
             item["explanation"] = engine.explain(rule, {"values": item.get("document_values", "")})
 
 
-def analyze_uploaded_core(files, config_dir, progress_callback=None):
+def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=None):
     """Переходный конвейер Core 2.1 Alpha 1.
 
     Legacy Analyzer пока выполняет проверенную предметную логику извлечения.
@@ -224,7 +225,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "5.0-cognitive-alpha1"
+        item["core_version"] = "5.2-ai-pipeline-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -258,6 +259,21 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
     raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
     object_registry, object_candidates = filter_registry(raw_object_registry, findings)
     consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
+    # AI Pipeline is an advisory second pass. It reviews ambiguous objects and,
+    # in extended modes, suspicious property bindings. Deterministic Core remains authoritative.
+    ai_options = ai_options or {}
+    ai_pipeline_audit = run_ai_pipeline(
+        findings,
+        comparisons,
+        provider=ai_options.get("provider"),
+        level=str(ai_options.get("level") or "off"),
+    )
+    # Rebuild registries because AI may block obvious service candidates.
+    if ai_pipeline_audit.get("object_reviews_received"):
+        raw_object_registry, object_register_audit = build_registry(findings)
+        raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
+        object_registry, object_candidates = filter_registry(raw_object_registry, findings)
+        consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
@@ -277,13 +293,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
 
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "5.0-cognitive-alpha1"
+        item["core_version"] = "5.2-ai-pipeline-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "5.0-cognitive-alpha1"
+        doc["core_version"] = "5.2-ai-pipeline-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -345,6 +361,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None):
         }
         doc["object_passports"] = [passport.to_dict() for passport in object_passports]
         doc["object_passport_summary"] = object_passport_summary
+        doc["ai_pipeline_audit"] = ai_pipeline_audit
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     progress(100, "Готово", "Проверка проекта завершена")

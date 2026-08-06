@@ -425,3 +425,17 @@ def analyze_checklist_evidence(provider: AIProvider, item: dict[str, Any], evide
     payload={'checklist_item':item,'evidence':evidence[:20]}
     result=provider.generate(json.dumps(payload,ensure_ascii=False,indent=2),system)
     return result, _extract_json(result.text) if result.ok else None
+
+
+def analyze_checklist_batch(provider: AIProvider, items: list[dict[str, Any]]) -> tuple[AIResult, dict[str, dict[str, Any]]]:
+    """Semantic review of several checklist items in one request."""
+    system = '''Вы — инженерный модуль смысловой проверки чек-листа проектной документации. Верните только JSON без Markdown.\nСхема: {"items":[{"key":"...","result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}]}. Используйте только переданные доказательства. Если доказательств мало, выберите insufficient_data или requires_review.'''
+    payload = {'task': 'checklist_batch_review', 'items': items[:12]}
+    result = provider.generate(json.dumps(payload, ensure_ascii=False, indent=2), system)
+    parsed = _extract_json(result.text) if result.ok else None
+    reviews: dict[str, dict[str, Any]] = {}
+    if isinstance(parsed, dict):
+        for row in parsed.get('items') or []:
+            if isinstance(row, dict) and row.get('key'):
+                reviews[str(row['key'])] = row
+    return result, reviews

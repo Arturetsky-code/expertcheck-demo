@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.checklist_engine import ChecklistEngine
+from core.ai_gateway import analyze_checklist_evidence, diagnostic_message, provider_from_settings
 from studio.components import card, empty, section
 
 
@@ -92,4 +93,31 @@ def render(ctx):
         selected=st.selectbox('Позиция',selectable,key=f'checklist_detail_{checklist}_{selected_section}_{mode}')
         detail=details[selected]
         st.write(detail.get('evidence') or 'Пояснение отсутствует.')
+        if st.session_state.get('expert_mode') and detail.get('compiled_rule'):
+            with st.expander('Скомпилированное правило'):
+                st.json(detail.get('compiled_rule'))
+        if st.session_state.get('ai_assisted_extraction') and detail.get('status') in {'Нет','Требует проверки','Нет данных'}:
+            provider=provider_from_settings(st.session_state.get('external_ai_provider','Отключён'),st.secrets)
+            if provider and st.button('Провести смысловой AI-анализ пункта',key='ai_checklist_item_btn'):
+                evidence_rows=[]
+                terms=(detail.get('compiled_rule') or {}).get('evidence_terms') or []
+                for row in findings.to_dict('records'):
+                    blob=' '.join(str(row.get(k) or '') for k in ('context','section_title','structural_zone','table_title','table_evidence','value_text'))
+                    if not terms or any(str(t).lower() in blob.lower() for t in terms):
+                        evidence_rows.append({k:row.get(k) for k in ('document','document_type','page','section_title','table_title','context','value_text','parameter_code','object_hint')})
+                    if len(evidence_rows)>=16: break
+                with st.spinner('AI сопоставляет пункт чек-листа с найденными фрагментами...'):
+                    result,data=analyze_checklist_evidence(provider,detail,evidence_rows)
+                if result.ok and data:
+                    st.session_state.ai_checklist_reviews[selected]=data
+                elif result.ok:
+                    st.warning('AI вернул неструктурированный ответ.'); st.code(result.text)
+                else:
+                    st.error(diagnostic_message(result))
+            ai_review=st.session_state.get('ai_checklist_reviews',{}).get(selected)
+            if ai_review:
+                st.write({'AI-оценка':ai_review.get('result'),'Уверенность':ai_review.get('confidence'),'Обоснование':ai_review.get('reason')})
+                if ai_review.get('covered'): st.success('Подтверждено: '+ '; '.join(map(str,ai_review.get('covered'))))
+                if ai_review.get('missing'): st.warning('Не найдено: '+ '; '.join(map(str,ai_review.get('missing'))))
+                st.caption('AI-оценка не заменяет решение специалиста и не меняет результат автоматически.')
         st.caption('Автоматический ответ «Да/Нет» формируется только при наличии структурированных доказательств. В остальных случаях система честно оставляет пункт на проверку специалисту.')

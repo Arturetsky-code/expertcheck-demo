@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from studio.components import card, empty, section
+from core.ai_gateway import analyze_object_fragment, diagnostic_message, provider_from_settings
 
 VISIBLE_EDITOR_COLS = [
     'Включить','Позиция по ГП','Наименование объекта','Статус проектирования','Доверие',
@@ -40,6 +41,47 @@ def _render_evidence(rows: list[dict]) -> None:
             if ev.get('forbidden'):
                 st.error(f"Источник запрещён для создания объекта: {ev.get('forbidden_reason')}")
 
+
+
+def _render_ai_review(rows: list[dict]) -> None:
+    if not st.session_state.get('ai_assisted_extraction'):
+        return
+    provider_name=st.session_state.get('external_ai_provider','Отключён')
+    provider=provider_from_settings(provider_name, st.secrets)
+    if provider is None:
+        st.warning('AI-проверка включена, но внешний провайдер не настроен.')
+        return
+    candidates=[r for r in rows if str(r.get('Решение Object Intelligence') or '').lower() in {'review','blocked','context'} or not r.get('Включить')]
+    if not candidates:
+        return
+    section('AI-проверка спорных кандидатов','OpenRouter/Groq анализирует только выбранный кандидат и его доказательства. Решение пользователя остаётся обязательным.')
+    labels=[f"{r.get('Позиция по ГП') or '—'} · {r.get('Наименование объекта') or 'Без наименования'}" for r in candidates]
+    label=st.selectbox('Кандидат для AI-анализа',labels,key='ai_object_candidate')
+    row=candidates[labels.index(label)]
+    if st.button('Проанализировать кандидата внешним AI',key='ai_review_object_btn'):
+        fragment={
+            'position':row.get('Позиция по ГП'), 'name':row.get('Наименование объекта'),
+            'design_status':row.get('Статус проектирования'), 'core_decision':row.get('Решение Object Intelligence'),
+            'core_reason':row.get('Обоснование Object Intelligence') or row.get('Блокировка'),
+            'canonical_source':row.get('Канонический источник'), 'evidence':row.get('_evidence') or [],
+        }
+        with st.spinner('AI анализирует доказательства кандидата...'):
+            result,data=analyze_object_fragment(provider,fragment)
+        if result.ok and data:
+            st.session_state.ai_object_reviews[label]=data
+        elif result.ok:
+            st.warning('AI вернул ответ, который не удалось преобразовать в структурированное решение.')
+            st.code(result.text)
+        else:
+            st.error(diagnostic_message(result))
+    review=st.session_state.get('ai_object_reviews',{}).get(label)
+    if review:
+        st.write({
+            'Классификация AI':review.get('entity_type'), 'Статус проектирования':review.get('design_status'),
+            'Самостоятельный объект':review.get('independent_object'), 'Уверенность':review.get('confidence'),
+            'Рекомендация':review.get('recommended_action'), 'Обоснование':review.get('reason'),
+        })
+        st.caption('Результат AI является рекомендацией и не меняет состав проекта автоматически.')
 
 def _assembly_editor() -> None:
     section('Мастер формирования состава проекта','Система формирует кандидатов и показывает доказательства. Пользователь исключает лишнее; только затем разрешается межраздельная сверка.')
@@ -88,6 +130,7 @@ def _assembly_editor() -> None:
             row['Решение пользователя']='Не задано'; row['Комментарий пользователя']=''
         st.session_state.object_registry_confirmed=False; st.rerun()
     _render_evidence(updated)
+    _render_ai_review(updated)
 
 
 def render(ctx):

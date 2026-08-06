@@ -27,6 +27,7 @@ def render(ctx) -> None:
         'Интерфейс',
         'Отчёты',
         'Knowledge Engine',
+        'AI-модули',
         'Core',
     ])
 
@@ -81,6 +82,38 @@ def render(ctx) -> None:
         st.caption('Редактирование отраслевых пакетов будет доступно в отдельном административном интерфейсе.')
 
     with tabs[5]:
+        section('AI-модули', 'Подключение внешних аналитических сервисов. Полные PDF по умолчанию не передаются.')
+        provider = st.selectbox(
+            'Внешний провайдер',
+            ['Отключён', 'Gemini', 'OpenRouter'],
+            index=['Отключён', 'Gemini', 'OpenRouter'].index(st.session_state.get('external_ai_provider', 'Отключён')),
+            key='settings_external_ai_provider',
+        )
+        st.radio(
+            'Режим передачи данных',
+            ['Только обезличенные структурированные данные'],
+            disabled=True,
+            key='settings_ai_transfer_mode',
+        )
+        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для Gemini: GEMINI_API_KEY и GEMINI_MODEL. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL.')
+        if st.button('Сохранить AI-настройки', width='content'):
+            st.session_state.external_ai_provider = provider
+            st.success('Настройки AI сохранены для текущей сессии.')
+        if provider != 'Отключён':
+            from core.ai_gateway import diagnostic_message, provider_from_settings
+            ai_provider = provider_from_settings(provider, st.secrets)
+            if st.button('Проверить подключение', width='content'):
+                with st.spinner('Проверка подключения...'):
+                    result = ai_provider.test_connection() if ai_provider else None
+                if result and result.ok:
+                    st.success(diagnostic_message(result))
+                elif result:
+                    st.error(diagnostic_message(result))
+                    if st.session_state.expert_mode:
+                        st.code(result.error)
+        st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
+
+    with tabs[6]:
         section('Core', 'Служебные параметры инженерного ядра.')
         if st.session_state.expert_mode:
             st.code(ctx.version)

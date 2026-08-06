@@ -1,13 +1,27 @@
 from __future__ import annotations
 
+import json
 import streamlit as st
 
+from core.ai_gateway import diagnostic_message, provider_from_settings
+from core.document_intelligence import build_structured_ai_context
 from core.engineering_advisor import answer_local_question, summarize_object_registry
 from studio.components import card, section
 
+SYSTEM_PROMPT = '''Вы — инженерный аналитик ExpertCheck. Анализируйте только переданный структурированный контекст проекта. Не выдумывайте отсутствующие сведения. Каждый вывод связывайте с объектом, характеристикой и источником, если они переданы. При недостатке данных прямо пишите «Недостаточно данных». Не изменяйте подтверждённый реестр и не выдавайте предположение за установленный факт.'''
+
+
+def _external_prompt(question: str, context: dict) -> str:
+    return (
+        'Вопрос пользователя:\n' + question.strip() +
+        '\n\nСтруктурированный контекст проекта (обезличен):\n' +
+        json.dumps(context, ensure_ascii=False, indent=2) +
+        '\n\nДайте краткий инженерный ответ. Отдельно укажите: 1) вывод; 2) доказательства; 3) что требует ручной проверки.'
+    )
+
 
 def render(ctx):
-    section('Локальный инженерный советник','Объясняет решения Core по объектам и сверкам. Не использует внешний API и не изменяет данные проекта.')
+    section('Инженерный советник','Локальный анализ работает без внешнего API. Подключаемый внешний AI анализирует только обезличенную структурированную модель, а не полные PDF.')
     rows = st.session_state.get('object_assembly_rows') or []
     comparisons = ctx.data[2].to_dict('records') if hasattr(ctx.data[2], 'to_dict') else []
     summary = summarize_object_registry(rows)
@@ -16,7 +30,30 @@ def render(ctx):
     with cols[1]: card('Предложено включить', summary['included'], 'До ручного подтверждения', 'ok')
     with cols[2]: card('Требуют решения', summary['review'], 'Недостаточно доказательств', 'warn')
     with cols[3]: card('Заблокировано', summary['blocked'], 'Служебные источники', 'bad')
-    question = st.text_area('Вопрос к локальному советнику', placeholder='Например: покажи подозрительные позиции в перечне объектов')
-    if st.button('Проанализировать', type='primary'):
-        st.markdown(answer_local_question(question, rows, comparisons))
-    st.caption('Советник работает только по структурированной модели ExpertCheck и не является языковой моделью.')
+
+    mode = st.radio('Режим анализа', ['Локальный советник', 'Внешний AI'], horizontal=True, key='advisor_mode')
+    question = st.text_area('Вопрос по загруженной документации', placeholder='Например: какие объекты выглядят сомнительно и почему?')
+
+    if mode == 'Локальный советник':
+        if st.button('Проанализировать локально', type='primary', disabled=not question.strip()):
+            st.markdown(answer_local_question(question, rows, comparisons))
+        st.caption('Локальный советник работает по правилам и цифровой модели ExpertCheck. Внешние сервисы не используются.')
+        return
+
+    provider_name = st.session_state.get('external_ai_provider', 'Отключён')
+    provider = provider_from_settings(provider_name, st.secrets)
+    if provider is None:
+        st.warning('Внешний AI не настроен. Откройте «Настройки → AI-модули» и выберите Gemini или OpenRouter.')
+        return
+    st.info(f'Провайдер: {provider.name}. Режим передачи: только обезличенные структурированные данные.')
+    if st.button('Отправить запрос внешнему AI', type='primary', disabled=not question.strip()):
+        context = build_structured_ai_context(rows, comparisons)
+        with st.spinner('Внешний AI анализирует структурированную модель проекта...'):
+            result = provider.generate(_external_prompt(question, context), SYSTEM_PROMPT)
+        if result.ok:
+            st.markdown(result.text)
+            st.caption(f'{result.provider} · {result.model}')
+        else:
+            st.error(diagnostic_message(result))
+            if st.session_state.get('expert_mode'):
+                st.code(result.error)

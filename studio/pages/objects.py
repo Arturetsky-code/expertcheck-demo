@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from studio.components import card, empty, section
-from core.ai_gateway import analyze_object_fragment, diagnostic_message, provider_from_settings
+from core.ai_gateway import analyze_object_fragment, diagnostic_message, provider_for_role
 
 VISIBLE_EDITOR_COLS = [
     'Включить','Позиция по ГП','Наименование объекта','Статус проектирования','Доверие',
@@ -46,8 +46,7 @@ def _render_evidence(rows: list[dict]) -> None:
 def _render_ai_review(rows: list[dict]) -> None:
     if not st.session_state.get('ai_assisted_extraction'):
         return
-    provider_name=st.session_state.get('external_ai_provider','Отключён')
-    provider=provider_from_settings(provider_name, st.secrets)
+    provider=provider_for_role('extraction', st.session_state, st.secrets)
     if provider is None:
         st.warning('AI-проверка включена, но внешний провайдер не настроен.')
         return

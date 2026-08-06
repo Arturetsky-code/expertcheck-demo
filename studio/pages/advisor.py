@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import streamlit as st
 
-from core.ai_gateway import diagnostic_message, provider_from_settings
+from core.ai_gateway import diagnostic_message, provider_for_role
 from core.document_intelligence import build_structured_ai_context
 from core.engineering_advisor import answer_local_question, summarize_object_registry
 from studio.components import card, section
@@ -46,10 +46,9 @@ def render(ctx):
         st.caption('Локальный советник работает по правилам и цифровой модели ExpertCheck. Внешние сервисы не используются.')
         return
 
-    provider_name = st.session_state.get('external_ai_provider', 'Отключён')
-    provider = provider_from_settings(provider_name, st.secrets)
+    provider = provider_for_role('reviewer', st.session_state, st.secrets)
     if provider is None:
-        st.warning('Внешний AI не настроен. Откройте «Настройки → AI-модули» и выберите OpenRouter, Groq или автоматический резерв.')
+        st.warning('Внешний AI не настроен. Откройте «Настройки → AI-модули» и выберите OpenRouter, Groq, DeepSeek или автоматический резерв.')
         return
     st.info(f'Провайдер: {provider.name}. Режим передачи: только обезличенные структурированные данные.')
     if st.button('Отправить запрос внешнему AI', type='primary', disabled=not question.strip()):

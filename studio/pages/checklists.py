@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.checklist_engine import ChecklistEngine
-from core.ai_gateway import analyze_checklist_evidence, diagnostic_message, provider_from_settings
+from core.ai_gateway import analyze_checklist_evidence, diagnostic_message, provider_for_role
 from studio.components import card, empty, section
 
 
@@ -97,7 +97,7 @@ def render(ctx):
             with st.expander('Скомпилированное правило'):
                 st.json(detail.get('compiled_rule'))
         if st.session_state.get('ai_assisted_extraction') and detail.get('status') in {'Нет','Требует проверки','Нет данных'}:
-            provider=provider_from_settings(st.session_state.get('external_ai_provider','Отключён'),st.secrets)
+            provider=provider_for_role('extraction', st.session_state, st.secrets)
             if provider and st.button('Провести смысловой AI-анализ пункта',key='ai_checklist_item_btn'):
                 evidence_rows=[]
                 terms=(detail.get('compiled_rule') or {}).get('evidence_terms') or []

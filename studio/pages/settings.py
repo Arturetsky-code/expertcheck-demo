@@ -83,12 +83,35 @@ def render(ctx) -> None:
 
     with tabs[5]:
         section('AI-модули', 'Подключение внешних аналитических сервисов. Полные PDF по умолчанию не передаются.')
+        provider_options = [
+            'Отключён', 'OpenRouter', 'Groq', 'DeepSeek',
+            'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter',
+            'Авто: DeepSeek → OpenRouter → Groq', 'Авто: OpenRouter → Groq → DeepSeek',
+            'Gemini',
+        ]
         provider = st.selectbox(
-            'Внешний провайдер',
-            ['Отключён', 'OpenRouter', 'Groq', 'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter', 'Gemini'],
-            index=['Отключён', 'OpenRouter', 'Groq', 'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter', 'Gemini'].index(st.session_state.get('external_ai_provider', 'Отключён')),
+            'Провайдер для свободного AI-диалога',
+            provider_options,
+            index=provider_options.index(st.session_state.get('external_ai_provider', 'Отключён')) if st.session_state.get('external_ai_provider', 'Отключён') in provider_options else 0,
             key='settings_external_ai_provider',
         )
+        c_extract, c_review = st.columns(2)
+        with c_extract:
+            extraction_provider = st.selectbox(
+                'AI Extraction — объекты, ТЭП, чек-листы',
+                provider_options[1:-1],
+                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'OpenRouter')) if st.session_state.get('ai_extraction_provider', 'OpenRouter') in provider_options[1:-1] else 0,
+                key='settings_ai_extraction_provider',
+                help='Рекомендуется OpenRouter или автоматический резерв: важнее качество понимания сложных фрагментов.',
+            )
+        with c_review:
+            reviewer_provider = st.selectbox(
+                'AI Reviewer — пояснения и ответы инженеру',
+                provider_options[1:-1],
+                index=provider_options[1:-1].index(st.session_state.get('ai_reviewer_provider', 'Groq')) if st.session_state.get('ai_reviewer_provider', 'Groq') in provider_options[1:-1] else 1,
+                key='settings_ai_reviewer_provider',
+                help='Рекомендуется Groq: быстрые ответы и интерактивная работа.',
+            )
         st.radio(
             'Режим передачи данных',
             ['Только обезличенные структурированные данные'],
@@ -101,9 +124,11 @@ def render(ctx) -> None:
             help='AI анализирует только выбранные структурированные фрагменты. Он не изменяет реестр и результаты без подтверждения пользователя.',
             key='settings_ai_assisted_extraction',
         )
-        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
+        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto. Для DeepSeek: DEEPSEEK_API_KEY и DEEPSEEK_MODEL для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
         if st.button('Сохранить AI-настройки', width='content'):
             st.session_state.external_ai_provider = provider
+            st.session_state.ai_extraction_provider = extraction_provider
+            st.session_state.ai_reviewer_provider = reviewer_provider
             st.session_state.ai_assisted_extraction = assisted
             st.success('Настройки AI сохранены для текущей сессии.')
         if provider != 'Отключён':
@@ -118,7 +143,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемый режим: «Авто: Groq → OpenRouter». Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
+        st.info('Рекомендуемая схема: AI Extraction — OpenRouter; AI Reviewer — Groq. DeepSeek можно назначить отдельным провайдером или резервом. Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

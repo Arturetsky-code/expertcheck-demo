@@ -37,10 +37,15 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             auto_blocked = obvious_file or (bool(evidence) and not valid_evidence)
             source_preview = '; '.join(compact_source(e) for e in valid_evidence[:3])
             intel=(intelligence_decisions or {}).get(key,{})
-            if intel.get('decision') == 'blocked':
-                auto_blocked=True
-            if intel.get('decision') == 'review':
-                default_include=False
+            intel_decision = intel.get('decision')
+            if intel_decision:
+                if intel_decision in {'blocked','context'}:
+                    auto_blocked=True
+                # Консервативный режим: при наличии решения Object Intelligence
+                # автоматически включаются только trusted.
+                default_include = bool(default_include and intel_decision == 'trusted')
+                if intel_decision != 'trusted':
+                    default_include=False
             rows.append({
                 'Ключ': key,
                 'Включить': bool(default_include and not auto_blocked),

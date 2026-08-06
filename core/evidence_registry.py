@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Any, Iterable
 
 from .normalization import normalize_text
+from .object_quality_rules import name_rejection_reasons
 
 FORBIDDEN_ZONE_TOKENS = (
     'состав проектной документации','ведомость документов','ведомость ссылочных',
@@ -35,6 +36,9 @@ def is_forbidden_evidence(item: dict[str, Any]) -> tuple[bool, str]:
     )))
     if FORBIDDEN_NAME_RE.search(name):
         return True, 'наименование документа, раздела или файла'
+    strict_reasons = name_rejection_reasons(name)
+    if strict_reasons:
+        return True, '; '.join(strict_reasons)
     if any(token in zone for token in FORBIDDEN_ZONE_TOKENS):
         return True, 'служебная зона документа не может создавать объект'
     return False, ''

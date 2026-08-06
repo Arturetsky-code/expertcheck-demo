@@ -6,6 +6,7 @@ from typing import Any, Iterable
 
 from .normalization import normalize_text
 from .evidence_registry import evidence_record, is_forbidden_evidence
+from .object_quality_rules import strong_object_name
 
 OFFICIAL_SOURCE_TYPES = {"OBJECT_REGISTER"}
 SUPPORTING_SOURCE_TYPES = {"OBJECT_TEP", "DRAWING_FIELD"}
@@ -90,7 +91,12 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
             lifecycle = next((v for v in lifecycle_values if v != "Не определён"), "Не определён")
 
         canonical = max(valid, key=_source_rank, default=None)
-        if forbidden and not valid:
+        name_ok, name_reasons = strong_object_name(names.get(key, ""), position=positions.get(key, ""), official=bool(official))
+        if not name_ok:
+            decision = "blocked"
+            confidence = 0
+            reason = "Кандидат отклонён строгими правилами: " + "; ".join(name_reasons) + "."
+        elif forbidden and not valid:
             decision = "blocked"
             confidence = 0
             reason = "Кандидат найден только в запрещённых служебных источниках."
@@ -98,22 +104,22 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
             decision = "context"
             confidence = 40 if valid else 0
             reason = f"Статус объекта: {lifecycle}. В основной состав текущего проекта не включается автоматически."
-        elif official:
+        elif official and positions.get(key):
             decision = "trusted"
-            confidence = 98 if len(independent) >= 2 else 94
-            reason = "Есть официальный объектный источник: экспликация, состав сложного объекта или структурированный реестр."
-        elif len(supporting) >= 2 and len(independent) >= 2:
+            confidence = 99 if len(independent) >= 2 else 96
+            reason = "Объект имеет позицию и найден в официальном объектном источнике."
+        elif official and len(independent) >= 2:
             decision = "trusted"
-            confidence = 86
-            reason = "Объект подтверждён минимум двумя независимыми инженерными документами."
-        elif supporting:
+            confidence = 92
+            reason = "Безпозиционный объект подтверждён официальным реестром и вторым независимым документом."
+        elif len(supporting) >= 2 and len(independent) >= 2 and positions.get(key):
             decision = "review"
-            confidence = 64
-            reason = "Есть инженерное подтверждение, но отсутствует официальный реестр или второй независимый источник."
-        elif valid:
+            confidence = 74
+            reason = "Есть позиция и два инженерных подтверждения, но нет официальной объектной таблицы. Требуется подтверждение пользователя."
+        elif supporting or valid:
             decision = "review"
-            confidence = 35
-            reason = "Объект найден только в обычном тексте. Требуется подтверждение пользователя."
+            confidence = 45 if supporting else 25
+            reason = "Недостаточно строгих оснований: требуется официальный объектный источник либо позиция и независимые подтверждения."
         else:
             decision = "blocked"
             confidence = 0

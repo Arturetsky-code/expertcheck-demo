@@ -191,26 +191,48 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         registry.load_json("core/parameter_catalog.json", []),
     )
     document_types = {str(doc.get("Файл", "")): str(doc.get("Раздел", doc.get("Тип документа", ""))) for doc in documents}
-    progress(58, "Реестр объектов", "Извлекаем экспликации и позиции генерального плана")
-    gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
+    progress(52, "Реестр объектов", "Читаем экспликации генерального плана")
+    pipeline_errors: list[dict[str, str]] = []
+    try:
+        gp_findings, general_plan_audit = GeneralPlanRegisterEngine().extract_uploaded(pdf_files, document_types)
+    except Exception as exc:
+        gp_findings, general_plan_audit = [], [{"decision": "error", "reason": str(exc)}]
+        pipeline_errors.append({"stage": "general_plan", "error": str(exc)})
     findings.extend(gp_findings)
     general_plan_anchor_audit = anchor_findings_to_general_plan(findings, gp_findings)
+
+    progress(57, "Реестр объектов", "Извлекаем официальные объектные таблицы")
     if UniversalRegistryExtractor is not None:
-        universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
-            pdf_files, document_types, legacy.read_pdf
-        )
-        findings.extend(universal_registry_findings)
+        try:
+            universal_registry_findings, universal_registry_audit = UniversalRegistryExtractor().extract_uploaded(
+                pdf_files, document_types, legacy.read_pdf
+            )
+            findings.extend(universal_registry_findings)
+        except Exception as exc:
+            universal_registry_findings, universal_registry_audit = [], [{"decision": "error", "reason": str(exc)}]
+            pipeline_errors.append({"stage": "universal_registry", "error": str(exc)})
     else:
         universal_registry_findings, universal_registry_audit = [], [{
             "decision": "пропущено",
             "reason": "Модуль universal_registry_extractor.py отсутствует в репозитории"
         }]
-    # Cognitive Document Intelligence extracts whole table rows and binds properties to the same object row.
-    cognitive_findings, cognitive_page_structures, cognitive_audit = CognitiveDocumentIntelligence().extract_uploaded(
-        pdf_files, document_types
-    )
+
+    progress(62, "Структурный анализ", "Связываем объекты и ТЭП внутри строк таблиц")
+    try:
+        cognitive_findings, cognitive_page_structures, cognitive_audit = CognitiveDocumentIntelligence().extract_uploaded(
+            pdf_files, document_types
+        )
+    except Exception as exc:
+        cognitive_findings, cognitive_page_structures, cognitive_audit = [], [], [{"decision": "error", "reason": str(exc)}]
+        pipeline_errors.append({"stage": "cognitive_document_intelligence", "error": str(exc)})
     findings.extend(cognitive_findings)
-    page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
+
+    progress(66, "Структурный анализ", "Определяем наиболее надёжные таблицы и источники")
+    try:
+        page_tables = _best_table_by_page(pdf_files, legacy, table_engine, document_types)
+    except Exception as exc:
+        page_tables = {}
+        pipeline_errors.append({"stage": "table_ranking", "error": str(exc)})
 
     for item in findings:
         table_info = page_tables.get((item.get("document"), int(item.get("page") or 0)), {})
@@ -254,7 +276,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         item["engineering_risk_reasons"] = risk["reasons"]
 
     # Реестр объектов строится отдельным движком и сопровождается журналом решений.
-    progress(70, "Консолидация реестра", "Сопоставляем ПЗ, генплан, XML и профильные разделы")
+    progress(72, "Консолидация реестра", "Сопоставляем ПЗ, генплан, XML и профильные разделы")
     raw_object_registry, object_register_audit = build_registry(findings)
     raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
     object_registry, object_candidates = filter_registry(raw_object_registry, findings)
@@ -362,6 +384,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["object_passports"] = [passport.to_dict() for passport in object_passports]
         doc["object_passport_summary"] = object_passport_summary
         doc["ai_pipeline_audit"] = ai_pipeline_audit
+        doc["pipeline_errors"] = pipeline_errors
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     progress(100, "Готово", "Проверка проекта завершена")

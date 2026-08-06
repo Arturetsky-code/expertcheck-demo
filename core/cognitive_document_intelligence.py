@@ -208,7 +208,12 @@ class CognitiveDocumentIntelligence:
                 page_no = page.number + 1
                 text = page.get_text('text')
                 zone, confidence, reason = _zone(text)
-                tables = _tables(page)
+                # find_tables() is expensive on large drawings and narrative pages.
+                # Run it only where document semantics indicate an object register or TEP table.
+                if zone in {'OFFICIAL_OBJECT_REGISTER', 'OBJECT_PROPERTY_TABLE'}:
+                    tables = _tables(page)
+                else:
+                    tables = []
                 blocks = page.get_text('blocks')
                 structures.append(PageStructure(filename, doc_type, page_no, zone, confidence, len(tables), len(blocks), reason).to_dict())
                 if zone == 'DOCUMENT_SERVICE':

@@ -2,7 +2,7 @@ from __future__ import annotations
 import io
 from datetime import datetime
 import pandas as pd
-from core.report_engine import build_decision_report
+from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
 from core.project_assembly import (
@@ -63,15 +63,156 @@ def apply_project_assembly(docs, passports, comparisons, state_rows, confirmed):
 def registry(docs): return raw_registry(docs)
 def passports(docs): return raw_passports(docs)
 
-def excel_report(project, version, docs, findings, comparisons):
-    out=io.BytesIO(); report=build_decision_report(docs.to_dict('records'),comparisons.to_dict('records')); summary=report['summary']
-    summary_rows=[['Проект',project],['Версия',version],['Дата проверки',datetime.now().strftime('%d.%m.%Y %H:%M')],['Комплектность',summary['completeness']],['Документов',summary['documents']],['Объектов',summary['objects']],['Проверено характеристик',summary['checks']],['Совпадает',summary['confirmed']],['Требует внимания',summary['requires_attention']],['Высокий приоритет',summary['high_priority']]]
-    problems=pd.DataFrame(report['problems']).rename(columns={'object':'Объект','parameter':'Характеристика','status':'Статус','priority':'Приоритет','values':'Значения','explanation':'Пояснение','sources':'Источники'})
-    recommendations=pd.DataFrame({'Рекомендация':report['recommendations']})
-    with pd.ExcelWriter(out,engine='openpyxl') as w:
-        pd.DataFrame(summary_rows,columns=['Показатель','Значение']).to_excel(w,sheet_name='Сводка',index=False); problems.to_excel(w,sheet_name='Требует внимания',index=False); recommendations.to_excel(w,sheet_name='Рекомендации',index=False); registry(docs).to_excel(w,sheet_name='Реестр объектов',index=False); comparisons.to_excel(w,sheet_name='Все сверки',index=False); docs.to_excel(w,sheet_name='Документы',index=False)
-        for ws in w.book.worksheets:
-            ws.freeze_panes='A2';ws.auto_filter.ref=ws.dimensions
-            for cells in ws.columns:
-                width=min(max(len(str(c.value or '')) for c in cells)+2,62);ws.column_dimensions[cells[0].column_letter].width=max(12,width)
+def _safe_sheet_name(name: str) -> str:
+    for ch in '[]:*?/\\':
+        name = name.replace(ch, '_')
+    return (name or 'Лист')[:31]
+
+
+def _style_workbook(book, report_kind: str = 'gip'):
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    dark = '1F4E78'
+    blue = 'D9EAF7'
+    light = 'F3F6F9'
+    green = 'E2F0D9'
+    yellow = 'FFF2CC'
+    red = 'FCE4D6'
+    gray = 'E7E6E6'
+    thin = Side(style='thin', color='B8C2CC')
+
+    for ws in book.worksheets:
+        ws.sheet_view.showGridLines = False
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = ws.dimensions
+        ws.row_dimensions[1].height = 30
+        for cell in ws[1]:
+            cell.fill = PatternFill('solid', fgColor=dark)
+            cell.font = Font(color='FFFFFF', bold=True, size=11)
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = Border(bottom=thin)
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+                cell.border = Border(bottom=thin)
+                value = str(cell.value or '').lower()
+                if 'высок' in value or 'расхожд' in value or value == 'нет':
+                    cell.fill = PatternFill('solid', fgColor=red)
+                elif 'средн' in value or 'требует' in value or 'частично' in value or 'недостат' in value:
+                    cell.fill = PatternFill('solid', fgColor=yellow)
+                elif 'подтверж' in value or 'совпад' in value or value == 'да':
+                    cell.fill = PatternFill('solid', fgColor=green)
+        for idx, cells in enumerate(ws.columns, 1):
+            values = [str(c.value or '') for c in cells[:120]]
+            width = min(max(max((len(v) for v in values), default=0) + 2, 12), 52)
+            ws.column_dimensions[get_column_letter(idx)].width = width
+        ws.auto_filter.ref = ws.dimensions
+
+    if 'Резюме' in book.sheetnames:
+        ws = book['Резюме']
+        ws.freeze_panes = None
+        ws.auto_filter.ref = None
+        ws.column_dimensions['A'].width = 34
+        ws.column_dimensions['B'].width = 68
+        for row in range(2, ws.max_row + 1):
+            ws[f'A{row}'].font = Font(bold=True)
+            ws[f'A{row}'].fill = PatternFill('solid', fgColor=blue)
+            ws[f'B{row}'].fill = PatternFill('solid', fgColor=light)
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+
+
+def _report_context(project, docs, comparisons, risks=None, checklist_results=None, assembly_rows_data=None):
+    return build_structured_report(
+        project,
+        docs.to_dict('records') if hasattr(docs, 'to_dict') else (docs or []),
+        comparisons.to_dict('records') if hasattr(comparisons, 'to_dict') else (comparisons or []),
+        risks=risks or [],
+        checklist_results=checklist_results or [],
+        assembly_rows=assembly_rows_data or [],
+    )
+
+
+def structured_excel_report(project, version, docs, findings, comparisons, *, report_kind='gip', risks=None, checklist_results=None, assembly_rows_data=None):
+    report = _report_context(project, docs, comparisons, risks, checklist_results, assembly_rows_data)
+    summary = report['summary']
+    out = io.BytesIO()
+
+    summary_rows = [
+        ['Наименование проекта', project],
+        ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
+        ['Версия ExpertCheck', version],
+        ['Вид отчёта', {'manager':'Резюме руководителя','gip':'Отчёт ГИПа','technical':'Техническое приложение'}.get(report_kind, report_kind)],
+        ['Комплектность', summary['completeness']],
+        ['Загружено документов', summary['documents']],
+        ['Подтверждено объектов', summary['objects']],
+        ['Проверено характеристик', summary['checks']],
+        ['Результатов, требующих внимания', summary['requires_attention']],
+        ['Рисков высокого уровня', summary['risks_high']],
+        ['Рисков среднего уровня', summary['risks_medium']],
+        ['Рассмотрено пунктов чек-листов', summary['checklist_total']],
+        ['Итоговый вывод', report['conclusion']],
+    ]
+
+    risks_df = pd.DataFrame([{
+        'ID': r.get('risk_id'),
+        'Уровень': r.get('level'),
+        'Категория': r.get('category'),
+        'Объект / раздел': r.get('object') or '—',
+        'Вопрос': r.get('parameter'),
+        'Выявленная проблема': r.get('finding'),
+        'Возможное замечание': r.get('possible_remark'),
+        'Рекомендуемое действие': r.get('recommendation'),
+        'Источники': r.get('sources'),
+    } for r in report['risks'] if r.get('level') in ({'Высокий','Средний'} if report_kind != 'technical' else {'Высокий','Средний','Низкий'})])
+
+    problems_df = pd.DataFrame(report['problems']).rename(columns={
+        'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
+        'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
+    })
+    object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
+        'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
+    })
+    checklist_problem_df = pd.DataFrame([{
+        'Пункт': f"{r.get('item_no') or r.get('position') or ''} — {r.get('question') or r.get('Позиция по чек-листу') or ''}".strip(' —'),
+        'Результат': r.get('status') or r.get('Соответствие') or r.get('result'),
+        'Обоснование': r.get('evidence') or r.get('Обоснование') or '',
+        'Источники': r.get('sources') or r.get('Источники') or '',
+    } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
+    recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+
+    with pd.ExcelWriter(out, engine='openpyxl') as writer:
+        pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']).to_excel(writer, sheet_name='Резюме', index=False)
+        if not risks_df.empty:
+            risks_df.to_excel(writer, sheet_name='Ключевые риски', index=False)
+        if not problems_df.empty:
+            problems_df.to_excel(writer, sheet_name='Межраздельные вопросы', index=False)
+        if report_kind != 'manager' and not object_df.empty:
+            object_df.to_excel(writer, sheet_name='Состав проекта', index=False)
+        if report_kind != 'manager' and not checklist_problem_df.empty:
+            checklist_problem_df.to_excel(writer, sheet_name='Чек-листы — вопросы', index=False)
+        recommendations_df.to_excel(writer, sheet_name='План действий', index=False)
+
+        if report_kind == 'technical':
+            registry(docs).to_excel(writer, sheet_name='Тех_реестр объектов', index=False)
+            comparisons.to_excel(writer, sheet_name='Тех_все сверки', index=False)
+            docs.to_excel(writer, sheet_name='Тех_документы', index=False)
+            if hasattr(findings, 'empty') and not findings.empty:
+                findings.to_excel(writer, sheet_name='Тех_извлечённые данные', index=False)
+            if report.get('excluded_objects'):
+                pd.DataFrame(report['excluded_objects']).to_excel(writer, sheet_name='Тех_исключённые объекты', index=False)
+            if report.get('unresolved_objects'):
+                pd.DataFrame(report['unresolved_objects']).to_excel(writer, sheet_name='Тех_спорные объекты', index=False)
+
+        _style_workbook(writer.book, report_kind)
+        writer.book.properties.title = f'ExpertCheck — {project}'
+        writer.book.properties.subject = 'Автоматизированная проверка проектной документации'
+        writer.book.properties.creator = 'ExpertCheck'
     return out.getvalue()
+
+
+def excel_report(project, version, docs, findings, comparisons):
+    """Backward-compatible default: compact GIP report."""
+    return structured_excel_report(project, version, docs, findings, comparisons, report_kind='gip')

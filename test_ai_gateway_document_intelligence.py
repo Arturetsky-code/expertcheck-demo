@@ -36,3 +36,19 @@ def test_empty_keys_return_clear_error():
 def test_diagnostic_401():
     from core.ai_gateway import AIResult
     assert 'недействителен' in diagnostic_message(AIResult(False, 'x', error='bad', status_code=401)).lower()
+
+
+def test_groq_empty_key_returns_clear_error():
+    from core.ai_gateway import GroqProvider
+    result = GroqProvider('', 'llama-3.3-70b-versatile').generate('x')
+    assert not result.ok
+    assert 'Groq' in result.error
+
+
+def test_auto_provider_is_created_with_keys(monkeypatch):
+    from core.ai_gateway import provider_from_settings, FailoverProvider
+    monkeypatch.setenv('OPENROUTER_API_KEY', 'or-test')
+    monkeypatch.setenv('GROQ_API_KEY', 'gsk-test')
+    provider = provider_from_settings('Авто: Groq → OpenRouter')
+    assert isinstance(provider, FailoverProvider)
+    assert [p.name for p in provider.providers] == ['Groq', 'OpenRouter']

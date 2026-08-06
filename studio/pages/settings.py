@@ -85,8 +85,8 @@ def render(ctx) -> None:
         section('AI-модули', 'Подключение внешних аналитических сервисов. Полные PDF по умолчанию не передаются.')
         provider = st.selectbox(
             'Внешний провайдер',
-            ['Отключён', 'Gemini', 'OpenRouter'],
-            index=['Отключён', 'Gemini', 'OpenRouter'].index(st.session_state.get('external_ai_provider', 'Отключён')),
+            ['Отключён', 'OpenRouter', 'Groq', 'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter', 'Gemini'],
+            index=['Отключён', 'OpenRouter', 'Groq', 'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter', 'Gemini'].index(st.session_state.get('external_ai_provider', 'Отключён')),
             key='settings_external_ai_provider',
         )
         st.radio(
@@ -95,7 +95,7 @@ def render(ctx) -> None:
             disabled=True,
             key='settings_ai_transfer_mode',
         )
-        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для Gemini: GEMINI_API_KEY и GEMINI_MODEL. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL.')
+        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY и GROQ_MODEL. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
         if st.button('Сохранить AI-настройки', width='content'):
             st.session_state.external_ai_provider = provider
             st.success('Настройки AI сохранены для текущей сессии.')
@@ -111,6 +111,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
+        st.info('Рекомендуемый режим: «Авто: Groq → OpenRouter» для быстрых ответов с резервом на бесплатные модели OpenRouter.')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

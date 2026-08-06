@@ -8,7 +8,7 @@ from core.document_intelligence import build_structured_ai_context
 from core.engineering_advisor import answer_local_question, summarize_object_registry
 from studio.components import card, section
 
-SYSTEM_PROMPT = '''Вы — инженерный аналитик ExpertCheck. Анализируйте только переданный структурированный контекст проекта. Не выдумывайте отсутствующие сведения. Каждый вывод связывайте с объектом, характеристикой и источником, если они переданы. При недостатке данных прямо пишите «Недостаточно данных». Не изменяйте подтверждённый реестр и не выдавайте предположение за установленный факт.'''
+SYSTEM_PROMPT = '''Вы — инженерный аналитик ExpertCheck. Возвращайте выводы только на основании переданного контекста. Для классификационных задач возвращайте валидный JSON. Анализируйте только переданный структурированный контекст проекта. Не выдумывайте отсутствующие сведения. Каждый вывод связывайте с объектом, характеристикой и источником, если они переданы. При недостатке данных прямо пишите «Недостаточно данных». Не изменяйте подтверждённый реестр и не выдавайте предположение за установленный факт.'''
 
 
 def _external_prompt(question: str, context: dict) -> str:
@@ -32,7 +32,13 @@ def render(ctx):
     with cols[3]: card('Заблокировано', summary['blocked'], 'Служебные источники', 'bad')
 
     mode = st.radio('Режим анализа', ['Локальный советник', 'Внешний AI'], horizontal=True, key='advisor_mode')
-    question = st.text_area('Вопрос по загруженной документации', placeholder='Например: какие объекты выглядят сомнительно и почему?')
+    task = st.selectbox('Задача советника', ['Ответ на вопрос', 'Проверить сомнительные объекты', 'Проверить результаты межраздельной сверки', 'Проанализировать текущий чек-лист'])
+    default_question = {
+        'Проверить сомнительные объекты': 'Проанализируй только объекты со статусом review или blocked. Для каждого укажи: объект ли это, статус проектирования, основания и рекомендуемое действие.',
+        'Проверить результаты межраздельной сверки': 'Найди только недостоверные или противоречивые сверки. Укажи объект, характеристику, источники и что проверить вручную.',
+        'Проанализировать текущий чек-лист': 'Проанализируй результаты текущего чек-листа. Покажи пункты без достаточных доказательств и недостающие сведения.',
+    }.get(task, '')
+    question = st.text_area('Вопрос по загруженной документации', value=default_question, placeholder='Например: какие объекты выглядят сомнительно и почему?')
 
     if mode == 'Локальный советник':
         if st.button('Проанализировать локально', type='primary', disabled=not question.strip()):
@@ -43,11 +49,14 @@ def render(ctx):
     provider_name = st.session_state.get('external_ai_provider', 'Отключён')
     provider = provider_from_settings(provider_name, st.secrets)
     if provider is None:
-        st.warning('Внешний AI не настроен. Откройте «Настройки → AI-модули» и выберите Gemini или OpenRouter.')
+        st.warning('Внешний AI не настроен. Откройте «Настройки → AI-модули» и выберите OpenRouter, Groq или автоматический резерв.')
         return
     st.info(f'Провайдер: {provider.name}. Режим передачи: только обезличенные структурированные данные.')
     if st.button('Отправить запрос внешнему AI', type='primary', disabled=not question.strip()):
-        context = build_structured_ai_context(rows, comparisons)
+        checklist_rows = st.session_state.get('checklist_run') or []
+        if isinstance(checklist_rows, dict):
+            checklist_rows = checklist_rows.get('rows') or checklist_rows.get('results') or []
+        context = build_structured_ai_context(rows, comparisons, checklist_rows)
         with st.spinner('Внешний AI анализирует структурированную модель проекта...'):
             result = provider.generate(_external_prompt(question, context), SYSTEM_PROMPT)
         if result.ok:

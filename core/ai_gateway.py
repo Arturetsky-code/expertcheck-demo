@@ -33,12 +33,13 @@ class AIProvider:
         raise NotImplementedError
 
     @staticmethod
-    def _post(url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 45) -> tuple[int, dict[str, Any]]:
+    def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 45, method: str = 'POST') -> tuple[int, dict[str, Any]]:
+        data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode('utf-8')
         request = urllib.request.Request(
             url,
-            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            data=data,
             headers={'Content-Type': 'application/json', **headers},
-            method='POST',
+            method=method,
         )
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -52,6 +53,14 @@ class AIProvider:
             return int(exc.code), body
         except (urllib.error.URLError, TimeoutError) as exc:
             return 0, {'error': {'message': str(exc)}}
+
+    @classmethod
+    def _post(cls, url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 45) -> tuple[int, dict[str, Any]]:
+        return cls._request(url, headers, payload, timeout, 'POST')
+
+    @classmethod
+    def _get(cls, url: str, headers: dict[str, str], timeout: int = 30) -> tuple[int, dict[str, Any]]:
+        return cls._request(url, headers, None, timeout, 'GET')
 
 
 class GeminiProvider(AIProvider):
@@ -82,30 +91,117 @@ class GeminiProvider(AIProvider):
 class GroqProvider(AIProvider):
     name = 'Groq'
 
-    def generate(self, prompt: str, system: str = '') -> AIResult:
+    FALLBACK_MODELS = (
+        'openai/gpt-oss-20b',
+        'openai/gpt-oss-120b',
+        'qwen/qwen3.6-27b',
+        'llama-3.3-70b-versatile',
+    )
+
+    @staticmethod
+    def _clean_key(value: str) -> str:
+        key = str(value or '').strip().strip('"').strip("'")
+        if key.lower().startswith('bearer '):
+            key = key[7:].strip()
+        return key
+
+    def __init__(self, api_key: str, model: str):
+        super().__init__(self._clean_key(api_key), model)
+
+    @property
+    def headers(self) -> dict[str, str]:
+        return {'Authorization': f'Bearer {self.api_key}'}
+
+    def available_models(self) -> tuple[AIResult, list[str]]:
+        if not self.api_key:
+            return AIResult(False, self.name, error='API-ключ Groq не задан.'), []
+        status, body = self._get('https://api.groq.com/openai/v1/models', self.headers)
+        if status != 200:
+            message = (((body.get('error') or {}).get('message')) or str(body))
+            return AIResult(False, self.name, error=message, status_code=status), []
+        models = [str(item.get('id', '')).strip() for item in (body.get('data') or []) if item.get('id')]
+        return AIResult(True, self.name, text='Список моделей получен.', status_code=status), models
+
+    def _candidate_models(self, available: list[str]) -> list[str]:
+        configured = (self.model or '').strip()
+        result: list[str] = []
+        if configured and configured.lower() not in {'auto', 'авто', 'automatic'}:
+            result.append(configured)
+        for model in self.FALLBACK_MODELS:
+            if model not in result:
+                result.append(model)
+        if available:
+            result = [model for model in result if model in available]
+            if not result:
+                result = available[:3]
+        return result
+
+    def test_connection(self) -> AIResult:
+        model_result, available = self.available_models()
+        if not model_result.ok:
+            return model_result
+        if not self._candidate_models(available):
+            return AIResult(False, self.name, error='Ключ действителен, но для проекта Groq не найдено доступных текстовых моделей.', status_code=403)
+        return self.generate('Ответьте одним словом: OK', _known_models=available)
+
+    def generate(self, prompt: str, system: str = '', _known_models: list[str] | None = None) -> AIResult:
         if not self.api_key:
             return AIResult(False, self.name, error='API-ключ Groq не задан.', model=self.model)
-        model = self.model or 'llama-3.3-70b-versatile'
+
+        available = list(_known_models or [])
+        if not available:
+            model_result, available = self.available_models()
+            if not model_result.ok:
+                return model_result
+
         messages=[]
         if system:
             messages.append({'role': 'system', 'content': system})
         messages.append({'role': 'user', 'content': prompt})
-        payload = {
-            'model': model, 'messages': messages, 'temperature': 0.1,
-            'max_tokens': 1600, 'response_format': {'type': 'json_object'} if 'JSON' in system.upper() else None,
-        }
-        if payload['response_format'] is None:
-            payload.pop('response_format')
-        headers = {'Authorization': f'Bearer {self.api_key}'}
-        status, body = self._post('https://api.groq.com/openai/v1/chat/completions', headers, payload)
-        if status != 200:
+
+        attempts: list[str] = []
+        last_result: AIResult | None = None
+        for model in self._candidate_models(available):
+            payload = {
+                'model': model,
+                'messages': messages,
+                'temperature': 0.1,
+                'max_tokens': 1600,
+            }
+            wants_json = 'JSON' in system.upper()
+            if wants_json:
+                payload['response_format'] = {'type': 'json_object'}
+
+            status, body = self._post('https://api.groq.com/openai/v1/chat/completions', self.headers, payload)
+            if status == 400 and wants_json:
+                payload.pop('response_format', None)
+                status, body = self._post('https://api.groq.com/openai/v1/chat/completions', self.headers, payload)
+
+            if status == 200:
+                try:
+                    text = body['choices'][0]['message']['content']
+                except (KeyError, IndexError, TypeError):
+                    return AIResult(False, self.name, error='Groq вернул ответ без текста.', status_code=status, model=model)
+                return AIResult(True, self.name, text=text, status_code=status, model=model)
+
             message = (((body.get('error') or {}).get('message')) or str(body))
-            return AIResult(False, self.name, error=message, status_code=status, model=model)
-        try:
-            text = body['choices'][0]['message']['content']
-        except (KeyError, IndexError, TypeError):
-            return AIResult(False, self.name, error='Groq вернул ответ без текста.', status_code=status, model=model)
-        return AIResult(True, self.name, text=text, status_code=status, model=model)
+            attempts.append(f'{model}: HTTP {status} — {message}')
+            last_result = AIResult(False, self.name, error=message, status_code=status, model=model)
+
+            if status in {401, 429, 500, 502, 503, 504}:
+                break
+            if status not in {400, 403, 404}:
+                break
+
+        if last_result is None:
+            return AIResult(False, self.name, error='Groq не предоставил доступную модель.', status_code=403)
+        return AIResult(
+            False,
+            self.name,
+            error='Не удалось выполнить запрос ни к одной доступной модели. ' + ' | '.join(attempts),
+            status_code=last_result.status_code,
+            model=last_result.model,
+        )
 
 
 class OpenRouterProvider(AIProvider):
@@ -176,15 +272,15 @@ def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | N
     if provider_key == 'openrouter':
         return OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free'))
     if provider_key == 'groq':
-        return GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile'))
+        return GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto'))
     if provider_key in {'авто: openrouter → groq', 'auto-openrouter-groq'}:
         return FailoverProvider([
             OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
-            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile')),
+            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
         ])
     if provider_key in {'авто: groq → openrouter', 'auto-groq-openrouter'}:
         return FailoverProvider([
-            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'llama-3.3-70b-versatile')),
+            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
             OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
         ])
     return None
@@ -199,7 +295,14 @@ def diagnostic_message(result: AIResult) -> str:
     if code == 402:
         return 'Недостаточно кредитов или бесплатный лимит исчерпан.'
     if code == 403:
-        return 'Доступ запрещён настройками ключа или провайдера.'
+        detail = str(result.error or '')
+        if result.provider == 'Groq':
+            return (
+                'Ключ Groq распознан, но доступ к выбранной модели запрещён. '
+                'Проверьте Groq Console → Settings → Organization/Projects → Limits → Model permissions. '
+                'Приложение уже попыталось подобрать другую доступную модель. Подробности: ' + detail
+            )
+        return 'Доступ запрещён настройками ключа или провайдера. ' + detail
     if code == 429:
         return 'Превышен лимит запросов. Повторите позже.'
     if code in {502, 503}:

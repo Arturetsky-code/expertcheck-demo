@@ -38,7 +38,12 @@ class AIProvider:
         request = urllib.request.Request(
             url,
             data=data,
-            headers={'Content-Type': 'application/json', **headers},
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'ExpertCheck/5.0 (+https://streamlit.io)',
+                **headers,
+            },
             method=method,
         )
         try:
@@ -233,6 +238,22 @@ class OpenRouterProvider(AIProvider):
 
 
 
+def _is_cloudflare_1010(result: AIResult) -> bool:
+    detail = str(result.error or '').lower()
+    return (
+        'error code: 1010' in detail
+        or 'error 1010' in detail
+        or ('cloudflare' in detail and '1010' in detail)
+        or "banned your access based on your browser's signature" in detail
+    )
+
+
+def _is_retryable_provider_failure(result: AIResult) -> bool:
+    if _is_cloudflare_1010(result):
+        return True
+    return result.status_code in {0, 408, 429, 500, 502, 503, 504}
+
+
 class FailoverProvider(AIProvider):
     name = 'Автоматический резерв'
 
@@ -252,7 +273,7 @@ class FailoverProvider(AIProvider):
             if result.ok:
                 return result
             errors.append(f'{provider.name}: {diagnostic_message(result)}')
-            if result.status_code not in {0, 408, 429, 500, 502, 503, 504}:
+            if not _is_retryable_provider_failure(result):
                 break
         return AIResult(False, self.name, error='; '.join(errors))
 
@@ -296,9 +317,16 @@ def diagnostic_message(result: AIResult) -> str:
         return 'Недостаточно кредитов или бесплатный лимит исчерпан.'
     if code == 403:
         detail = str(result.error or '')
+        if _is_cloudflare_1010(result):
+            return (
+                'Groq отклонил соединение на уровне Cloudflare (ошибка 1010). '
+                'Это не ошибка API-ключа и не запрет модели: заблокирован сетевой запрос из текущего облачного окружения. '
+                'Используйте режим «Авто: Groq → OpenRouter» или OpenRouter; приложение переключится на резерв автоматически. '
+                'Подробности: ' + detail
+            )
         if result.provider == 'Groq':
             return (
-                'Ключ Groq распознан, но доступ к выбранной модели запрещён. '
+                'Ключ Groq распознан, но доступ к выбранной модели запрещён настройками организации или проекта. '
                 'Проверьте Groq Console → Settings → Organization/Projects → Limits → Model permissions. '
                 'Приложение уже попыталось подобрать другую доступную модель. Подробности: ' + detail
             )

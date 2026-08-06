@@ -1,12 +1,11 @@
-from . import project, objects, checks, checklists, issues, reports, settings, advisor
+from . import project, objects, checks, checklists, issues, reports, settings, advisor, risks
 
 PAGES={
     'Проект': project.render,
-    'Объекты': objects.render,
+    'Состав объектов': objects.render,
     'Межраздельная сверка': checks.render,
+    'Риски экспертизы': risks.render,
     'Чек-листы': checklists.render,
-    'Замечания': issues.render,
-    'Отчёты': reports.render,
-    'Локальный советник': advisor.render,
+    'Отчёт': reports.render,
     'Настройки': settings.render,
 }

@@ -83,7 +83,7 @@ def _upload(ctx):
             if ai_level != 'Отключён':
                 ai_provider = provider_for_role('extraction', st.session_state, st.secrets)
             ai_options = {'level': {
-                'Отключён': 'off', 'Помощник': 'helper',
+                'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',
                 'Расширенный': 'extended', 'Максимальный': 'maximum',
             }.get(ai_level, 'helper'), 'provider': ai_provider}
             try:
@@ -99,7 +99,8 @@ def _upload(ctx):
             st.session_state.object_assembly_rows = []
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
-            update_progress(100, 'Проверка завершена', 'Открываем рабочее пространство проекта')
+            update_progress(100, 'Проверка завершена', 'Переходим к подтверждению состава объектов')
+            st.session_state.page = 'Состав объектов'
             st.rerun()
 
 

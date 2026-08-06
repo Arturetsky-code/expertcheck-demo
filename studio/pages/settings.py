@@ -100,7 +100,7 @@ def render(ctx) -> None:
             extraction_provider = st.selectbox(
                 'AI Extraction — объекты, ТЭП, чек-листы',
                 provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'OpenRouter')) if st.session_state.get('ai_extraction_provider', 'OpenRouter') in provider_options[1:-1] else 0,
+                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'Авто: OpenRouter → Groq')) if st.session_state.get('ai_extraction_provider', 'Авто: OpenRouter → Groq') in provider_options[1:-1] else 0,
                 key='settings_ai_extraction_provider',
                 help='Рекомендуется OpenRouter или автоматический резерв: важнее качество понимания сложных фрагментов.',
             )
@@ -120,14 +120,14 @@ def render(ctx) -> None:
         )
         ai_level = st.selectbox(
             'Уровень участия AI в проверке',
-            ['Отключён', 'Помощник', 'Расширенный', 'Максимальный'],
-            index=['Отключён', 'Помощник', 'Расширенный', 'Максимальный'].index(st.session_state.get('ai_pipeline_level', 'Помощник')) if st.session_state.get('ai_pipeline_level', 'Помощник') in ['Отключён', 'Помощник', 'Расширенный', 'Максимальный'] else 1,
-            help='Помощник — только неоднозначные объекты; Расширенный — дополнительно проверка привязки ТЭП и смысловых пунктов чек-листов; Максимальный — также расширенные рекомендации к результатам.',
+            ['Отключён', 'Умный автоматический', 'Помощник', 'Расширенный', 'Максимальный'],
+            index=['Отключён', 'Умный автоматический', 'Помощник', 'Расширенный', 'Максимальный'].index(st.session_state.get('ai_pipeline_level', 'Умный автоматический')) if st.session_state.get('ai_pipeline_level', 'Умный автоматический') in ['Отключён', 'Умный автоматический', 'Помощник', 'Расширенный', 'Максимальный'] else 1,
+            help='Умный автоматический — AI вызывается только для результатов со средней/низкой уверенностью; Помощник — только неоднозначные объекты; Расширенный — дополнительно проверка привязки ТЭП и смысловых пунктов чек-листов; Максимальный — также расширенные рекомендации к результатам.',
             key='settings_ai_pipeline_level',
         )
         assisted = st.checkbox(
             'Использовать внешний AI для неоднозначных объектов и пунктов чек-листов',
-            value=bool(st.session_state.get('ai_assisted_extraction', False)),
+            value=bool(st.session_state.get('ai_assisted_extraction', True)),
             help='AI анализирует только обезличенные структурированные фрагменты. В режиме «Расширенный» он автоматически проверяет неоднозначные объекты, привязку ТЭП и смысловые пункты чек-листов. Окончательный реестр подтверждает пользователь.',
             key='settings_ai_assisted_extraction',
         )
@@ -151,7 +151,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемая схема: AI Extraction — OpenRouter; AI Reviewer — Groq. DeepSeek можно назначить отдельным провайдером или резервом. Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
+        st.info('Рекомендуемая схема: уровень «Умный автоматический»; AI Extraction — OpenRouter с резервом Groq; AI Reviewer — Groq. DeepSeek можно назначить отдельным провайдером или резервом. Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

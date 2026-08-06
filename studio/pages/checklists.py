@@ -70,7 +70,7 @@ def render(ctx):
     ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
     batch_signature = f"{checklist}|{selected_section}|{mode}|{','.join(sorted(selected_set))}"
     batch_store = st.session_state.setdefault('ai_checklist_batch_reviews', {})
-    if ai_level in {'Расширенный','Максимальный'} and batch_signature not in batch_store:
+    if ai_level in {'Умный автоматический','Расширенный','Максимальный'} and batch_signature not in batch_store:
         provider = provider_for_role('extraction', st.session_state, st.secrets)
         if provider:
             batch_items=[]
@@ -109,6 +109,9 @@ def render(ctx):
                 r['status']=mapped
                 r['evidence']=(r.get('evidence') or '')+' AI-анализ: '+str(review.get('reason') or '')
 
+    # Persist final checklist results for the Expert Review Engine and reports.
+    if isinstance(st.session_state.get('checklist_run'), dict):
+        st.session_state.checklist_run['results'] = [dict(row) for row in results]
     summary=engine.summary(results)
     a,b,c,d=st.columns(4)
     with a:card('Пунктов',summary['total'],'Без группирующих заголовков')

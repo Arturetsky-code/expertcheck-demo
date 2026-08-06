@@ -209,6 +209,40 @@ class GroqProvider(AIProvider):
         )
 
 
+class DeepSeekProvider(AIProvider):
+    name = 'DeepSeek'
+
+    def generate(self, prompt: str, system: str = '') -> AIResult:
+        if not self.api_key:
+            return AIResult(False, self.name, error='API-ключ DeepSeek не задан.', model=self.model)
+        model = self.model or 'deepseek-v4-flash'
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({'role': 'system', 'content': system})
+        messages.append({'role': 'user', 'content': prompt})
+        payload: dict[str, Any] = {
+            'model': model,
+            'messages': messages,
+            'temperature': 0.1,
+            'max_tokens': 2000,
+        }
+        if 'JSON' in system.upper():
+            payload['response_format'] = {'type': 'json_object'}
+        headers = {'Authorization': f'Bearer {self.api_key}'}
+        status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=60)
+        if status == 400 and 'response_format' in payload:
+            payload.pop('response_format', None)
+            status, body = self._post('https://api.deepseek.com/chat/completions', headers, payload, timeout=60)
+        if status != 200:
+            message = (((body.get('error') or {}).get('message')) or str(body))
+            return AIResult(False, self.name, error=message, status_code=status, model=model)
+        try:
+            text = body['choices'][0]['message']['content']
+        except (KeyError, IndexError, TypeError):
+            return AIResult(False, self.name, error='DeepSeek вернул ответ без текста.', status_code=status, model=model)
+        return AIResult(True, self.name, text=text, status_code=status, model=model)
+
+
 class OpenRouterProvider(AIProvider):
     name = 'OpenRouter'
 
@@ -280,6 +314,7 @@ class FailoverProvider(AIProvider):
 
 def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | None:
     provider_key = (provider or '').strip().lower()
+
     def get(name: str, default: str = '') -> str:
         value = ''
         if secrets is not None:
@@ -288,23 +323,39 @@ def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | N
             except Exception:
                 value = ''
         return str(value or os.getenv(name, default) or '')
-    if provider_key == 'gemini':
-        return GeminiProvider(get('GEMINI_API_KEY'), get('GEMINI_MODEL', 'gemini-2.5-flash'))
-    if provider_key == 'openrouter':
-        return OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free'))
-    if provider_key == 'groq':
-        return GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto'))
-    if provider_key in {'авто: openrouter → groq', 'auto-openrouter-groq'}:
-        return FailoverProvider([
-            OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
-            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
-        ])
-    if provider_key in {'авто: groq → openrouter', 'auto-groq-openrouter'}:
-        return FailoverProvider([
-            GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
-            OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
-        ])
+
+    providers = {
+        'openrouter': OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
+        'groq': GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
+        'deepseek': DeepSeekProvider(get('DEEPSEEK_API_KEY'), get('DEEPSEEK_MODEL', 'deepseek-v4-flash')),
+        'gemini': GeminiProvider(get('GEMINI_API_KEY'), get('GEMINI_MODEL', 'gemini-2.5-flash')),
+    }
+    aliases = {
+        'авто: openrouter → groq': ['openrouter', 'groq'],
+        'auto-openrouter-groq': ['openrouter', 'groq'],
+        'авто: groq → openrouter': ['groq', 'openrouter'],
+        'auto-groq-openrouter': ['groq', 'openrouter'],
+        'авто: deepseek → openrouter → groq': ['deepseek', 'openrouter', 'groq'],
+        'auto-deepseek-openrouter-groq': ['deepseek', 'openrouter', 'groq'],
+        'авто: openrouter → groq → deepseek': ['openrouter', 'groq', 'deepseek'],
+        'auto-openrouter-groq-deepseek': ['openrouter', 'groq', 'deepseek'],
+        'гибридный ai': ['openrouter', 'groq', 'deepseek'],
+        'hybrid': ['openrouter', 'groq', 'deepseek'],
+    }
+    if provider_key in providers:
+        return providers[provider_key]
+    if provider_key in aliases:
+        return FailoverProvider([providers[name] for name in aliases[provider_key]])
     return None
+
+
+def provider_for_role(role: str, session_state: Any, secrets: Any = None) -> AIProvider | None:
+    role_key = (role or '').strip().lower()
+    if role_key in {'extraction', 'извлечение', 'analysis'}:
+        selected = session_state.get('ai_extraction_provider') or session_state.get('external_ai_provider', 'Отключён')
+    else:
+        selected = session_state.get('ai_reviewer_provider') or session_state.get('external_ai_provider', 'Отключён')
+    return provider_from_settings(str(selected), secrets)
 
 
 def diagnostic_message(result: AIResult) -> str:
@@ -314,6 +365,8 @@ def diagnostic_message(result: AIResult) -> str:
     if code == 401:
         return 'Ключ недействителен или отозван.'
     if code == 402:
+        if result.provider == 'DeepSeek':
+            return 'Недостаточно средств на балансе DeepSeek API. Пополните баланс или выберите Groq/OpenRouter.'
         return 'Недостаточно кредитов или бесплатный лимит исчерпан.'
     if code == 403:
         detail = str(result.error or '')

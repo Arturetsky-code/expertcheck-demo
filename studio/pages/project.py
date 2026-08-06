@@ -6,6 +6,7 @@ from studio.components import hero, card, section, empty, project_status_bar, ti
 from studio.data import excel_report
 from core.project_upload import DOCUMENT_TYPE_OPTIONS, apply_document_type_overrides, prepare_uploads
 from core.report_engine import build_decision_report
+from core.ai_gateway import provider_for_role
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
 
@@ -77,8 +78,16 @@ def _upload(ctx):
                 stage_text.markdown(f'**{stage}**')
                 detail_text.caption(detail or 'Выполняется обработка проекта')
 
+            ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
+            ai_provider = None
+            if ai_level != 'Отключён':
+                ai_provider = provider_for_role('extraction', st.session_state, st.secrets)
+            ai_options = {'level': {
+                'Отключён': 'off', 'Помощник': 'helper',
+                'Расширенный': 'extended', 'Максимальный': 'maximum',
+            }.get(ai_level, 'helper'), 'provider': ai_provider}
             try:
-                st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress)
+                st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
             except TypeError:
                 update_progress(15, 'Подготовка комплекта', 'Запускаем обработку документов')
                 st.session_state.result = ctx.analyze(files, ctx.config_dir)

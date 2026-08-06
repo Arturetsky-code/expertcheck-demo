@@ -118,10 +118,17 @@ def render(ctx) -> None:
             disabled=True,
             key='settings_ai_transfer_mode',
         )
+        ai_level = st.selectbox(
+            'Уровень участия AI в проверке',
+            ['Отключён', 'Помощник', 'Расширенный', 'Максимальный'],
+            index=['Отключён', 'Помощник', 'Расширенный', 'Максимальный'].index(st.session_state.get('ai_pipeline_level', 'Помощник')) if st.session_state.get('ai_pipeline_level', 'Помощник') in ['Отключён', 'Помощник', 'Расширенный', 'Максимальный'] else 1,
+            help='Помощник — только неоднозначные объекты; Расширенный — дополнительно проверка привязки ТЭП и смысловых пунктов чек-листов; Максимальный — также расширенные рекомендации к результатам.',
+            key='settings_ai_pipeline_level',
+        )
         assisted = st.checkbox(
             'Использовать внешний AI для неоднозначных объектов и пунктов чек-листов',
             value=bool(st.session_state.get('ai_assisted_extraction', False)),
-            help='AI анализирует только выбранные структурированные фрагменты. Он не изменяет реестр и результаты без подтверждения пользователя.',
+            help='AI анализирует только обезличенные структурированные фрагменты. В режиме «Расширенный» он автоматически проверяет неоднозначные объекты, привязку ТЭП и смысловые пункты чек-листов. Окончательный реестр подтверждает пользователь.',
             key='settings_ai_assisted_extraction',
         )
         st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto. Для DeepSeek: DEEPSEEK_API_KEY и DEEPSEEK_MODEL для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
@@ -130,6 +137,7 @@ def render(ctx) -> None:
             st.session_state.ai_extraction_provider = extraction_provider
             st.session_state.ai_reviewer_provider = reviewer_provider
             st.session_state.ai_assisted_extraction = assisted
+            st.session_state.ai_pipeline_level = ai_level
             st.success('Настройки AI сохранены для текущей сессии.')
         if provider != 'Отключён':
             from core.ai_gateway import diagnostic_message, provider_from_settings

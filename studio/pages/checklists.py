@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.checklist_engine import ChecklistEngine
-from core.ai_gateway import analyze_checklist_evidence, diagnostic_message, provider_for_role
+from core.ai_gateway import analyze_checklist_evidence, analyze_checklist_batch, diagnostic_message, provider_for_role
 from studio.components import card, empty, section
 
 
@@ -65,12 +65,56 @@ def render(ctx):
     results=[r for r in results if r.get('is_heading') or r.get('automation_level') in levels]
     if not results:return empty('Для выбранного сочетания нет пунктов.')
 
+    # In extended AI mode semantic and uncertain checklist items are reviewed automatically
+    # in one compact batch. Core evidence remains visible and AI cannot hide missing data.
+    ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
+    batch_signature = f"{checklist}|{selected_section}|{mode}|{','.join(sorted(selected_set))}"
+    batch_store = st.session_state.setdefault('ai_checklist_batch_reviews', {})
+    if ai_level in {'Расширенный','Максимальный'} and batch_signature not in batch_store:
+        provider = provider_for_role('extraction', st.session_state, st.secrets)
+        if provider:
+            batch_items=[]
+            for idx,r in enumerate(results):
+                if r.get('is_heading') or r.get('status') not in {'Нет','Требует проверки','Нет данных'}:
+                    continue
+                terms=(r.get('compiled_rule') or {}).get('evidence_terms') or []
+                evidence_rows=[]
+                for row in findings.to_dict('records'):
+                    blob=' '.join(str(row.get(k) or '') for k in ('context','section_title','structural_zone','table_title','table_evidence','value_text'))
+                    if not terms or any(str(t).lower() in blob.lower() for t in terms):
+                        evidence_rows.append({k:row.get(k) for k in ('document','document_type','page','section_title','table_title','context','value_text','parameter_code','object_hint')})
+                    if len(evidence_rows)>=8: break
+                key=f"item-{idx}"
+                r['_ai_batch_key']=key
+                batch_items.append({'key':key,'checklist_position':r.get('item_no'),'question':r.get('question'),'core_status':r.get('status'),'compiled_rule':r.get('compiled_rule'),'evidence':evidence_rows})
+                if len(batch_items)>=10: break
+            if batch_items:
+                with st.spinner('AI выполняет смысловую проверку неоднозначных пунктов чек-листа...'):
+                    batch_result,batch_reviews=analyze_checklist_batch(provider,batch_items)
+                if batch_result.ok:
+                    batch_store[batch_signature]=batch_reviews
+                else:
+                    batch_store[batch_signature]={'__error__':diagnostic_message(batch_result)}
+    batch_reviews=batch_store.get(batch_signature,{})
+    for r in results:
+        review=batch_reviews.get(r.get('_ai_batch_key')) if isinstance(batch_reviews,dict) else None
+        if not review: continue
+        r['ai_review']=review
+        result_code=str(review.get('result') or '')
+        confidence=float(review.get('confidence') or 0)
+        if confidence>=0.78:
+            mapped={'yes':'Да','no':'Нет','partial':'Частично','requires_review':'Требует проверки','insufficient_data':'Нет данных'}.get(result_code)
+            if mapped:
+                r['status_before_ai']=r.get('status')
+                r['status']=mapped
+                r['evidence']=(r.get('evidence') or '')+' AI-анализ: '+str(review.get('reason') or '')
+
     summary=engine.summary(results)
     a,b,c,d=st.columns(4)
     with a:card('Пунктов',summary['total'],'Без группирующих заголовков')
     with b:card('Да',summary['yes'],'Соответствие подтверждено','ok')
     with c:card('Нет',summary['no'],'Выявлено несоответствие','bad')
-    with d:card('К проверке',summary['review']+summary['no_data'],'Недостаточно автоматических доказательств','warn')
+    with d:card('К проверке',summary['review']+summary['no_data']+sum(1 for x in results if x.get('status')=='Частично'),'Недостаточно автоматических доказательств','warn')
 
     rows=[]
     details={}

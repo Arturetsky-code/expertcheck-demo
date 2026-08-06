@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 import pandas as pd
 import streamlit as st
+from core.ai_gateway import provider_for_role
 from studio.components import hero,card,section
 from studio.data import status_group,excel_report
 from core.project_upload import DOCUMENT_TYPE_OPTIONS,apply_document_type_overrides,prepare_uploads
@@ -44,7 +45,7 @@ def render(ctx):
                     stage_text.markdown(f'**{stage}**')
                     detail_text.caption(detail or 'Выполняется обработка проекта')
                 try:
-                    st.session_state.result=ctx.analyze(files,ctx.config_dir,progress_callback=update_progress)
+                    st.session_state.result=ctx.analyze(files,ctx.config_dir,progress_callback=update_progress,ai_options={'level':{'Отключён':'off','Помощник':'helper','Расширенный':'extended','Максимальный':'maximum'}.get(str(st.session_state.get('ai_pipeline_level') or 'Помощник'),'helper'),'provider':provider_for_role('extraction',st.session_state,st.secrets) if str(st.session_state.get('ai_pipeline_level') or 'Помощник')!='Отключён' else None})
                     st.session_state.project_name=name.strip() or 'Новый проект'
                     st.session_state.analysis_time=datetime.now().isoformat(timespec='minutes')
                     st.session_state.completeness_user_confirmed=False

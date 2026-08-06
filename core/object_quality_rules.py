@@ -44,6 +44,10 @@ CODE_RE = re.compile(r'\b(?:RAM|РД|ПД|[A-ZА-Я]{2,8})[-_.][A-ZА-Я0-9._-]{
 ONLY_NUMERIC_RE = re.compile(r'^[\d\s.,:+\-/№()]+$')
 
 
+
+def position_like_prefix(value: str) -> bool:
+    return bool(re.match(r'^\s*\d+(?:\.\d+){0,3}\s*[-–—|]', str(value or '')))
+
 def name_rejection_reasons(value: Any) -> list[str]:
     raw = str(value or '').strip()
     low = normalize_text(raw)
@@ -68,6 +72,14 @@ def name_rejection_reasons(value: Any) -> list[str]:
         reasons.append('абзац текста, а не наименование объекта')
     if low.startswith(('проверить ', 'предусмотреть ', 'выполнить ', 'обеспечить ', 'разработать ')):
         reasons.append('формулировка требования или действия')
+    if re.match(r'^(?:раздел|подраздел|том|часть|книга|лист|таблица|рисунок|приложение|пункт)\b', low):
+        if not any(noun in low for noun in OBJECT_NOUNS):
+            reasons.append('служебный заголовок документа')
+    if re.search(r'\b(?:гост|сп|снип|фз|постановлен|приказ|техническ(?:ий|ое) регламент)\b', low):
+        if not any(noun in low for noun in OBJECT_NOUNS):
+            reasons.append('нормативная ссылка, а не объект')
+    if ':' in raw and len(low.split()) > 10 and not position_like_prefix(raw):
+        reasons.append('описательная строка, а не наименование объекта')
     return list(dict.fromkeys(reasons))
 
 

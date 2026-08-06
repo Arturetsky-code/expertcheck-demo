@@ -94,12 +94,19 @@ def numeric_value(item: dict[str, Any]) -> float | None:
 def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
     obj = str(item.get("semantic_anchor_name") or item.get("object_hint") or "").strip()
+    confidence = float(item.get("core2_confidence") or item.get("confidence") or 0.0)
+    position = str(item.get("genplan_position") or "").strip()
+    binding = str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
+    strong_binding = binding in {"ROW_LOCKED", "POSITION_LOCKED", "EXACT_OBJECT"}
+    # Без позиции или жёсткой привязки принимаются только сведения с высокой уверенностью.
+    binding_ok = bool(position) or strong_binding or confidence >= 0.82
     return (
         code in TOLERANCES
         and numeric_value(item) is not None
         and bool(obj)
         and obj != "Не определён"
-        and float(item.get("core2_confidence") or item.get("confidence") or 0.0) >= 0.55
+        and confidence >= 0.62
+        and binding_ok
     )
 
 
@@ -242,10 +249,13 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             cross_mismatch = len(comparable_values) >= 2 and any(
                 not _same(comparable_values[0], value, code) for value in comparable_values[1:]
             )
-            if internal_conflicts:
+            strong_evidence_count = sum(1 for x in object_items if str(x.get('binding_status') or x.get('property_binding_status') or '').upper() in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'} or x.get('genplan_position') or float(x.get('core2_confidence') or x.get('confidence') or 0.0) >= 0.82)
+            if internal_conflicts and strong_evidence_count >= 2:
                 status = "КОНФЛИКТ ВНУТРИ РАЗДЕЛА"
-            elif cross_mismatch:
+            elif cross_mismatch and strong_evidence_count >= 2:
                 status = "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ"
+            elif cross_mismatch:
+                status = "НЕДОСТАТОЧНО ДАННЫХ"
             elif independent_sections >= 2:
                 status = "СОВПАДАЕТ"
             else:

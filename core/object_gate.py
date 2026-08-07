@@ -51,8 +51,25 @@ def _section_heading_reason(name: str, item: dict[str, Any]) -> str:
     if not match:
         return ''
     title = normalize_text(match.group('title')).strip(' .–—-')
+    # A numbered row from a verified object register / explication is not a
+    # document heading merely because its name is short or industry-specific.
+    # Service-zone evidence still wins above and is always blocked.
+    strong_register = bool(
+        item.get('general_plan_explication')
+        or item.get('object_recovery_strong_evidence')
+        or item.get('source_kind') in {'xml','project_scope_recovery'}
+        or any(token in normalize_text(str(item.get('match_method') or '') + ' ' + str(item.get('structural_zone') or ''))
+               for token in ('экспликац','состав сложного объекта','идентификационн призна','сильный источник состава'))
+    )
+    if strong_register:
+        return ''
     if title in SERVICE_TITLES or any(title.startswith(x + ' ') for x in SERVICE_TITLES):
         return 'нумерованный заголовок раздела документа'
+    # Outside a verified object register, a short dotted-number heading without
+    # engineering-object semantics is overwhelmingly a section/subsection row.
+    # This catches arbitrary TOC items, not only a fixed dictionary of titles.
+    if '.' in match.group('num') and not has_object_semantics(title) and len(title.split()) <= 12:
+        return 'нумерованный пункт/подпункт проектной документации'
     # Section headings are normally short abstract phrases. Engineering object
     # semantics is required to escape this guard.
     if not has_object_semantics(title) and len(title.split()) <= 14:

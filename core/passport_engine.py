@@ -62,6 +62,7 @@ class ObjectPassport:
     quantity: int
     registry_status: str
     registry_sources: list[str]
+    evidence_sources: list[dict[str, Any]]
     confirmation_matrix: dict[str, str]
     aliases: list[str]
     characteristics: list[PassportCharacteristic]
@@ -149,6 +150,20 @@ def build_object_passports(
             section: ("Подтверждено" if section in sections else "Не найдено")
             for section in ["ПЗ", "ПЗУ", "АР", "ТХ", "ИОС", "ПОС", "ООС"]
         }
+        evidence_sources=[]
+        seen_evidence=set()
+        for item in object_mentions + linked:
+            doc=_clean(item.get("document"))
+            sec=_section(item.get("document_type"))
+            page=item.get("page") or ""
+            zone=_clean(item.get("structural_zone") or item.get("trusted_zone"))
+            method=_clean(item.get("match_method"))
+            table=_clean(item.get("table_title") or item.get("table_type"))
+            key=(doc,sec,str(page),zone,table,method)
+            if not doc or key in seen_evidence:continue
+            seen_evidence.add(key)
+            evidence_sources.append({"document":doc,"section":sec,"page":page,"zone":zone,"table":table,"method":method})
+        evidence_sources=evidence_sources[:40]
 
         grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for item in linked:
@@ -220,6 +235,7 @@ def build_object_passports(
             quantity=quantity,
             registry_status=_clean(record.get("Статус") or record.get("status")),
             registry_sources=sections,
+            evidence_sources=evidence_sources,
             confirmation_matrix=confirmation_matrix,
             aliases=aliases,
             characteristics=characteristics,

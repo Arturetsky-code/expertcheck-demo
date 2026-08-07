@@ -5,6 +5,8 @@ from typing import Any, Iterable
 
 from .normalization import normalize_text
 from .object_semantics import is_service_object_candidate
+from .object_quality_rules import name_rejection_reasons
+from .position_rules import is_date_like_position
 
 PROJECT_TOKENS = ("проект", "проектируем", "новое строительство", "нов. стр", "стр.")
 EXISTING_TOKENS = ("сущ", "существ", "действующ", "сохраняем")
@@ -96,10 +98,17 @@ def filter_registry(records: list[dict[str, Any]], findings: Iterable[dict[str, 
         max_score=max([int(x.get("object_trust_score") or -100) for x in ev] or [-100])
         lives={str(x.get("object_lifecycle_status") or "Не определён") for x in ev}
         life="Проектируемый" if "Проектируемый" in lives else ("Реконструируемый" if "Реконструируемый" in lives else next(iter(lives),"Не определён"))
-        service=bool(FILEISH_RE.search(str(row.get("Наименование объекта") or "")))
+        raw_name = str(row.get("Наименование объекта") or row.get("Объект") or "")
+        registry_reasons = name_rejection_reasons(raw_name)
+        service=bool(FILEISH_RE.search(raw_name) or registry_reasons)
+        if pos and is_date_like_position(pos):
+            service = True
+            registry_reasons = list(registry_reasons) + ["позиция похожа на календарную дату"]
         hard_blocked=any(bool(x.get("hard_object_gate_blocked") or x.get("structure_guard_blocked")) for x in ev) and not any(int(x.get("object_trust_score") or -1000) >= 80 for x in ev)
         confirmed_sources=int(row.get("Количество источников") or row.get("Подтверждений") or 0)
         is_trusted=(not service and not hard_blocked and life in {"Проектируемый","Реконструируемый"} and (max_score>=80 or (max_score>=60 and confirmed_sources>=2)))
         row=dict(row); row["Статус проектирования"]=life; row["Доверие к объекту"]=max_score; row["Подтвержденный реестр"]=is_trusted
+        if registry_reasons:
+            row["Причина исключения из подтвержденного реестра"] = "; ".join(registry_reasons)
         (trusted if is_trusted else candidates).append(row)
     return trusted,candidates

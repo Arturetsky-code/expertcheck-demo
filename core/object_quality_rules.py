@@ -32,7 +32,7 @@ OBJECT_NOUNS = (
     'нефтепровод','канал','лоток','дамба','плотина','карьер','отвал','хвостохранилище','пруд',
     'очистные сооружения','линия','сеть','мачта','опора','кпп','ктп','дэс','абк','ремонтная',
     'котельная','венткамера','трансформатор','скважина','куст','факел','сепаратор','манифольд',
-    'блок','модуль','пункт','пост','навес','укрытие','гараж','стоянка','ограждение','мост',
+    'блок','модуль','пост','навес','укрытие','гараж','стоянка','ограждение','мост',
 )
 
 DOCUMENT_MARK_RE = re.compile(
@@ -63,6 +63,11 @@ def name_rejection_reasons(value: Any) -> list[str]:
         reasons.append('название раздела или служебного блока')
     if low in GENERIC_FIELD_LABELS:
         reasons.append('заголовок поля или характеристика, а не объект')
+    # Legacy table extraction may concatenate an object name with a property
+    # header (e.g. "КТП. Площадь застройки м2"). Such a row is evidence for a
+    # property, not a new object identity.
+    if re.search(r'[.;:]\s*(?:площадь(?: застройки)?|общая площадь|строительн(?:ый|ого) объ[её]м|высота|этажность|мощность|производительность|диаметр|давление|протяж[её]нность|расход|объ[её]м|вместимость|количество)\b', low):
+        reasons.append('наименование склеено с технико-экономическим показателем')
     if ONLY_NUMERIC_RE.fullmatch(raw):
         reasons.append('числовая или координатная строка')
     if TOC_ENTRY_RE.match(raw):
@@ -92,14 +97,34 @@ def name_rejection_reasons(value: Any) -> list[str]:
 
 def has_object_semantics(value: Any) -> bool:
     low = normalize_text(value)
-    return bool(low and any(noun in low for noun in OBJECT_NOUNS))
+    if not low:
+        return False
+    if any(noun in low for noun in OBJECT_NOUNS):
+        return True
+    # Russian engineering nouns often appear in oblique cases in PZ tables and
+    # construction-scope phrases. Stems are intentionally object-specific;
+    # generic words such as "пункт" are excluded to avoid legal/document prose.
+    stems=(
+        'здани','сооружен','площадк','корпус','станц','насосн','компрессорн','подстанц',
+        'резервуар','емкост','ёмкост','склад','цех','комплекс','установк','узел','камер',
+        'колодц','эстакад','галере','конвейер','дорог','проезд','съезд','трубопровод',
+        'водовод','газопровод','нефтепровод','канал','лоток','дамб','плотин','карьер',
+        'отвал','хвостохранилищ','пруд','очистн сооружен','лини','сет','мачт','опор',
+        'котельн','венткамер','трансформатор','скважин','куст','факел','сепаратор',
+        'манифольд','модул','навес','укрыти','гараж','стоянк','огражден','мост',
+        'раскомандировоч','водосборник','водоотстойник','отстойник'
+    )
+    return any(stem in low for stem in stems)
 
 
 def strong_object_name(value: Any, *, position: str = '', official: bool = False) -> tuple[bool, list[str]]:
     reasons = name_rejection_reasons(value)
     if reasons:
         return False, reasons
-    if official and position:
+    # Official object registers and identification tables may contain short
+    # industry names/abbreviations (ККВ, ДСК, ОПУ) without a generic object noun.
+    # The service/date/file filters above remain mandatory.
+    if official:
         return True, []
     if has_object_semantics(value):
         return True, []

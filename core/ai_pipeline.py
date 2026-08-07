@@ -5,6 +5,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Iterable
 
 from .ai_gateway import AIProvider, AIResult, _extract_json
+from .normalization import normalize_text
 
 
 @dataclass
@@ -209,3 +210,75 @@ def run_ai_pipeline(
             audit.errors.append("Property AI: " + str(result2.error))
         audit.property_reviews_received = apply_comparison_reviews(comparisons, reviews2)
     return audit.to_dict()
+
+
+def discover_objects_from_scope_evidence(
+    provider: AIProvider | None,
+    scope_audit: list[dict[str, Any]],
+    *,
+    limit_pages: int = 6,
+) -> tuple[AIResult | None, list[dict[str,Any]], int]:
+    """AI-assisted *discovery* from strong project-scope evidence.
+
+    Unlike secondary candidate review, this step can recover an object that a
+    deterministic parser did not tokenize. Every returned name is verified to
+    occur in the supplied source excerpt before it is admitted as a candidate.
+    """
+    if provider is None:
+        return None, [], 0
+    sources=[]
+    for row in scope_audit:
+        if row.get('decision')!='scope_source' or not row.get('excerpt'):
+            continue
+        sources.append({
+            'source_key':f"{row.get('document')}|{row.get('page')}",
+            'document':row.get('document'),'document_type':row.get('document_type'),
+            'page':row.get('page'),'reason':row.get('reason'),'excerpt':row.get('excerpt'),
+        })
+        if len(sources)>=limit_pages:break
+    if not sources:
+        return None, [], 0
+    system=(
+        'Вы — модуль первичного определения состава проектируемых объектов. Верните только JSON без Markdown. '
+        'Анализируйте только предоставленные фрагменты сильных источников: состав сложного объекта, идентификационные признаки, '
+        'формулировки «проектом предусматривается строительство/реконструкция», экспликации и перечни объектов. '
+        'Не включайте разделы, пункты, даты, оборудование внутри самостоятельного объекта, нормативные документы и существующие объекты. '
+        'Ответ: {"objects":[{"source_key":"...","name":"точное наименование из текста","position":"",'
+        '"design_status":"projected|reconstructed|existing|prospective|unknown","independent_object":true,'
+        '"confidence":0.0,"reason":"..."}]}. Название должно быть дословно подтверждено исходным фрагментом.'
+    )
+    payload={'task':'deep_project_object_discovery','sources':sources}
+    result=provider.generate(json.dumps(payload,ensure_ascii=False),system)
+    parsed=_extract_json(result.text) if result.ok else None
+    accepted=[]
+    if not isinstance(parsed,dict):
+        return result, accepted, len(sources)
+    by_key={x['source_key']:x for x in sources}
+    for obj in parsed.get('objects') or []:
+        if not isinstance(obj,dict):continue
+        key=str(obj.get('source_key') or '')
+        src=by_key.get(key)
+        name=str(obj.get('name') or '').strip()
+        if not src or not name:continue
+        # Mandatory hallucination guard: exact normalized name must occur in evidence.
+        if normalize_text(name) not in normalize_text(src.get('excerpt') or ''):
+            continue
+        if str(obj.get('design_status') or '') not in {'projected','reconstructed'}:
+            continue
+        if obj.get('independent_object') is False:
+            continue
+        try: conf=float(obj.get('confidence') or 0)
+        except Exception: conf=0
+        if conf < 0.72:continue
+        accepted.append({
+            'parameter_code':'OBJECT_CANDIDATE','parameter_name':'Проектируемый объект (AI discovery)',
+            'value_text':name,'object_hint':name,'genplan_position':str(obj.get('position') or ''),
+            'document':src.get('document'),'document_type':src.get('document_type'),'page':src.get('page'),
+            'confidence':min(0.9,max(0.72,conf)),'core2_confidence':min(0.9,max(0.72,conf)),
+            'source_type':'OBJECT_REGISTER','source_kind':'ai_scope_discovery',
+            'match_method':'AI Project Scope Discovery','structural_zone':'сильный источник состава проектируемых объектов',
+            'context':src.get('excerpt'),'object_lifecycle_status':'Реконструируемый' if obj.get('design_status')=='reconstructed' else 'Проектируемый',
+            'trusted_zone':'OBJECT_REGISTER','ai_discovery_reason':obj.get('reason'),'ai_discovery_confidence':conf,
+            'record_kind':'project_object',
+        })
+    return result, accepted, len(sources)

@@ -6,6 +6,8 @@ from typing import Any
 import json
 import re
 
+from .remark_learning import RemarkLearningEngine
+
 
 def _text(row: dict[str, Any], *keys: str) -> str:
     for key in keys:
@@ -98,9 +100,20 @@ def _possible_remark(kind: str, object_name: str, parameter: str) -> str:
     return "Требуется дополнительная проверка согласованности и полноты проектных решений."
 
 
+def _attach_historical_remarks(risk: dict[str,Any], engine: RemarkLearningEngine) -> dict[str,Any]:
+    text=' '.join(str(risk.get(k) or '') for k in ('category','object','parameter','finding','possible_remark','recommendation'))
+    matches=engine.match_raw(text=text, section=str(risk.get('category') or ''), limit=4)
+    if matches:
+        risk['historical_remark_analogs']=matches
+        risk['historical_remark_total_mentions']=sum(int(x.get('recurrence') or 0) for x in matches)
+        risk['historical_best_similarity']=matches[0].get('similarity_score')
+    return risk
+
+
 def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str,Any]]|None=None,checklist_results:list[dict[str,Any]]|None=None,scenario_path:str|Path|None=None,documents:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
     risks=[]; object_rows=object_rows or []; checklist_results=checklist_results or []; documents=documents or []
     scenarios=load_risk_scenarios(scenario_path)
+    remark_engine=RemarkLearningEngine(Path(__file__).resolve().parents[1] / "knowledge")
     for index,row in enumerate(comparisons):
         status=_text(row,"status","Статус","result","Результат").lower()
         if not any(t in status for t in ("расхожд","конфликт","недостат","требует","отсутств","не подтвержд","нет данных")): continue
@@ -136,6 +149,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
                 continue
             risk={"risk_id":f"R-IRD-{index+1:03d}","level":"Средний","score":46,"category":"Исходные и разрешительные документы","object":"","parameter":row.get('title') or row.get('code'),"finding":"Автоматический анализ не подтвердил наличие документа или сведений.","possible_remark":"Не подтверждена полнота исходных данных и документов, необходимых для обоснования проектных решений.","recommendation":row.get('recommendation') or 'Проверить наличие, применимость и актуальность документа.',"sources":"","origin":"Engineering Intelligence","evidence_strength":"Средняя"}
             risks.append(_enrich(risk,scenarios))
+    risks=[_attach_historical_remarks(r,remark_engine) for r in risks]
     unique={}
     for risk in risks:
         key=(risk.get("scenario_id") or risk["category"],risk["object"].lower(),risk["parameter"].lower())

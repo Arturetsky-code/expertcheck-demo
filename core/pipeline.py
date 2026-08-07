@@ -33,9 +33,13 @@ from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
 from .trusted_project_model import annotate_findings, filter_registry
 from .cognitive_document_intelligence import CognitiveDocumentIntelligence
-from .ai_pipeline import run_ai_pipeline, review_object_candidates, apply_object_reviews
+from .ai_pipeline import run_ai_pipeline, review_object_candidates, apply_object_reviews, discover_objects_from_scope_evidence
 from .engineering_intelligence import apply_structure_guards, audit_mandatory_documents, scan_normative_references
 from .object_gate import apply_hard_object_gate
+from .project_object_recovery import recover_project_objects_from_uploaded
+from .project_profile_87 import detect_pp87_profile
+from .visual_document_intelligence import recover_text_from_scanned_pages
+from .project_object_recovery import recover_project_objects_from_pages
 from .evidence_graph import build_evidence_graph
 from .normative_knowledge import NormativeKnowledgeLayer
 from .remark_learning import RemarkLearningEngine
@@ -166,6 +170,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             except Exception:
                 pass
 
+    ai_options = ai_options or {}
     progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
 
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
@@ -242,6 +247,39 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         page_tables = {}
         pipeline_errors.append({"stage": "table_ranking", "error": str(exc)})
 
+    progress(68, "Состав проекта", "Ищем объекты по ПЗ, идентификационным признакам и формулировкам проектных решений")
+    try:
+        recovered_objects, object_recovery_audit = recover_project_objects_from_uploaded(pdf_files, document_types)
+        findings.extend(recovered_objects)
+    except Exception as exc:
+        recovered_objects, object_recovery_audit = [], [{"decision":"error","reason":str(exc)}]
+        pipeline_errors.append({"stage": "project_object_recovery", "error": str(exc)})
+
+    # AI participates in the *discovery* stage, not only in secondary filtering.
+    # It receives only strong scope/identification excerpts and every returned
+    # name is checked against the source excerpt before becoming a candidate.
+    ai_scope_result = None
+    ai_scope_sent = 0
+    ai_scope_objects = []
+    if str(ai_options.get("level") or "off").lower() != "off" and ai_options.get("provider") is not None:
+        progress(68, "AI-анализ состава", "ИИ проверяет сильные источники состава проекта и восстанавливает пропущенные объекты")
+        try:
+            ai_scope_result, ai_scope_objects, ai_scope_sent = discover_objects_from_scope_evidence(
+                ai_options.get("provider"), object_recovery_audit, limit_pages=6
+            )
+            findings.extend(ai_scope_objects)
+        except Exception as exc:
+            pipeline_errors.append({"stage":"ai_scope_discovery","error":str(exc)})
+
+    progress(69, "Сканы и чертежи", "Определяем текстово-разреженные страницы и выполняем безопасный OCR, если он доступен")
+    try:
+        ocr_pages, scan_audit = recover_text_from_scanned_pages(pdf_files, document_types, max_pages_per_file=4)
+        ocr_objects, ocr_object_audit = recover_project_objects_from_pages(ocr_pages)
+        findings.extend(ocr_objects)
+    except Exception as exc:
+        ocr_pages, scan_audit, ocr_object_audit = [], [{"decision":"error","reason":str(exc)}], []
+        pipeline_errors.append({"stage": "scan_ocr", "error": str(exc)})
+
     for item in findings:
         table_info = page_tables.get((item.get("document"), int(item.get("page") or 0)), {})
         item.update(table_info)
@@ -255,7 +293,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
+        item["core_version"] = "7.2-deep-project-understanding-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -294,7 +332,6 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(70, "Object Gate", "Отсекаем оглавления, пункты разделов, даты и служебные строки")
     final_gate = apply_hard_object_gate(findings)
     object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(final_gate.get(k,0)) for k in set(object_gate_audit)|set(final_gate)}
-    ai_options = ai_options or {}
     learning_examples = list(ai_options.get("learning_examples") or [])
     learning_applied = apply_learning_examples(findings, learning_examples)
     pre_ai_result, pre_ai_reviews, pre_ai_sent = review_object_candidates(
@@ -347,13 +384,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
+        item["core_version"] = "7.2-deep-project-understanding-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
+    pp87_project_profile = detect_pp87_profile(findings, documents)
     for doc in documents:
-        doc["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
+        doc["core_version"] = "7.2-deep-project-understanding-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -419,6 +457,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["pipeline_errors"] = pipeline_errors
         doc["structure_guard_audit"] = structure_guard_audit
         doc["object_gate_audit"] = object_gate_audit
+        doc["object_recovery_audit"] = object_recovery_audit
+        doc["ai_scope_discovery"] = {
+            "sources_sent": ai_scope_sent,
+            "objects_recovered": len(ai_scope_objects),
+            "provider": getattr(ai_scope_result, "provider", "") if ai_scope_result else "",
+            "error": getattr(ai_scope_result, "error", "") if ai_scope_result and not ai_scope_result.ok else "",
+        }
+        doc["scan_document_audit"] = scan_audit
+        doc["ocr_object_audit"] = ocr_object_audit
+        doc["pp87_project_profile"] = pp87_project_profile
         doc["learning_engine_summary"] = {"examples_loaded": len(learning_examples), "rules_applied": learning_applied}
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit

@@ -35,9 +35,13 @@ def load_risk_scenarios(path: str | Path | None = None) -> list[dict[str, Any]]:
         return []
 
 
-def _scenario_match(blob: str, scenario: dict[str, Any]) -> tuple[int, list[str]]:
+def _scenario_match(blob: str, scenario: dict[str, Any], parameter_code: str = "") -> tuple[int, list[str]]:
     triggers = scenario.get("triggers") or {}
     matched=[]; score=0
+    exact_codes={str(x).upper() for x in (scenario.get("parameter_codes") or [])}
+    if parameter_code and parameter_code.upper() in exact_codes:
+        matched.append(parameter_code.upper())
+        score += 58
     status_hits=0; keyword_hits=0
     for token in triggers.get("statuses") or []:
         norm=_norm(token)
@@ -59,7 +63,7 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
     blob=_norm(" ".join(str(risk.get(k) or "") for k in ("category","object","parameter","finding","possible_remark","sources")))
     best=None; best_score=0; best_tokens=[]
     for scenario in scenarios:
-        score,tokens=_scenario_match(blob,scenario)
+        score,tokens=_scenario_match(blob,scenario,str(risk.get("parameter_code") or ""))
         if score>best_score:
             best,best_score,best_tokens=scenario,score,tokens
     if not best or best_score < 22:
@@ -108,7 +112,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         if priority.lower().startswith("выс"): score+=18
         elif priority.lower().startswith("низ"): score-=8
         sources=row.get("sources") or row.get("Источники") or row.get("sections") or row.get("document_values") or ""
-        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность" if kind=="mismatch" else "Полнота и доказательность","object":obj,"parameter":parameter,"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark(kind,obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах." if kind=="mismatch" else "Дополнить сведения либо подтвердить показатель однозначным источником с указанием объекта и страницы.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if sources else "Средняя"}
+        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность" if kind=="mismatch" else "Полнота и доказательность","object":obj,"parameter":parameter,"parameter_code":_text(row,"parameter_code"),"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark(kind,obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах." if kind=="mismatch" else "Дополнить сведения либо подтвердить показатель однозначным источником с указанием объекта и страницы.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if sources else "Средняя"}
         risks.append(_enrich(risk,scenarios))
     for index,row in enumerate(object_rows):
         included=bool(row.get("Включить в состав проекта",row.get("include",False)))

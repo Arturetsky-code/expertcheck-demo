@@ -71,6 +71,13 @@ def build_structured_report(
             "explanation": _text(row, "explanation", "Пояснение") or "Проверьте исходные значения и актуальность разделов.",
             "sources": row.get("sources") or row.get("sections") or "",
         })
+    # Один инженерный вопрос — одна строка в стандартном отчёте.
+    deduped = {}
+    for item in problems:
+        key = (item["object"].strip().lower(), item["parameter"].strip().lower(), item["status"].strip().lower())
+        if key not in deduped:
+            deduped[key] = item
+    problems = list(deduped.values())
     problems.sort(key=lambda x: (x["priority"] != "Высокий", x["object"], x["parameter"]))
 
     high_risks = [r for r in risks if str(r.get("level")) == "Высокий"]
@@ -115,7 +122,7 @@ def build_structured_report(
         text = f"Проверить показатель «{p['parameter']}» по объекту «{p['object']}» и согласовать сведения между разделами."
         if text not in recommendations:
             recommendations.append(text)
-    recommendations = recommendations[:15]
+    recommendations = recommendations[:10]
 
     if high_risks:
         conclusion = f"Выявлено {len(high_risks)} вопрос(а) высокого риска. Рекомендуется устранить их до передачи документации на экспертизу."

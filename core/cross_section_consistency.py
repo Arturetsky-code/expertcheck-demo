@@ -8,6 +8,7 @@ from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, classify_object, parameter_applicability
 from .object_identity import ObjectIdentityEngine
+from .property_intelligence import normalize_engineering_value, parameter_display_name
 
 # Абсолютный допуск, относительный допуск, приоритет проверки.
 TOLERANCES: dict[str, tuple[float, float, str]] = {
@@ -30,6 +31,9 @@ TOLERANCES: dict[str, tuple[float, float, str]] = {
     "FLOW_RATE": (0.01, 0.005, "Высокий"),
     "VOLTAGE": (0.01, 0.002, "Высокий"),
     "DEPTH": (0.1, 0.001, "Средний"),
+    "WIDTH": (0.05, 0.002, "Средний"),
+    "VOLUME": (0.1, 0.001, "Высокий"),
+    "LINE_COUNT": (0.0, 0.0, "Высокий"),
 }
 
 SECTION_FAMILIES = (
@@ -69,6 +73,9 @@ EXPECTED_SECTION_HINTS: dict[str, tuple[str, ...]] = {
     "FLOW_RATE": ("ПЗ", "ТХ", "ИОС"),
     "VOLTAGE": ("ПЗ", "ТХ", "ИОС1"),
     "DEPTH": ("ПЗ", "ПЗУ", "ТХ", "КР"),
+    "WIDTH": ("ПЗ", "ПЗУ", "ТХ"),
+    "VOLUME": ("ПЗ", "ТХ", "ИОС"),
+    "LINE_COUNT": ("ПЗ", "ТХ", "ИОС"),
 }
 
 
@@ -84,12 +91,13 @@ def section_family(item: dict[str, Any]) -> str:
 
 
 def numeric_value(item: dict[str, Any]) -> float | None:
-    value = item.get("value_num", item.get("value"))
-    try:
-        return float(str(value).replace(" ", "").replace(",", "."))
-    except (TypeError, ValueError):
-        return None
+    normalized = normalize_engineering_value(item)
+    return normalized.value if normalized else None
 
+
+def value_scope(item: dict[str, Any]) -> str:
+    normalized = normalize_engineering_value(item)
+    return normalized.scope if normalized else "default"
 
 def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
@@ -208,14 +216,16 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
     - не выбирает автоматически "правильный" источник.
     """
     usable = [item for item in findings if _usable(item)]
-    by_code: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_code: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for item in usable:
         code = canonical_parameter_code(item.get("parameter_code"))
         item["parameter_code"] = code
-        by_code[code].append(item)
+        scope = value_scope(item)
+        item["comparison_scope"] = scope
+        by_code[(code, scope)].append(item)
 
     rows: list[dict[str, Any]] = []
-    for code, code_items in by_code.items():
+    for (code, comparison_scope), code_items in by_code.items():
         for object_items in _merge_name_groups(code_items):
             object_items = _dedupe(object_items)
             if not object_items:
@@ -267,8 +277,9 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             if applicability == "not_applicable":
                 continue
             position = next((str(x.get("genplan_position") or "") for x in object_items if x.get("genplan_position")), "")
-            parameter_name = str(next((x.get("parameter_name") for x in object_items if x.get("parameter_name")), code))
-            unit = str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
+            parameter_name = parameter_display_name(code)
+            normalized_first = next((normalize_engineering_value(x) for x in object_items if normalize_engineering_value(x)), None)
+            unit = normalized_first.unit if normalized_first else str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
             abs_tol, rel_tol, priority = TOLERANCES[code]
             expected = EXPECTED_SECTION_HINTS.get(code, ())
             missing_hints = [section for section in expected if section not in section_values]
@@ -301,6 +312,7 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 "parameter_name": parameter_name,
                 "object_type_code": object_type,
                 "parameter_applicability": applicability,
+                "comparison_scope": comparison_scope,
                 "unit": unit,
                 "priority": priority,
                 "rule_name": "Межраздельная согласованность характеристик",
@@ -329,7 +341,7 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                     if status == "СОВПАДАЕТ"
                     else "Требуется подтверждение характеристики в другом разделе."
                 ),
-                "explanation": " ".join(explanation_bits),
+                "explanation": " ".join(explanation_bits) + (" Сопоставляются только значения одного смыслового уровня: " + comparison_scope + "." if comparison_scope != "default" else ""),
                 "rule_source": "core/cross-section",
                 "knowledge_rule_code": "CORE-XSEC-001",
                 "knowledge_rule_name": "Межраздельная согласованность характеристик",

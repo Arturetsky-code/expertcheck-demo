@@ -23,8 +23,11 @@ def display_name(row: dict[str, Any]) -> str:
 def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[dict[str, Any]], evidence_index: dict[str, list[dict[str, Any]]] | None = None, intelligence_decisions: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for source, default_include in ((trusted, True), (candidates, False)):
+    for source, source_default_include in ((trusted, True), (candidates, False)):
         for original in source:
+            # Never mutate the source-level default inside the row loop. A single
+            # review candidate used to switch all following trusted rows off.
+            default_include = bool(source_default_include)
             row = dict(original)
             key = object_key(row)
             if not key or key in seen:
@@ -46,11 +49,14 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             if intel_decision:
                 if intel_decision in {'blocked','context'}:
                     auto_blocked=True
-                # Консервативный режим: при наличии решения Object Intelligence
-                # автоматически включаются только trusted.
-                default_include = bool(default_include and intel_decision == 'trusted')
-                if intel_decision != 'trusted':
                     default_include=False
+                elif intel_decision == 'trusted':
+                    default_include=bool(default_include)
+                elif intel_decision == 'review':
+                    # A deterministic trusted registry row (e.g. GP + PZ) must not
+                    # be downgraded merely because Object Intelligence sees the GP
+                    # evidence alone as review. Candidates remain unchecked.
+                    default_include=bool(source_default_include)
             rows.append({
                 'Ключ': key,
                 'Включить': bool(default_include and not auto_blocked),

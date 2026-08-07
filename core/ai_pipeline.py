@@ -106,8 +106,14 @@ def apply_object_reviews(findings: list[dict[str, Any]], reviews: dict[str, dict
         # AI is advisory. It may strengthen review or block obvious service/equipment,
         # but never upgrades a candidate to trusted without deterministic evidence.
         if review.get("recommended_action") == "exclude" and float(review.get("confidence") or 0) >= 0.85:
-            item["object_intelligence_decision"] = "blocked"
-            item["object_intelligence_reason"] = "AI-вторичная проверка: " + str(review.get("reason") or "кандидат не является объектом проекта")
+            if item.get("general_plan_explication") or item.get("object_recovery_strong_evidence"):
+                # AI cannot erase a deterministic official-register row. It may
+                # only request human review when its semantic interpretation differs.
+                item["object_intelligence_decision"] = "review"
+                item["object_intelligence_reason"] = "AI сомневается в объекте из сильного источника; требуется проверка пользователя: " + str(review.get("reason") or "")
+            else:
+                item["object_intelligence_decision"] = "blocked"
+                item["object_intelligence_reason"] = "AI-вторичная проверка: " + str(review.get("reason") or "кандидат не является объектом проекта")
         elif review.get("recommended_action") == "include" and item.get("object_intelligence_decision") != "trusted":
             item["object_intelligence_decision"] = "review"
             item["object_intelligence_reason"] = "AI рекомендует включение, но требуется подтверждение пользователя: " + str(review.get("reason") or "")

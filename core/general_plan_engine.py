@@ -29,6 +29,36 @@ SERVICE_NAMES = {
 }
 ROW_NOTES = {"проект", "проект.", "сущ", "сущ.", "существ.", "перспект", "перспект.", "стр", "стр."}
 
+
+def _page_status_policy(page: fitz.Page, textpage: fitz.TextPage | None = None) -> tuple[bool, bool]:
+    """Return (mixed_statuses, has_project_marker) for an explication page."""
+    low = _normalize_text(page.get_text("text", textpage=textpage))
+    has_existing = bool(re.search(r"\b(?:сущ\.?|существ\w*)\b", low))
+    has_perspective = bool(re.search(r"\bперспект\w*\.?\b", low))
+    has_project = bool(re.search(r"\bпроект\w*\.?\b", low))
+    # A dedicated heading is stronger than incidental existing-object labels on
+    # the drawing field. In that case the explication itself is project-only.
+    dedicated_project_heading = any(tok in low for tok in (
+        "проектируемые здания и сооружения", "экспликация проектируемых объектов",
+        "перечень проектируемых объектов", "проектируемые объекты"
+    ))
+    if dedicated_project_heading:
+        return False, True
+    return bool(has_existing or has_perspective), has_project
+
+
+def _status_from_row_text(text: str) -> str:
+    low = _normalize_text(text)
+    if re.search(r"\b(?:сущ\.?|существ\w*)\b", low):
+        return "Существующий"
+    if re.search(r"\bперспект\w*\.?\b", low):
+        return "Перспективный"
+    if re.search(r"\bреконстр\w*\b", low):
+        return "Реконструируемый"
+    if re.search(r"\bпроект\w*\.?\b", low):
+        return "Проектируемый"
+    return "Не определён"
+
 # Консервативный словарь для подписей/выносок непосредственно на поле генплана.
 # Такие записи имеют меньший приоритет, чем экспликация, но могут формировать
 # кандидата объекта, если экспликация отсутствует (характерно для линейных объектов).
@@ -54,6 +84,8 @@ class GeneralPlanEntry:
     extraction_method: str
     evidence: str
     named_plan_label: bool = False
+    design_status: str = "Не определён"
+    project_default: bool = False
 
     def to_finding(self, document: str) -> dict[str, Any]:
         confirmations = []
@@ -83,6 +115,11 @@ class GeneralPlanEntry:
             "general_plan_field": self.on_drawing,
             "general_plan_named_label": self.named_plan_label,
             "general_plan_occurrences": self.drawing_occurrences,
+            "general_plan_design_status": self.design_status,
+            "general_plan_project_default": self.project_default,
+            "source_kind": "general_plan_explication" if self.in_explication else "general_plan_field",
+            "record_kind": "project_object",
+            "object_recovery_strong_evidence": bool(self.in_explication),
             "review_note": "; ".join(confirmations),
         }
 
@@ -207,7 +244,7 @@ def _extract_explication_blocks(page: fitz.Page, textpage: fitz.TextPage | None 
                 if position and _is_plausible_name(name):
                     direct[position] = name
                     audit.append({"page": page.number + 1, "position": position, "name": name,
-                                  "decision": "принято", "method": "строка экспликации"})
+                                  "decision": "принято", "method": "строка экспликации", "raw_text": block["text"]})
                 elif position and not name:
                     standalone_positions.append({**block, "position": position})
         elif _is_plausible_name(block["text"]):
@@ -238,7 +275,7 @@ def _extract_explication_blocks(page: fitz.Page, textpage: fitz.TextPage | None 
                 direct[pos_block["position"]] = name
                 used_names.add(idx)
                 audit.append({"page": page.number + 1, "position": pos_block["position"], "name": name,
-                              "decision": "принято", "method": "связаны соседние ячейки экспликации"})
+                              "decision": "принято", "method": "связаны соседние ячейки экспликации", "raw_text": pos_block.get("text", "") + " " + match.get("text", "")})
         else:
             audit.append({"page": page.number + 1, "position": pos_block["position"], "name": "",
                           "decision": "требует проверки", "method": "позиция без наименования"})
@@ -371,7 +408,7 @@ class GeneralPlanRegisterEngine:
 
     def extract_pdf(self, data: bytes, filename: str) -> tuple[list[GeneralPlanEntry], list[dict[str, Any]]]:
         doc = fitz.open(stream=data, filetype="pdf")
-        explication: dict[str, tuple[str, int]] = {}
+        explication: dict[str, tuple[str, int, str, bool]] = {}
         field_counts: dict[str, int] = {}
         field_pages: dict[str, set[int]] = {}
         named_labels: dict[str, tuple[str, int]] = {}
@@ -392,11 +429,19 @@ class GeneralPlanRegisterEngine:
             page_rows: dict[str, str] = {}
             if _page_has_explication(page, textpage):
                 page_rows, row_audit = _extract_explication_blocks(page, textpage)
+                mixed_statuses, has_project_marker = _page_status_policy(page, textpage)
+                row_status = {str(r.get("position") or ""): _status_from_row_text(str(r.get("raw_text") or "") + " " + str(r.get("name") or "")) for r in row_audit}
                 audit.extend(row_audit)
                 for position, name in page_rows.items():
+                    status = row_status.get(position) or "Не определён"
+                    # If the explication page contains no existing/prospective markers,
+                    # it is a project explication and rows may default to projected.
+                    project_default = not mixed_statuses
+                    if status == "Не определён" and project_default:
+                        status = "Проектируемый"
                     current = explication.get(position)
                     if not current or len(name) > len(current[0]):
-                        explication[position] = (name, page.number + 1)
+                        explication[position] = (name, page.number + 1, status, project_default)
             if _looks_like_general_plan(page, textpage):
                 exp_names = {_normalize_text(name) for name in page_rows.values()}
                 if text_method.startswith("OCR"):
@@ -413,7 +458,7 @@ class GeneralPlanRegisterEngine:
 
         entries: list[GeneralPlanEntry] = []
         for position in sorted(explication, key=lambda p: tuple(int(x) for x in p.split("."))):
-            name, exp_page = explication[position]
+            name, exp_page, design_status, project_default = explication[position]
             occurrences = field_counts.get(position, 0)
             # Одно вхождение обычно находится в экспликации, второе — на поле чертежа.
             on_drawing = occurrences >= 2
@@ -425,6 +470,7 @@ class GeneralPlanRegisterEngine:
                 in_explication=True, on_drawing=on_drawing,
                 drawing_occurrences=occurrences, confidence=confidence,
                 extraction_method=method, evidence=evidence,
+                design_status=design_status, project_default=project_default,
             ))
 
         # Подписи поля не дублируют объекты экспликации по нормализованному наименованию.
@@ -448,11 +494,14 @@ class GeneralPlanRegisterEngine:
         for uploaded in files:
             declared = document_types.get(uploaded.name, "")
             # Для файлов с нейтральным именем выполняется безопасная содержательная проверка.
-            should_try = declared == "ПЗУ2"
+            filename_low = _normalize_text(getattr(uploaded, "name", ""))
+            should_try = declared == "ПЗУ2" or any(tok in filename_low for tok in ("пзу2", "генплан", "генеральный план", "гп"))
             if not should_try:
                 try:
                     probe = fitz.open(stream=uploaded.getvalue(), filetype="pdf")
-                    should_try = any(_looks_like_general_plan(page) for page in list(probe)[:3])
+                    # Explications are frequently located on sheets 4-8, not in the
+                    # first three pages. Probe a wider but still bounded window.
+                    should_try = any(_looks_like_general_plan(page) for page in list(probe)[:12])
                     probe.close()
                 except Exception:
                     should_try = False

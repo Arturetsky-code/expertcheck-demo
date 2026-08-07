@@ -44,6 +44,7 @@ from .evidence_graph import build_evidence_graph
 from .normative_knowledge import NormativeKnowledgeLayer
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
+from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -293,7 +294,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.2-deep-project-understanding-alpha1"
+        item["core_version"] = "7.3-object-discovery-3-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -346,6 +347,20 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     object_registry, object_candidates = filter_registry(raw_object_registry, findings)
     consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
 
+    # General Plan First safety net. The explication is an independent object
+    # register and must remain visible even if downstream lifecycle inference or
+    # PZ/XML matching is incomplete. Explicit project rows are restored to the
+    # trusted registry; unknown-status rows remain visible as candidates.
+    object_registry, object_candidates, gp_seed_audit = ensure_general_plan_registry_visibility(
+        object_registry, object_candidates, gp_findings
+    )
+    consolidated_registry, consolidated_candidates, gp_seed_audit_consolidated = ensure_general_plan_registry_visibility(
+        consolidated_registry, consolidated_candidates, gp_findings
+    )
+    recovery_mode_triggered = needs_object_recovery(object_registry, object_candidates, gp_findings)
+    if recovery_mode_triggered:
+        progress(74, "Recovery Mode", "Повторно используем экспликацию генплана и сильные источники ПЗ; результат не считается пустым автоматически")
+
     ai_pipeline_audit = run_ai_pipeline(
         findings,
         comparisons,
@@ -384,14 +399,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.2-deep-project-understanding-alpha1"
+        item["core_version"] = "7.3-object-discovery-3-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     pp87_project_profile = detect_pp87_profile(findings, documents)
     for doc in documents:
-        doc["core_version"] = "7.2-deep-project-understanding-alpha1"
+        doc["core_version"] = "7.3-object-discovery-3-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -458,6 +473,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["structure_guard_audit"] = structure_guard_audit
         doc["object_gate_audit"] = object_gate_audit
         doc["object_recovery_audit"] = object_recovery_audit
+        doc["object_discovery_3_summary"] = {
+            "general_plan_first": True,
+            "general_plan_explication_objects": sum(1 for x in gp_findings if x.get("general_plan_explication")),
+            "general_plan_seed_trusted": int(gp_seed_audit.get("general_plan_seed_trusted", 0)) + int(gp_seed_audit_consolidated.get("general_plan_seed_trusted", 0)),
+            "general_plan_seed_candidates": int(gp_seed_audit.get("general_plan_seed_candidates", 0)) + int(gp_seed_audit_consolidated.get("general_plan_seed_candidates", 0)),
+            "recovery_mode_triggered": recovery_mode_triggered,
+            "trusted_objects": len(object_registry),
+            "candidate_objects": len(object_candidates),
+        }
         doc["ai_scope_discovery"] = {
             "sources_sent": ai_scope_sent,
             "objects_recovered": len(ai_scope_objects),

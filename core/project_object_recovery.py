@@ -88,6 +88,33 @@ def _is_plausible_object_name(name: str, *, strong_context: bool = False) -> boo
     # Sentence-like prose, legal references and actions are not register names.
     if any(tok in low for tok in ('в соответствии с','федеральн закон','градостроительн кодекс','застройщик','использовать','используя','выполняется','будет расположен','будет размещ','будет введен','будет введён','являются','является','представлено','организовать','схема устройства','система пожарной сигнализации','проектируемую систему','проектируемая система')):
         return False
+    # Identification-sign pages frequently contain explanatory prose that also
+    # mentions buildings/structures. Those sentences are context, not object names.
+    if low.startswith(('сведения ', 'документация ', 'требования ', 'требований ', 'безопасности ',
+                       'затрат ', 'людей ', 'необходимости ', 'значимости ', 'назначение ',
+                       'оборудовании ', 'инженерном оборудовании ', 'наименование зданий',
+                       'сооружений и вид', 'постоянным ')):
+        return False
+    if any(tok in low for tok in ('для объектов капитального строительства', 'о зданиях (сооружениях)',
+                                  'о зданиях и сооружениях', 'сетях и системах инженерно-технического обеспечения')):
+        return False
+    if name.count(',') >= 2 and len(name.split()) > 8:
+        return False
+    if low.startswith(('разработана ', 'разработан ', 'строений, ', '(сооружениях)', 'зданий и сооружений')):
+        return False
+    # Fragmented table cells often arrive as lowercase grammatical fragments.
+    # Keep lowercase names only when they start with a clear engineering object noun.
+    first = low.split()[0] if low.split() else ''
+    object_first = ('здани','сооружен','площадк','станц','подстанц','насосн','компрессорн',
+                    'резервуар','емкост','ёмкост','склад','цех','комплекс','установк','узел','камер',
+                    'эстакад','галере','конвейер','дорог','трубопровод','водовод','канал','дамб','карьер',
+                    'отвал','пруд','лини','мачт','опор','модул','кпп','ктп','дэс','очистн','приемн','приёмн')
+    if name[:1].islower() and not any(first.startswith(x) for x in object_first):
+        return False
+    if 'ооо' in low and not any(low.startswith(x) for x in object_first):
+        return False
+    if low in {'площадки','площадка','сооружения','сооружение','комплекса','значимости','постоянным','линии, т','линии'}:
+        return False
     reasons = name_rejection_reasons(name)
     if reasons:
         return False

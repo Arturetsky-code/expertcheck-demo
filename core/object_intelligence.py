@@ -67,6 +67,7 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
     positions: dict[str, str] = {}
     lifecycles: dict[str, list[str]] = defaultdict(list)
     hard_blocks: dict[str, list[str]] = defaultdict(list)
+    gp_explication: dict[str, bool] = defaultdict(bool)
 
     for item in findings:
         if str(item.get("parameter_code") or "") not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
@@ -79,6 +80,7 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
                 positions[key] = str(item.get("genplan_position") or "").strip()
                 lifecycles[key].append(str(item.get("object_lifecycle_status") or "Не определён"))
                 hard_blocks[key].append(str(item.get("hard_object_gate_reason") or item.get("structure_guard_reason") or "служебная запись"))
+                gp_explication[key] = gp_explication[key] or bool(item.get("general_plan_explication"))
             continue
         key = _candidate_key(item)
         if key == "|":
@@ -87,6 +89,7 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
         names[key] = str(item.get("value_text") or item.get("object_hint") or "").strip()
         positions[key] = str(item.get("genplan_position") or "").strip()
         lifecycles[key].append(str(item.get("object_lifecycle_status") or "Не определён"))
+        gp_explication[key] = gp_explication[key] or bool(item.get("general_plan_explication"))
 
     decisions: dict[str, dict[str, Any]] = {}
     for key, records in grouped.items():
@@ -115,9 +118,14 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
             confidence = 0
             reason = "Кандидат найден только в запрещённых служебных источниках."
         elif lifecycle not in PROJECT_LIFECYCLES:
-            decision = "context"
-            confidence = 40 if valid else 0
-            reason = f"Статус объекта: {lifecycle}. В основной состав текущего проекта не включается автоматически."
+            if gp_explication.get(key) and lifecycle == "Не определён" and positions.get(key):
+                decision = "review"
+                confidence = 82
+                reason = "Позиция найдена в экспликации генерального плана, но статус проектирования не удалось прочитать. Объект сохраняется для сопоставления с ПЗ/XML и подтверждения пользователя."
+            else:
+                decision = "context"
+                confidence = 40 if valid else 0
+                reason = f"Статус объекта: {lifecycle}. В основной состав текущего проекта не включается автоматически."
         elif official and positions.get(key):
             decision = "trusted"
             confidence = 99 if len(independent) >= 2 else 96

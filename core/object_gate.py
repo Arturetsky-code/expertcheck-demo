@@ -32,6 +32,13 @@ SERVICE_ZONE_TOKENS = (
     'титульный лист','список исполнителей','ведомость ссылочных','перечень листов','содержание тома',
 )
 
+PROPERTY_LABEL_STEMS = (
+    'площадь участка', 'площадь застройки', 'общая площадь', 'полезная площадь',
+    'строительный объем', 'строительный объём', 'производительность', 'мощность',
+    'высота', 'этажность', 'количество этажей', 'протяженность', 'протяжённость',
+    'диаметр', 'давление', 'расход', 'вместимость', 'объем', 'объём', 'ширина', 'глубина',
+)
+
 
 def _context_blob(item: dict[str, Any]) -> str:
     return normalize_text(' '.join(str(item.get(k) or '') for k in (
@@ -98,6 +105,14 @@ def hard_rejection_reason(item: dict[str, Any]) -> str:
     heading = _section_heading_reason(name, item)
     if heading:
         return heading
+
+    low_name = normalize_text(name)
+    # A parameter label/value row is not a project object. This specifically
+    # prevents rows such as "Площадь застройки, всего" from surviving recovery.
+    if any(low_name.startswith(stem) for stem in PROPERTY_LABEL_STEMS):
+        return 'наименование является технико-экономическим показателем, а не объектом'
+    if re.fullmatch(r'(?:линии|линия|итого|всего)[,;:]?\s*(?:т|шт|м|м2|м²|м3|м³)?', low_name):
+        return 'обрывок строки таблицы/показателя, а не объект'
 
     # Reuse global non-object rules as the final safety net. Object semantics
     # can override only weak generic reasons, never file/service/date reasons.

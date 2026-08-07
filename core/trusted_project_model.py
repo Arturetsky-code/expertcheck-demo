@@ -8,7 +8,7 @@ from .object_semantics import is_service_object_candidate
 from .object_quality_rules import name_rejection_reasons
 from .position_rules import is_date_like_position
 
-PROJECT_TOKENS = ("проект", "проектируем", "новое строительство", "нов. стр", "стр.")
+PROJECT_TOKENS = ("проектируем", "проектом предусматри", "новое строительство", "нов. стр", "строительство", "реконструкц")
 EXISTING_TOKENS = ("сущ", "существ", "действующ", "сохраняем")
 PERSPECTIVE_TOKENS = ("перспект", "последующ", "резерв")
 RECONSTRUCTION_TOKENS = ("реконстр", "техническое перевооруж", "модерниз")
@@ -25,8 +25,19 @@ def lifecycle_status(item: dict[str, Any]) -> str:
     if any(t in text for t in RECONSTRUCTION_TOKENS): return "Реконструируемый"
     if any(t in text for t in PERSPECTIVE_TOKENS): return "Перспективный"
     if any(t in text for t in EXISTING_TOKENS): return "Существующий"
+    if item.get("general_plan_explication") and re.search(r"\bпроект\.?\b", text): return "Проектируемый"
     if any(t in text for t in PROJECT_TOKENS): return "Проектируемый"
-    if item.get("general_plan_explication") and not text:
+    # General Plan explication is an independent object register. Preserve an
+    # explicit lifecycle status extracted by GeneralPlan Intelligence. When an
+    # explication page contains no markers of existing/prospective objects, the
+    # engine may safely classify its rows as project objects. Otherwise the row
+    # remains visible as a candidate rather than disappearing from the registry.
+    if item.get("general_plan_explication"):
+        gp_status = str(item.get("general_plan_design_status") or "").strip()
+        if gp_status in {"Проектируемый", "Реконструируемый", "Существующий", "Перспективный"}:
+            return gp_status
+        if bool(item.get("general_plan_project_default")):
+            return "Проектируемый"
         return "Не определён"
     return "Проектируемый" if str(item.get("document_type") or "") in {"ПЗ", "XML"} and item.get("parameter_code") == "OBJECT_ENTRY" else "Не определён"
 
@@ -106,7 +117,15 @@ def filter_registry(records: list[dict[str, Any]], findings: Iterable[dict[str, 
             registry_reasons = list(registry_reasons) + ["позиция похожа на календарную дату"]
         hard_blocked=any(bool(x.get("hard_object_gate_blocked") or x.get("structure_guard_blocked")) for x in ev) and not any(int(x.get("object_trust_score") or -1000) >= 80 for x in ev)
         confirmed_sources=int(row.get("Количество источников") or row.get("Подтверждений") or 0)
-        is_trusted=(not service and not hard_blocked and life in {"Проектируемый","Реконструируемый"} and (max_score>=80 or (max_score>=60 and confirmed_sources>=2)))
+        gp_explication = any(bool(x.get("general_plan_explication")) for x in ev)
+        explicit_project = life in {"Проектируемый","Реконструируемый"}
+        # General-plan rows must never be lost merely because lifecycle text was
+        # absent. Unknown GP-only rows remain candidates; cross-confirmed rows are
+        # trusted once another independent source confirms the same object.
+        is_trusted=(not service and not hard_blocked and (
+            (explicit_project and (max_score>=80 or (max_score>=60 and confirmed_sources>=2)))
+            or (gp_explication and confirmed_sources>=2 and max_score>=80 and life not in {"Существующий","Перспективный"})
+        ))
         row=dict(row); row["Статус проектирования"]=life; row["Доверие к объекту"]=max_score; row["Подтвержденный реестр"]=is_trusted
         if registry_reasons:
             row["Причина исключения из подтвержденного реестра"] = "; ".join(registry_reasons)

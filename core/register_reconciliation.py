@@ -199,6 +199,17 @@ class RegisterReconciliationEngine:
                 chosen = max(by_source[source], key=lambda row: (float(row.get("confidence") or 0), len(row["_name"])))
                 break
         chosen = chosen or group[0]
+        # PZ tables are primary, but PDF extraction may split a multi-line name
+        # into a generic fragment (e.g. "подстанция"). When the general plan
+        # carries a clearly more complete version of the same name, preserve the
+        # fuller GP identity while still recording PZ as confirmation.
+        if chosen.get("_group") == "PZ" and by_source.get("GENERAL_PLAN"):
+            gp_best = max(by_source["GENERAL_PLAN"], key=lambda row: (float(row.get("confidence") or 0), len(row.get("_name", ""))))
+            pz_norm = normalize_name(chosen.get("_name"))
+            gp_norm = normalize_name(gp_best.get("_name"))
+            containment = bool(pz_norm and gp_norm and (pz_norm in gp_norm or gp_norm in pz_norm))
+            if containment and len(gp_norm) >= len(pz_norm) * 1.25:
+                chosen = gp_best
         chosen_source = SOURCE_LABELS.get(str(chosen.get("_group") or ""), str(chosen.get("_group") or ""))
 
         source_names = {

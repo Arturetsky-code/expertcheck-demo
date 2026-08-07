@@ -43,6 +43,9 @@ FILE_RE = re.compile(r'\.(?:pdf|xml|sig|zip|rar|7z|docx?|xlsx?|dwg|dxf)$', re.I)
 CODE_RE = re.compile(r'\b(?:RAM|РД|ПД|[A-ZА-Я]{2,8})[-_.][A-ZА-Я0-9._-]{4,}\b', re.I)
 ONLY_NUMERIC_RE = re.compile(r'^[\d\s.,:+\-/№()]+$')
 
+TOC_ENTRY_RE = re.compile(r'^\s*\d+(?:\.\d+){1,5}\s+[А-ЯA-Zа-яё]', re.I)
+TOC_SECTION_WORDS = ('введение','общие сведения','общие положения','исходные данные','основные решения','заключение','приложения','нормативные ссылки','описание проектных решений')
+
 
 
 def position_like_prefix(value: str) -> bool:
@@ -62,6 +65,10 @@ def name_rejection_reasons(value: Any) -> list[str]:
         reasons.append('заголовок поля или характеристика, а не объект')
     if ONLY_NUMERIC_RE.fullmatch(raw):
         reasons.append('числовая или координатная строка')
+    if TOC_ENTRY_RE.match(raw):
+        tail = normalize_text(re.sub(r'^\s*\d+(?:\.\d+){1,5}\s*', '', raw))
+        if tail in TOC_SECTION_WORDS or any(tail.startswith(x + ' ') for x in TOC_SECTION_WORDS) or any(x in tail for x in ('сведен','описан','решен','требован','мероприят','организац','обоснован')):
+            reasons.append('элемент содержания или заголовок раздела документа')
     if CODE_RE.search(raw) and len(re.findall(r'[а-яё]{3,}', raw.lower())) < 2:
         reasons.append('шифр документа')
     if DOCUMENT_MARK_RE.search(raw) and not any(noun in low for noun in OBJECT_NOUNS):

@@ -8,6 +8,7 @@ from typing import Any, Iterable
 
 from .normalization import normalize_text
 from .checklist_compiler import compile_item
+from .pp87_matrix import evaluate_pp87
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -201,6 +202,13 @@ class ChecklistEngine:
                 else:
                     status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
             results.append({**item,'compiled_rule':compiled.to_dict(),'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+        return results
+
+    def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None) -> list[dict[str,Any]]:
+        results = self.evaluate(documents, comparisons, findings, source_file=source_file, section=section)
+        if section:
+            selected = self._selected_findings(findings, documents, section)
+            results.extend(evaluate_pp87(section, selected))
         return results
 
     def summary(self, results: Iterable[dict[str,Any]]):

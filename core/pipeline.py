@@ -34,6 +34,7 @@ from .knowledge_engine import default_knowledge_engine
 from .trusted_project_model import annotate_findings, filter_registry
 from .cognitive_document_intelligence import CognitiveDocumentIntelligence
 from .ai_pipeline import run_ai_pipeline
+from .engineering_intelligence import apply_structure_guards, audit_mandatory_documents, scan_normative_references
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -174,6 +175,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     xml_documents, xml_findings, xml_warnings = XmlEngine().parse_uploaded(xml_files)
     documents.extend(xml_documents)
     findings.extend(xml_findings)
+    structure_guard_audit = apply_structure_guards(findings)
     enrich_findings_with_object_semantics(findings)
     trusted_object_audit = annotate_findings(findings)
     pdf_xml_checks = build_pdf_xml_checks(findings)
@@ -247,11 +249,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "6.0-guided-review-alpha1"
+        item["core_version"] = "7.0-engineering-intelligence-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
     findings.extend(discovered_objects)
+    structure_guard_audit_2 = apply_structure_guards(findings)
+    structure_guard_audit = {k: int(structure_guard_audit.get(k,0))+int(structure_guard_audit_2.get(k,0)) for k in set(structure_guard_audit)|set(structure_guard_audit_2)}
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
     trusted_object_audit.extend(annotate_findings(findings))
@@ -315,15 +319,18 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     for filename, _page in page_tables:
         table_pages_by_doc[filename] += 1
 
+    progress(88, "Инженерная полнота", "Проверяем исходные документы и нормативные ссылки")
+    mandatory_document_audit = audit_mandatory_documents(documents, findings)
+    normative_reference_audit = scan_normative_references(findings)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "6.0-guided-review-alpha1"
+        item["core_version"] = "7.0-engineering-intelligence-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "6.0-guided-review-alpha1"
+        doc["core_version"] = "7.0-engineering-intelligence-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -387,6 +394,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["object_passport_summary"] = object_passport_summary
         doc["ai_pipeline_audit"] = ai_pipeline_audit
         doc["pipeline_errors"] = pipeline_errors
+        doc["structure_guard_audit"] = structure_guard_audit
+        doc["mandatory_document_audit"] = mandatory_document_audit
+        doc["normative_reference_audit"] = normative_reference_audit
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     progress(100, "Готово", "Проверка проекта завершена")

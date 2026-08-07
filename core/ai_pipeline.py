@@ -30,7 +30,7 @@ def _safe_fragment(item: dict[str, Any]) -> dict[str, Any]:
         "document", "document_type", "page", "section_title", "structural_zone",
         "table_title", "table_evidence", "context", "source_type",
         "object_intelligence_decision", "object_intelligence_confidence",
-        "object_intelligence_reason", "core2_confidence",
+        "object_intelligence_reason", "core2_confidence", "structure_guard_blocked", "structure_guard_reason",
     )
     return {key: item.get(key) for key in keys if item.get(key) not in (None, "", [])}
 
@@ -39,7 +39,7 @@ def review_object_candidates(
     provider: AIProvider | None,
     findings: list[dict[str, Any]],
     *,
-    limit: int = 8,
+    limit: int = 12,
 ) -> tuple[AIResult | None, dict[str, dict[str, Any]], int]:
     if provider is None:
         return None, {}, 0
@@ -49,6 +49,8 @@ def review_object_candidates(
         if str(item.get("parameter_code") or "") not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
             continue
         decision = str(item.get("object_intelligence_decision") or "review")
+        if item.get("structure_guard_blocked"):
+            continue
         confidence = int(item.get("object_intelligence_confidence") or 0)
         if decision == "trusted" and confidence >= 90:
             continue

@@ -25,14 +25,14 @@ def render(ctx)->None:
         with col: card(title,value,"",tone)
     tabs=st.tabs(["Критично до подачи","Требует внимания","Контроль специалиста"])
     groups=[{"Высокий"},{"Средний"},{"Низкий","Недостаточно данных"}]
-    for tab,levels in zip(tabs,groups):
+    for tab_index, (tab, levels) in enumerate(zip(tabs, groups)):
         with tab:
             selected=[r for r in risks if r.get("level") in levels]
             if not selected: empty("Риски этой группы не сформированы."); continue
             table=pd.DataFrame([{"ID":r["risk_id"],"Категория":r["category"],"Объект / раздел":r.get("object") or "—","Вопрос":r["parameter"],"Аналоги":", ".join(r.get("analog_projects") or []),"Решение":decisions.get(r["risk_id"],{}).get("status","Не рассмотрено")} for r in selected])
             st.dataframe(table,hide_index=True,width="stretch")
             section("Карточки риска","Каждый вывод содержит источник, аналогичный сценарий и действие до подачи.")
-            for risk in selected[:50]:
+            for risk_index, risk in enumerate(selected[:50]):
                 with st.expander(f"{risk['level']} · {risk.get('scenario_title') or risk['category']} · {risk.get('object') or risk['parameter']}"):
                     st.write("**Выявленная проблема**"); st.write(risk["finding"])
                     st.write("**Возможная формулировка замечания**"); st.info(risk["possible_remark"])
@@ -44,7 +44,7 @@ def render(ctx)->None:
                     if risk.get("sources"): st.write("**Доказательства**"); st.write(risk["sources"])
                     current=decisions.get(risk["risk_id"],{})
                     c1,c2=st.columns([1,2])
-                    status=c1.selectbox("Решение",["Не рассмотрено","Принято в работу","Проверено","Не применимо"],index=["Не рассмотрено","Принято в работу","Проверено","Не применимо"].index(current.get("status","Не рассмотрено")),key=f"risk_status_{risk['risk_id']}")
-                    comment=c2.text_input("Комментарий",value=current.get("comment",""),key=f"risk_comment_{risk['risk_id']}")
+                    status=c1.selectbox("Решение",["Не рассмотрено","Принято в работу","Проверено","Не применимо"],index=["Не рассмотрено","Принято в работу","Проверено","Не применимо"].index(current.get("status","Не рассмотрено")),key=f"risk_status_{tab_index}_{risk_index}_{risk.get('risk_id', 'risk')}")
+                    comment=c2.text_input("Комментарий",value=current.get("comment",""),key=f"risk_comment_{tab_index}_{risk_index}_{risk.get('risk_id', 'risk')}")
                     decisions[risk["risk_id"]]={"status":status,"comment":comment}
                     st.caption(f"Источник оценки: {risk['origin']} · Risk ID: {risk['risk_id']} · Надёжность доказательств: {risk.get('evidence_strength','—')}")

@@ -232,6 +232,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Итоговый вывод', report['conclusion']],
     ]
 
+    selected_risks = [r for r in report['risks'] if r.get('level') in ({'Высокий','Средний'} if report_kind != 'technical' else {'Высокий','Средний','Низкий'})]
+    if report_kind == 'manager': selected_risks = selected_risks[:12]
+    elif report_kind == 'gip': selected_risks = selected_risks[:30]
     risks_df = pd.DataFrame([{
         'ID': r.get('risk_id'),
         'Уровень': r.get('level'),
@@ -247,9 +250,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Проекты-аналоги': ', '.join(r.get('analog_projects') or []),
         'Решение пользователя': r.get('user_status') or 'Не рассмотрено',
         'Комментарий пользователя': r.get('user_comment') or '',
-    } for r in report['risks'] if r.get('level') in ({'Высокий','Средний'} if report_kind != 'technical' else {'Высокий','Средний','Низкий'})])
+    } for r in selected_risks])
 
-    problems_df = pd.DataFrame(report['problems']).rename(columns={
+    selected_problems = report['problems'] if report_kind == 'technical' else report['problems'][:(12 if report_kind == 'manager' else 35)]
+    problems_df = pd.DataFrame(selected_problems).rename(columns={
         'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
         'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
     })
@@ -271,39 +275,121 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
 
-    with pd.ExcelWriter(out, engine='openpyxl') as writer:
-        summary_df.to_excel(writer, sheet_name='Резюме', index=False)
-        if not risks_df.empty:
-            risks_df.to_excel(writer, sheet_name='Ключевые риски', index=False)
-        if not problems_df.empty:
-            problems_df.to_excel(writer, sheet_name='Межраздельные вопросы', index=False)
-        if report_kind != 'manager' and not object_df.empty:
-            object_df.to_excel(writer, sheet_name='Состав проекта', index=False)
-        if report_kind != 'manager' and not checklist_problem_df.empty:
-            checklist_problem_df.to_excel(writer, sheet_name='Чек-листы — вопросы', index=False)
-        recommendations_df.to_excel(writer, sheet_name='План действий', index=False)
+    sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
+    if not risks_df.empty:
+        sheets.append(('Ключевые риски', risks_df))
+    if not problems_df.empty:
+        sheets.append(('Межраздельные вопросы', problems_df))
+    # Состав проекта в стандартном отчёте не дублируется: только в техническом приложении.
+    if report_kind == 'technical' and not object_df.empty:
+        sheets.append(('Состав проекта', object_df))
+    if report_kind != 'manager' and not checklist_problem_df.empty:
+        sheets.append(('Чек-листы — вопросы', checklist_problem_df))
+    sheets.append(('План действий', recommendations_df))
+    if report_kind == 'technical':
+        for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
+            if not frame.empty:
+                sheets.append((_safe_sheet_name(sheet_name), frame))
 
-        if report_kind == 'technical':
-            # Compact technical appendix: only reproducible engineering fields, without
-            # raw nested payloads, full page text or internal Python structures.
-            for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
-                if not frame.empty:
-                    frame.to_excel(writer, sheet_name=_safe_sheet_name(sheet_name), index=False)
+    # XlsxWriter creates a clean OOXML package and avoids repair messages that
+    # Excel can show for workbooks containing complex openpyxl metadata.
+    with pd.ExcelWriter(
+        out,
+        engine='xlsxwriter',
+        engine_kwargs={'options': {
+            'strings_to_formulas': False,
+            'strings_to_urls': False,
+            'nan_inf_to_errors': False,
+        }},
+    ) as writer:
+        workbook = writer.book
+        workbook.set_properties({
+            'title': f'ExpertCheck — {project}',
+            'subject': 'Автоматизированная проверка проектной документации',
+            'author': 'ExpertCheck',
+            'company': 'ExpertCheck',
+        })
+        header_fmt = workbook.add_format({
+            'bold': True, 'font_color': '#FFFFFF', 'bg_color': '#1F4E78',
+            'align': 'center', 'valign': 'vcenter', 'text_wrap': True,
+            'border': 1, 'border_color': '#B8C2CC',
+        })
+        body_fmt = workbook.add_format({
+            'valign': 'top', 'text_wrap': True,
+            'bottom': 1, 'bottom_color': '#D9E0E6',
+        })
+        label_fmt = workbook.add_format({
+            'bold': True, 'bg_color': '#D9EAF7', 'valign': 'top',
+            'text_wrap': True, 'border': 1, 'border_color': '#D9E0E6',
+        })
+        value_fmt = workbook.add_format({
+            'bg_color': '#F3F6F9', 'valign': 'top', 'text_wrap': True,
+            'border': 1, 'border_color': '#D9E0E6',
+        })
+        bad_fmt = workbook.add_format({'bg_color': '#FCE4D6'})
+        warn_fmt = workbook.add_format({'bg_color': '#FFF2CC'})
+        ok_fmt = workbook.add_format({'bg_color': '#E2F0D9'})
 
-        _style_workbook(writer.book, report_kind)
-        writer.book.properties.title = f'ExpertCheck — {project}'
-        writer.book.properties.subject = 'Автоматизированная проверка проектной документации'
-        writer.book.properties.creator = 'ExpertCheck'
-        writer.book.active = 0
-        try:
-            writer.book.calculation.fullCalcOnLoad = True
-            writer.book.calculation.forceFullCalc = True
-        except Exception:
-            pass
+        used_names: set[str] = set()
+        for raw_name, frame in sheets:
+            name = _safe_sheet_name(raw_name)
+            base = name
+            suffix = 2
+            while name in used_names:
+                tail = f'_{suffix}'
+                name = (base[:31-len(tail)] + tail)
+                suffix += 1
+            used_names.add(name)
+            safe_frame = _excel_safe_frame(frame)
+            safe_frame.to_excel(writer, sheet_name=name, index=False)
+            worksheet = writer.sheets[name]
+            worksheet.hide_gridlines(2)
+            worksheet.set_row(0, 30, header_fmt)
+            if name == 'Резюме':
+                worksheet.set_column(0, 0, 34, label_fmt)
+                worksheet.set_column(1, 1, 68, value_fmt)
+                worksheet.set_landscape()
+                worksheet.fit_to_pages(1, 0)
+            else:
+                worksheet.freeze_panes(1, 0)
+                if len(safe_frame.columns):
+                    worksheet.autofilter(0, 0, max(len(safe_frame), 1), len(safe_frame.columns)-1)
+                for col_idx, column in enumerate(safe_frame.columns):
+                    values = [str(column)] + [str(v or '') for v in safe_frame[column].head(120)]
+                    width = min(max(max((len(v) for v in values), default=0) + 2, 12), 52)
+                    worksheet.set_column(col_idx, col_idx, width, body_fmt)
+                # Lightweight conditional highlighting without formulas.
+                if len(safe_frame) and len(safe_frame.columns):
+                    last_row = len(safe_frame)
+                    last_col = len(safe_frame.columns)-1
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Высокий', 'format': bad_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Расхождение', 'format': bad_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Требует', 'format': warn_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Средний', 'format': warn_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Совпадает', 'format': ok_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Подтвержден', 'format': ok_fmt})
+
     payload = out.getvalue()
-    # Validate container signature before returning it to Streamlit.
     if not payload.startswith(b'PK'):
         raise ValueError('Не удалось сформировать корректный XLSX-файл.')
+
+    # Full OOXML and workbook round-trip validation before download.
+    import zipfile
+    from openpyxl import load_workbook
+    buffer = io.BytesIO(payload)
+    with zipfile.ZipFile(buffer) as archive:
+        broken = archive.testzip()
+        if broken is not None:
+            raise ValueError(f'Повреждён элемент XLSX: {broken}')
+    buffer.seek(0)
+    check_book = load_workbook(buffer, read_only=True, data_only=False)
+    check_book.close()
     return payload
 
 

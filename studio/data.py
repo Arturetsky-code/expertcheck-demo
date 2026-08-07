@@ -36,8 +36,24 @@ def engineer_findings(df):
     if 'parameter_code' in out:out=out[~out['parameter_code'].fillna('').astype(str).isin(excluded)]
     return out
 
+def composition_baseline(docs):
+    if docs.empty or 'composition_baseline' not in docs:return pd.DataFrame()
+    return pd.DataFrame(docs.iloc[0].get('composition_baseline') or [])
+
 def raw_registry(docs):
-    if docs.empty or 'consolidated_registry' not in docs:return pd.DataFrame()
+    if docs.empty:return pd.DataFrame()
+    # Structured project composition is the fail-safe engineer-facing registry.
+    # If present, it cannot be replaced by generic narrative extraction results.
+    base = composition_baseline(docs)
+    if not base.empty:
+        consolidated = pd.DataFrame(docs.iloc[0].get('consolidated_registry') or [])
+        if not consolidated.empty and 'Позиция по ГП' in consolidated.columns:
+            extra_cols=[c for c in consolidated.columns if c not in base.columns]
+            if extra_cols:
+                enrich=consolidated[['Позиция по ГП']+extra_cols].drop_duplicates('Позиция по ГП')
+                base=base.merge(enrich,on='Позиция по ГП',how='left')
+        return base
+    if 'consolidated_registry' not in docs:return pd.DataFrame()
     return pd.DataFrame(docs.iloc[0].get('consolidated_registry') or [])
 
 def raw_candidates(docs):
@@ -52,7 +68,12 @@ def assembly_rows(docs, findings=None):
     finding_rows=(findings.to_dict('records') if hasattr(findings,'to_dict') else findings) or []
     evidence_index=build_evidence_index(finding_rows)
     intelligence=build_object_decisions(finding_rows)
-    return build_assembly_rows(raw_registry(docs).to_dict('records'), raw_candidates(docs).to_dict('records'), evidence_index, intelligence)
+    trusted=raw_registry(docs).to_dict('records')
+    # With an explicit composition baseline, generic text candidates belong only
+    # to developer diagnostics. The primary table must show the actual project
+    # composition, not sentences, TEP labels or section headings.
+    candidates=[] if not composition_baseline(docs).empty else raw_candidates(docs).to_dict('records')
+    return build_assembly_rows(trusted, candidates, evidence_index, intelligence)
 
 def apply_project_assembly(docs, passports, comparisons, state_rows, confirmed):
     if not confirmed:

@@ -215,8 +215,16 @@ def render(ctx):
         matrix=passport.get('confirmation_matrix') or {}
         src_rows=[{'Раздел':k,'Наличие':v} for k,v in matrix.items()]
         st.dataframe(pd.DataFrame(src_rows),hide_index=True,width='stretch')
+        evidence=passport.get('evidence_sources') or []
+        if evidence:
+            st.markdown('**Точные источники и страницы**')
+            ev_df=pd.DataFrame([{
+                'Документ':x.get('document') or '—','Раздел':x.get('section') or '—','Страница / лист':x.get('page') or '—',
+                'Зона / таблица':x.get('table') or x.get('zone') or '—','Способ обнаружения':x.get('method') or '—'
+            } for x in evidence])
+            st.dataframe(ev_df,hide_index=True,width='stretch',height=min(420,70+35*len(ev_df)))
         if passport.get('registry_sources'):
-            st.caption('Источники реестра: ' + ', '.join(passport.get('registry_sources') or []))
+            st.caption('Разделы с подтверждениями: ' + ', '.join(passport.get('registry_sources') or []))
 
     with tab_risks:
         comparisons_df=ctx.data[2]

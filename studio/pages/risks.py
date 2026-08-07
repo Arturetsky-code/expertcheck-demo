@@ -41,6 +41,12 @@ def render(ctx)->None:
                         st.write("**Связь с базой замечаний**")
                         st.write(f"Сценарий: {risk['scenario_id']} — {risk.get('scenario_title','')}")
                         st.write(f"Повторяемость в базе: {risk.get('recurrence',0)}; проекты-аналоги: {', '.join(risk.get('analog_projects') or []) or 'не указаны'}")
+                    historical=risk.get('historical_remark_analogs') or []
+                    if historical:
+                        st.write('**Похожие реальные замечания экспертов**')
+                        for analog in historical[:3]:
+                            st.markdown(f"- {analog.get('remark','')}  ")
+                            st.caption(f"Совпадение: {analog.get('similarity_score','—')} · Повторяемость: {analog.get('recurrence',0)} · Разделы: {', '.join(analog.get('sections') or []) or '—'}")
                     if risk.get("sources"): st.write("**Доказательства**"); st.write(risk["sources"])
                     current=decisions.get(risk["risk_id"],{})
                     c1,c2=st.columns([1,2])

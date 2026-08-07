@@ -136,6 +136,17 @@ def _dashboard(ctx):
 
     tab_summary, tab_documents, tab_completeness, tab_ird = st.tabs(['Сводка', 'Документы', 'Комплектность', 'Исходные документы'])
     with tab_summary:
+        first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+        pp87_profile = first_doc.get('pp87_project_profile') or {}
+        if pp87_profile:
+            with st.container(border=True):
+                st.markdown('**Профиль проверки по ПП №87**')
+                st.write(pp87_profile.get('profile') or 'Тип требует подтверждения')
+                appendices=pp87_profile.get('appendices') or []
+                if appendices:
+                    st.caption('Применимые специальные приложения: ' + '; '.join(x.get('title','') for x in appendices if x.get('title')))
+                else:
+                    st.caption('Специальные приложения автоматически не определены.')
         section('Что требует внимания', 'Показаны только результаты, по которым требуется инженерное решение.')
         problems = report['problems']
         if not problems:

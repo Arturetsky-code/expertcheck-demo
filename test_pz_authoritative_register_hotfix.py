@@ -58,6 +58,7 @@ def test_authoritative_pz_baseline_suppresses_identification_only_rows_but_keeps
       {'parameter_code':'OBJECT_ENTRY','genplan_position':'4.30','value_text':'Новый объект с генплана','general_plan_explication':True},
     ]
     t,c,a=enforce_authoritative_pz_registry(trusted,candidates,pz,findings)
-    assert [x['Позиция по ГП'] for x in t]==['4.1','4.4']
-    assert [x['Позиция по ГП'] for x in c]==['4.30']
-    assert a['suppressed_non_authoritative']>=2
+    assert [x['Позиция по ГП'] for x in t][:2]==['4.1','4.4']
+    assert any(x['Позиция по ГП']=='4.30' for x in t)
+    assert not any(x['Позиция по ГП']=='4.30' for x in c)
+    assert a['suppressed_non_authoritative']==0

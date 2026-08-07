@@ -64,7 +64,7 @@ def _section_heading_reason(name: str, item: dict[str, Any]) -> str:
     strong_register = bool(
         item.get('general_plan_explication')
         or item.get('object_recovery_strong_evidence')
-        or item.get('source_kind') in {'xml','project_scope_recovery'}
+        or item.get('source_kind') in {'xml','project_scope_recovery','pz_complex_object_register'}
         or any(token in normalize_text(str(item.get('match_method') or '') + ' ' + str(item.get('structural_zone') or ''))
                for token in ('экспликац','состав сложного объекта','идентификационн призна','сильный источник состава'))
     )
@@ -101,6 +101,11 @@ def hard_rejection_reason(item: dict[str, Any]) -> str:
     prefix = DATE_PREFIX_RE.match(name)
     if prefix and is_date_like_position(prefix.group(1)):
         return 'строка начинается с календарной даты'
+
+    # The authoritative PZ complex-object register wins over generic title/service heuristics.
+    # Calendar-like positions/names were already blocked above.
+    if item.get('pz_complex_object_register') or item.get('source_kind') == 'pz_complex_object_register':
+        return ''
 
     heading = _section_heading_reason(name, item)
     if heading:

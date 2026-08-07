@@ -13,10 +13,15 @@ EXISTING_TOKENS = ("сущ", "существ", "действующ", "сохра
 PERSPECTIVE_TOKENS = ("перспект", "последующ", "резерв")
 RECONSTRUCTION_TOKENS = ("реконстр", "техническое перевооруж", "модерниз")
 DEMOLITION_TOKENS = ("демонт", "снос", "ликвидир")
-FILEISH_RE = re.compile(r"(?:\.pdf|\.xml|\.sig|\.zip|\.docx?|\.xlsx?|раздел\s+пд|подраздел\s+пд|том\s*№?|часть\s*№?)", re.I)
+FILEISH_RE = re.compile(r"(?:\.pdf\b|\.xml\b|\.sig\b|\.zip\b|\.docx?\b|\.xlsx?\b|\bраздел\s+пд\b|\bподраздел\s+пд\b|\bтом\b\s*№?|\bчасть\b\s*№?)", re.I)
 
 
 def lifecycle_status(item: dict[str, Any]) -> str:
+    # The final PZ complex-object table explicitly enumerates buildings/structures
+    # entering the project. Do not infer lifecycle from words inside the object name
+    # (e.g. 'резервуарами' must not be mistaken for 'перспективный резерв').
+    if item.get('pz_complex_object_register') or item.get('source_kind') == 'pz_complex_object_register':
+        return 'Проектируемый'
     text = normalize_text(" ".join(str(item.get(k) or "") for k in (
         "value_text", "object_hint", "context", "structural_zone", "table_evidence",
         "review_note", "match_method", "status_note", "general_plan_note", "remark",
@@ -43,6 +48,8 @@ def lifecycle_status(item: dict[str, Any]) -> str:
 
 
 def classify_zone(item: dict[str, Any]) -> str:
+    if item.get('pz_complex_object_register') or item.get('source_kind') == 'pz_complex_object_register':
+        return 'OBJECT_REGISTER'
     text = normalize_text(" ".join(str(item.get(k) or "") for k in (
         "structural_zone", "context", "table_type", "table_evidence", "match_method", "parameter_name"
     )))
@@ -61,6 +68,11 @@ def evidence_score(item: dict[str, Any]) -> tuple[int, list[str]]:
     reasons: list[str] = []
     if item.get("hard_object_gate_blocked") or item.get("structure_guard_blocked"):
         return -1000, [str(item.get("hard_object_gate_reason") or item.get("structure_guard_reason") or "заблокировано Object Gate")]
+    authoritative_pz = bool(item.get('pz_complex_object_register') or item.get('source_kind') == 'pz_complex_object_register')
+    if authoritative_pz:
+        reasons = ['официальный перечень зданий/сооружений в составе сложного объекта ПЗ']
+        if str(item.get('genplan_position') or '').strip(): reasons.append('позиция объекта указана в ПЗ')
+        return 140, reasons
     service, service_reasons = is_service_object_candidate(item)
     raw = str(item.get("value_text") or item.get("object_hint") or "")
     if service or FILEISH_RE.search(raw):
@@ -111,7 +123,13 @@ def filter_registry(records: list[dict[str, Any]], findings: Iterable[dict[str, 
         life="Проектируемый" if "Проектируемый" in lives else ("Реконструируемый" if "Реконструируемый" in lives else next(iter(lives),"Не определён"))
         raw_name = str(row.get("Наименование объекта") or row.get("Объект") or "")
         registry_reasons = name_rejection_reasons(raw_name)
-        service=bool(FILEISH_RE.search(raw_name) or registry_reasons)
+        authoritative_pz = any(bool(x.get('pz_complex_object_register') or x.get('source_kind') == 'pz_complex_object_register') for x in ev)
+        # A row from the explicit PZ complex-object register is authoritative.
+        # Generic lexical filters must not reject legitimate names such as
+        # «Пункт обогрева» or «Здание с кабинетом начальника».
+        service = False if authoritative_pz else bool(FILEISH_RE.search(raw_name) or registry_reasons)
+        if authoritative_pz:
+            registry_reasons = []
         if pos and is_date_like_position(pos):
             service = True
             registry_reasons = list(registry_reasons) + ["позиция похожа на календарную дату"]

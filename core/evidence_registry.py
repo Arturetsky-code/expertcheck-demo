@@ -31,6 +31,8 @@ SOURCE_TYPE_LABELS = {
 
 def is_forbidden_evidence(item: dict[str, Any]) -> tuple[bool, str]:
     name = str(item.get('value_text') or item.get('object_hint') or '')
+    if item.get('pz_complex_object_register') or item.get('source_kind') == 'pz_complex_object_register':
+        return False, ''
     zone = normalize_text(' '.join(str(item.get(k) or '') for k in (
         'trusted_zone','structural_zone','context','table_type','table_evidence','parameter_name'
     )))

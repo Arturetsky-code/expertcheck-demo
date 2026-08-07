@@ -45,6 +45,7 @@ from .normative_knowledge import NormativeKnowledgeLayer
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
+from .pz_complex_object_register import extract_pz_complex_object_register_from_uploaded, enforce_authoritative_pz_registry
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -248,7 +249,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         page_tables = {}
         pipeline_errors.append({"stage": "table_ranking", "error": str(exc)})
 
-    progress(68, "Состав проекта", "Ищем объекты по ПЗ, идентификационным признакам и формулировкам проектных решений")
+    progress(67, "Состав проекта", "Читаем официальный перечень зданий и сооружений в составе сложного объекта ПЗ")
+    try:
+        pz_complex_objects, pz_complex_object_audit = extract_pz_complex_object_register_from_uploaded(pdf_files, document_types)
+        findings.extend(pz_complex_objects)
+    except Exception as exc:
+        pz_complex_objects, pz_complex_object_audit = [], [{"decision":"error","reason":str(exc)}]
+        pipeline_errors.append({"stage": "pz_complex_object_register", "error": str(exc)})
+
+    progress(68, "Состав проекта", "Дополняем состав по идентификационным признакам и формулировкам проектных решений")
     try:
         recovered_objects, object_recovery_audit = recover_project_objects_from_uploaded(pdf_files, document_types)
         findings.extend(recovered_objects)
@@ -294,7 +303,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.3-object-discovery-3-alpha1"
+        item["core_version"] = "7.3.2-pz-authoritative-baseline-hotfix"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -357,6 +366,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     consolidated_registry, consolidated_candidates, gp_seed_audit_consolidated = ensure_general_plan_registry_visibility(
         consolidated_registry, consolidated_candidates, gp_findings
     )
+
+    # If PZ contains the explicit final complex-object table, it is the primary
+    # project-composition baseline. Identification-sign rows not present in this
+    # final table are suppressed; GP-only rows remain visible as discrepancies.
+    object_registry, object_candidates, pz_authoritative_audit = enforce_authoritative_pz_registry(
+        object_registry, object_candidates, pz_complex_objects, findings
+    )
+    consolidated_registry, consolidated_candidates, pz_authoritative_audit_consolidated = enforce_authoritative_pz_registry(
+        consolidated_registry, consolidated_candidates, pz_complex_objects, findings
+    )
     recovery_mode_triggered = needs_object_recovery(object_registry, object_candidates, gp_findings)
     if recovery_mode_triggered:
         progress(74, "Recovery Mode", "Повторно используем экспликацию генплана и сильные источники ПЗ; результат не считается пустым автоматически")
@@ -399,14 +418,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.3-object-discovery-3-alpha1"
+        item["core_version"] = "7.3.2-pz-authoritative-baseline-hotfix"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     pp87_project_profile = detect_pp87_profile(findings, documents)
     for doc in documents:
-        doc["core_version"] = "7.3-object-discovery-3-alpha1"
+        doc["core_version"] = "7.3.2-pz-authoritative-baseline-hotfix"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -456,6 +475,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         }
         doc["project_profile_summary"] = project_profile_summary
         doc["general_plan_audit"] = general_plan_audit
+        doc["pz_complex_object_audit"] = pz_complex_object_audit
+        doc["pz_complex_object_count"] = len([x for x in pz_complex_objects if x.get("parameter_code") == "OBJECT_ENTRY"])
+        doc["pz_authoritative_registry_audit"] = pz_authoritative_audit_consolidated
         doc["general_plan_anchor_audit"] = general_plan_anchor_audit
         doc["general_plan_coverage"] = general_plan_coverage
         doc["general_plan_summary"] = {

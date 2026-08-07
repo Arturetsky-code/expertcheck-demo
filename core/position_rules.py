@@ -22,7 +22,10 @@ def is_date_like_position(value: Any) -> bool:
     a, b, c = (int(match.group(name)) for name in ("a", "b", "c"))
     candidates: list[tuple[int, int, int]] = []
     # dd.mm.yy / dd.mm.yyyy
-    if 1 <= a <= 31 and 1 <= b <= 12 and (20 <= c <= 99 or 1900 <= c <= 2199):
+    # Two-digit years are ambiguous with hierarchical GP positions (3.3.20).
+    # Reject them as dates only when the first component cannot be a month-like
+    # hierarchy component (>12). Four-digit years remain unambiguous dates.
+    if 1 <= a <= 31 and 1 <= b <= 12 and (1900 <= c <= 2199 or (20 <= c <= 99 and a > 12)):
         year = 2000 + c if c <= 69 else (1900 + c if c <= 99 else c)
         candidates.append((year, b, a))
     # yyyy.mm.dd

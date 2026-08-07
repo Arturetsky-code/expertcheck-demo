@@ -129,7 +129,17 @@ def _normalize_text(value: str) -> str:
 
 
 def _clean_position(value: str) -> str:
-    return normalize_genplan_position(value, allow_integer=True)
+    # In a GP explication, values such as 3.3.20 are legitimate hierarchical
+    # positions and must not be rejected merely because they resemble a date.
+    text = re.sub(r"\s+", "", str(value or "").strip()).replace(",", ".")
+    if not POSITION_RE.fullmatch(text) or CLASSIFIER_RE.fullmatch(text):
+        return ""
+    parts = text.split(".")
+    # Obvious dd.mm.yy dates (e.g. 27.05.26) are not positions. Values such as
+    # 3.3.20 remain valid because hierarchical GP positions commonly look date-like.
+    if len(parts) == 3 and int(parts[0]) > 12 and 1 <= int(parts[1]) <= 12 and 0 <= int(parts[2]) <= 99:
+        return ""
+    return text
 
 
 def _clean_name(value: str) -> str:
@@ -150,6 +160,16 @@ def _is_plausible_name(value: str) -> bool:
     if re.fullmatch(r"[\d.,+\-–— ]+", name):
         return False
     if name.lower().endswith((".pdf", ".xml", ".sig", ".zip")):
+        return False
+    # Notes and legend rows near an explication must never become project objects.
+    if re.search(r"\bзам\.?\s*\d+[/\-]\d+", low):
+        return False
+    if any(low.startswith(tok) for tok in (
+        "разбивка сооружений", "система высот", "система координат",
+        "расположение ", "отметка ", "инженерно-геологическая скважина",
+        "проектируемые здания и сооружения", "существующие здания и сооружения",
+        "характерные поворотные точки",
+    )):
         return False
     return any(ch.isalpha() for ch in name)
 
@@ -222,13 +242,21 @@ def _extract_explication_blocks(page: fitz.Page, textpage: fitz.TextPage | None 
     if header and page.rotation in {90, 270}:
         # На повернутом листе строки таблицы идут слева от вертикального заголовка.
         blocks = [b for b in raw_blocks
-                  if header["x0"] - 750 <= b["x0"] <= header["x0"] - 35
-                  and header["y0"] - 190 <= b["y0"] <= header["y1"] + 90]
+                  if header["x0"] - 1050 <= b["x0"] <= header["x0"] - 20
+                  and header["y0"] - 260 <= b["y0"] <= header["y1"] + 120]
     elif header:
-        # На альбомном листе строки расположены ниже заголовка в правой части листа.
+        # На альбомном листе строки расположены ниже заголовка. Ограничиваем
+        # область следующим заголовком ведомости, чтобы соседняя таблица покрытий
+        # не превращалась в объекты проекта.
+        next_table_y = min(
+            [b["y0"] for b in raw_blocks
+             if b["y0"] > header["y1"] + 10 and _normalize_text(b["text"]).startswith("ведомость ")],
+            default=header["y1"] + 850,
+        )
+        end_y = min(header["y1"] + 850, next_table_y - 2)
         blocks = [b for b in raw_blocks
                   if header["x0"] - 220 <= b["x0"] <= page.rect.width - 20
-                  and header["y1"] + 5 <= b["y0"] <= header["y1"] + 520]
+                  and header["y1"] + 2 <= b["y0"] <= end_y]
     else:
         blocks = raw_blocks
 
@@ -261,7 +289,7 @@ def _extract_explication_blocks(page: fitz.Page, textpage: fitz.TextPage | None 
             dy = abs(name_block["y0"] - pos_block["y0"])
             if page.rotation in {90, 270}:
                 score = dx + 0.02 * dy
-                eligible = dx <= 30 and dy <= 520
+                eligible = dx <= 15 and dy <= 520
             else:
                 score = dy + 0.02 * dx
                 eligible = dy <= 20 and dx <= 1100
@@ -436,8 +464,12 @@ class GeneralPlanRegisterEngine:
                     status = row_status.get(position) or "Не определён"
                     # If the explication page contains no existing/prospective markers,
                     # it is a project explication and rows may default to projected.
-                    project_default = not mixed_statuses
-                    if status == "Не определён" and project_default:
+                    # An explication is a composition register. Explicit row markers
+                    # (existing/perspective/reconstructed) override the default; otherwise
+                    # the row is treated as projected. Incidental "existing" labels in the
+                    # drawing field must not downgrade the whole explication.
+                    project_default = True
+                    if status == "Не определён":
                         status = "Проектируемый"
                     current = explication.get(position)
                     if not current or len(name) > len(current[0]):

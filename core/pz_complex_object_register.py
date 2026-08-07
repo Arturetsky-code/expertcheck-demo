@@ -307,12 +307,12 @@ def enforce_authoritative_pz_registry(
     pz_findings: Iterable[dict[str, Any]],
     all_findings: Iterable[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
-    """Make the final PZ complex-object table the primary composition baseline.
+    """Use explicit PZ composition as a high-confidence source, not an exclusive whitelist.
 
-    When this authoritative register exists, rows originating only from the
-    identification-sign table or narrative text must not contaminate the normal
-    project-object list. General-plan rows absent from PZ stay visible as review
-    candidates because they may indicate a genuine cross-section omission.
+    Different project types describe composition differently. Therefore an explicit GP
+    explication is an independent strong source and must never be deleted merely because
+    the PZ table is absent, incomplete, differently structured, or uses another hierarchy.
+    Explicit existing/perspective GP rows remain review candidates.
     """
     pz_objects = [x for x in pz_findings if x.get('parameter_code') == 'OBJECT_ENTRY' and x.get('pz_complex_object_register')]
     if len(pz_objects) < 2:
@@ -320,26 +320,37 @@ def enforce_authoritative_pz_registry(
             'authoritative_pz_active': 0, 'authoritative_positions': len(pz_objects),
             'suppressed_non_authoritative': 0, 'gp_only_candidates': 0,
         }
+
     authoritative: dict[str, dict[str, Any]] = {}
     for item in pz_objects:
-        pos = normalize_genplan_position(item.get('genplan_position') or '', allow_integer=False)
+        pos = normalize_genplan_position(item.get('genplan_position') or '', allow_integer=True)
         if pos:
             authoritative[pos] = item
-    gp_positions = {
-        normalize_genplan_position(x.get('genplan_position') or '', allow_integer=False)
-        for x in all_findings
-        if x.get('general_plan_explication') and normalize_genplan_position(x.get('genplan_position') or '', allow_integer=False)
-    }
+
     rows_by_pos: dict[str, dict[str, Any]] = {}
+    unpositioned: list[dict[str, Any]] = []
     for row in list(trusted) + list(candidates):
-        pos = normalize_genplan_position(row.get('Позиция по ГП') or row.get('position') or '', allow_integer=False)
-        if pos and pos not in rows_by_pos:
-            rows_by_pos[pos] = dict(row)
+        pos = normalize_genplan_position(row.get('Позиция по ГП') or row.get('position') or '', allow_integer=True)
+        if pos:
+            # Prefer a trusted/stronger row already present.
+            if pos not in rows_by_pos or bool(row.get('Подтвержденный реестр')):
+                rows_by_pos[pos] = dict(row)
+        else:
+            unpositioned.append(dict(row))
+
+    gp_by_pos: dict[str, dict[str, Any]] = {}
+    for item in all_findings:
+        if not item.get('general_plan_explication'):
+            continue
+        pos = normalize_genplan_position(item.get('genplan_position') or '', allow_integer=True)
+        if pos:
+            gp_by_pos[pos] = item
 
     trusted_out: list[dict[str, Any]] = []
     candidates_out: list[dict[str, Any]] = []
-    suppressed = 0
-    gp_only = 0
+    used: set[str] = set()
+
+    # PZ explicit rows remain the highest-confidence naming source.
     for pos, item in authoritative.items():
         row = dict(rows_by_pos.get(pos) or {})
         row.setdefault('Позиция по ГП', pos)
@@ -352,27 +363,51 @@ def enforce_authoritative_pz_registry(
         row['Источник принятого наименования'] = 'ПЗ / Сведения о сложном объекте'
         row['Статус консолидации'] = 'Подтверждено официальным составом сложного объекта ПЗ'
         row['Причины решения'] = (str(row.get('Причины решения') or '') + '; официальный состав сложного объекта ПЗ').strip('; ')
-        trusted_out.append(row)
+        trusted_out.append(row); used.add(pos)
 
-    # Keep only genuine GP-vs-PZ discrepancies as visible review candidates.
-    for row in list(trusted) + list(candidates):
-        pos = normalize_genplan_position(row.get('Позиция по ГП') or row.get('position') or '', allow_integer=False)
-        if pos in authoritative:
+    # GP explication is an independent composition register. Project/unknown rows are
+    # retained even when absent from PZ; explicit existing/perspective rows are review-only.
+    gp_only = 0
+    for pos, item in gp_by_pos.items():
+        if pos in used:
             continue
-        if pos and pos in gp_positions:
-            out = dict(row)
-            out['Подтвержденный реестр'] = False
-            out['Включить'] = False
-            out['Статус консолидации'] = 'Есть на генплане, но отсутствует в официальном составе ПЗ — требуется проверка'
-            out['Причина исключения из подтвержденного реестра'] = 'позиция отсутствует в таблице «Сведения о сложном объекте» ПЗ'
-            candidates_out.append(out)
-            gp_only += 1
+        row = dict(rows_by_pos.get(pos) or {})
+        row.setdefault('Позиция по ГП', pos)
+        row['Наименование объекта'] = str(item.get('value_text') or item.get('object_hint') or row.get('Наименование объекта') or '').strip()
+        status = str(item.get('general_plan_design_status') or row.get('Статус проектирования') or 'Не определён')
+        row['Статус проектирования'] = status
+        row['В генплане'] = True
+        row['Источник принятого наименования'] = row.get('Источник принятого наименования') or 'Экспликация генерального плана'
+        if status in {'Существующий', 'Перспективный'}:
+            row['Подтвержденный реестр'] = False
+            row['Включить'] = False
+            row['Статус консолидации'] = f'Экспликация ГП: {status.lower()} — требуется проверка включения'
+            candidates_out.append(row)
         else:
-            suppressed += 1
+            row['Подтвержденный реестр'] = True
+            row['Включить'] = True
+            row['Доверие к объекту'] = max(int(row.get('Доверие к объекту') or 0), 120)
+            row['Статус консолидации'] = 'Подтверждено экспликацией генерального плана; отсутствует/не сопоставлено в составе ПЗ'
+            row['Причины решения'] = (str(row.get('Причины решения') or '') + '; независимый реестр экспликации ГП').strip('; ')
+            trusted_out.append(row)
+        gp_only += 1; used.add(pos)
+
+    # Preserve other already trusted rows and review candidates instead of silently
+    # deleting them. They may represent section-only or unpositioned linear objects.
+    for row in list(trusted):
+        pos = normalize_genplan_position(row.get('Позиция по ГП') or row.get('position') or '', allow_integer=True)
+        if pos and pos in used:
+            continue
+        trusted_out.append(dict(row))
+    for row in list(candidates):
+        pos = normalize_genplan_position(row.get('Позиция по ГП') or row.get('position') or '', allow_integer=True)
+        if pos and pos in used:
+            continue
+        candidates_out.append(dict(row))
 
     return trusted_out, candidates_out, {
         'authoritative_pz_active': 1,
         'authoritative_positions': len(authoritative),
-        'suppressed_non_authoritative': suppressed,
+        'suppressed_non_authoritative': 0,
         'gp_only_candidates': gp_only,
     }

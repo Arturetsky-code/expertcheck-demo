@@ -89,8 +89,18 @@ def _render_ai_review(rows: list[dict]) -> None:
         render_ai_result(review, title='Рекомендация AI по кандидату')
         st.caption('Результат AI является рекомендацией и не меняет состав проекта автоматически.')
 
-def _assembly_editor() -> None:
-    section('Состав объектов','Проверьте только спорные позиции. Надёжно подтверждённые объекты уже отмечены системой.')
+def _assembly_editor(ctx=None) -> None:
+    section('Состав объектов','Сначала используется экспликация генерального плана, затем ПЗ/XML и профильные разделы. Проверьте только спорные позиции.')
+    if ctx is not None:
+        try:
+            docs = ctx.data[0]
+            if docs is not None and not docs.empty and 'object_discovery_3_summary' in docs.columns:
+                summary = docs.iloc[0].get('object_discovery_3_summary') or {}
+                gp = int(summary.get('general_plan_explication_objects') or 0)
+                if gp:
+                    st.caption(f'General Plan First: в экспликациях найдено {gp} позиций. Они используются как опорный реестр и сверяются с ПЗ, XML и профильными разделами.')
+        except Exception:
+            pass
     rows=st.session_state.get('object_assembly_rows') or []
     if not rows:
         st.info('Кандидаты объектов не извлечены.')
@@ -151,7 +161,7 @@ def _assembly_editor() -> None:
 
 
 def render(ctx):
-    _assembly_editor()
+    _assembly_editor(ctx)
     if not st.session_state.get('object_registry_confirmed'):
         st.info('Подтвердите состав проекта выше. До этого паспорта и межраздельные сверки недоступны.')
         return

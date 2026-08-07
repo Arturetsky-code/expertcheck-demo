@@ -85,7 +85,7 @@ def _upload(ctx):
             ai_options = {'level': {
                 'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',
                 'Расширенный': 'extended', 'Максимальный': 'maximum',
-            }.get(ai_level, 'helper'), 'provider': ai_provider}
+            }.get(ai_level, 'helper'), 'provider': ai_provider, 'learning_examples': st.session_state.get('object_learning_examples', [])}
             try:
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
             except TypeError:

@@ -6,6 +6,7 @@ import streamlit as st
 from studio.components import card, empty, section
 from studio.ai_presenter import render_ai_result, render_unstructured_ai_text
 from core.ai_gateway import analyze_object_fragment, diagnostic_message, provider_for_role
+from core.learning_engine import object_learning_examples, merge_examples
 
 VISIBLE_EDITOR_COLS = [
     'Включить','Позиция по ГП','Наименование объекта','Статус проектирования',
@@ -133,6 +134,7 @@ def _assembly_editor() -> None:
             st.error(f'Нельзя подтвердить состав: {len(unresolved)} включённых позиций не имеют допустимого доказательства либо основаны на запрещённом источнике.')
         else:
             st.session_state.object_assembly_rows=updated
+            st.session_state.object_learning_examples=merge_examples(st.session_state.get('object_learning_examples',[]), object_learning_examples(updated))
             st.session_state.object_registry_confirmed=True
             st.success('Состав проекта подтверждён. Сверка будет выполнена только по выбранным объектам.')
             st.rerun()
@@ -167,17 +169,64 @@ def render(ctx):
     main=['Позиция по ГП','Наименование объекта','Тип объекта','Количество','Количество источников','Статус проектирования','Доверие к объекту']
     st.dataframe(view[[c for c in main if c in view]],width='stretch',hide_index=True,height=400)
     if not passports:return
-    section('Цифровой паспорт объекта','Характеристики и источники выбранного объекта.')
+    section('Цифровой паспорт объекта','Единая карточка объекта: где он подтверждён, какие ТЭП найдены и что требует внимания.')
     labels=[f"{p.get('position','') or '—'} · {p.get('name','') or 'Объект без наименования'}" for p in passports]
     selected=st.selectbox('Объект',labels); passport=passports[labels.index(selected)]
-    cols=st.columns(4)
+    st.subheader(passport.get('name') or 'Объект без наименования')
+    cols=st.columns(5)
     with cols[0]:card('Позиция',passport.get('position') or '—',passport.get('object_type_name') or 'Тип не определён')
     with cols[1]:card('Количество',passport.get('quantity',1),'Физических экземпляров')
-    with cols[2]:card('Характеристики',len(passport.get('characteristics',[])),'Связанные инженерные параметры','ok')
-    with cols[3]:card('Полнота',f"{float(passport.get('passport_completeness',0)):.0f}%",'Наполнение цифрового паспорта','warn')
-    ch=pd.DataFrame(passport.get('characteristics',[]))
-    if ch.empty:return st.info('Для выбранного объекта характеристики пока не извлечены.')
-    ch=ch.rename(columns={'parameter_name':'Характеристика','unit':'Ед. изм.','values_by_section':'Значения по разделам','status':'Статус','source_count':'Источников','confidence':'Уверенность'})
-    visible=['Характеристика','Ед. изм.','Значения по разделам','Статус','Источников']
-    if st.session_state.expert_mode:visible+=['Уверенность','pages_by_section','evidence_count']
-    st.dataframe(ch[[c for c in visible if c in ch]],width='stretch',hide_index=True)
+    with cols[2]:card('Источники',len(passport.get('registry_sources') or []),'Разделов с подтверждениями','ok')
+    with cols[3]:card('Характеристики',len(passport.get('characteristics',[])),'Извлечённых ТЭП','ok')
+    with cols[4]:card('Полнота',f"{float(passport.get('passport_completeness',0)):.0f}%",'Наполнение паспорта','warn')
+
+    tab_summary, tab_props, tab_sources, tab_risks = st.tabs(['Сводка','Характеристики','Где найден','Риски и замечания'])
+    with tab_summary:
+        matrix=passport.get('confirmation_matrix') or {}
+        if matrix:
+            st.markdown('**Подтверждение по разделам**')
+            st.dataframe(pd.DataFrame([{'Раздел':k,'Статус':v} for k,v in matrix.items()]),hide_index=True,width='stretch',height=250)
+        missing=passport.get('missing_expected_parameter_codes') or []
+        if missing:
+            st.warning('Не найдены ожидаемые для этого типа объекта характеристики: ' + ', '.join(missing))
+        else:
+            st.success('Ожидаемые типовые характеристики по доступной модели объекта найдены.')
+        aliases=passport.get('aliases') or []
+        if aliases:
+            st.caption('Варианты наименования в документации: ' + '; '.join(aliases[:8]))
+
+    with tab_props:
+        ch=pd.DataFrame(passport.get('characteristics',[]))
+        if ch.empty:
+            st.info('Для выбранного объекта характеристики пока не извлечены.')
+        else:
+            rows=[]
+            for item in passport.get('characteristics',[]):
+                vals=item.get('values_by_section') or {}
+                row={'Характеристика':item.get('parameter_name') or item.get('parameter_code'),'Ед. изм.':item.get('unit') or '—','Статус':item.get('status') or '—'}
+                for sec in ['ПЗ','ПЗУ','АР','ТХ','ИОС','ПОС','ООС']:
+                    row[sec]=vals.get(sec,'—') if isinstance(vals,dict) else '—'
+                rows.append(row)
+            prop_df=pd.DataFrame(rows)
+            st.dataframe(prop_df,width='stretch',hide_index=True,height=min(480,70+35*len(prop_df)))
+            st.caption('Значения показываются по разделам; спорные и отсутствующие ТЭП дополнительно попадают в межраздельную сверку.')
+
+    with tab_sources:
+        matrix=passport.get('confirmation_matrix') or {}
+        src_rows=[{'Раздел':k,'Наличие':v} for k,v in matrix.items()]
+        st.dataframe(pd.DataFrame(src_rows),hide_index=True,width='stretch')
+        if passport.get('registry_sources'):
+            st.caption('Источники реестра: ' + ', '.join(passport.get('registry_sources') or []))
+
+    with tab_risks:
+        comparisons_df=ctx.data[2]
+        if comparisons_df is None or getattr(comparisons_df,'empty',True):
+            st.info('Связанные межраздельные риски не сформированы.')
+        else:
+            name=str(passport.get('name') or '').lower()
+            related=comparisons_df[comparisons_df.get('object',pd.Series(dtype=str)).fillna('').astype(str).str.lower().str.contains(name,regex=False)] if 'object' in comparisons_df.columns and name else pd.DataFrame()
+            if related.empty:
+                st.success('По выбранному объекту проблемные межраздельные проверки не найдены.')
+            else:
+                cols=[c for c in ['parameter_name','status','explanation','remark_best_scenario','remark_recurrence','remark_recommendation'] if c in related.columns]
+                st.dataframe(related[cols].rename(columns={'parameter_name':'Показатель','status':'Результат','explanation':'Пояснение','remark_best_scenario':'Сценарий замечания','remark_recurrence':'Повторяемость','remark_recommendation':'Рекомендация'}),hide_index=True,width='stretch')

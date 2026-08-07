@@ -77,9 +77,25 @@ def render(ctx) -> None:
         st.caption('Расширенные шаблоны отчётов будут подключены в Sprint S4 — Report Workspace.')
 
     with tabs[4]:
-        section('Knowledge Engine', 'Подключаемые библиотеки профилей объектов и характеристик.')
+        section('Knowledge Engine', 'Профили объектов, нормативная база, кейсы замечаний и проверенные решения пользователя.')
         st.markdown(status_badge('Knowledge Engine активен', 'ok'), unsafe_allow_html=True)
-        st.caption('Редактирование отраслевых пакетов будет доступно в отдельном административном интерфейсе.')
+        from core.learning_engine import build_learning_pack, learning_pack_bytes, parse_learning_pack, merge_examples
+        examples=st.session_state.get('object_learning_examples',[])
+        c1,c2=st.columns(2)
+        with c1: st.metric('Проверенных решений по объектам',len(examples))
+        with c2: st.metric('Решений по рискам',len(st.session_state.get('risk_user_decisions',{})))
+        pack=build_learning_pack(examples,st.session_state.get('risk_user_decisions',{}))
+        st.download_button('Скачать learning pack',data=learning_pack_bytes(pack),file_name='expertcheck_learning_pack.json',mime='application/json',width='content')
+        uploaded=st.file_uploader('Подключить ранее сохранённый learning pack',type=['json'],key='learning_pack_upload')
+        if uploaded and st.button('Импортировать learning pack',width='content'):
+            try:
+                incoming=parse_learning_pack(uploaded.getvalue())
+                st.session_state.object_learning_examples=merge_examples(examples,incoming.get('object_examples') or [])
+                st.session_state.risk_user_decisions.update(incoming.get('risk_decisions') or {})
+                st.success('Learning pack подключён к текущей сессии.')
+            except Exception as exc:
+                st.error(f'Не удалось импортировать learning pack: {exc}')
+        st.caption('Обучение консервативное: решения пользователя сохраняются как примеры и не превращаются автоматически в глобальное правило после одного случая.')
 
     with tabs[5]:
         section('AI-модули', 'Подключение внешних аналитических сервисов. Полные PDF по умолчанию не передаются.')

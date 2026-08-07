@@ -134,7 +134,7 @@ def _dashboard(ctx):
     with q2: card('2. Объекты','Готово' if object_gate else 'Требуется', 'Пользовательское подтверждение', 'ok' if object_gate else 'warn')
     with q3: card('3. Сверка ТЭП','Доступна' if object_gate else 'Заблокирована','Только по Trusted Object Registry','ok' if object_gate else 'info')
 
-    tab_summary, tab_documents, tab_completeness = st.tabs(['Сводка', 'Документы', 'Комплектность'])
+    tab_summary, tab_documents, tab_completeness, tab_ird = st.tabs(['Сводка', 'Документы', 'Комплектность', 'Исходные документы'])
     with tab_summary:
         section('Что требует внимания', 'Показаны только результаты, по которым требуется инженерное решение.')
         problems = report['problems']
@@ -165,6 +165,20 @@ def _dashboard(ctx):
         render_documents(ctx)
     with tab_completeness:
         render_completeness(ctx)
+
+    with tab_ird:
+        section('Исходные и подтверждающие документы', 'Автоматический контроль наличия ключевых исходных материалов. Статус «Требует проверки» означает, что применимость и актуальность необходимо подтвердить специалисту.')
+        first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+        audit = first_doc.get('mandatory_document_audit') or []
+        if audit:
+            show = pd.DataFrame([{'Документ / сведения':x.get('title'),'Статус':x.get('status'),'Применимость':x.get('applicability'),'Что проверить':x.get('recommendation')} for x in audit])
+            st.dataframe(show, hide_index=True, width='stretch')
+        else:
+            st.info('Автоматический аудит исходных документов пока не сформирован.')
+        refs = first_doc.get('normative_reference_audit') or []
+        if refs:
+            with st.expander(f'Нормативные ссылки, требующие контроля актуальности ({len(refs)})'):
+                st.dataframe(pd.DataFrame(refs), hide_index=True, width='stretch')
 
 
 def render(ctx):

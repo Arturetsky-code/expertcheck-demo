@@ -31,6 +31,7 @@ def render(ctx):
         comparisons.to_dict('records') if not comparisons.empty else [],
         assembly,
         checklist,
+        documents=docs.to_dict('records') if hasattr(docs, 'to_dict') else [],
     )
     risk_decisions = st.session_state.get('risk_user_decisions') or {}
     for risk in risks:

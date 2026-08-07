@@ -17,7 +17,7 @@ def render(ctx)->None:
     hero("Риски экспертизы","Оценка рисков замечаний на основе межраздельной сверки, чек-листов и базы типовых замечаний проектов-аналогов.","GGE Risk Intelligence · прогноз, а не гарантия позиции эксперта")
     if not st.session_state.get("object_registry_confirmed"):
         st.warning("Сначала подтвердите состав проектируемых объектов. Оценка рисков заблокирована."); return
-    risks=build_expert_risks(comparisons.to_dict("records") if not comparisons.empty else [],st.session_state.get("object_assembly_rows") or [],_checklist_results())
+    risks=build_expert_risks(comparisons.to_dict("records") if not comparisons.empty else [],st.session_state.get("object_assembly_rows") or [],_checklist_results(),documents=docs.to_dict("records") if not docs.empty else [])
     decisions=st.session_state.setdefault("risk_user_decisions",{})
     summary=summarize_risks(risks)
     cols=st.columns(5)

@@ -23,7 +23,7 @@ def _document_options(docs: pd.DataFrame) -> list[str]:
 
 def render(ctx):
     docs,findings,comparisons=ctx.data[:3]
-    section('Проверка ПД по чек-листам','Выберите корпоративный чек-лист и конкретный раздел документации. Результаты проверки по чек-листу не смешиваются с межраздельной сверкой ТЭП.')
+    section('Проверка раздела','ExpertCheck сопоставляет выбранный раздел одновременно с корпоративным чек-листом и базовой контрольной матрицей ПП №87. AI автоматически подключается к неоднозначным смысловым пунктам.')
     if docs.empty: return empty('Сначала загрузите комплект проектной документации.')
     engine=ChecklistEngine(ctx.config_dir/'knowledge'/'checklist_catalog.json')
     if not engine.items:return empty('Каталог чек-листов не загружен.')
@@ -60,7 +60,7 @@ def render(ctx):
     labels=_document_options(docs); doc_records=[]
     for label,(_,row) in zip(labels,docs.iterrows()):
         if label in selected_set: doc_records.append(row.to_dict())
-    results=engine.evaluate(doc_records,comparisons.to_dict('records'),findings.to_dict('records'),source_file=checklist,section=selected_section)
+    results=engine.evaluate_with_pp87(doc_records,comparisons.to_dict('records'),findings.to_dict('records'),source_file=checklist,section=selected_section)
     levels={'Быстрая':{'A'},'Полная':{'A','B'},'Экспертная':{'A','B','C'}}[mode]
     results=[r for r in results if r.get('is_heading') or r.get('automation_level') in levels]
     if not results:return empty('Для выбранного сочетания нет пунктов.')
@@ -87,7 +87,7 @@ def render(ctx):
                 key=f"item-{idx}"
                 r['_ai_batch_key']=key
                 batch_items.append({'key':key,'checklist_position':r.get('item_no'),'question':r.get('question'),'core_status':r.get('status'),'compiled_rule':r.get('compiled_rule'),'evidence':evidence_rows})
-                if len(batch_items)>=10: break
+                if len(batch_items)>=12: break
             if batch_items:
                 with st.spinner('AI выполняет смысловую проверку неоднозначных пунктов чек-листа...'):
                     batch_result,batch_reviews=analyze_checklist_batch(provider,batch_items)

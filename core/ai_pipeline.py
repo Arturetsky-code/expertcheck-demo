@@ -40,6 +40,7 @@ def review_object_candidates(
     findings: list[dict[str, Any]],
     *,
     limit: int = 12,
+    learning_examples: list[dict[str, Any]] | None = None,
 ) -> tuple[AIResult | None, dict[str, dict[str, Any]], int]:
     if provider is None:
         return None, {}, 0
@@ -75,7 +76,7 @@ def review_object_candidates(
         "\"reason\":\"...\",\"evidence_refs\":[\"document/page/table\"]}]}. "
         "Рекомендация include допустима только при явном доказательстве самостоятельного проектируемого объекта."
     )
-    payload = {"task": "object_registry_review", "candidates": [{"key": k, **v} for k, v in candidates]}
+    payload = {"task": "object_registry_review", "candidates": [{"key": k, **v} for k, v in candidates], "verified_user_examples": list(learning_examples or [])[-20:]}
     result = provider.generate(json.dumps(payload, ensure_ascii=False, indent=2), system)
     parsed = _extract_json(result.text) if result.ok else None
     reviews: dict[str, dict[str, Any]] = {}
@@ -183,19 +184,21 @@ def run_ai_pipeline(
     provider: AIProvider | None,
     level: str = "helper",
     progress_callback=None,
+    skip_object_review: bool = False,
 ) -> dict[str, Any]:
     normalized = str(level or "off").strip().lower()
     audit = AIPipelineAudit(enabled=provider is not None and normalized != "off", level=normalized, provider=getattr(provider, "name", ""), errors=[])
     if not audit.enabled:
         return audit.to_dict()
 
-    if progress_callback:
-        progress_callback(75, 'AI-анализ объектов', 'Проверяем только неоднозначные позиции; при недоступности API Core продолжит работу')
-    result, reviews, sent = review_object_candidates(provider, findings)
-    audit.object_candidates_sent = sent
-    if result and not result.ok:
-        audit.errors.append("Object AI: " + str(result.error))
-    audit.object_reviews_received = apply_object_reviews(findings, reviews)
+    if not skip_object_review:
+        if progress_callback:
+            progress_callback(75, 'AI-анализ объектов', 'Проверяем только неоднозначные позиции; при недоступности API Core продолжит работу')
+        result, reviews, sent = review_object_candidates(provider, findings, limit=24)
+        audit.object_candidates_sent = sent
+        if result and not result.ok:
+            audit.errors.append("Object AI: " + str(result.error))
+        audit.object_reviews_received = apply_object_reviews(findings, reviews)
 
     if normalized in {"extended", "maximum", "расширенный", "максимальный"}:
         if progress_callback:

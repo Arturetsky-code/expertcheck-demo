@@ -33,8 +33,13 @@ from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
 from .trusted_project_model import annotate_findings, filter_registry
 from .cognitive_document_intelligence import CognitiveDocumentIntelligence
-from .ai_pipeline import run_ai_pipeline
+from .ai_pipeline import run_ai_pipeline, review_object_candidates, apply_object_reviews
 from .engineering_intelligence import apply_structure_guards, audit_mandatory_documents, scan_normative_references
+from .object_gate import apply_hard_object_gate
+from .evidence_graph import build_evidence_graph
+from .normative_knowledge import NormativeKnowledgeLayer
+from .remark_learning import RemarkLearningEngine
+from .learning_engine import apply_learning_examples
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -176,6 +181,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     documents.extend(xml_documents)
     findings.extend(xml_findings)
     structure_guard_audit = apply_structure_guards(findings)
+    object_gate_audit = apply_hard_object_gate(findings)
     enrich_findings_with_object_semantics(findings)
     trusted_object_audit = annotate_findings(findings)
     pdf_xml_checks = build_pdf_xml_checks(findings)
@@ -249,13 +255,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.0-engineering-intelligence-alpha1"
+        item["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
     findings.extend(discovered_objects)
     structure_guard_audit_2 = apply_structure_guards(findings)
     structure_guard_audit = {k: int(structure_guard_audit.get(k,0))+int(structure_guard_audit_2.get(k,0)) for k in set(structure_guard_audit)|set(structure_guard_audit_2)}
+    object_gate_audit_2 = apply_hard_object_gate(findings)
+    object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(object_gate_audit_2.get(k,0)) for k in set(object_gate_audit)|set(object_gate_audit_2)}
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
     trusted_object_audit.extend(annotate_findings(findings))
@@ -272,35 +280,47 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     comparisons.extend(general_plan_document_checks)
     _enrich_rules(comparisons, registry)
     knowledge_base = KnowledgeBase(root / "knowledge")
+    remark_learning = RemarkLearningEngine(root / "knowledge")
     for item in comparisons:
         knowledge_base.enrich_comparison(item)
         risk = calculate_engineering_risk(item)
         item["engineering_risk_score"] = risk["score"]
         item["engineering_risk_level"] = risk["level"]
         item["engineering_risk_reasons"] = risk["reasons"]
+    remark_learning_count = remark_learning.enrich_comparisons(comparisons)
 
-    # Реестр объектов строится отдельным движком и сопровождается журналом решений.
+    # Final Object Gate runs before any registry is built. AI is the second filter
+    # for ambiguous candidates, so the user sees an already cleaned project composition.
+    progress(70, "Object Gate", "Отсекаем оглавления, пункты разделов, даты и служебные строки")
+    final_gate = apply_hard_object_gate(findings)
+    object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(final_gate.get(k,0)) for k in set(object_gate_audit)|set(final_gate)}
+    ai_options = ai_options or {}
+    learning_examples = list(ai_options.get("learning_examples") or [])
+    learning_applied = apply_learning_examples(findings, learning_examples)
+    pre_ai_result, pre_ai_reviews, pre_ai_sent = review_object_candidates(
+        ai_options.get("provider"), findings, limit=24, learning_examples=learning_examples
+    ) if str(ai_options.get("level") or "off").lower() != "off" else (None, {}, 0)
+    pre_ai_applied = apply_object_reviews(findings, pre_ai_reviews) if pre_ai_reviews else 0
+
+    # Реестр объектов строится только после Object Gate + AI secondary filter.
     progress(72, "Консолидация реестра", "Сопоставляем ПЗ, генплан, XML и профильные разделы")
     raw_object_registry, object_register_audit = build_registry(findings)
     raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
     object_registry, object_candidates = filter_registry(raw_object_registry, findings)
     consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
-    # AI Pipeline is an advisory second pass. It reviews ambiguous objects and,
-    # in extended modes, suspicious property bindings. Deterministic Core remains authoritative.
-    ai_options = ai_options or {}
+
     ai_pipeline_audit = run_ai_pipeline(
         findings,
         comparisons,
         provider=ai_options.get("provider"),
         level=str(ai_options.get("level") or "off"),
         progress_callback=progress,
+        skip_object_review=True,
     )
-    # Rebuild registries because AI may block obvious service candidates.
-    if ai_pipeline_audit.get("object_reviews_received"):
-        raw_object_registry, object_register_audit = build_registry(findings)
-        raw_consolidated_registry, reconciliation_audit = reconcile_register(findings)
-        object_registry, object_candidates = filter_registry(raw_object_registry, findings)
-        consolidated_registry, consolidated_candidates = filter_registry(raw_consolidated_registry, findings)
+    ai_pipeline_audit["object_candidates_sent"] = pre_ai_sent
+    ai_pipeline_audit["object_reviews_received"] = pre_ai_applied
+    if pre_ai_result is not None and not pre_ai_result.ok:
+        ai_pipeline_audit.setdefault("errors", []).append("Object AI: " + str(pre_ai_result.error))
     progress(80, 'Паспорта объектов', 'Формируем итоговый реестр и цифровые паспорта')
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
@@ -322,15 +342,18 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(88, "Инженерная полнота", "Проверяем исходные документы и нормативные ссылки")
     mandatory_document_audit = audit_mandatory_documents(documents, findings)
     normative_reference_audit = scan_normative_references(findings)
+    normative_layer = NormativeKnowledgeLayer(root / "knowledge")
+    normative_reference_audit = normative_layer.enrich(normative_reference_audit)
+    evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.0-engineering-intelligence-alpha1"
+        item["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     for doc in documents:
-        doc["core_version"] = "7.0-engineering-intelligence-alpha1"
+        doc["core_version"] = "7.1-trusted-engineering-intelligence-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -395,8 +418,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["ai_pipeline_audit"] = ai_pipeline_audit
         doc["pipeline_errors"] = pipeline_errors
         doc["structure_guard_audit"] = structure_guard_audit
+        doc["object_gate_audit"] = object_gate_audit
+        doc["learning_engine_summary"] = {"examples_loaded": len(learning_examples), "rules_applied": learning_applied}
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit
+        doc["normative_knowledge_summary"] = normative_layer.summary()
+        doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
+        doc["evidence_graph"] = evidence_graph
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     progress(100, "Готово", "Проверка проекта завершена")

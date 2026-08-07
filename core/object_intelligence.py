@@ -66,9 +66,19 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
     names: dict[str, str] = {}
     positions: dict[str, str] = {}
     lifecycles: dict[str, list[str]] = defaultdict(list)
+    hard_blocks: dict[str, list[str]] = defaultdict(list)
 
     for item in findings:
         if str(item.get("parameter_code") or "") not in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"}:
+            continue
+        if item.get("hard_object_gate_blocked") or item.get("structure_guard_blocked"):
+            key = _candidate_key(item)
+            if key != "|":
+                grouped[key].append(evidence_record(item))
+                names[key] = str(item.get("value_text") or item.get("object_hint") or "").strip()
+                positions[key] = str(item.get("genplan_position") or "").strip()
+                lifecycles[key].append(str(item.get("object_lifecycle_status") or "Не определён"))
+                hard_blocks[key].append(str(item.get("hard_object_gate_reason") or item.get("structure_guard_reason") or "служебная запись"))
             continue
         key = _candidate_key(item)
         if key == "|":
@@ -92,7 +102,11 @@ def build_object_decisions(findings: Iterable[dict[str, Any]]) -> dict[str, dict
 
         canonical = max(valid, key=_source_rank, default=None)
         name_ok, name_reasons = strong_object_name(names.get(key, ""), position=positions.get(key, ""), official=bool(official))
-        if not name_ok:
+        if hard_blocks.get(key):
+            decision = "blocked"
+            confidence = 0
+            reason = "Object Gate: " + "; ".join(dict.fromkeys(hard_blocks[key])) + "."
+        elif not name_ok:
             decision = "blocked"
             confidence = 0
             reason = "Кандидат отклонён строгими правилами: " + "; ".join(name_reasons) + "."

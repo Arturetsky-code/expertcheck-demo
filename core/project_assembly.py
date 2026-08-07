@@ -39,6 +39,10 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             source_preview = '; '.join(compact_source(e) for e in valid_evidence[:3])
             intel=(intelligence_decisions or {}).get(key,{})
             intel_decision = intel.get('decision')
+            # Strictly rejected service/date/TOC candidates are not shown to the
+            # engineer at all. The audit remains available in developer mode.
+            if intel_decision == 'blocked' and int(intel.get('confidence') or 0) == 0:
+                continue
             if intel_decision:
                 if intel_decision in {'blocked','context'}:
                     auto_blocked=True

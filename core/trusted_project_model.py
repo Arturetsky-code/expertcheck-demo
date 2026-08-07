@@ -46,6 +46,8 @@ def classify_zone(item: dict[str, Any]) -> str:
 
 def evidence_score(item: dict[str, Any]) -> tuple[int, list[str]]:
     reasons: list[str] = []
+    if item.get("hard_object_gate_blocked") or item.get("structure_guard_blocked"):
+        return -1000, [str(item.get("hard_object_gate_reason") or item.get("structure_guard_reason") or "заблокировано Object Gate")]
     service, service_reasons = is_service_object_candidate(item)
     raw = str(item.get("value_text") or item.get("object_hint") or "")
     if service or FILEISH_RE.search(raw):
@@ -95,8 +97,9 @@ def filter_registry(records: list[dict[str, Any]], findings: Iterable[dict[str, 
         lives={str(x.get("object_lifecycle_status") or "Не определён") for x in ev}
         life="Проектируемый" if "Проектируемый" in lives else ("Реконструируемый" if "Реконструируемый" in lives else next(iter(lives),"Не определён"))
         service=bool(FILEISH_RE.search(str(row.get("Наименование объекта") or "")))
+        hard_blocked=any(bool(x.get("hard_object_gate_blocked") or x.get("structure_guard_blocked")) for x in ev) and not any(int(x.get("object_trust_score") or -1000) >= 80 for x in ev)
         confirmed_sources=int(row.get("Количество источников") or row.get("Подтверждений") or 0)
-        is_trusted=(not service and life in {"Проектируемый","Реконструируемый"} and (max_score>=80 or (max_score>=60 and confirmed_sources>=2)))
+        is_trusted=(not service and not hard_blocked and life in {"Проектируемый","Реконструируемый"} and (max_score>=80 or (max_score>=60 and confirmed_sources>=2)))
         row=dict(row); row["Статус проектирования"]=life; row["Доверие к объекту"]=max_score; row["Подтвержденный реестр"]=is_trusted
         (trusted if is_trusted else candidates).append(row)
     return trusted,candidates

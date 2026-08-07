@@ -45,6 +45,7 @@ from .normative_knowledge import NormativeKnowledgeLayer
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
+from .composition_registry import build_composition_baseline, merge_baseline_with_registry
 from .pz_complex_object_register import extract_pz_complex_object_register_from_uploaded, enforce_authoritative_pz_registry
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
@@ -303,7 +304,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.3.3-multisource-object-registry"
+        item["core_version"] = "7.3.4-composition-failsafe"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -376,6 +377,21 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     consolidated_registry, consolidated_candidates, pz_authoritative_audit_consolidated = enforce_authoritative_pz_registry(
         consolidated_registry, consolidated_candidates, pz_complex_objects, findings
     )
+
+    # Composition Fail-Safe: the engineer-facing object list is built from explicit
+    # structured composition registers (PZ complex-object table + GP explication).
+    # Downstream generic filters may enrich these rows, but cannot delete them.
+    composition_baseline, composition_baseline_audit = build_composition_baseline(pz_complex_objects, gp_findings)
+    if composition_baseline:
+        consolidated_registry = merge_baseline_with_registry(composition_baseline, consolidated_registry)
+        object_registry = merge_baseline_with_registry(composition_baseline, object_registry)
+        # Generic narrative candidates are intentionally kept out of the primary
+        # composition list when a structured baseline exists. They remain in findings
+        # and developer diagnostics, but no longer displace real project objects.
+        baseline_positions = {str(r.get('Позиция по ГП') or '') for r in composition_baseline}
+        consolidated_candidates = [r for r in consolidated_candidates if str(r.get('Позиция по ГП') or '') not in baseline_positions and bool(r.get('general_plan_seed'))]
+        object_candidates = [r for r in object_candidates if str(r.get('Позиция по ГП') or '') not in baseline_positions and bool(r.get('general_plan_seed'))]
+
     recovery_mode_triggered = needs_object_recovery(object_registry, object_candidates, gp_findings)
     if recovery_mode_triggered:
         progress(74, "Recovery Mode", "Повторно используем экспликацию генплана и сильные источники ПЗ; результат не считается пустым автоматически")
@@ -418,14 +434,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.3.3-multisource-object-registry"
+        item["core_version"] = "7.3.4-composition-failsafe"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     pp87_project_profile = detect_pp87_profile(findings, documents)
     for doc in documents:
-        doc["core_version"] = "7.3.3-multisource-object-registry"
+        doc["core_version"] = "7.3.4-composition-failsafe"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -477,6 +493,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["general_plan_audit"] = general_plan_audit
         doc["pz_complex_object_audit"] = pz_complex_object_audit
         doc["pz_complex_object_count"] = len([x for x in pz_complex_objects if x.get("parameter_code") == "OBJECT_ENTRY"])
+        doc["composition_baseline"] = composition_baseline
+        doc["composition_baseline_audit"] = composition_baseline_audit
         doc["pz_authoritative_registry_audit"] = pz_authoritative_audit_consolidated
         doc["general_plan_anchor_audit"] = general_plan_anchor_audit
         doc["general_plan_coverage"] = general_plan_coverage

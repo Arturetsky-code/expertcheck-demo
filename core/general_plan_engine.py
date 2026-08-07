@@ -117,6 +117,11 @@ class GeneralPlanEntry:
             "general_plan_occurrences": self.drawing_occurrences,
             "general_plan_design_status": self.design_status,
             "general_plan_project_default": self.project_default,
+            # Explication rows are an official structured object source, not narrative text.
+            # This is critical: Object Intelligence must never discard a valid GP row
+            # merely because the name is short (e.g. КПП, КТП) or absent in PZ.
+            "trusted_zone": "OBJECT_REGISTER" if self.in_explication else "DRAWING_FIELD",
+            "object_lifecycle_status": self.design_status if self.design_status != "Не определён" else ("Проектируемый" if self.in_explication and self.project_default else "Не определён"),
             "source_kind": "general_plan_explication" if self.in_explication else "general_plan_field",
             "record_kind": "project_object",
             "object_recovery_strong_evidence": bool(self.in_explication),

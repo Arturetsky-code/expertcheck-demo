@@ -42,11 +42,15 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
             source_preview = '; '.join(compact_source(e) for e in valid_evidence[:3])
             intel=(intelligence_decisions or {}).get(key,{})
             intel_decision = intel.get('decision')
-            # Strictly rejected service/date/TOC candidates are not shown to the
-            # engineer at all. The audit remains available in developer mode.
-            if intel_decision == 'blocked' and int(intel.get('confidence') or 0) == 0:
+            structured_baseline = bool(row.get('composition_baseline'))
+            # Structured PZ/GP composition rows are the primary evidence channel.
+            # Generic Object Intelligence is not allowed to erase them.
+            if intel_decision == 'blocked' and int(intel.get('confidence') or 0) == 0 and not structured_baseline:
                 continue
-            if intel_decision:
+            if structured_baseline:
+                auto_blocked = False
+                default_include = bool(row.get('Включить', source_default_include))
+            if intel_decision and not structured_baseline:
                 if intel_decision in {'blocked','context'}:
                     auto_blocked=True
                     default_include=False
@@ -65,8 +69,8 @@ def build_assembly_rows(trusted: Iterable[dict[str, Any]], candidates: Iterable[
                 'Статус проектирования': row.get('Статус проектирования') or 'Не определён',
                 'Доверие': row.get('Доверие к объекту', ''),
                 'Источники': source_preview or row.get('Источники') or row.get('Количество источников') or '',
-                'Количество доказательств': len(valid_evidence),
-                'Основание включения': source_preview or ('Надёжное доказательство не найдено' if not valid_evidence else ''),
+                'Количество доказательств': max(len(valid_evidence), 1 if structured_baseline else 0),
+                'Основание включения': source_preview or (str(row.get('Источник состава') or '') if structured_baseline else ('Надёжное доказательство не найдено' if not valid_evidence else '')),
                 'Блокировка': '; '.join(e.get('forbidden_reason','') for e in forbidden_evidence[:2]) if auto_blocked else '',
                 'Решение пользователя': 'Не задано',
                 'Комментарий пользователя': '',

@@ -417,15 +417,64 @@ def _extract_json(text: str) -> dict[str, Any] | list[Any] | None:
             return None
 
 
+
+_RUSSIAN_TEXT_FIELDS = {"reason","explanation","rationale","recommendation","covered","missing","summary","comment"}
+
+def _cyrillic_ratio(value: Any) -> float:
+    text=""
+    if isinstance(value, dict):
+        text=" ".join(str(v) for k,v in value.items() if k in _RUSSIAN_TEXT_FIELDS)
+    elif isinstance(value, list):
+        text=" ".join(str(x) for x in value)
+    else:
+        text=str(value or "")
+    letters=[c for c in text if c.isalpha()]
+    if not letters:
+        return 1.0
+    cyr=sum(1 for c in letters if ('А' <= c <= 'я') or c in 'Ёё')
+    return cyr/len(letters)
+
+def _needs_russian_translation(payload: Any) -> bool:
+    """True when user-visible AI explanation is predominantly non-Russian."""
+    if isinstance(payload, dict):
+        parts=[]
+        for key,value in payload.items():
+            if key in _RUSSIAN_TEXT_FIELDS:
+                parts.append(value)
+            elif key=="items" and isinstance(value,list):
+                parts.extend(value)
+        return any(_cyrillic_ratio(x) < 0.35 for x in parts if str(x or "").strip())
+    if isinstance(payload,list):
+        return any(_needs_russian_translation(x) for x in payload)
+    return _cyrillic_ratio(payload) < 0.35
+
+def _ensure_russian_payload(provider: "AIProvider", payload: Any) -> Any:
+    """Translate only human-readable fields, preserving enum values and structure."""
+    if payload is None or not _needs_russian_translation(payload):
+        return payload
+    system=(
+        "Переведите пользовательские текстовые пояснения JSON на русский язык. "
+        "Верните только JSON без Markdown. СТРОГО сохраните структуру, ключи, числа, ссылки, "
+        "идентификаторы и машинные enum-значения (yes/no/partial/requires_review/insufficient_data, "
+        "valid/suspicious/insufficient, keep/requires_review/suppress, include/review/exclude и т.п.) без перевода. "
+        "Переводите только свободный текст: reason, explanation, rationale, recommendation, covered, missing, summary, comment."
+    )
+    result=provider.generate(json.dumps(payload,ensure_ascii=False),system)
+    translated=_extract_json(result.text) if result.ok else None
+    return translated if isinstance(translated,(dict,list)) else payload
+
+
 def analyze_object_fragment(provider: AIProvider, fragment: dict[str, Any]) -> tuple[AIResult, dict[str, Any] | None]:
     system = '''Вы — модуль классификации инженерных сущностей. Верните только JSON без Markdown.\nСхема: {"entity_type":"project_object|equipment|document_service|context_object|unknown","design_status":"projected|reconstructed|existing|prospective|unknown","independent_object":true|false,"confidence":0.0,"reason":"...","recommended_action":"include|review|exclude"}. Не выдумывайте сведения и опирайтесь только на переданный фрагмент.'''
     prompt = 'Классифицируйте фрагмент проектной документации:\n' + json.dumps(fragment, ensure_ascii=False, indent=2)
     result = provider.generate(prompt, system)
-    return result, _extract_json(result.text) if result.ok else None
+    parsed = _extract_json(result.text) if result.ok else None
+    parsed = _ensure_russian_payload(provider, parsed) if parsed is not None else parsed
+    return result, parsed
 
 
 def analyze_checklist_evidence(provider: AIProvider, item: dict[str, Any], evidence: list[dict[str, Any]]) -> tuple[AIResult, dict[str, Any] | None]:
-    system = '''Вы — инженерный модуль проверки пункта чек-листа. Верните только JSON без Markdown.\nСхема: {"result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}. Не подменяйте инженерное решение предположением.'''
+    system = '''Вы — инженерный модуль проверки пункта чек-листа. Верните только JSON без Markdown. ВСЕ пользовательские текстовые поля (reason, covered, missing) пишите только на русском языке. Машинные значения result оставляйте в указанном английском enum.\nСхема: {"result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}. Не подменяйте инженерное решение предположением.'''
     payload={'checklist_item':item,'evidence':evidence[:20]}
     result=provider.generate(json.dumps(payload,ensure_ascii=False,indent=2),system)
     return result, _extract_json(result.text) if result.ok else None
@@ -433,10 +482,11 @@ def analyze_checklist_evidence(provider: AIProvider, item: dict[str, Any], evide
 
 def analyze_checklist_batch(provider: AIProvider, items: list[dict[str, Any]]) -> tuple[AIResult, dict[str, dict[str, Any]]]:
     """Semantic review of several checklist items in one request."""
-    system = '''Вы — инженерный модуль смысловой проверки чек-листа проектной документации. Верните только JSON без Markdown.\nСхема: {"items":[{"key":"...","result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}]}. Используйте только переданные доказательства. Если доказательств мало, выберите insufficient_data или requires_review.'''
+    system = '''Вы — инженерный модуль смысловой проверки чек-листа проектной документации. Верните только JSON без Markdown. ВСЕ пользовательские текстовые поля (reason, covered, missing) пишите только на русском языке. Машинные значения result оставляйте в указанном английском enum.\nСхема: {"items":[{"key":"...","result":"yes|no|partial|requires_review|insufficient_data","confidence":0.0,"covered":[],"missing":[],"evidence_refs":[],"reason":"..."}]}. Используйте только переданные доказательства. Если доказательств мало, выберите insufficient_data или requires_review.'''
     payload = {'task': 'checklist_batch_review', 'items': items[:12]}
     result = provider.generate(json.dumps(payload, ensure_ascii=False, indent=2), system)
     parsed = _extract_json(result.text) if result.ok else None
+    parsed = _ensure_russian_payload(provider, parsed) if parsed is not None else parsed
     reviews: dict[str, dict[str, Any]] = {}
     if isinstance(parsed, dict):
         for row in parsed.get('items') or []:

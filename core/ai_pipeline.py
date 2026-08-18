@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, asdict
 from typing import Any, Iterable
 
-from .ai_gateway import AIProvider, AIResult, _extract_json
+from .ai_gateway import AIProvider, AIResult, _extract_json, _ensure_russian_payload
 from .normalization import normalize_text
 
 
@@ -151,13 +151,17 @@ def review_ambiguous_comparisons(
         return None, {}, 0
     system = (
         "Вы — модуль контроля привязки технико-экономических показателей. Верните только JSON без Markdown. "
-        "Проверяйте, достаточно ли доказательств, что значения относятся к одному объекту и одному показателю. "
+        "Все пользовательские пояснения reason пишите только на русском языке. "
+        "Строго различайте СУЩНОСТИ: object — это объект проектирования (например КПП, насосная станция, КТП), "
+        "parameter — это характеристика/ТЭП (например площадь застройки, мощность, высота). "
+        "Название ТЭП никогда не является объектом. Проверяйте, достаточно ли доказательств, что значения относятся к ОДНОМУ объекту и ОДНОМУ показателю. "
         "Ответ: {\"items\":[{\"key\":\"...\",\"binding\":\"valid|suspicious|insufficient\","
         "\"confidence\":0.0,\"reason\":\"...\",\"recommended_status\":\"keep|requires_review|suppress\"}]}. "
         "Не сравнивайте числа заново и не выдумывайте источники."
     )
     result = provider.generate(json.dumps({"task": "property_binding_review", "comparisons": rows}, ensure_ascii=False, indent=2), system)
     parsed = _extract_json(result.text) if result.ok else None
+    parsed = _ensure_russian_payload(provider, parsed) if parsed is not None else parsed
     reviews: dict[str, dict[str, Any]] = {}
     if isinstance(parsed, dict):
         for item in parsed.get("items") or []:

@@ -55,6 +55,34 @@ DOCUMENT_CONTEXT_TOKENS = (
 )
 
 
+
+_PARAMETER_ENTITY_PATTERNS = (
+    r"^площадь\s+застройки\b", r"^общая\s+площадь\b", r"^полезная\s+площадь\b",
+    r"^строительн(?:ый|ого)\s+об[ъь]?[её]м\b", r"^об[ъь]?[её]м\b", r"^вместимость\b",
+    r"^высота\b", r"^высотность\b", r"^этажность\b", r"^количество\s+этаж",
+    r"^мощность\b", r"^проектная\s+мощность\b", r"^установленная\s+мощность\b",
+    r"^производительность\b", r"^пропускная\s+способность\b", r"^расход\b",
+    r"^давление\b", r"^напор\b", r"^диаметр\b", r"^протяж[её]нность\b", r"^длина\b",
+    r"^ширина\b", r"^глубина\b", r"^напряжение\b", r"^освещ[её]нность\b",
+    r"^уровень\s+ответственности\b", r"^степень\s+огнестойкости\b",
+    r"^класс\s+функциональной\s+пожарной\s+опасности\b", r"^категория\s+над[её]жности\b",
+    r"^отметка\b", r"^уклон\b", r"^количество\b", r"^число\b",
+)
+
+def is_parameter_entity_name(value: Any) -> bool:
+    """A metric/property label can never be the canonical project-object name."""
+    raw=re.sub(r"\s+"," ",str(value or "")).strip(" .;:-")
+    if not raw:
+        return False
+    low=normalize_text(raw)
+    if any(re.search(p,low,re.I) for p in _PARAMETER_ENTITY_PATTERNS):
+        return True
+    # Very common table labels with units/value appended.
+    if re.match(r"^(?:площадь|мощность|производительность|объем|объём|высота|этажность|расход|давление|диаметр|протяженность|протяжённость)\b",low):
+        return True
+    return False
+
+
 def canonical_parameter_code(value: Any) -> str:
     code = str(value or "").strip().upper()
     return PARAMETER_CODE_ALIASES.get(code, code)
@@ -68,6 +96,8 @@ def is_service_object_candidate(item: dict[str, Any]) -> tuple[bool, list[str]]:
     """
     reasons: list[str] = []
     raw = str(item.get("value_text") or item.get("object_hint") or "").strip()
+    if is_parameter_entity_name(raw):
+        return True, ["наименование является инженерным показателем/ТЭП, а не объектом"]
     low = normalize_text(raw)
     document = str(item.get("document") or "").strip()
     method = normalize_text(item.get("match_method") or "")
@@ -151,6 +181,8 @@ def object_candidate_evidence(item: dict[str, Any]) -> tuple[int, list[str]]:
     """
     reasons: list[str] = []
     raw = str(item.get("value_text") or item.get("object_hint") or "").strip()
+    if is_parameter_entity_name(raw):
+        return True, ["наименование является инженерным показателем/ТЭП, а не объектом"]
     low = normalize_text(raw)
     context = normalize_text(" ".join(str(item.get(k) or "") for k in (
         "context", "structural_zone", "table_type", "table_evidence", "match_method", "parameter_name"

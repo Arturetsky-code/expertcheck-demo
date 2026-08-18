@@ -9,6 +9,11 @@ _RESULT_LABELS = {
     'project_object': 'Объект проекта', 'equipment': 'Оборудование', 'service_record': 'Служебная запись',
     'existing_object': 'Существующий объект', 'prospective_object': 'Перспективный объект',
     'include': 'Рекомендуется включить', 'exclude': 'Рекомендуется исключить', 'review': 'Проверить вручную',
+    'projected': 'Проектируемый', 'reconstructed': 'Реконструируемый', 'existing': 'Существующий',
+    'prospective': 'Перспективный', 'unknown': 'Не определено',
+    'valid': 'Привязка подтверждена', 'suspicious': 'Привязка сомнительна', 'insufficient': 'Недостаточно данных',
+    'keep': 'Оставить результат', 'requires_review': 'Требует проверки', 'suppress': 'Не использовать без проверки',
+    'document_service': 'Служебный элемент документа', 'context_object': 'Контекстное упоминание',
 }
 
 _FIELD_LABELS = {

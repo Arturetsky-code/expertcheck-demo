@@ -1072,6 +1072,35 @@ def _evidence_level(representatives: dict[str, Finding]) -> str:
     return "Низкая"
 
 
+
+_PARAMETER_OBJECT_LABEL_RE = re.compile(
+    r"^(?:площадь(?:\s+застройки|\s+общая)?|общая\s+площадь|строительн(?:ый|ого)\s+об[ъь]?[её]м|"
+    r"об[ъь]?[её]м|вместимость|высота|высотность|этажность|мощность|производительность|"
+    r"пропускная\s+способность|расход|давление|напор|диаметр|протяж[её]нность|длина|ширина|"
+    r"глубина|напряжение|освещ[её]нность|уровень\s+ответственности|количество)\b", re.I
+)
+
+def _object_hint_is_parameter_label(name: str, parameter_name: str="") -> bool:
+    clean=re.sub(r"\s+"," ",str(name or "")).strip(" .;:-")
+    if not clean:
+        return True
+    if parameter_name and normalized_search_text(clean)==normalized_search_text(parameter_name):
+        return True
+    return bool(_PARAMETER_OBJECT_LABEL_RE.match(clean))
+
+def _authoritative_object_by_position(findings: list[Finding]) -> dict[str,str]:
+    candidates: dict[str,list[tuple[float,str]]] = {}
+    for f in findings:
+        if f.parameter_code not in {"OBJECT_ENTRY","OBJECT_CANDIDATE"} or not f.genplan_position:
+            continue
+        name=str(f.object_hint or f.value_text or "").strip()
+        if not name or _object_hint_is_parameter_label(name):
+            continue
+        bonus=0.10 if f.parameter_code=="OBJECT_ENTRY" else 0.0
+        candidates.setdefault(f.genplan_position,[]).append((float(f.confidence or 0)+bonus,name))
+    return {pos:max(rows,key=lambda x:x[0])[1] for pos,rows in candidates.items() if rows}
+
+
 def compare_findings(findings: list[Finding], parameters: list[dict], engineering_rules: list[dict] | None = None) -> list[dict]:
     """Выполняет доказательную межраздельную сверку.
 
@@ -1082,11 +1111,22 @@ def compare_findings(findings: list[Finding], parameters: list[dict], engineerin
     parameter_map = {p.get("code"): p for p in parameters}
     engineering_rule_map = {r.get("parameter_code"): r for r in (engineering_rules or []) if r.get("enabled", True)}
     groups: dict[tuple[str, str, str], list[Finding]] = {}
+    position_objects=_authoritative_object_by_position(findings)
     for finding in findings:
-        if finding.parameter_code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} or finding.value is None or finding.object_hint == "Не определён":
+        if finding.parameter_code in {"OBJECT_ENTRY", "OBJECT_CANDIDATE"} or finding.value is None:
             continue
+        object_hint=str(finding.object_hint or "").strip()
+        parameter_name=str(finding.parameter_name or "").strip()
+        # Entity-type invariant: a TEP/property label cannot be an object.
+        if object_hint=="Не определён" or _object_hint_is_parameter_label(object_hint, parameter_name):
+            repaired=position_objects.get(str(finding.genplan_position or "").strip(),"")
+            if repaired:
+                object_hint=repaired
+            else:
+                # Safer to omit one uncertain value than create a false inter-section mismatch.
+                continue
         groups.setdefault(
-            (finding.object_hint, finding.parameter_code, normalize_unit(finding.unit)), []
+            (object_hint, finding.parameter_code, normalize_unit(finding.unit)), []
         ).append(finding)
 
     rows: list[dict] = []

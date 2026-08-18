@@ -1,0 +1,993 @@
+[
+  {
+    "id": "NR-PD-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Состав проектной документации",
+    "requirement": "Комплект разделов и содержание должны проверяться по типу объекта капитального строительства и применимым приложениям.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "STRUCTURE",
+    "automation": "AUTO",
+    "status": "Базовое структурное правило",
+    "keywords": [
+      "состав проектной документации",
+      "раздел"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Базовое структурное правило",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-PZ-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Идентификация объекта",
+    "requirement": "В ПЗ должны быть согласованно раскрыты сведения об объекте, его назначении, составе и основных характеристиках.",
+    "sections": [
+      "ПЗ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "SEMANTIC",
+    "status": "Предварительная проверка",
+    "keywords": [
+      "сведения об объекте",
+      "функциональное назначение",
+      "состав",
+      "характеристик"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-PZU-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Состав и размещение объектов",
+    "requirement": "Планировочные решения должны позволять идентифицировать проектируемые объекты и их размещение на земельном участке.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "STRUCTURE",
+    "automation": "AUTO",
+    "status": "Предварительная проверка",
+    "keywords": [
+      "экспликация",
+      "схема планировочной организации",
+      "генеральный план"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-PZU-002",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Организация рельефа и водоотведения",
+    "requirement": "Для применимых объектов должны быть раскрыты решения по организации рельефа и отводу поверхностных вод.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "SEMANTIC",
+    "status": "Предварительная проверка",
+    "keywords": [
+      "организация рельефа",
+      "водоотвед",
+      "поверхностн",
+      "вертикальн"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-AR-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Объёмно-планировочные характеристики",
+    "requirement": "Характеристики зданий должны согласовываться с архитектурными решениями и сводными сведениями проекта.",
+    "sections": [
+      "АР",
+      "ПЗ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "CALC",
+    "status": "Предварительная проверка",
+    "parameter_codes": [
+      "AREA_BUILD",
+      "AREA_TOTAL",
+      "VOLUME_BUILD",
+      "HEIGHT_BUILD",
+      "FLOORS"
+    ],
+    "keywords": [
+      "площадь",
+      "объем",
+      "объём",
+      "высота",
+      "этаж"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-TX-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Проектная мощность и технология",
+    "requirement": "Проектная мощность и производительность должны подтверждаться технологическими решениями и быть согласованы со сводными сведениями.",
+    "sections": [
+      "ТХ",
+      "ПЗ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "CALC",
+    "status": "Предварительная проверка",
+    "parameter_codes": [
+      "CAPACITY"
+    ],
+    "keywords": [
+      "производительность",
+      "мощность",
+      "технологическ"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-IOS1-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Электроснабжение",
+    "requirement": "Основные электрические параметры должны подтверждаться профильными решениями электроснабжения.",
+    "sections": [
+      "ИОС1",
+      "ПЗ",
+      "ТХ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "CALC",
+    "status": "Предварительная проверка",
+    "parameter_codes": [
+      "POWER_INSTALLED",
+      "POWER_CALCULATED",
+      "POWER_KTP",
+      "VOLTAGE"
+    ],
+    "keywords": [
+      "электроснаб",
+      "мощность",
+      "напряжение"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-IOS2-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Водоснабжение и водоотведение",
+    "requirement": "Расходы, объёмы, давление, производительность и иные ключевые параметры систем должны быть согласованы с ПЗ и связанными разделами.",
+    "sections": [
+      "ИОС2",
+      "ПЗ",
+      "ТХ",
+      "ПБ",
+      "ООС"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "CALC",
+    "status": "Предварительная проверка",
+    "parameter_codes": [
+      "FLOW_RATE",
+      "PRESSURE",
+      "DIAMETER",
+      "RES_VOLUME",
+      "VOLUME",
+      "CAPACITY"
+    ],
+    "keywords": [
+      "водоснаб",
+      "водоотвед",
+      "расход",
+      "давление",
+      "резервуар"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-IR-001",
+    "source": "Постановление Правительства РФ № 87",
+    "topic": "Исходные данные",
+    "requirement": "Проектные решения должны быть обеспечены применимыми исходными и разрешительными документами; формальное наличие документа не подтверждает достаточность территории или срока его действия.",
+    "sections": [
+      "ПЗ",
+      "ALL"
+    ],
+    "check_kind": "DOCUMENT",
+    "automation": "SEMANTIC",
+    "status": "Предварительная проверка",
+    "keywords": [
+      "исходно-разрешительн",
+      "технические условия",
+      "земельн",
+      "окн",
+      "оопт"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-CROSS-001",
+    "source": "Инженерное правило ExpertCheck",
+    "topic": "Межраздельная согласованность",
+    "requirement": "Одинаковая инженерная характеристика одного объекта должна иметь единый смысл и согласованные значения в профильном и зависимых разделах.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "CALC",
+    "status": "Внутреннее контрольное правило",
+    "keywords": [
+      "соответствие",
+      "согласован",
+      "сверить"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Внутреннее контрольное правило",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-EVID-001",
+    "source": "Инженерное правило ExpertCheck",
+    "topic": "Доказуемость вывода",
+    "requirement": "Отрицательный автоматический вывод допускается только при наличии идентифицированного объекта, характеристики и проверяемого источника.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "EVIDENCE",
+    "automation": "AUTO",
+    "status": "Внутреннее контрольное правило",
+    "keywords": [
+      "доказательств",
+      "источник",
+      "страница"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Внутреннее контрольное правило",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-ID-001",
+    "source": "384-ФЗ / идентификационные признаки",
+    "topic": "Идентификационные признаки объекта",
+    "requirement": "Проверить согласованность идентификационных признаков, уровня ответственности и классификационных характеристик между ПЗ и профильными разделами.",
+    "parameter_codes": [
+      "RESPONSIBILITY_LEVEL",
+      "CONSTRUCTION_CLASS"
+    ],
+    "keywords": [
+      "идентификационные признаки",
+      "уровень ответственности",
+      "класс сооружения"
+    ],
+    "status": "Требует подтверждения актуальной редакции и применимости",
+    "check_type": "CROSS_SECTION",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения актуальной редакции и применимости",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-FIRE-001",
+    "source": "Нормативные требования пожарной безопасности",
+    "topic": "Пожарно-технические характеристики",
+    "requirement": "Проверить согласованность степени огнестойкости, класса функциональной пожарной опасности и иных пожарных характеристик.",
+    "parameter_codes": [
+      "FIRE_RESISTANCE",
+      "FIRE_CLASS"
+    ],
+    "keywords": [
+      "огнестойкость",
+      "пожарной опасности"
+    ],
+    "status": "Требует подтверждения конкретного НТД и пункта",
+    "check_type": "CROSS_SECTION",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения конкретного НТД и пункта",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-EL-001",
+    "source": "Нормативные требования к электроснабжению",
+    "topic": "Надёжность и параметры электроснабжения",
+    "requirement": "Проверить категорию надёжности, мощность, напряжение и резервирование по профильным решениям электроснабжения.",
+    "parameter_codes": [
+      "POWER_INSTALLED",
+      "POWER_CALCULATED",
+      "POWER_KTP",
+      "VOLTAGE",
+      "TRANSFORMER_COUNT",
+      "RELIABILITY_CATEGORY"
+    ],
+    "keywords": [
+      "электроснабжение",
+      "мощность",
+      "напряжение",
+      "категория надежности",
+      "категория надёжности"
+    ],
+    "status": "Требует подтверждения конкретного НТД и пункта",
+    "check_type": "CALC",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения конкретного НТД и пункта",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-LIGHT-001",
+    "source": "ФНП / нормы освещения — уточнить применимость",
+    "topic": "Освещение рабочих зон",
+    "requirement": "Проверить наличие нормируемой освещённости в рабочих зонах и местах выполнения технологических операций.",
+    "parameter_codes": [
+      "ILLUMINATION"
+    ],
+    "keywords": [
+      "освещенность",
+      "освещённость",
+      "наружное освещение"
+    ],
+    "status": "Требует подтверждения применимого пункта",
+    "check_type": "CALC",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения применимого пункта",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-LAND-001",
+    "source": "ПП РФ №87 и исходно-разрешительная документация",
+    "topic": "Земельные участки и границы проектирования",
+    "requirement": "Проверить соответствие границ проектирования, площади участка и правоустанавливающих документов принятым решениям ПЗУ.",
+    "parameter_codes": [
+      "LAND_AREA"
+    ],
+    "keywords": [
+      "земельный участок",
+      "границы проектирования",
+      "аренда"
+    ],
+    "status": "Требует проверки применимости к проекту",
+    "check_type": "DOCUMENT",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует проверки применимости к проекту",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-HYDRO-001",
+    "source": "Нормативные требования к ГТС — уточнить применимость",
+    "topic": "Расчётные уровни и отметки ГТС",
+    "requirement": "Проверить согласованность расчётных уровней воды, отметок гребня и геометрических параметров ГТС.",
+    "parameter_codes": [
+      "WATER_LEVEL",
+      "DAM_CREST_ELEVATION",
+      "HEIGHT_BUILD",
+      "VOLUME"
+    ],
+    "keywords": [
+      "гребень",
+      "уровень воды",
+      "гтс",
+      "хвостохранилище"
+    ],
+    "status": "Требует подтверждения класса и применимого НТД",
+    "check_type": "CALC",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения класса и применимого НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-ROAD-001",
+    "source": "Нормативные требования к автомобильным дорогам — уточнить применимость",
+    "topic": "Параметры автомобильных дорог",
+    "requirement": "Проверить категорию дороги, количество полос, ширину, уклоны и протяжённость по АД и ПЗУ.",
+    "parameter_codes": [
+      "ROAD_CATEGORY",
+      "LANE_COUNT",
+      "WIDTH",
+      "SLOPE",
+      "LENGTH"
+    ],
+    "keywords": [
+      "дорога",
+      "полос",
+      "уклон",
+      "проезжей части"
+    ],
+    "status": "Требует подтверждения категории и применимого НТД",
+    "check_type": "CROSS_SECTION",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует подтверждения категории и применимого НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-STORAGE-001",
+    "source": "Технологические и специальные требования — уточнить применимость",
+    "topic": "Вместимость и режим эксплуатации складов",
+    "requirement": "Проверить согласованность вместимости склада и режима работы с технологическими, пожарными и экологическими решениями.",
+    "parameter_codes": [
+      "STORAGE_CAPACITY",
+      "OPERATING_MODE"
+    ],
+    "keywords": [
+      "вместимость склада",
+      "режим работы",
+      "хранение"
+    ],
+    "status": "Требует определения вида склада и применимых требований",
+    "check_type": "SEMANTIC",
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует определения вида склада и применимых требований",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-DATA-OWNER-001",
+    "source": "Методика ExpertCheck; конкретный НТД определяется по объекту",
+    "topic": "Согласованность профильного и сводного разделов",
+    "requirement": "Значение инженерной характеристики должно подтверждаться профильным разделом и не противоречить повторяющим его сведениям в смежных разделах.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Методическое правило; НТД требует привязки",
+    "keywords": [
+      "согласован",
+      "соответств",
+      "характеристик"
+    ],
+    "parameter_codes": [],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Методическое правило; НТД требует привязки",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-WATER-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Водоснабжение и водоотведение",
+    "requirement": "Расход, напор, производительность, объёмы резервуаров и число ёмкостей должны быть взаимно согласованы с принятой схемой.",
+    "sections": [
+      "ИОС2",
+      "ИОС3",
+      "ТХ",
+      "ПБ"
+    ],
+    "check_kind": "CALC",
+    "automation": "CALC",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "расход",
+      "напор",
+      "резервуар",
+      "насосн"
+    ],
+    "parameter_codes": [
+      "FLOW_RATE",
+      "PUMP_HEAD",
+      "RES_VOLUME",
+      "RESERVOIR_COUNT",
+      "FIRE_WATER_RESERVE"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-POWER-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Электроснабжение",
+    "requirement": "Мощность, напряжение, количество трансформаторов и категория надёжности должны соответствовать принятой схеме электроснабжения и составу электроприёмников.",
+    "sections": [
+      "ИОС1",
+      "ПЗ",
+      "ТХ"
+    ],
+    "check_kind": "CALC",
+    "automation": "CALC",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "трансформатор",
+      "напряжен",
+      "категория надежности",
+      "электроснабж"
+    ],
+    "parameter_codes": [
+      "POWER_INSTALLED",
+      "VOLTAGE",
+      "TRANSFORMER_COUNT",
+      "RELIABILITY_CATEGORY"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-PIPE-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Линейные инженерные сети",
+    "requirement": "Диаметр, протяжённость, давление и пропускная способность сети должны быть согласованы с трассой, расходом и расчётным режимом.",
+    "sections": [
+      "ИОС2",
+      "ИОС3",
+      "ТХ",
+      "ПЗУ"
+    ],
+    "check_kind": "CALC",
+    "automation": "CALC",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "трубопровод",
+      "водовод",
+      "диаметр",
+      "давлен"
+    ],
+    "parameter_codes": [
+      "DIAMETER",
+      "PIPELINE_LENGTH",
+      "PRESSURE",
+      "PIPELINE_CAPACITY",
+      "FLOW_RATE"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-FIRE-WATER-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Противопожарное водоснабжение",
+    "requirement": "Запас воды, количество и назначение резервуаров должны быть однозначно отражены и согласованы между ПБ, ВК, ПЗ и генпланом.",
+    "sections": [
+      "ПБ",
+      "ИОС2",
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "противопожар",
+      "резервуар",
+      "запас воды"
+    ],
+    "parameter_codes": [
+      "FIRE_WATER_RESERVE",
+      "RESERVOIR_COUNT",
+      "RES_VOLUME"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-SANZONE-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Санитарно-защитная зона",
+    "requirement": "Принятый размер СЗЗ и границы должны быть подтверждены экологическими материалами и согласованы с планировочной частью.",
+    "sections": [
+      "ООС",
+      "ПЗУ",
+      "ПЗ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "SEMANTIC",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "санитарно-защитн",
+      "сзз"
+    ],
+    "parameter_codes": [
+      "SANITARY_ZONE"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-SEISMIC-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Сейсмические исходные данные",
+    "requirement": "Расчётная сейсмичность проектных решений должна соответствовать исходным данным инженерных изысканий и быть согласована по разделам.",
+    "sections": [
+      "ИГИ",
+      "ПЗ",
+      "КР",
+      "АР",
+      "ГТ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "сейсмич",
+      "оср"
+    ],
+    "parameter_codes": [
+      "SEISMICITY"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-EQUIP-001",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Основное технологическое оборудование",
+    "requirement": "Количество и состав основного оборудования должны соответствовать принятой технологической схеме, мощности объекта и нагрузкам на инженерные системы.",
+    "sections": [
+      "ТХ",
+      "ПЗ",
+      "ИОС",
+      "ПОС"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "оборудован",
+      "количество",
+      "технологическ"
+    ],
+    "parameter_codes": [
+      "EQUIPMENT_COUNT",
+      "DESIGN_CAPACITY"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-FIRE-RES-002",
+    "source": "Нормативная база ExpertCheck — требуется верификация применимого НТД",
+    "topic": "Противопожарные резервуары",
+    "requirement": "Назначение, количество и объём каждого противопожарного резервуара должны быть однозначно согласованы в ПЗ, ПЗУ, ВК и ПБ.",
+    "sections": [
+      "ПБ",
+      "ИОС2",
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Требует верификации НТД",
+    "keywords": [
+      "противопожарн резервуар",
+      "объем резервуара",
+      "объём резервуара"
+    ],
+    "parameter_codes": [
+      "FIRE_RESERVOIR_VOLUME",
+      "RESERVOIR_COUNT",
+      "RES_VOLUME"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Требует верификации НТД",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  },
+  {
+    "id": "NR-CAPACITY-002",
+    "source": "Постановление Правительства РФ № 87 / профильные требования — уточняются по типу объекта",
+    "topic": "Проектная мощность",
+    "requirement": "Проектная мощность должна быть раскрыта в ПЗ и согласована с технологическими, инженерными и экологическими расчётами.",
+    "sections": [
+      "ПЗ",
+      "ТХ",
+      "ИОС",
+      "ООС"
+    ],
+    "check_kind": "CROSS_SECTION",
+    "automation": "AUTO",
+    "status": "Предварительная проверка",
+    "keywords": [
+      "проектная мощность",
+      "производительность"
+    ],
+    "parameter_codes": [
+      "DESIGN_CAPACITY",
+      "CAPACITY"
+    ],
+    "document_id": "",
+    "paragraph": "",
+    "verification_status": "Предварительная проверка",
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "PRELIMINARY_ONLY"
+  }
+]

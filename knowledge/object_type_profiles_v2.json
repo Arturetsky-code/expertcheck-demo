@@ -1,0 +1,226 @@
+[
+  {
+    "object_type": "BUILDING",
+    "name": "Здание/сооружение",
+    "aliases": [
+      "здание",
+      "корпус",
+      "кпп",
+      "абк"
+    ],
+    "expected_parameters": [
+      "AREA_BUILD",
+      "AREA_TOTAL",
+      "VOLUME_BUILD",
+      "HEIGHT_BUILD",
+      "FLOORS",
+      "FIRE_RESISTANCE",
+      "FIRE_CLASS",
+      "RESPONSIBILITY_LEVEL"
+    ],
+    "owner_sections": {
+      "AREA_BUILD": [
+        "ПЗУ",
+        "АР"
+      ],
+      "AREA_TOTAL": [
+        "АР"
+      ],
+      "HEIGHT_BUILD": [
+        "АР"
+      ],
+      "FIRE_RESISTANCE": [
+        "АР",
+        "ПБ"
+      ]
+    }
+  },
+  {
+    "object_type": "SUBSTATION",
+    "name": "КТП/электротехнический объект",
+    "aliases": [
+      "ктп",
+      "трансформаторная подстанция",
+      "подстанция"
+    ],
+    "expected_parameters": [
+      "POWER_INSTALLED",
+      "TRANSFORMER_COUNT",
+      "VOLTAGE",
+      "AREA_BUILD"
+    ],
+    "owner_sections": {
+      "POWER_INSTALLED": [
+        "ИОС1"
+      ],
+      "TRANSFORMER_COUNT": [
+        "ИОС1"
+      ],
+      "VOLTAGE": [
+        "ИОС1"
+      ]
+    }
+  },
+  {
+    "object_type": "PUMP_STATION",
+    "name": "Насосная станция",
+    "aliases": [
+      "насосная станция",
+      "насосная"
+    ],
+    "expected_parameters": [
+      "FLOW_RATE",
+      "PUMP_HEAD",
+      "POWER_INSTALLED",
+      "AREA_BUILD"
+    ],
+    "owner_sections": {
+      "FLOW_RATE": [
+        "ИОС2",
+        "ТХ"
+      ],
+      "PUMP_HEAD": [
+        "ИОС2",
+        "ТХ"
+      ]
+    }
+  },
+  {
+    "object_type": "RESERVOIR",
+    "name": "Резервуар",
+    "aliases": [
+      "резервуар",
+      "емкость",
+      "ёмкость"
+    ],
+    "expected_parameters": [
+      "VOLUME",
+      "RESERVOIR_COUNT",
+      "FIRE_WATER_RESERVE",
+      "DIAMETER",
+      "HEIGHT_BUILD"
+    ],
+    "owner_sections": {
+      "VOLUME": [
+        "ИОС2",
+        "ПБ"
+      ],
+      "FIRE_WATER_RESERVE": [
+        "ПБ",
+        "ИОС2"
+      ]
+    }
+  },
+  {
+    "object_type": "ROAD",
+    "name": "Автомобильная дорога/проезд",
+    "aliases": [
+      "автодорога",
+      "автомобильная дорога",
+      "проезд",
+      "дорога"
+    ],
+    "expected_parameters": [
+      "ROAD_LENGTH",
+      "ROAD_WIDTH",
+      "ROAD_CATEGORY",
+      "LANE_COUNT",
+      "SLOPE"
+    ],
+    "owner_sections": {
+      "ROAD_LENGTH": [
+        "ПЗУ",
+        "АД"
+      ],
+      "ROAD_WIDTH": [
+        "ПЗУ",
+        "АД"
+      ]
+    }
+  },
+  {
+    "object_type": "PIPELINE",
+    "name": "Трубопровод",
+    "aliases": [
+      "трубопровод",
+      "водовод",
+      "пульпопровод"
+    ],
+    "expected_parameters": [
+      "LENGTH",
+      "DIAMETER",
+      "PRESSURE",
+      "FLOW_RATE"
+    ],
+    "owner_sections": {
+      "LENGTH": [
+        "ИОС2",
+        "ТХ"
+      ],
+      "DIAMETER": [
+        "ИОС2",
+        "ТХ"
+      ]
+    }
+  },
+  {
+    "object_type": "HYDRAULIC",
+    "name": "Гидротехническое сооружение",
+    "aliases": [
+      "хвостохранилище",
+      "дамба",
+      "плотина",
+      "гтс",
+      "карта хвостов"
+    ],
+    "expected_parameters": [
+      "CREST_ELEVATION",
+      "WATER_LEVEL",
+      "HEIGHT_BUILD",
+      "VOLUME",
+      "RESPONSIBILITY_LEVEL",
+      "SEISMICITY"
+    ],
+    "owner_sections": {
+      "CREST_ELEVATION": [
+        "ГТ"
+      ],
+      "WATER_LEVEL": [
+        "ГТ"
+      ],
+      "SEISMICITY": [
+        "ИГИ",
+        "ГТ"
+      ]
+    }
+  },
+  {
+    "object_type": "INDUSTRIAL",
+    "name": "Технологический объект",
+    "aliases": [
+      "дск",
+      "дробильно-сортировочный",
+      "зиф",
+      "цех",
+      "установка"
+    ],
+    "expected_parameters": [
+      "DESIGN_CAPACITY",
+      "CAPACITY",
+      "EQUIPMENT_COUNT",
+      "POWER_INSTALLED",
+      "AREA_BUILD"
+    ],
+    "owner_sections": {
+      "DESIGN_CAPACITY": [
+        "ТХ"
+      ],
+      "CAPACITY": [
+        "ТХ"
+      ],
+      "EQUIPMENT_COUNT": [
+        "ТХ"
+      ]
+    }
+  }
+]

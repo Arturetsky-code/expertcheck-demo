@@ -1,0 +1,48 @@
+[
+  {
+    "document_id": "PP87",
+    "title": "Постановление Правительства РФ от 16.02.2008 № 87 «О составе разделов проектной документации и требованиях к их содержанию»",
+    "document_type": "НПА",
+    "authority": "Правительство РФ",
+    "source_class": "official",
+    "verification_status": "Требует постатейной верификации редакции",
+    "effective_from": "2008-02-16",
+    "effective_to": null,
+    "scope": [
+      "PROJECT_DOCUMENTATION_COMPOSITION"
+    ]
+  },
+  {
+    "document_id": "384-FZ",
+    "title": "Федеральный закон № 384-ФЗ «Технический регламент о безопасности зданий и сооружений»",
+    "document_type": "Федеральный закон",
+    "authority": "Российская Федерация",
+    "source_class": "official",
+    "verification_status": "Требует постатейной верификации редакции",
+    "scope": [
+      "BUILDING_SAFETY"
+    ]
+  },
+  {
+    "document_id": "123-FZ",
+    "title": "Федеральный закон № 123-ФЗ «Технический регламент о требованиях пожарной безопасности»",
+    "document_type": "Федеральный закон",
+    "authority": "Российская Федерация",
+    "source_class": "official",
+    "verification_status": "Требует постатейной верификации редакции",
+    "scope": [
+      "FIRE_SAFETY"
+    ]
+  },
+  {
+    "document_id": "FNP-MINING",
+    "title": "ФНП в области промышленной безопасности для горных работ и переработки твёрдых полезных ископаемых",
+    "document_type": "ФНП",
+    "authority": "Ростехнадзор",
+    "source_class": "official",
+    "verification_status": "Требует загрузки и верификации применимой редакции",
+    "scope": [
+      "MINING"
+    ]
+  }
+]

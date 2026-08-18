@@ -1,21 +1,688 @@
 [
-  {"parameter_code":"AREA_BUILD","name":"Площадь застройки","owner_sections":["АР"],"control_sections":["ПЗУ","ПЗ"],"object_classes":["BUILDING","STRUCTURE","GENERIC"],"priority":"Высокий","rationale":"Площадь застройки должна быть однозначно привязана к тому же объекту и согласована между архитектурным/планировочным и сводным описанием."},
-  {"parameter_code":"AREA_TOTAL","name":"Общая площадь","owner_sections":["АР"],"control_sections":["ПЗ"],"object_classes":["BUILDING"],"priority":"Высокий","rationale":"Общая площадь является прежде всего характеристикой здания и должна подтверждаться архитектурными решениями."},
-  {"parameter_code":"VOLUME_BUILD","name":"Строительный объём","owner_sections":["АР"],"control_sections":["ПЗ","КР"],"object_classes":["BUILDING"],"priority":"Высокий","rationale":"Строительный объём должен быть согласован с геометрией здания и сводными ТЭП."},
-  {"parameter_code":"HEIGHT_BUILD","name":"Высота","owner_sections":["АР"],"control_sections":["ПЗ","КР","ПЗУ"],"object_classes":["BUILDING","STRUCTURE"],"priority":"Высокий","rationale":"Высотная характеристика должна относиться к одному и тому же объекту и иметь единый смысл во всех разделах."},
-  {"parameter_code":"FLOORS","name":"Этажность","owner_sections":["АР"],"control_sections":["ПЗ"],"object_classes":["BUILDING"],"priority":"Высокий","rationale":"Этажность здания должна совпадать в ПЗ и архитектурных решениях."},
-  {"parameter_code":"CAPACITY","name":"Производительность","owner_sections":["ТХ"],"control_sections":["ПЗ","ИОС","ООС","ПБ"],"object_classes":["TECHNOLOGY","GENERIC","STRUCTURE"],"priority":"Высокий","rationale":"Проектная производительность должна исходить из технологических решений и согласовываться со смежными нагрузками и воздействиями."},
-  {"parameter_code":"POWER_INSTALLED","name":"Установленная мощность","owner_sections":["ИОС1","ТХ"],"control_sections":["ПЗ","ПЗУ"],"object_classes":["ELECTRICAL","TECHNOLOGY","GENERIC"],"priority":"Высокий","rationale":"Электрическая мощность должна подтверждаться профильным разделом электроснабжения или технологией."},
-  {"parameter_code":"POWER_CALCULATED","name":"Расчётная мощность","owner_sections":["ИОС1"],"control_sections":["ПЗ","ТХ"],"object_classes":["ELECTRICAL","GENERIC"],"priority":"Высокий","rationale":"Расчётная мощность должна подтверждаться расчётами электроснабжения."},
-  {"parameter_code":"POWER_KTP","name":"Мощность КТП","owner_sections":["ИОС1"],"control_sections":["ПЗ","ПЗУ","ТХ"],"object_classes":["ELECTRICAL","GENERIC"],"priority":"Высокий","rationale":"Мощность трансформаторной подстанции должна подтверждаться разделом электроснабжения."},
-  {"parameter_code":"VOLTAGE","name":"Напряжение","owner_sections":["ИОС1"],"control_sections":["ПЗ","ТХ"],"object_classes":["ELECTRICAL","GENERIC"],"priority":"Высокий","rationale":"Класс напряжения должен совпадать в идентификационных сведениях и электротехнических решениях."},
-  {"parameter_code":"FLOW_RATE","name":"Расход","owner_sections":["ИОС2","ТХ"],"control_sections":["ПЗ","ООС","ПБ"],"object_classes":["WATER","PIPELINE","TECHNOLOGY","GENERIC"],"priority":"Высокий","rationale":"Расход должен быть подтверждён профильной системой и согласован с технологическими/экологическими нагрузками."},
-  {"parameter_code":"PRESSURE","name":"Давление","owner_sections":["ИОС2","ТХ"],"control_sections":["ПЗ"],"object_classes":["PIPELINE","WATER","TECHNOLOGY","GENERIC"],"priority":"Высокий","rationale":"Рабочее давление должно подтверждаться профильным инженерным разделом."},
-  {"parameter_code":"DIAMETER","name":"Диаметр","owner_sections":["ИОС2","ТХ"],"control_sections":["ПЗУ","ПЗ"],"object_classes":["PIPELINE","WATER","GENERIC"],"priority":"Высокий","rationale":"Диаметр линейной инженерной сети должен быть согласован между планом и профильными решениями."},
-  {"parameter_code":"RES_VOLUME","name":"Объём резервуара","owner_sections":["ИОС2","ПБ"],"control_sections":["ПЗ","ПЗУ","ТХ"],"object_classes":["TANK","WATER","GENERIC"],"priority":"Высокий","rationale":"Объём резервуара должен проверяться с учётом назначения и того, является значение единичным или суммарным."},
-  {"parameter_code":"VOLUME","name":"Объём / вместимость","owner_sections":["ТХ","ИОС2"],"control_sections":["ПЗ","ПЗУ","ООС"],"object_classes":["TANK","TECHNOLOGY","STRUCTURE","GENERIC"],"priority":"Высокий","rationale":"Объём должен сравниваться только при совпадении объекта, назначения и смыслового уровня значения."},
-  {"parameter_code":"LENGTH","name":"Протяжённость","owner_sections":["ПЗУ","ТХ","ИОС"],"control_sections":["ПЗ","ПОС"],"object_classes":["LINEAR","PIPELINE","ROAD","STRUCTURE","GENERIC"],"priority":"Средний","rationale":"Протяжённость линейного объекта должна подтверждаться графическими и профильными решениями."},
-  {"parameter_code":"WIDTH","name":"Ширина","owner_sections":["ПЗУ","АД","ТХ"],"control_sections":["ПЗ","ПОС"],"object_classes":["LINEAR","ROAD","STRUCTURE","GENERIC"],"priority":"Средний","rationale":"Ширина должна относиться к одному и тому же элементу и проверяться по планировочным/дорожным решениям."},
-  {"parameter_code":"DEPTH","name":"Глубина","owner_sections":["ПЗУ","КР","ТХ"],"control_sections":["ПЗ"],"object_classes":["STRUCTURE","LINEAR","GENERIC"],"priority":"Средний","rationale":"Глубина должна быть увязана с конструктивными и планировочными решениями."},
-  {"parameter_code":"QUANTITY","name":"Количество","owner_sections":["ПРОФИЛЬНЫЙ"],"control_sections":["ПЗ","ПЗУ"],"object_classes":["ALL"],"priority":"Высокий","rationale":"Количество сравнивается только после определения сущности: самостоятельный объект, секция, агрегат или единица оборудования."}
+  {
+    "parameter_code": "AREA_BUILD",
+    "name": "Площадь застройки",
+    "owner_sections": [
+      "АР"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПЗ"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Площадь застройки должна быть однозначно привязана к тому же объекту и согласована между архитектурным/планировочным и сводным описанием."
+  },
+  {
+    "parameter_code": "AREA_TOTAL",
+    "name": "Общая площадь",
+    "owner_sections": [
+      "АР"
+    ],
+    "control_sections": [
+      "ПЗ"
+    ],
+    "object_classes": [
+      "BUILDING"
+    ],
+    "priority": "Высокий",
+    "rationale": "Общая площадь является прежде всего характеристикой здания и должна подтверждаться архитектурными решениями."
+  },
+  {
+    "parameter_code": "VOLUME_BUILD",
+    "name": "Строительный объём",
+    "owner_sections": [
+      "АР"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "КР"
+    ],
+    "object_classes": [
+      "BUILDING"
+    ],
+    "priority": "Высокий",
+    "rationale": "Строительный объём должен быть согласован с геометрией здания и сводными ТЭП."
+  },
+  {
+    "parameter_code": "HEIGHT_BUILD",
+    "name": "Высота",
+    "owner_sections": [
+      "АР"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "КР",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Высотная характеристика должна относиться к одному и тому же объекту и иметь единый смысл во всех разделах."
+  },
+  {
+    "parameter_code": "FLOORS",
+    "name": "Этажность",
+    "owner_sections": [
+      "АР"
+    ],
+    "control_sections": [
+      "ПЗ"
+    ],
+    "object_classes": [
+      "BUILDING"
+    ],
+    "priority": "Высокий",
+    "rationale": "Этажность здания должна совпадать в ПЗ и архитектурных решениях."
+  },
+  {
+    "parameter_code": "CAPACITY",
+    "name": "Производительность",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ИОС",
+      "ООС",
+      "ПБ"
+    ],
+    "object_classes": [
+      "TECHNOLOGY",
+      "GENERIC",
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Проектная производительность должна исходить из технологических решений и согласовываться со смежными нагрузками и воздействиями."
+  },
+  {
+    "parameter_code": "POWER_INSTALLED",
+    "name": "Установленная мощность",
+    "owner_sections": [
+      "ИОС1",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "TECHNOLOGY",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Электрическая мощность должна подтверждаться профильным разделом электроснабжения или технологией."
+  },
+  {
+    "parameter_code": "POWER_CALCULATED",
+    "name": "Расчётная мощность",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Расчётная мощность должна подтверждаться расчётами электроснабжения."
+  },
+  {
+    "parameter_code": "POWER_KTP",
+    "name": "Мощность КТП",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Мощность трансформаторной подстанции должна подтверждаться разделом электроснабжения."
+  },
+  {
+    "parameter_code": "VOLTAGE",
+    "name": "Напряжение",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Класс напряжения должен совпадать в идентификационных сведениях и электротехнических решениях."
+  },
+  {
+    "parameter_code": "FLOW_RATE",
+    "name": "Расход",
+    "owner_sections": [
+      "ИОС2",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ООС",
+      "ПБ"
+    ],
+    "object_classes": [
+      "WATER",
+      "PIPELINE",
+      "TECHNOLOGY",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Расход должен быть подтверждён профильной системой и согласован с технологическими/экологическими нагрузками."
+  },
+  {
+    "parameter_code": "PRESSURE",
+    "name": "Давление",
+    "owner_sections": [
+      "ИОС2",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ"
+    ],
+    "object_classes": [
+      "PIPELINE",
+      "WATER",
+      "TECHNOLOGY",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Рабочее давление должно подтверждаться профильным инженерным разделом."
+  },
+  {
+    "parameter_code": "DIAMETER",
+    "name": "Диаметр",
+    "owner_sections": [
+      "ИОС2",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПЗ"
+    ],
+    "object_classes": [
+      "PIPELINE",
+      "WATER",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Диаметр линейной инженерной сети должен быть согласован между планом и профильными решениями."
+  },
+  {
+    "parameter_code": "RES_VOLUME",
+    "name": "Объём резервуара",
+    "owner_sections": [
+      "ИОС2",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "TANK",
+      "WATER",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Объём резервуара должен проверяться с учётом назначения и того, является значение единичным или суммарным."
+  },
+  {
+    "parameter_code": "VOLUME",
+    "name": "Объём / вместимость",
+    "owner_sections": [
+      "ТХ",
+      "ИОС2"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ООС"
+    ],
+    "object_classes": [
+      "TANK",
+      "TECHNOLOGY",
+      "STRUCTURE",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Объём должен сравниваться только при совпадении объекта, назначения и смыслового уровня значения."
+  },
+  {
+    "parameter_code": "LENGTH",
+    "name": "Протяжённость",
+    "owner_sections": [
+      "ПЗУ",
+      "ТХ",
+      "ИОС"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "LINEAR",
+      "PIPELINE",
+      "ROAD",
+      "STRUCTURE",
+      "GENERIC"
+    ],
+    "priority": "Средний",
+    "rationale": "Протяжённость линейного объекта должна подтверждаться графическими и профильными решениями."
+  },
+  {
+    "parameter_code": "WIDTH",
+    "name": "Ширина",
+    "owner_sections": [
+      "ПЗУ",
+      "АД",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "LINEAR",
+      "ROAD",
+      "STRUCTURE",
+      "GENERIC"
+    ],
+    "priority": "Средний",
+    "rationale": "Ширина должна относиться к одному и тому же элементу и проверяться по планировочным/дорожным решениям."
+  },
+  {
+    "parameter_code": "DEPTH",
+    "name": "Глубина",
+    "owner_sections": [
+      "ПЗУ",
+      "КР",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ"
+    ],
+    "object_classes": [
+      "STRUCTURE",
+      "LINEAR",
+      "GENERIC"
+    ],
+    "priority": "Средний",
+    "rationale": "Глубина должна быть увязана с конструктивными и планировочными решениями."
+  },
+  {
+    "parameter_code": "QUANTITY",
+    "name": "Количество",
+    "owner_sections": [
+      "ПРОФИЛЬНЫЙ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "ALL"
+    ],
+    "priority": "Высокий",
+    "rationale": "Количество сравнивается только после определения сущности: самостоятельный объект, секция, агрегат или единица оборудования."
+  },
+  {
+    "parameter_code": "FIRE_RESERVOIR_COUNT",
+    "name": "Количество противопожарных резервуаров",
+    "owner_sections": [
+      "ИОС2",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "TANK",
+      "WATER"
+    ],
+    "priority": "Высокий",
+    "rationale": "Количество и назначение противопожарных резервуаров должны быть согласованы между ВК/ПБ и сводными разделами."
+  },
+  {
+    "parameter_code": "RESPONSIBILITY_LEVEL",
+    "name": "Уровень ответственности",
+    "owner_sections": [
+      "ПЗ",
+      "КР"
+    ],
+    "control_sections": [
+      "АР",
+      "ПЗУ",
+      "ПБ"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Уровень ответственности должен быть единообразно указан в идентификационных признаках и профильных решениях."
+  },
+  {
+    "parameter_code": "FIRE_RESISTANCE",
+    "name": "Степень огнестойкости",
+    "owner_sections": [
+      "АР",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "КР"
+    ],
+    "object_classes": [
+      "BUILDING"
+    ],
+    "priority": "Высокий",
+    "rationale": "Степень огнестойкости должна совпадать в архитектурных, пожарных и идентификационных сведениях."
+  },
+  {
+    "parameter_code": "FIRE_CLASS",
+    "name": "Класс функциональной пожарной опасности",
+    "owner_sections": [
+      "АР",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ"
+    ],
+    "object_classes": [
+      "BUILDING"
+    ],
+    "priority": "Высокий",
+    "rationale": "Класс функциональной пожарной опасности должен быть согласован между ПЗ, АР и ПБ."
+  },
+  {
+    "parameter_code": "CONSTRUCTION_CLASS",
+    "name": "Класс сооружения",
+    "owner_sections": [
+      "КР",
+      "ПЗ"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПБ"
+    ],
+    "object_classes": [
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Класс сооружения должен иметь единое обоснованное значение в идентификационных и конструктивных решениях."
+  },
+  {
+    "parameter_code": "MARK_ELEVATION",
+    "name": "Высотная отметка",
+    "owner_sections": [
+      "ПЗУ",
+      "КР"
+    ],
+    "control_sections": [
+      "АР",
+      "ТХ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE",
+      "LINEAR"
+    ],
+    "priority": "Высокий",
+    "rationale": "Ключевые отметки должны быть согласованы между планировкой, конструктивом и технологией."
+  },
+  {
+    "parameter_code": "SLOPE",
+    "name": "Уклон",
+    "owner_sections": [
+      "ПЗУ",
+      "АД"
+    ],
+    "control_sections": [
+      "ИОС2",
+      "ПОС"
+    ],
+    "object_classes": [
+      "ROAD",
+      "LINEAR"
+    ],
+    "priority": "Средний",
+    "rationale": "Уклоны должны согласовываться с вертикальной планировкой, дорогами и водоотведением."
+  },
+  {
+    "parameter_code": "ROAD_CATEGORY",
+    "name": "Категория дороги",
+    "owner_sections": [
+      "АД",
+      "ПЗУ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "ROAD"
+    ],
+    "priority": "Средний",
+    "rationale": "Категория дороги должна совпадать в планировочных и дорожных решениях."
+  },
+  {
+    "parameter_code": "LANE_COUNT",
+    "name": "Количество полос",
+    "owner_sections": [
+      "АД"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПЗ"
+    ],
+    "object_classes": [
+      "ROAD"
+    ],
+    "priority": "Средний",
+    "rationale": "Количество полос движения должно быть согласовано между АД и ПЗУ."
+  },
+  {
+    "parameter_code": "TANK_COUNT",
+    "name": "Количество резервуаров/ёмкостей",
+    "owner_sections": [
+      "ИОС2",
+      "ТХ",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "TANK",
+      "WATER",
+      "TECHNOLOGY"
+    ],
+    "priority": "Высокий",
+    "rationale": "Количество ёмкостей сравнивается только при совпадении назначения и объектной привязки."
+  },
+  {
+    "parameter_code": "TRANSFORMER_COUNT",
+    "name": "Количество трансформаторов",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "ELECTRICAL"
+    ],
+    "priority": "Высокий",
+    "rationale": "Количество трансформаторов должно подтверждаться схемами электроснабжения и сводными сведениями."
+  },
+  {
+    "parameter_code": "RELIABILITY_CATEGORY",
+    "name": "Категория надёжности электроснабжения",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "TECHNOLOGY"
+    ],
+    "priority": "Высокий",
+    "rationale": "Категория надёжности должна соответствовать принятой схеме электроснабжения и требованиям потребителей."
+  },
+  {
+    "parameter_code": "STORAGE_CAPACITY",
+    "name": "Вместимость склада",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ООС",
+      "ПБ"
+    ],
+    "object_classes": [
+      "TECHNOLOGY",
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Вместимость склада влияет на технологические, пожарные и экологические решения и должна быть согласована."
+  },
+  {
+    "parameter_code": "OPERATING_MODE",
+    "name": "Режим работы",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС",
+      "ООС"
+    ],
+    "object_classes": [
+      "TECHNOLOGY"
+    ],
+    "priority": "Средний",
+    "rationale": "Режим работы должен быть согласован с производительностью, численностью и расчётами воздействий."
+  },
+  {
+    "parameter_code": "WATER_LEVEL",
+    "name": "Уровень воды",
+    "owner_sections": [
+      "ИОС2",
+      "ГТС"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПЗ",
+      "ООС"
+    ],
+    "object_classes": [
+      "WATER",
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Расчётные уровни воды должны быть согласованы между гидротехническими, планировочными и экологическими решениями."
+  },
+  {
+    "parameter_code": "DAM_CREST_ELEVATION",
+    "name": "Отметка гребня",
+    "owner_sections": [
+      "ГТС",
+      "КР"
+    ],
+    "control_sections": [
+      "ПЗУ",
+      "ПЗ"
+    ],
+    "object_classes": [
+      "STRUCTURE"
+    ],
+    "priority": "Высокий",
+    "rationale": "Отметка гребня ГТС должна совпадать в расчётах, чертежах и сводных характеристиках."
+  },
+  {
+    "parameter_code": "ILLUMINATION",
+    "name": "Освещённость",
+    "owner_sections": [
+      "ИОС1"
+    ],
+    "control_sections": [
+      "ТХ",
+      "ПЗУ",
+      "ПБ"
+    ],
+    "object_classes": [
+      "ELECTRICAL",
+      "TECHNOLOGY"
+    ],
+    "priority": "Высокий",
+    "rationale": "Освещённость рабочих зон должна подтверждаться профильным разделом и соответствовать условиям технологического процесса."
+  },
+  {
+    "parameter_code": "SANITARY_ZONE",
+    "name": "Размер санитарно-защитной зоны",
+    "owner_sections": [
+      "ООС"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "GENERIC"
+    ],
+    "priority": "Средний",
+    "rationale": "Размер и границы СЗЗ должны быть согласованы с планировочными и экологическими решениями."
+  },
+  {
+    "parameter_code": "LAND_AREA",
+    "name": "Площадь земельного участка",
+    "owner_sections": [
+      "ПЗУ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Площадь участка и границы проектирования должны быть согласованы с правоустанавливающими и планировочными материалами."
+  }
 ]

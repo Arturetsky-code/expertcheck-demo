@@ -140,6 +140,19 @@ def render(ctx):
         selected=st.selectbox('Позиция',selectable,key=f'checklist_detail_{checklist}_{selected_section}_{mode}')
         detail=details[selected]
         st.write(detail.get('evidence') or 'Пояснение отсутствует.')
+        compiled=detail.get('compiled_rule') or {}
+        automation=compiled.get('automation_class')
+        if automation:
+            labels={'AUTO':'Автоматическая проверка','CALC':'Расчётная / межраздельная проверка','SEMANTIC':'Смысловой AI-анализ','EXPERT':'Контроль специалиста'}
+            st.caption('Тип проверки: ' + labels.get(automation,str(automation)))
+        normative=detail.get('normative_context') or []
+        if normative:
+            with st.expander('Нормативный контекст пункта'):
+                for norm in normative[:4]:
+                    st.markdown(f"**{norm.get('source','')} · {norm.get('topic','')}**")
+                    st.write(norm.get('requirement') or '')
+                    st.caption(norm.get('status') or 'Предварительная проверка')
+                st.caption('Нормативный контекст используется как база предварительного контроля и не заменяет проверку актуальной редакции НТД специалистом.')
         if st.session_state.get('expert_mode') and detail.get('compiled_rule'):
             with st.expander('Скомпилированное правило'):
                 st.json(detail.get('compiled_rule'))

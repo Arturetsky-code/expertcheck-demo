@@ -35,8 +35,8 @@ def render(ctx):
             if view.empty:
                 st.success('Результатов, требующих внимания, нет.')
                 continue
-            compact=['object','parameter_name','status','document_values']
-            labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','document_values':'Значения по разделам'}
+            compact=['object','parameter_name','status','preliminary_compliance','document_values']
+            labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','preliminary_compliance':'Предварительная оценка','document_values':'Значения по разделам'}
             st.dataframe(view[[c for c in compact if c in view]].rename(columns=labels),width='stretch',hide_index=True,height=430)
             choices=[]; mapping={}
             for idx,row in view.iterrows():
@@ -48,6 +48,21 @@ def render(ctx):
                 st.markdown(f"**{row.get('object') or 'Объект'} — {row.get('parameter_name') or 'Показатель'}**")
                 st.write(row.get('explanation') or 'Пояснение отсутствует.')
                 st.markdown(f"**Значения:** {row.get('document_values') or '—'}")
+                owners=row.get('data_owner_sections') or []
+                dependents=row.get('dependent_sections') or []
+                if owners or dependents:
+                    st.markdown('**Логика межраздельной проверки**')
+                    if owners: st.write('Профильный источник данных: ' + ', '.join(str(x) for x in owners))
+                    if dependents: st.write('Разделы для контрольной сверки: ' + ', '.join(str(x) for x in dependents))
+                    if row.get('dependency_rationale'): st.caption(str(row.get('dependency_rationale')))
+                norms=row.get('normative_requirements') or []
+                if norms:
+                    with st.expander('Нормативный контекст · предварительная оценка'):
+                        for norm in norms[:5]:
+                            st.markdown(f"**{norm.get('source','')} · {norm.get('topic','')}**")
+                            st.write(norm.get('requirement') or '')
+                            st.caption(norm.get('status') or 'Требует проверки актуальности')
+                        st.caption('ExpertCheck использует этот контекст для предварительной предподачной проверки. Итоговое нормативное заключение должен подтвердить специалист.')
                 if row.get('sources'):
                     with st.expander('Показать источники'):
                         st.write(row.get('sources'))

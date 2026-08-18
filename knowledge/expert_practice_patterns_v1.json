@@ -1,0 +1,71 @@
+[
+  {
+    "pattern_id": "EP-MISSING-INFO",
+    "category": "Отсутствие обязательных сведений",
+    "signals": [
+      "не представлены",
+      "не приведены",
+      "отсутствуют сведения",
+      "не отражено"
+    ],
+    "check_strategy": "PRESENCE_AND_SCOPE",
+    "risk_weight": 0.8
+  },
+  {
+    "pattern_id": "EP-CROSS-MISMATCH",
+    "category": "Межраздельное расхождение",
+    "signals": [
+      "не соответствует",
+      "расходится",
+      "уточнить значение",
+      "привести в соответствие"
+    ],
+    "check_strategy": "CROSS_SECTION_VALUE",
+    "risk_weight": 0.9
+  },
+  {
+    "pattern_id": "EP-INSUFFICIENT-JUSTIFICATION",
+    "category": "Недостаточность обоснования",
+    "signals": [
+      "не обосновано",
+      "обосновать",
+      "недостаточно обосновано"
+    ],
+    "check_strategy": "SEMANTIC_JUSTIFICATION",
+    "risk_weight": 0.75
+  },
+  {
+    "pattern_id": "EP-SURVEY-SCOPE",
+    "category": "Недостаточность инженерных изысканий",
+    "signals": [
+      "недостаточно для территории проектирования",
+      "границы изысканий",
+      "результаты изысканий"
+    ],
+    "check_strategy": "SURVEY_COVERAGE",
+    "risk_weight": 0.95
+  },
+  {
+    "pattern_id": "EP-TEXT-GRAPHICS",
+    "category": "Конфликт текстовой и графической частей",
+    "signals": [
+      "графическая часть",
+      "текстовая часть",
+      "не соответствует чертежу"
+    ],
+    "check_strategy": "TEXT_GRAPHICS_CROSSCHECK",
+    "risk_weight": 0.9
+  },
+  {
+    "pattern_id": "EP-NORM-REFERENCE",
+    "category": "Нормативное основание/актуальность НТД",
+    "signals": [
+      "в соответствии с",
+      "требования",
+      "норматив",
+      "пункт"
+    ],
+    "check_strategy": "NORMATIVE_VALIDITY",
+    "risk_weight": 0.7
+  }
+]

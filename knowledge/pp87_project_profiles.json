@@ -1,0 +1,39 @@
+{
+  "document_id": "PP87",
+  "title": "Постановление Правительства РФ от 16.02.2008 № 87",
+  "revision": "ред. от 21.10.2025",
+  "valid_until": "2028-09-01",
+  "source_url": "https://government.ru/docs/all/63014/",
+  "profiles": [
+    {
+      "project_type": "CAPITAL_PRODUCTION_NONPRODUCTION",
+      "label": "Объекты капитального строительства производственного и непроизводственного назначения",
+      "structure_ref": "Раздел II",
+      "required_logic": "Проверять состав и содержание по разделу II с учетом условий применимости."
+    },
+    {
+      "project_type": "LINEAR",
+      "label": "Линейные объекты",
+      "structure_ref": "Раздел III",
+      "required_logic": "Проверять состав и содержание по разделу III."
+    },
+    {
+      "project_type": "MINING_PRIMARY_PROCESSING",
+      "label": "Предприятия по добыче и первичной переработке твердых полезных ископаемых",
+      "structure_ref": "Приложение № 7",
+      "required_logic": "Дополнительно учитывать особенности приложения № 7."
+    },
+    {
+      "project_type": "RESERVOIR_HYDRAULIC",
+      "label": "Гидротехнические сооружения, образующие водохранилища",
+      "structure_ref": "Приложение № 8",
+      "required_logic": "Дополнительно учитывать особенности приложения № 8."
+    },
+    {
+      "project_type": "ROAD",
+      "label": "Автомобильные дороги",
+      "structure_ref": "Приложение № 2",
+      "required_logic": "Дополнительно учитывать особенности приложения № 2."
+    }
+  ]
+}

@@ -25,43 +25,56 @@ def _upload(ctx):
         confirmed = False
         errors = []
         if uploads:
-            upload_status = st.status('Подготовка комплекта', expanded=False)
+            st.caption(f'Выбрано файлов для загрузки: {len(uploads)}')
+            upload_status = st.status('Подготовка комплекта', expanded=True)
             upload_status.write('Проверяем архивы, форматы и структуру файлов.')
-            package = prepare_uploads(uploads)
-            prepared = package.files
-            errors = package.errors
-            upload_status.update(label=f'Подготовлено файлов: {len(prepared)}', state='complete', expanded=False)
-            for item in errors:
-                st.error(item)
-            for item in package.warnings:
-                st.warning(item)
-            if prepared:
-                summary = package.package_summary
-                c1, c2, c3 = st.columns(3)
-                c1.metric('Файлов', int(summary.get('files', 0)))
-                c2.metric('Общий объём', f"{float(summary.get('total_bytes', 0))/1048576:.1f} МБ")
-                c3.metric('XML', ', '.join(summary.get('identity', {}).get('xml_schemas', [])) or 'нет')
-                with st.expander('Проверить состав и типы документов', expanded=True):
-                    edited = st.data_editor(
-                        pd.DataFrame(package.inventory),
-                        hide_index=True,
-                        width='stretch',
-                        disabled=['ID', 'Файл', 'Формат', 'Семейство', 'Размер, МБ', 'Источник', 'Статус'],
-                        column_config={
-                            'Предполагаемый раздел': st.column_config.SelectboxColumn(
-                                'Раздел', options=DOCUMENT_TYPE_OPTIONS, required=True
-                            )
-                        },
-                        key='studio3_upload_inventory',
-                    )
-                    comp = summary.get('completeness', {})
-                    available = comp.get('available_checks', [])
-                    limits = comp.get('limitations', [])
-                    if available:
-                        st.success('Доступно: ' + '; '.join(available))
-                    if limits:
-                        st.info('Ограничения: ' + '; '.join(limits))
-                confirmed = st.checkbox('Состав загруженного комплекта проверен', key='studio3_package_confirmed')
+            try:
+                package = prepare_uploads(uploads)
+            except Exception as exc:
+                upload_status.update(label='Не удалось подготовить комплект', state='error', expanded=True)
+                st.error(f'Ошибка подготовки загруженных файлов: {type(exc).__name__}: {exc}')
+                package = None
+            if package is not None:
+                prepared = package.files
+                errors = package.errors
+                upload_status.update(
+                    label=f'Подготовлено файлов: {len(prepared)} из {len(uploads)} загруженных элементов',
+                    state='complete' if prepared else 'error',
+                    expanded=not bool(prepared),
+                )
+                for item in errors:
+                    st.error(item)
+                for item in package.warnings:
+                    st.warning(item)
+                if not prepared:
+                    st.error('Ни один PDF/XML не был подготовлен. Проверьте размер файлов, формат ZIP и журналы выше.')
+                if prepared:
+                    summary = package.package_summary
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric('Файлов', int(summary.get('files', 0)))
+                    c2.metric('Общий объём', f"{float(summary.get('total_bytes', 0))/1048576:.1f} МБ")
+                    c3.metric('XML', ', '.join(summary.get('identity', {}).get('xml_schemas', [])) or 'нет')
+                    with st.expander('Проверить состав и типы документов', expanded=True):
+                        edited = st.data_editor(
+                            pd.DataFrame(package.inventory),
+                            hide_index=True,
+                            width='stretch',
+                            disabled=['ID', 'Файл', 'Формат', 'Семейство', 'Размер, МБ', 'Источник', 'Статус'],
+                            column_config={
+                                'Предполагаемый раздел': st.column_config.SelectboxColumn(
+                                    'Раздел', options=DOCUMENT_TYPE_OPTIONS, required=True
+                                )
+                            },
+                            key='studio3_upload_inventory',
+                        )
+                        comp = summary.get('completeness', {})
+                        available = comp.get('available_checks', [])
+                        limits = comp.get('limitations', [])
+                        if available:
+                            st.success('Доступно: ' + '; '.join(available))
+                        if limits:
+                            st.info('Ограничения: ' + '; '.join(limits))
+                    confirmed = st.checkbox('Состав загруженного комплекта проверен', key='studio3_package_confirmed')
         if st.button(
             'Запустить проверку',
             type='primary',

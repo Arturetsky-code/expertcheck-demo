@@ -19,7 +19,16 @@ def render(ctx):
             if uploads:
                 upload_status=st.status('Подготавливаем загруженный комплект…',expanded=False)
                 upload_status.write('Проверяем архивы, форматы и внутреннюю структуру файлов.')
-                package=prepare_uploads(uploads);prepared=package.files;errors=package.errors
+                try:
+                    package=prepare_uploads(uploads)
+                except Exception as exc:
+                    upload_status.update(label='Не удалось подготовить комплект',state='error',expanded=True)
+                    st.error(f'Ошибка подготовки файлов: {type(exc).__name__}: {exc}')
+                    package=None
+                if package is None:
+                    prepared=[];errors=[]
+                else:
+                    prepared=package.files;errors=package.errors
                 upload_status.update(label=f'Комплект подготовлен: {len(prepared)} файлов',state='complete',expanded=False)
                 for x in errors:st.error(x)
                 for x in package.warnings:st.warning(x)

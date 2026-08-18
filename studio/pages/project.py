@@ -206,6 +206,16 @@ def _dashboard(ctx):
 
 
 def render(ctx):
+    if not st.session_state.get('active_project_id'):
+        user=st.session_state.get('auth_user') or {}
+        if not user.get('id'):
+            st.error('Сессия пользователя не определена.')
+            return
+        st.info('Сначала создайте или откройте проект в разделе «Мои проекты».')
+        if st.button('Перейти в Мои проекты', type='primary', key='go_workspace_from_project'):
+            st.session_state['_navigate_to']='Мои проекты'
+            st.rerun()
+        return
     docs = ctx.data[0]
     if docs.empty:
         _upload(ctx)

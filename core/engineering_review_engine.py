@@ -6,6 +6,8 @@ from typing import Any
 
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code
+from .normative_intelligence import NormativeIntelligence
+from .engineering_verification_v2 import EngineeringVerification2
 
 
 class CrossSectionDependencyEngine:
@@ -17,7 +19,9 @@ class CrossSectionDependencyEngine:
     def __init__(self, knowledge_root: str | Path):
         root = Path(knowledge_root)
         self.rules = self._load(root / "cross_section_dependency_rules.json")
-        self.norms = self._load(root / "normative_requirements_v1.json")
+        self.norms = self._load(root / "normative_requirements_v2.json") or self._load(root / "normative_requirements_v1.json")
+        self.normative = NormativeIntelligence(root)
+        self.verification2 = EngineeringVerification2(root)
         self.by_parameter = {str(r.get("parameter_code") or "").upper(): r for r in self.rules if r.get("parameter_code")}
 
     @staticmethod
@@ -104,13 +108,25 @@ class CrossSectionDependencyEngine:
             row["dependent_sections"] = list(rule.get("control_sections") or [])
             row["dependency_rationale"] = str(rule.get("rationale") or "")
             row["dependency_priority"] = str(rule.get("priority") or row.get("priority") or "")
+            binding=self.verification2.validate_binding(
+                str(row.get("object") or row.get("object_name") or ""),
+                code,
+                " ".join(self._sections_in_row(row))
+            )
+            row["engineering_binding"]=binding
             diag=self.dependency_diagnostics(row, rule)
             row["dependency_diagnostics"] = diag
             row["data_owner_evidence"] = "Подтверждён" if diag.get("owner_evidence_ok") else "Не найден профильный источник"
             row["missing_expected_sections"] = list(dict.fromkeys((diag.get("owner_missing") or []) + (diag.get("control_missing") or [])))
-            reqs=self.requirements_for_parameter(code)
+            reqs=self.normative.search(
+                question=str(row.get("parameter_name") or row.get("parameter") or ""),
+                parameter_codes=[code],
+                section=" ".join(sorted(self._sections_in_row(row))),
+                object_type=(binding.get("object_type") or ""),
+                limit=6
+            ) or self.requirements_for_parameter(code)
             row["normative_requirements"] = [
-                {"id":x.get("id"),"source":x.get("source"),"topic":x.get("topic"),"requirement":x.get("requirement"),"status":x.get("status")}
+                {"id":x.get("id"),"source":x.get("source"),"paragraph":x.get("paragraph"),"topic":x.get("topic"),"requirement":x.get("requirement"),"status":x.get("status"),"legal_confidence":x.get("legal_confidence") or self.normative.legal_confidence(x)}
                 for x in reqs
             ]
             status = normalize_text(row.get("status") or "")
@@ -129,20 +145,10 @@ class CrossSectionDependencyEngine:
         return changed
 
     def checklist_context(self, question: str, compiled_rule: dict[str, Any]) -> list[dict[str, Any]]:
-        low=normalize_text(question)
-        codes={canonical_parameter_code(x) for x in (compiled_rule.get("parameter_codes") or [])}
-        ranked=[]
-        for req in self.norms:
-            score=0
-            if codes and codes.intersection(set(req.get("parameter_codes") or [])):
-                score += 5
-            for token in req.get("keywords") or []:
-                if normalize_text(token) in low:
-                    score += 1
-            if score:
-                ranked.append((score, req))
-        ranked.sort(key=lambda x:x[0], reverse=True)
-        return [dict(x[1]) for x in ranked[:4]]
+        codes=[canonical_parameter_code(x) for x in (compiled_rule.get("parameter_codes") or [])]
+        results=self.normative.search(question=question,parameter_codes=codes,limit=6)
+        return results
+
 
     def summary(self) -> dict[str, int]:
-        return {"dependency_rules":len(self.rules),"normative_requirements":len(self.norms)}
+        return {"dependency_rules":len(self.rules),"normative_requirements":len(self.norms),**self.normative.summary()}

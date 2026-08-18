@@ -42,6 +42,8 @@ PARAMETERS = {
     'ROAD_WIDTH': ('ширина проезжей части','ширина дороги'),
 }
 
+MANDATORY_DOCUMENT = ('справк','договор аренды','гпзу','градостроительный план','технические условия','задание на проектирование','окн','объект культурного наследия','оопт','особо охраняем')
+SECTION_STRUCTURE = ('постановлен', '№87', '87', 'обязательн', 'состав раздела', 'содержание раздела')
 SEMANTIC = ('обоснован', 'достаточн', 'рациональн', 'соответств', 'увязан', 'учтен', 'учтён', 'предусмотрен', 'обеспечен')
 PRESENCE = ('наличие', 'представлен', 'приведен', 'приведён', 'указан', 'отражен', 'отражён', 'содержит')
 STOP = {'проверить','проверка','соответствие','наличие','раздел','проектной','документации','должен','должна','должны','требования'}
@@ -53,6 +55,10 @@ def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
     for code,tokens in PARAMETERS.items():
         if any(token in question for token in tokens): codes.append(code)
     terms=tuple(dict.fromkeys(w for w in re.findall(r'[а-яa-z0-9-]{4,}', question) if w not in STOP))[:12]
+    if any(x in question for x in MANDATORY_DOCUMENT):
+        return CompiledChecklistRule('mandatory_document','source_document',terms,tuple(codes),False,'Проверка наличия обязательного/исходно-разрешительного документа.','AUTO',('PROJECT_SET',),('DOCUMENT_IDENTITY','PAGE_REFERENCE'),'CONSERVATIVE')
+    if any(x in question for x in SECTION_STRUCTURE):
+        return CompiledChecklistRule('section_structure','pp87_requirement',terms,tuple(codes),True,'Проверка структуры и обязательного содержания раздела ПД.','SEMANTIC',('SELECTED_SECTION',),('NORMATIVE_CONTEXT','RELEVANT_FRAGMENT','PAGE_REFERENCE'),'AI_WITH_EVIDENCE')
     if codes and any(x in question for x in ('свер', 'соответств', 'совпад')):
         return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'),('STRUCTURED_VALUE','SOURCE_SECTION'),'STRICT')
     if any(x in question for x in PRESENCE):

@@ -16,6 +16,8 @@ class CompiledChecklistRule:
     rationale: str
     automation_class: str = "SEMANTIC"
     required_section_roles: tuple[str, ...] = ()
+    evidence_types: tuple[str, ...] = ()
+    negative_result_policy: str = 'CONSERVATIVE'
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -31,7 +33,15 @@ PARAMETERS = {
     'FIRE_RESISTANCE': ('степень огнестойкости',), 'FIRE_CLASS': ('класс функциональной пожарной опасности',),
     'ROAD_CATEGORY': ('категория дороги',), 'LANE_COUNT': ('количество полос',), 'SLOPE': ('уклон',),
     'LAND_AREA': ('площадь земельного участка','площадь участка'), 'STORAGE_CAPACITY': ('вместимость склада',),
+    'RESERVOIR_COUNT': ('количество резервуаров','число резервуаров'),
+    'FIRE_WATER_RESERVE': ('противопожарный запас воды','запас воды'),
+    'PUMP_HEAD': ('напор насосной станции','напор'),
+    'SEISMICITY': ('сейсмичность','сейсмический'),
+    'SANITARY_ZONE': ('санитарно-защитная зона','сзз'),
+    'ROAD_LENGTH': ('протяженность дороги','протяжённость дороги'),
+    'ROAD_WIDTH': ('ширина проезжей части','ширина дороги'),
 }
+
 SEMANTIC = ('обоснован', 'достаточн', 'рациональн', 'соответств', 'увязан', 'учтен', 'учтён', 'предусмотрен', 'обеспечен')
 PRESENCE = ('наличие', 'представлен', 'приведен', 'приведён', 'указан', 'отражен', 'отражён', 'содержит')
 STOP = {'проверить','проверка','соответствие','наличие','раздел','проектной','документации','должен','должна','должны','требования'}
@@ -44,11 +54,11 @@ def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
         if any(token in question for token in tokens): codes.append(code)
     terms=tuple(dict.fromkeys(w for w in re.findall(r'[а-яa-z0-9-]{4,}', question) if w not in STOP))[:12]
     if codes and any(x in question for x in ('свер', 'соответств', 'совпад')):
-        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'))
+        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'),('STRUCTURED_VALUE','SOURCE_SECTION'),'STRICT')
     if any(x in question for x in PRESENCE):
-        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',))
+        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',),('TEXT_OR_TABLE','PAGE_REFERENCE'),'CONSERVATIVE')
     if any(x in question for x in SEMANTIC):
-        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'))
+        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'),('RELEVANT_FRAGMENT','NORMATIVE_CONTEXT','REMARK_ANALOG'),'AI_WITH_EVIDENCE')
     if codes:
-        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',))
-    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'))
+        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',),('STRUCTURED_VALUE','PAGE_REFERENCE'),'CONSERVATIVE')
+    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'),('ENGINEERING_EVIDENCE','SPECIALIST_REVIEW'),'SPECIALIST')

@@ -77,12 +77,56 @@ class RemarkLearningEngine:
         ranked.sort(key=lambda x:x[0],reverse=True)
         return [{**dict(case),'similarity_score':round(score,1)} for score,case in ranked[:limit]]
 
+
+    @staticmethod
+    def issue_signature(text: str, parameter_code: str='', section: str='') -> dict[str, Any]:
+        low=normalize_text(text)
+        families=[]
+        mapping={
+            "MISMATCH":("расхожд","не совпад","привести в соответств"),
+            "MISSING":("отсутств","не представ","не найден","не привед"),
+            "JUSTIFICATION":("обоснован","обосновани","достаточн"),
+            "OBJECT_COMPOSITION":("состав объект","экспликац","перечень объект"),
+            "CALCULATION":("расчет","расчёт","расчетн","расчётн"),
+            "SOURCE_DATA":("исходн дан","техническ услов","изыскан"),
+        }
+        for fam,tokens in mapping.items():
+            if any(t in low for t in tokens):
+                families.append(fam)
+        return {
+            "parameter_code":str(parameter_code or '').upper(),
+            "section":normalize_text(section),
+            "families":families,
+            "tokens":sorted(_tokens(text))[:40],
+        }
+
+    def match_engineering(self, *, text: str, parameter_code: str='', section: str='', limit: int=5) -> list[dict[str,Any]]:
+        """Hybrid analog search: curated scenario + historical wording + engineering signature."""
+        sig=self.issue_signature(text,parameter_code,section)
+        curated=self.match(text=text,parameter_code=parameter_code,limit=limit)
+        raw=self.match_raw(text=text,section=section,limit=max(limit*2,8))
+        fams=set(sig.get("families") or [])
+        ranked=[]
+        for row in raw:
+            score=float(row.get("similarity_score") or 0)
+            remark=normalize_text(row.get("remark") or "")
+            if "MISMATCH" in fams and any(x in remark for x in ("соответств","расхожд","различ")): score+=12
+            if "MISSING" in fams and any(x in remark for x in ("отсутств","не представлен","не привед")): score+=12
+            if "JUSTIFICATION" in fams and "обосн" in remark: score+=10
+            if parameter_code and normalize_text(parameter_code) in normalize_text(str(row.get("parameter_code") or "")): score+=15
+            ranked.append((score,row))
+        ranked.sort(key=lambda x:x[0],reverse=True)
+        return [
+            {**dict(row),"engineering_similarity":round(score,1),"issue_families":list(fams)}
+            for score,row in ranked[:limit]
+        ] or curated
+
     def enrich_comparisons(self, comparisons: Iterable[dict[str, Any]]) -> int:
         count=0
         for row in comparisons:
             text=' '.join(str(row.get(k) or '') for k in ('object','parameter_name','status','explanation','sources','document_values'))
             matches=self.match(text=text,parameter_code=str(row.get('parameter_code') or ''),limit=3)
-            raw_matches=self.match_raw(text=text, section=str(row.get('section') or row.get('sections') or ''), limit=4)
+            raw_matches=self.match_engineering(text=text, parameter_code=str(row.get('parameter_code') or ''), section=str(row.get('section') or row.get('sections') or ''), limit=4)
             if matches:
                 row['remark_analogs']=matches
                 row['remark_best_scenario']=matches[0].get('scenario_id')

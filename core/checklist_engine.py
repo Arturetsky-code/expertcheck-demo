@@ -200,12 +200,15 @@ class ChecklistEngine:
                     if matched:
                         status='Требует проверки'; evidence='Найдены потенциально релевантные фрагменты: '+', '.join(matched[:6])+'. Нужна смысловая оценка.'
                     else:
-                        status='Нет'; evidence='Релевантные фрагменты по смысловым признакам не найдены.'
+                        # Отсутствие ключевого слова не доказывает отсутствие проектного решения.
+                        # Для SEMANTIC/EXPERT отрицательный вывод допустим только после анализа доказательств.
+                        status='Нет данных' if not selected_findings else 'Требует проверки'
+                        evidence='Достаточные смысловые доказательства автоматически не выявлены; отрицательный вывод без AI/специалиста не формируется.'
                 else:
                     status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
             compiled_dict=compiled.to_dict()
             normative_context=self.review_engine.checklist_context(q, compiled_dict)
-            results.append({**item,'compiled_rule':compiled_dict,'normative_context':normative_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled_dict,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None) -> list[dict[str,Any]]:

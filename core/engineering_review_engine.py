@@ -28,6 +28,59 @@ class CrossSectionDependencyEngine:
         except Exception:
             return []
 
+
+    @staticmethod
+    def _sections_in_row(row: dict[str, Any]) -> set[str]:
+        """Best-effort section extraction from comparison evidence."""
+        values=[]
+        for key in ("sections","section","document_values","sources","documents"):
+            value=row.get(key)
+            if isinstance(value, dict):
+                values.extend(str(k) for k in value.keys())
+                values.extend(str(v) for v in value.values())
+            elif isinstance(value, (list,tuple,set)):
+                values.extend(str(x) for x in value)
+            elif value:
+                values.append(str(value))
+        blob=" ".join(values).upper()
+        aliases={
+            "ПЗ":["ПЗ","ПОЯСНИТЕЛЬН"],
+            "ПЗУ":["ПЗУ","ГЕНПЛАН","ГЕНЕРАЛЬН"],
+            "АР":["АР","АРХИТЕКТУР"],
+            "КР":["КР","КОНСТРУКТИВ"],
+            "ТХ":["ТХ","ТЕХНОЛОГИЧ"],
+            "ИОС1":["ИОС1","ЭОМ","ЭС","ЭЛЕКТРОСНАБ"],
+            "ИОС2":["ИОС2","ВК","ВОДОСНАБ"],
+            "ИОС3":["ИОС3","ВОДООТВ"],
+            "ПБ":["ПБ","ПОЖАР"],
+            "ООС":["ООС","ОХРАНЕ ОКРУЖ"],
+            "ПОС":["ПОС","ОРГАНИЗАЦИИ СТРОИТЕЛЬ"],
+            "АД":["АД","АВТОМОБИЛЬН"],
+            "ГТ":["ГТ","ГИДРОТЕХ"],
+            "ИГИ":["ИГИ","ИНЖЕНЕРНО-ГЕОЛ"],
+        }
+        found=set()
+        for section,tokens in aliases.items():
+            if any(t in blob for t in tokens):
+                found.add(section)
+        return found
+
+    def dependency_diagnostics(self, row: dict[str, Any], rule: dict[str, Any]) -> dict[str, Any]:
+        present=self._sections_in_row(row)
+        owners=list(rule.get("owner_sections") or [])
+        controls=list(rule.get("control_sections") or [])
+        owner_present=[x for x in owners if x in present]
+        control_present=[x for x in controls if x in present]
+        return {
+            "present_sections": sorted(present),
+            "owner_present": owner_present,
+            "control_present": control_present,
+            "owner_missing": [x for x in owners if x not in present],
+            "control_missing": [x for x in controls if x not in present],
+            "owner_evidence_ok": bool(owner_present) if owners else True,
+            "cross_section_coverage": len(owner_present)+len(control_present),
+        }
+
     def requirements_for_parameter(self, parameter_code: str) -> list[dict[str, Any]]:
         code = canonical_parameter_code(parameter_code)
         out=[]
@@ -51,6 +104,10 @@ class CrossSectionDependencyEngine:
             row["dependent_sections"] = list(rule.get("control_sections") or [])
             row["dependency_rationale"] = str(rule.get("rationale") or "")
             row["dependency_priority"] = str(rule.get("priority") or row.get("priority") or "")
+            diag=self.dependency_diagnostics(row, rule)
+            row["dependency_diagnostics"] = diag
+            row["data_owner_evidence"] = "Подтверждён" if diag.get("owner_evidence_ok") else "Не найден профильный источник"
+            row["missing_expected_sections"] = list(dict.fromkeys((diag.get("owner_missing") or []) + (diag.get("control_missing") or [])))
             reqs=self.requirements_for_parameter(code)
             row["normative_requirements"] = [
                 {"id":x.get("id"),"source":x.get("source"),"topic":x.get("topic"),"requirement":x.get("requirement"),"status":x.get("status")}
@@ -60,6 +117,8 @@ class CrossSectionDependencyEngine:
             evidence = int(row.get("strong_evidence_count") or row.get("evidence_count") or 0)
             if "расхожд" in status or "конфликт" in status:
                 row["preliminary_compliance"] = "Выявлен риск несоответствия"
+            elif not diag.get("owner_evidence_ok"):
+                row["preliminary_compliance"] = "Недостаточно данных: не найден профильный источник"
             elif "совпад" in status or "подтверж" in status:
                 row["preliminary_compliance"] = "Предварительно согласовано"
             elif evidence < 2 or "недостат" in status:

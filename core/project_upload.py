@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 import zipfile
+import hashlib
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 from typing import Any, Iterable
@@ -279,20 +280,24 @@ def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
     errors: list[str] = []
     for uploaded in uploaded_files or []:
         name = str(getattr(uploaded, "name", ""))
-        if _extension(name) == ".zip":
-            files.extend(_extract_zip(uploaded, errors, warnings))
-        else:
-            prepared = _direct_upload(uploaded)
-            if prepared:
-                files.append(prepared)
+        try:
+            if _extension(name) == ".zip":
+                files.extend(_extract_zip(uploaded, errors, warnings))
             else:
-                warnings.append(f"Файл {name} пропущен: поддерживаются PDF, XML и ZIP.")
+                prepared = _direct_upload(uploaded)
+                if prepared:
+                    files.append(prepared)
+                else:
+                    warnings.append(f"Файл {name} пропущен: поддерживаются PDF, XML и ZIP.")
+        except Exception as exc:
+            # Не останавливаем загрузку всего комплекта из-за одного проблемного файла.
+            warnings.append(f"Не удалось подготовить файл {name}: {type(exc).__name__}: {exc}")
 
     # Удаляем точные дубли по пути и содержимому, но не объединяем одноимённые разные файлы.
     unique: list[PreparedUpload] = []
     seen: set[tuple[str, int, int]] = set()
     for file in files:
-        signature = (file.name.lower(), len(file.data), hash(file.data))
+        signature = (file.name.lower(), len(file.data), hashlib.blake2b(file.data, digest_size=12).hexdigest())
         if signature in seen:
             warnings.append(f"Удалён полный дубль: {file.name}")
             continue

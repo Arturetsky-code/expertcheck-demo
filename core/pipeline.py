@@ -48,6 +48,7 @@ from .object_discovery_orchestrator import ensure_general_plan_registry_visibili
 from .composition_registry import build_composition_baseline, merge_baseline_with_registry
 from .pz_complex_object_register import extract_pz_complex_object_register_from_uploaded, enforce_authoritative_pz_registry
 from .engineering_review_engine import CrossSectionDependencyEngine
+from .expert_practice_intelligence import ExpertPracticeIntelligence
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -340,6 +341,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     remark_learning_count = remark_learning.enrich_comparisons(comparisons)
     engineering_review = CrossSectionDependencyEngine(root / "knowledge")
     engineering_review_count = engineering_review.enrich_comparisons(comparisons)
+    expert_practice = ExpertPracticeIntelligence(root / "knowledge")
+    expert_practice_count = expert_practice.enrich_comparisons(comparisons)
 
     # Final Object Gate runs before any registry is built. AI is the second filter
     # for ambiguous candidates, so the user sees an already cleaned project composition.
@@ -539,6 +542,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_reference_audit"] = normative_reference_audit
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
+        doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)

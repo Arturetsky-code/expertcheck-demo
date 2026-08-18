@@ -14,6 +14,8 @@ class CompiledChecklistRule:
     parameter_codes: tuple[str, ...]
     requires_semantic_review: bool
     rationale: str
+    automation_class: str = "SEMANTIC"
+    required_section_roles: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -38,11 +40,11 @@ def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
         if any(token in question for token in tokens): codes.append(code)
     terms=tuple(dict.fromkeys(w for w in re.findall(r'[а-яa-z0-9-]{4,}', question) if w not in STOP))[:12]
     if codes and any(x in question for x in ('свер', 'соответств', 'совпад')):
-        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.')
+        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'))
     if any(x in question for x in PRESENCE):
-        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.')
+        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',))
     if any(x in question for x in SEMANTIC):
-        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.')
+        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'))
     if codes:
-        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.')
-    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.')
+        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',))
+    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'))

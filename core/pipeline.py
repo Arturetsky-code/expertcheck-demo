@@ -47,6 +47,7 @@ from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
 from .composition_registry import build_composition_baseline, merge_baseline_with_registry
 from .pz_complex_object_register import extract_pz_complex_object_register_from_uploaded, enforce_authoritative_pz_registry
+from .engineering_review_engine import CrossSectionDependencyEngine
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -304,7 +305,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "7.3.4-composition-failsafe"
+        item["core_version"] = "8.0.0-engineering-review-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -337,6 +338,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         item["engineering_risk_level"] = risk["level"]
         item["engineering_risk_reasons"] = risk["reasons"]
     remark_learning_count = remark_learning.enrich_comparisons(comparisons)
+    engineering_review = CrossSectionDependencyEngine(root / "knowledge")
+    engineering_review_count = engineering_review.enrich_comparisons(comparisons)
 
     # Final Object Gate runs before any registry is built. AI is the second filter
     # for ambiguous candidates, so the user sees an already cleaned project composition.
@@ -434,14 +437,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "7.3.4-composition-failsafe"
+        item["core_version"] = "8.0.0-engineering-review-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     pp87_project_profile = detect_pp87_profile(findings, documents)
     for doc in documents:
-        doc["core_version"] = "7.3.4-composition-failsafe"
+        doc["core_version"] = "8.0.0-engineering-review-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -535,6 +538,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit
         doc["normative_knowledge_summary"] = normative_layer.summary()
+        doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)

@@ -9,6 +9,7 @@ from typing import Any, Iterable
 from .normalization import normalize_text
 from .checklist_compiler import compile_item
 from .pp87_matrix import evaluate_pp87
+from .engineering_review_engine import CrossSectionDependencyEngine
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -49,6 +50,7 @@ class ChecklistEngine:
     def __init__(self, catalog_path: str | Path):
         self.catalog_path = Path(catalog_path)
         self.items = json.loads(self.catalog_path.read_text(encoding='utf-8')) if self.catalog_path.exists() else []
+        self.review_engine = CrossSectionDependencyEngine(self.catalog_path.parent)
         self._mark_hierarchy()
 
     def _mark_hierarchy(self) -> None:
@@ -201,7 +203,9 @@ class ChecklistEngine:
                         status='Нет'; evidence='Релевантные фрагменты по смысловым признакам не найдены.'
                 else:
                     status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
-            results.append({**item,'compiled_rule':compiled.to_dict(),'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            compiled_dict=compiled.to_dict()
+            normative_context=self.review_engine.checklist_context(q, compiled_dict)
+            results.append({**item,'compiled_rule':compiled_dict,'normative_context':normative_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None) -> list[dict[str,Any]]:

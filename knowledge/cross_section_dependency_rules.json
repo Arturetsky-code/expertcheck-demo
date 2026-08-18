@@ -684,5 +684,267 @@
     ],
     "priority": "Высокий",
     "rationale": "Площадь участка и границы проектирования должны быть согласованы с правоустанавливающими и планировочными материалами."
+  },
+  {
+    "parameter_code": "CREST_LEVEL",
+    "name": "Отметка гребня",
+    "owner_sections": [
+      "ГТ",
+      "КР"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "HYDRO"
+    ],
+    "priority": "Высокий",
+    "rationale": "Отметка гребня является определяющей геометрической характеристикой ГТС и должна быть согласована между профильными и сводными разделами."
+  },
+  {
+    "parameter_code": "RESERVOIR_COUNT",
+    "name": "Количество резервуаров/ёмкостей",
+    "owner_sections": [
+      "ИОС2",
+      "ПБ",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "RESERVOIR",
+      "NETWORK"
+    ],
+    "priority": "Высокий",
+    "rationale": "Количество резервуаров должно совпадать в составе объекта, генплане и профильной системе."
+  },
+  {
+    "parameter_code": "FIRE_WATER_RESERVE",
+    "name": "Противопожарный запас воды",
+    "owner_sections": [
+      "ИОС2",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ТХ"
+    ],
+    "object_classes": [
+      "RESERVOIR",
+      "BUILDING",
+      "INDUSTRIAL"
+    ],
+    "priority": "Высокий",
+    "rationale": "Противопожарный запас должен быть согласован между ВК, ПБ и сводными характеристиками объекта."
+  },
+  {
+    "parameter_code": "STORAGE_MASS",
+    "name": "Масса/объём хранения",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ООС",
+      "ПБ"
+    ],
+    "object_classes": [
+      "WAREHOUSE",
+      "INDUSTRIAL"
+    ],
+    "priority": "Высокий",
+    "rationale": "Вместимость и объём хранения определяют технологические, пожарные и экологические решения."
+  },
+  {
+    "parameter_code": "ROAD_LENGTH",
+    "name": "Протяжённость дороги",
+    "owner_sections": [
+      "ПЗУ",
+      "АД"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "ROAD",
+      "LINEAR"
+    ],
+    "priority": "Средний",
+    "rationale": "Протяжённость дороги должна соответствовать планировочной схеме и решениям по организации строительства."
+  },
+  {
+    "parameter_code": "ROAD_WIDTH",
+    "name": "Ширина проезжей части",
+    "owner_sections": [
+      "ПЗУ",
+      "АД"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС",
+      "ПБ"
+    ],
+    "object_classes": [
+      "ROAD",
+      "LINEAR"
+    ],
+    "priority": "Средний",
+    "rationale": "Ширина проезжей части должна быть согласована с функциональным назначением и пожарными проездами."
+  },
+  {
+    "parameter_code": "PIPELINE_LENGTH",
+    "name": "Протяжённость трубопровода",
+    "owner_sections": [
+      "ИОС2",
+      "ИОС3",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "PIPELINE",
+      "LINEAR"
+    ],
+    "priority": "Средний",
+    "rationale": "Протяжённость сетей должна быть согласована с трассой на генплане и профильными расчётами."
+  },
+  {
+    "parameter_code": "PIPELINE_CAPACITY",
+    "name": "Пропускная способность трубопровода",
+    "owner_sections": [
+      "ИОС2",
+      "ИОС3",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ООС"
+    ],
+    "object_classes": [
+      "PIPELINE",
+      "NETWORK"
+    ],
+    "priority": "Высокий",
+    "rationale": "Пропускная способность должна быть согласована с расчётным расходом и производительностью системы."
+  },
+  {
+    "parameter_code": "PUMP_HEAD",
+    "name": "Напор насосной станции",
+    "owner_sections": [
+      "ИОС2",
+      "ИОС3",
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "PUMP_STATION",
+      "NETWORK"
+    ],
+    "priority": "Высокий",
+    "rationale": "Напор насосной станции должен соответствовать гидравлическому расчёту и принятой схеме."
+  },
+  {
+    "parameter_code": "DESIGN_LIFE",
+    "name": "Расчётный срок службы",
+    "owner_sections": [
+      "КР",
+      "ГТ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE",
+      "HYDRO"
+    ],
+    "priority": "Средний",
+    "rationale": "Расчётный срок службы должен быть согласован с уровнем ответственности и проектными решениями."
+  },
+  {
+    "parameter_code": "SEISMICITY",
+    "name": "Расчётная сейсмичность",
+    "owner_sections": [
+      "ИГИ",
+      "КР"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "АР",
+      "ГТ"
+    ],
+    "object_classes": [
+      "BUILDING",
+      "STRUCTURE",
+      "HYDRO"
+    ],
+    "priority": "Высокий",
+    "rationale": "Расчётная сейсмичность должна базироваться на материалах изысканий и одинаково учитываться в конструктивных решениях."
+  },
+  {
+    "parameter_code": "FIRE_RESERVOIR_VOLUME",
+    "name": "Объём противопожарного резервуара",
+    "owner_sections": [
+      "ИОС2",
+      "ПБ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПЗУ"
+    ],
+    "object_classes": [
+      "RESERVOIR"
+    ],
+    "priority": "Высокий",
+    "rationale": "Объём противопожарного резервуара должен быть одинаково интерпретирован в ВК, ПБ и сводных разделах."
+  },
+  {
+    "parameter_code": "EQUIPMENT_COUNT",
+    "name": "Количество основного оборудования",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ПОС",
+      "ИОС"
+    ],
+    "object_classes": [
+      "INDUSTRIAL"
+    ],
+    "priority": "Средний",
+    "rationale": "Количество основного оборудования влияет на производительность и потребность в инженерном обеспечении."
+  },
+  {
+    "parameter_code": "DESIGN_CAPACITY",
+    "name": "Проектная мощность объекта",
+    "owner_sections": [
+      "ТХ"
+    ],
+    "control_sections": [
+      "ПЗ",
+      "ООС",
+      "ИОС"
+    ],
+    "object_classes": [
+      "INDUSTRIAL",
+      "GENERIC"
+    ],
+    "priority": "Высокий",
+    "rationale": "Проектная мощность является ключевым исходным показателем для смежных расчётов и должна быть согласована."
   }
 ]

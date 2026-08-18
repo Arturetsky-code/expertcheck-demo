@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+import json
 from dataclasses import dataclass
 from pathlib import Path
 import streamlit as st
@@ -11,16 +12,22 @@ try:
     from studio.components import header,sidebar_brand,sidebar_group,sidebar_project
     from studio.data import frames,registry,passports,metrics,engineer_findings,assembly_rows,apply_project_assembly
     from studio.pages import PAGES
+    from studio.auth import auth_screen
+    from core.workspace_store import get_store, session_snapshot
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 8.2 Alpha 1 · Engineering Intelligence Expansion'
+VERSION='ExpertCheck 9.0 Alpha 1 · Multi-User Workspace'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
-for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Авто: OpenRouter → Groq','ai_reviewer_provider':'Groq','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[]}.items():
+WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
+if not st.session_state.get('auth_user'):
+    auth_screen(WORKSPACE_STORE)
+    st.stop()
+for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Авто: OpenRouter → Groq','ai_reviewer_provider':'Groq','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'active_project_id':None}.items():
     st.session_state.setdefault(k,v)
 # Apply deferred navigation before the sidebar radio widget is instantiated.
 _pending_page = st.session_state.pop('_navigate_to', None)
@@ -28,7 +35,10 @@ if _pending_page:
     st.session_state['page'] = _pending_page
 with st.sidebar:
     sidebar_brand()
-    if st.button('＋ Начать новую проверку', type='primary', width='stretch', key='sidebar_new_check'):
+    if st.button('＋ Новый проект', type='primary', width='stretch', key='sidebar_new_check'):
+        user=st.session_state.get('auth_user') or {}
+        pid=WORKSPACE_STORE.create_project(user.get('id'),'Новый проект')
+        st.session_state.active_project_id=pid
         st.session_state.result=None
         st.session_state.analysis_time=None
         st.session_state.project_name='Новый проект'
@@ -43,14 +53,14 @@ with st.sidebar:
     sidebar_group('Этапы проверки')
     has_result = bool(st.session_state.result)
     object_gate = bool(st.session_state.get('object_registry_confirmed'))
-    guided_pages = ['Проект']
+    guided_pages = ['Мои проекты', 'Проект']
     if has_result:
         guided_pages.extend(['Состав объектов', 'Чек-листы'])
     if object_gate:
         guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
     guided_pages.append('Настройки')
     if st.session_state.get('page') not in guided_pages:
-        st.session_state.page = 'Состав объектов' if has_result else 'Проект'
+        st.session_state.page = 'Состав объектов' if has_result else 'Мои проекты'
     page=st.radio('Раздел',guided_pages,label_visibility='collapsed',key='page')
     if not has_result:
         st.caption('Следующий этап откроется после загрузки проекта.')
@@ -58,6 +68,12 @@ with st.sidebar:
         st.caption('Сверка, риски и отчёт откроются после подтверждения состава объектов.')
     else:
         st.caption('Все основные этапы доступны.')
+    user=st.session_state.get('auth_user') or {}
+    st.caption(f"Пользователь: {user.get('display_name') or user.get('email','')}")
+    if st.button('Выйти', width='stretch', key='sidebar_logout'):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
     status='Проверка выполнена' if st.session_state.result else 'Комплект не загружен'
     sidebar_project(st.session_state.project_name,status)
     sidebar_group('Режим интерфейса')
@@ -82,4 +98,27 @@ class Context:
     version:str
     config_dir:Path
     analyze:object
-PAGES[page](Context(data,VERSION,CONFIG_DIR,analyze_uploaded))
+    workspace_store:object
+    current_user:dict
+ctx=Context(data,VERSION,CONFIG_DIR,analyze_uploaded,WORKSPACE_STORE,st.session_state.get('auth_user') or {})
+PAGES[page](ctx)
+
+# Persist the current private project after every completed rerun.
+# Access is owner-scoped in WorkspaceStore, so a project id from another user cannot be saved.
+_active=st.session_state.get('active_project_id')
+_user=st.session_state.get('auth_user') or {}
+if _active and _user.get('id') and st.session_state.get('result') is not None:
+    try:
+        _snapshot=session_snapshot(st.session_state)
+        _signature=str(hash(json.dumps(_snapshot,ensure_ascii=False,default=str,sort_keys=True)))
+        if st.session_state.get('_workspace_saved_signature') != _signature:
+            WORKSPACE_STORE.save_project(
+                _user['id'],_active,st.session_state.get('project_name') or 'Проект',
+                _snapshot,status='analyzed',app_version=VERSION
+            )
+            st.session_state['_workspace_saved_signature']=_signature
+    except PermissionError:
+        st.error('Доступ к выбранному проекту запрещён.')
+    except Exception as workspace_error:
+        if st.session_state.get('expert_mode'):
+            st.warning(f'Не удалось сохранить проект: {type(workspace_error).__name__}: {workspace_error}')

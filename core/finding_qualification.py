@@ -2,10 +2,22 @@ from __future__ import annotations
 from typing import Any
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    """Accept int/float/numeric strings incl. comma decimal; never raise on UI/report data."""
+    if value is None or value == "":
+        return default
+    try:
+        if isinstance(value, bool):
+            return int(value)
+        return int(float(str(value).strip().replace("\u00a0", "").replace(" ", "").replace(",", ".")))
+    except (TypeError, ValueError, OverflowError):
+        return default
+
+
 def qualify_comparison(row: dict[str, Any]) -> dict[str, Any]:
     status = str(row.get("status") or row.get("Статус") or "").lower()
-    trusted = int(row.get("independent_trusted_sources") or 0)
-    sections = int(row.get("independent_section_count") or 0)
+    trusted = _safe_int(row.get("independent_trusted_sources"), 0)
+    sections = _safe_int(row.get("independent_section_count"), 0)
     source_text = str(row.get("sources") or row.get("document_values") or "").strip()
 
     if "расхожд" in status or "конфликт" in status:

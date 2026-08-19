@@ -5,6 +5,7 @@ import streamlit as st
 from studio.components import hero, card, section, empty, project_status_bar, timeline
 from studio.data import excel_report
 from core.project_upload import DOCUMENT_TYPE_OPTIONS, apply_document_type_overrides, prepare_uploads
+from core.review_profiles import filter_prepared_files, PROFILES
 from core.report_engine import build_decision_report
 from core.ai_gateway import provider_for_role
 from studio.pages.documents import render as render_documents
@@ -19,13 +20,27 @@ def _upload(ctx):
     )
     with st.container(border=True):
         name = st.text_input('Наименование проекта', value=st.session_state.project_name)
+        mode_label=st.radio(
+            'Режим проверки',
+            ['Быстрая','Расширенная — рекомендуется','Полная'],
+            index=1,horizontal=True,key='project_review_mode',
+            help='Быстрая — основные разделы ПД; Расширенная — ПД + ИИ + ключевая ИРД; Полная — весь комплект.'
+        )
+        mode_code={'Быстрая':'quick','Расширенная — рекомендуется':'extended','Полная':'full'}[mode_label]
+        st.caption({
+            'quick':'Основные разделы ПД: быстрее, подходит для ранней предпроверки.',
+            'extended':'Рекомендуемый режим перед экспертизой: ПД + ИИ + ключевая ИРД.',
+            'full':'Максимальная глубина. Для больших комплектов обработка может занимать существенно больше времени.'
+        }[mode_code])
         uploads = st.file_uploader('Комплект проекта', type=['pdf', 'xml', 'zip'], accept_multiple_files=True)
         prepared = []
         edited = pd.DataFrame()
         confirmed = False
         errors = []
         if uploads:
-            st.caption(f'Выбрано файлов для загрузки: {len(uploads)}')
+            total_upload_bytes=sum(int(getattr(x,'size',0) or 0) for x in uploads)
+            st.caption(f'Получено браузером: {len(uploads)} файлов · {total_upload_bytes/1048576:.1f} МБ')
+            st.progress(100,text=f'Загрузка в приложение: 100% · {len(uploads)} из {len(uploads)} файлов')
             upload_status = st.status('Подготовка комплекта', expanded=True)
             upload_status.write('Проверяем архивы, форматы и структуру файлов.')
             try:
@@ -82,13 +97,20 @@ def _upload(ctx):
             disabled=not prepared or bool(errors) or not confirmed,
         ):
             files = apply_document_type_overrides(prepared, edited.to_dict('records'))
-            progress_bar = st.progress(0, text='Подготовка комплекта')
+            files, skipped_by_mode = filter_prepared_files(files,mode_code)
+            if skipped_by_mode:
+                st.info(f'Режим «{mode_label}»: {len(skipped_by_mode)} файлов оставлены вне текущего анализа. Их можно проверить позднее без изменения исходного комплекта.')
+            if not files:
+                st.error('Для выбранного режима не найдено файлов для анализа.')
+                st.stop()
+            st.markdown('### Анализ проекта')
+            progress_bar = st.progress(0, text=f'Анализ: 0% · файлов в программе: {len(files)}')
             stage_text = st.empty()
             detail_text = st.empty()
 
             def update_progress(value, stage, detail=''):
-                progress_bar.progress(value, text=f'{value}%')
-                stage_text.markdown(f'**{stage}**')
+                progress_bar.progress(value, text=f'Анализ проекта: {value}%')
+                stage_text.markdown(f'**Этап: {stage}**')
                 detail_text.caption(detail or 'Выполняется обработка проекта')
 
             ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
@@ -105,6 +127,8 @@ def _upload(ctx):
                 update_progress(15, 'Подготовка комплекта', 'Запускаем обработку документов')
                 st.session_state.result = ctx.analyze(files, ctx.config_dir)
             st.session_state.project_name = name.strip() or 'Новый проект'
+            st.session_state.review_mode = mode_code
+            st.session_state.review_mode_label = mode_label
             st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
             st.session_state.completeness_user_confirmed = False
             st.session_state.completeness_decisions = {}

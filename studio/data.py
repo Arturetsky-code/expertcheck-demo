@@ -237,6 +237,21 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     summary = report['summary']
     out = io.BytesIO()
 
+    # Normative validity is attached to every document by the pipeline; use the first
+    # project record as the shared audit payload to avoid duplicating rows.
+    normative_rows=[]
+    if hasattr(docs,'empty') and not docs.empty:
+        first_doc=docs.iloc[0].to_dict()
+        normative_rows=list(first_doc.get('normative_validity_audit') or [])
+    elif isinstance(docs,list) and docs:
+        normative_rows=list((docs[0] or {}).get('normative_validity_audit') or [])
+    normative_statuses={}
+    for row in normative_rows:
+        status=str(row.get('status') or 'Требует верификации')
+        normative_statuses[status]=normative_statuses.get(status,0)+1
+    normative_attention=sum(v for k,v in normative_statuses.items() if k not in {'Действует','Действует с изменениями'})
+    normative_high=sum(1 for x in normative_rows if x.get('impact_risk')=='Высокий' and x.get('status') not in {'Действует','Действует с изменениями'})
+
     summary_rows = [
         ['Наименование проекта', project],
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
@@ -250,6 +265,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Рисков высокого уровня', summary['risks_high']],
         ['Рисков среднего уровня', summary['risks_medium']],
         ['Рассмотрено пунктов чек-листов', summary['checklist_total']],
+        ['Нормативных ссылок проверено', len(normative_rows)],
+        ['НТД действуют / с изменениями', normative_statuses.get('Действует',0)+normative_statuses.get('Действует с изменениями',0)],
+        ['НТД требуют внимания', normative_attention],
+        ['Нормативных рисков высокого влияния', normative_high],
         ['Итоговый вывод', report['conclusion']],
     ]
 
@@ -288,6 +307,19 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Источники': r.get('sources') or r.get('Источники') or '',
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
     recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+    normative_df = pd.DataFrame([{
+        'НТД':x.get('reference'),
+        'Статус':x.get('status'),
+        'Статус редакции':(x.get('edition_assessment') or {}).get('edition_status',''),
+        'Актуальная редакция / замена':(x.get('edition_assessment') or {}).get('current_reference','') or x.get('replacement',''),
+        'Файл':x.get('document'),
+        'Страница':x.get('page'),
+        'Риск влияния':x.get('impact_risk'),
+        'Приоритет базы':x.get('verification_priority'),
+        'Замечаний экспертизы':x.get('expert_occurrences',0),
+        'Дата проверки':x.get('verified_on') or x.get('last_verified_at') or '',
+        'Источник проверки':x.get('official_source'),
+    } for x in normative_rows])
 
     summary_df = _excel_safe_frame(pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']))
     risks_df = _excel_safe_frame(risks_df)
@@ -295,6 +327,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     object_df = _excel_safe_frame(object_df)
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
+    normative_df = _excel_safe_frame(normative_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     if not risks_df.empty:
@@ -306,6 +339,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         sheets.append(('Состав проекта', object_df))
     if report_kind != 'manager' and not checklist_problem_df.empty:
         sheets.append(('Чек-листы — вопросы', checklist_problem_df))
+    if report_kind == 'manager' and not normative_df.empty:
+        attention_norm=normative_df[~normative_df['Статус'].isin(['Действует','Действует с изменениями'])].head(12)
+        if not attention_norm.empty:
+            sheets.append(('НТД — внимание', attention_norm))
+    elif report_kind in {'gip','technical'} and not normative_df.empty:
+        sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
     sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
         for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():

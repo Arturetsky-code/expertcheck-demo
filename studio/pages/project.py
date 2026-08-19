@@ -318,6 +318,18 @@ def _dashboard(ctx):
                         st.dataframe(pd.DataFrame(queue_rows),hide_index=True,width='stretch')
             except Exception:
                 pass
+            try:
+                from core.normative_intelligence import NormativeIntelligence
+                nsum=NormativeIntelligence(ctx.config_dir/'knowledge').summary()
+                with st.expander('Качество нормативной базы', expanded=False):
+                    n1,n2,n3,n4=st.columns(4)
+                    n1.metric('Документов в ядре',nsum.get('documents',0))
+                    n2.metric('Требований',nsum.get('requirements',0))
+                    n3.metric('Пунктов верифицировано',nsum.get('clause_verified_requirements',0))
+                    n4.metric('Категоричные выводы разрешены',nsum.get('categorical_requirements',0))
+                    st.caption('Неверифицированное требование используется для маршрутизации и предварительной проверки, но не должно формировать доказанное нормативное нарушение.')
+            except Exception:
+                pass
         else:
             refs = first_doc.get('normative_reference_audit') or []
             if refs:

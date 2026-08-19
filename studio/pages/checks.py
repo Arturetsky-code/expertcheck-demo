@@ -61,12 +61,16 @@ def render(ctx):
                         for norm in norms[:5]:
                             st.markdown(f"**{norm.get('source','')} · {norm.get('topic','')}**")
                             st.write(norm.get('requirement') or '')
-                            st.caption(norm.get('status') or 'Требует проверки актуальности')
+                            q=norm.get('normative_quality') or {}
+                            mode=q.get('conclusion_mode') or ''
+                            debt='; '.join(q.get('verification_debt') or [])
+                            st.caption((norm.get('status') or 'Требует проверки актуальности') + (f" · {mode}" if mode else ''))
+                            if debt: st.caption('Долг верификации: ' + debt)
                         st.caption('ExpertCheck использует этот контекст для предварительной предподачной проверки. Итоговое нормативное заключение должен подтвердить специалист.')
                 if row.get('sources'):
                     with st.expander('Показать источники'):
                         st.write(row.get('sources'))
                 if st.session_state.get('expert_mode'):
                     with st.expander('Техническая диагностика'):
-                        fields=['check_code','priority','evidence_count','independent_section_count','engineering_risk_level','tolerance']
+                        fields=['check_code','priority','evidence_count','independent_section_count','independent_trusted_sources','trusted_section_families','engineering_risk_level','tolerance']
                         st.write({f:row.get(f) for f in fields if f in row})

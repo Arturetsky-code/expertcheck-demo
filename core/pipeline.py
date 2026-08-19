@@ -57,6 +57,8 @@ from .assignment_compliance import extract_requirements as extract_assignment_re
 from .project_understanding import build_project_object_model, understanding_quality
 from .table_row_integrity import apply_table_row_integrity_guard
 from .evidence_provenance import annotate_evidence_provenance
+from .drawing_intelligence import annotate_drawing_evidence
+from .finding_qualification import coverage_summary
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -314,7 +316,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.6.1-source-binding-normative-depth-alpha2"
+        item["core_version"] = "9.7.0-deep-engineering-review-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -335,6 +337,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # после универсального поиска объектов, затем строим проверки состава.
     general_plan_anchor_audit.extend(anchor_findings_to_general_plan(findings, gp_findings))
     evidence_provenance_audit = annotate_evidence_provenance(findings)
+    drawing_intelligence_summary = annotate_drawing_evidence(findings)
     general_plan_field_checks = build_general_plan_field_checks(gp_findings, general_plan_audit)
     general_plan_document_checks, general_plan_coverage = build_general_plan_document_checks(findings, gp_findings)
     # Пересобираем сводную сверку после добавления генплана и семантических якорей.
@@ -494,7 +497,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.6.1-source-binding-normative-depth-alpha2"
+        item["core_version"] = "9.7.0-deep-engineering-review-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -513,8 +516,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     except Exception as exc:
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
+    decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     for doc in documents:
-        doc["core_version"] = "9.6.1-source-binding-normative-depth-alpha2"
+        doc["core_version"] = "9.7.0-deep-engineering-review-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -607,6 +611,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["learning_engine_summary"] = {"examples_loaded": len(learning_examples), "rules_applied": learning_applied}
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit
+        doc["drawing_intelligence_summary"] = drawing_intelligence_summary
+        doc["decision_coverage"] = decision_coverage
         doc["normative_validity_audit"] = normative_validity_audit
         doc["normative_validity_summary"] = normative_validity_summary
         doc["normative_requirement_audit"] = normative_requirement_audit

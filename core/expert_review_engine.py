@@ -7,6 +7,7 @@ import json
 import re
 
 from .remark_learning import RemarkLearningEngine
+from .finding_qualification import qualify_comparison, qualify_checklist
 
 
 def _text(row: dict[str, Any], *keys: str) -> str:
@@ -132,17 +133,25 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
     scenarios=load_risk_scenarios(scenario_path)
     remark_engine=RemarkLearningEngine(Path(__file__).resolve().parents[1] / "knowledge")
     for index,row in enumerate(comparisons):
+        qualification=qualify_comparison(row)
+        row.update({
+            "finding_class":qualification["finding_class"],
+            "user_status":qualification["user_status"],
+            "finding_qualification_reason":qualification["reason"],
+        })
+        if not qualification["risk_eligible"]:
+            continue
         status=_text(row,"status","Статус","result","Результат").lower()
-        if not any(t in status for t in ("расхожд","конфликт","недостат","требует","отсутств","не подтвержд","нет данных")): continue
         obj=_text(row,"object","Объект","object_name")
         parameter=_text(row,"parameter_name","parameter","Параметр","parameter_code") or "показатель"
         priority=_text(row,"priority","Приоритет") or "Средний"
-        kind="mismatch" if any(t in status for t in ("расхожд","конфликт")) else "insufficient"
-        score=_safe_score(row.get("engineering_risk_score"),0) or (52 if kind=="mismatch" else 34)
-        if priority.lower().startswith("выс"): score+=18
+        kind="mismatch" if any(t in status for t in ("расхожд","конфликт")) else "review"
+        score=_safe_score(row.get("engineering_risk_score"),0) or (72 if qualification["finding_class"]=="CONFIRMED_ISSUE" else 46)
+        if priority.lower().startswith("выс"): score+=8
         elif priority.lower().startswith("низ"): score-=8
+        if qualification["max_risk_level"] == "Средний": score=min(score,69)
         sources=row.get("sources") or row.get("Источники") or row.get("sections") or row.get("document_values") or ""
-        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность" if kind=="mismatch" else "Полнота и доказательность","object":obj,"parameter":parameter,"parameter_code":_text(row,"parameter_code"),"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark(kind,obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах." if kind=="mismatch" else "Дополнить сведения либо подтвердить показатель однозначным источником с указанием объекта и страницы.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if sources else "Средняя"}
+        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность","object":obj,"parameter":parameter,"parameter_code":_text(row,"parameter_code"),"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark("mismatch",obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if qualification["finding_class"]=="CONFIRMED_ISSUE" else "Средняя","finding_class":qualification["finding_class"],"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
         risks.append(_enrich(risk,scenarios))
     for index,row in enumerate(object_rows):
         included=bool(row.get("Включить в состав проекта",row.get("include",False)))
@@ -153,10 +162,17 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
             risk={"risk_id":f"R-OBJ-{index+1:04d}","level":"Средний","score":68 if decision=="blocked" else 48,"category":"Состав проекта","object":name,"parameter":"Принадлежность к составу проекта","finding":f"Позиция включена пользователем, хотя решение Core: {decision or 'не определено'}; статус: {status or 'не определён'}.","possible_remark":_possible_remark("object_gap",name,""),"recommendation":"Проверить официальный источник: состав сложного объекта, XML или экспликацию генплана.","sources":row.get("Основание включения") or row.get("Канонический источник") or "","origin":"Project Engine","evidence_strength":"Средняя"}
             risks.append(_enrich(risk,scenarios))
     for index,row in enumerate(checklist_results):
+        qualification=qualify_checklist(row)
+        row.update({
+            "finding_class":qualification["finding_class"],
+            "user_status":qualification["user_status"],
+            "finding_qualification_reason":qualification["reason"],
+        })
+        if not qualification["risk_eligible"]:
+            continue
         status=_text(row,"status","Соответствие","result").lower()
-        if status not in {"нет","частично","требует проверки","нет данных","не соответствует"}: continue
         item_no=_text(row,"item_no","Позиция","position"); question=_text(row,"question","Вопрос","Позиция по чек-листу")
-        risk={"risk_id":f"R-CHK-{index+1:04d}","level":"Средний" if status in {"нет","не соответствует"} else "Низкий","score":58 if status in {"нет","не соответствует"} else 32,"category":"Чек-лист раздела","object":"","parameter":f"{item_no} {question}".strip(),"finding":_text(row,"evidence","Обоснование") or f"Результат пункта: {status}","possible_remark":_possible_remark("checklist","",f"{item_no} {question}".strip()),"recommendation":"Открыть доказательства по пункту, дополнить раздел и повторно запустить проверку чек-листа.","sources":_text(row,"sources","Источники"),"origin":"Checklist Engine","evidence_strength":"Средняя"}
+        risk={"risk_id":f"R-CHK-{index+1:04d}","level":"Средний","score":58,"category":"Чек-лист раздела","object":"","parameter":f"{item_no} {question}".strip(),"finding":_text(row,"evidence","Обоснование") or f"Результат пункта: {status}","possible_remark":_possible_remark("checklist","",f"{item_no} {question}".strip()),"recommendation":"Открыть доказательства по пункту и подтвердить наличие реального несоответствия перед включением в отчёт.","sources":_text(row,"sources","Источники"),"origin":"Checklist Engine","evidence_strength":"Средняя","finding_class":qualification["finding_class"],"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
         risks.append(_enrich(risk,scenarios))
     # Source/permit document risks from Engineering Intelligence.
     if documents:

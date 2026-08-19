@@ -8,6 +8,7 @@ from .object_semantics import canonical_parameter_code,is_parameter_entity_name,
 from .entity_property_binding import stable_object_id
 from .checklist_routing import canonical_section
 from .table_row_integrity import is_integrity_blocked
+from .object_scope_guard import assess_scope_binding
 
 AUTHORITATIVE_SECTION_WEIGHT={"ПЗ":100,"ПЗУ":96,"АР":88,"КР":88,"ТХ":92,"ИОС1":84,"ИОС2":84,"ИОС3":84,"ИОС4":84,"ИОС5":84,"ПОС":68,"ООС":60}
 PARAMETER_OWNER_HINTS={
@@ -84,8 +85,19 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
         candidate_ids=list(dict.fromkeys(candidate_ids))
         if len(candidate_ids)!=1:
             stats["properties_unresolved"]+=1
+            f["project_understanding_binding"]="Недостаточно данных"
             continue
         oid=candidate_ids[0];section=_source_section(f)
+        scope_guard=assess_scope_binding(f,objects[oid]["name"],objects[oid]["position"])
+        f.update(scope_guard)
+        if scope_guard["scope_binding_decision"] == "REJECT":
+            stats["properties_rejected"]+=1
+            f["project_understanding_binding"]="Отклонено: границы объекта"
+            continue
+        if scope_guard["scope_binding_decision"] == "HOLD":
+            stats["properties_unresolved"]+=1
+            f["project_understanding_binding"]="Требует проверки границ объекта"
+            continue
         ev={
           "parameter_code":code,"parameter_name":f.get("parameter_name") or code,
           "value":f.get("value"),"value_text":f.get("value_text"),"unit":f.get("unit"),
@@ -101,6 +113,9 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
           "match_method":f.get("match_method"),
           "genplan_position":f.get("genplan_position"),
           "owner_section":section in PARAMETER_OWNER_HINTS.get(code,set()),
+          "scope_binding_score":scope_guard.get("scope_binding_score"),
+          "scope_binding_decision":scope_guard.get("scope_binding_decision"),
+          "scope_binding_reasons":scope_guard.get("scope_binding_reasons"),
         }
         objects[oid]["properties"][code].append(ev)
         f["project_understanding_object_id"]=oid

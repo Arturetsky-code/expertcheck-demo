@@ -95,6 +95,21 @@ def infer_value_scope(item: dict[str, Any], code: Any) -> str:
             return "total"
         if any(token in context for token in ("одной линии", "каждой линии", "единичн")):
             return "per_unit"
+    if canonical == "AREA_TOTAL":
+        if any(token in context for token in ("экспликация помещений", "площадь помещений", "сумма площадей помещений", "итого помещений")):
+            return "room_area_sum"
+        if any(token in context for token in ("общая площадь здания", "общая площадь объекта", "общая площадь, м")):
+            return "building_total_area"
+    if canonical == "AREA_BUILD":
+        if any(token in context for token in ("площадь территории", "площадь площадки", "площадь земельного участка")):
+            return "site_area"
+        if "площадь застройки" in context:
+            return "building_footprint"
+    if canonical == "LENGTH":
+        if "протяженность ограж" in context or "протяжённость ограж" in context:
+            return "fence_length"
+        if "эстакад" in context:
+            return "trestle_length"
     return "default"
 
 

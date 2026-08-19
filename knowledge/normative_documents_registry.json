@@ -10,7 +10,8 @@
     "effective_to": null,
     "scope": [
       "PROJECT_DOCUMENTATION_COMPOSITION"
-    ]
+    ],
+    "validity_canonical_id": "PP:87"
   },
   {
     "document_id": "384-FZ",
@@ -21,7 +22,8 @@
     "verification_status": "Требует постатейной верификации редакции",
     "scope": [
       "BUILDING_SAFETY"
-    ]
+    ],
+    "validity_canonical_id": "FZ:384-фз"
   },
   {
     "document_id": "123-FZ",
@@ -32,7 +34,8 @@
     "verification_status": "Требует постатейной верификации редакции",
     "scope": [
       "FIRE_SAFETY"
-    ]
+    ],
+    "validity_canonical_id": "FZ:123-фз"
   },
   {
     "document_id": "FNP-MINING",
@@ -43,6 +46,51 @@
     "verification_status": "Требует загрузки и верификации применимой редакции",
     "scope": [
       "MINING"
+    ]
+  },
+  {
+    "document_id": "GOST-R-21.101-2026",
+    "title": "ГОСТ Р 21.101-2026 «Система проектной документации для строительства. Основные требования к проектной и рабочей документации»",
+    "document_type": "ГОСТ Р",
+    "authority": "Росстандарт",
+    "source_class": "official",
+    "validity_canonical_id": "GOST:21.101-2026",
+    "effective_from": "2026-04-01",
+    "scope": [
+      "DESIGN_DOCUMENTATION_FORMAT"
+    ]
+  },
+  {
+    "document_id": "GOST-R-21.101-2020",
+    "title": "ГОСТ Р 21.101-2020 «Система проектной документации для строительства. Основные требования к проектной и рабочей документации»",
+    "document_type": "ГОСТ Р",
+    "authority": "Росстандарт",
+    "source_class": "official",
+    "validity_canonical_id": "GOST:21.101-2020",
+    "scope": [
+      "DESIGN_DOCUMENTATION_FORMAT"
+    ]
+  },
+  {
+    "document_id": "SP-47.13330.2016",
+    "title": "СП 47.13330.2016 «Инженерные изыскания для строительства. Основные положения»",
+    "document_type": "СП",
+    "authority": "Минстрой России",
+    "source_class": "official",
+    "validity_canonical_id": "SP:47.13330.2016",
+    "scope": [
+      "ENGINEERING_SURVEYS"
+    ]
+  },
+  {
+    "document_id": "SP-48.13330.2019",
+    "title": "СП 48.13330.2019 «Организация строительства»",
+    "document_type": "СП",
+    "authority": "Минстрой России",
+    "source_class": "official",
+    "validity_canonical_id": "SP:48.13330.2019",
+    "scope": [
+      "CONSTRUCTION_ORGANIZATION"
     ]
   }
 ]

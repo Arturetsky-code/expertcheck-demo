@@ -158,7 +158,7 @@ class ChecklistEngine:
             return 'Да','Имеется положительный структурированный результат межраздельной сверки.'
         return 'Требует проверки','Структурированные сведения найдены, но автоматический вывод недостаточен.'
 
-    def evaluate(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None) -> list[dict[str,Any]]:
+    def evaluate(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:
         doc_types=self._doc_types(documents)
         selected_findings=self._selected_findings(findings,documents,section)
         blob=self._finding_blob(selected_findings)
@@ -210,18 +210,21 @@ class ChecklistEngine:
                     status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
             compiled_dict=compiled.to_dict()
             normative_context=self.review_engine.checklist_context(q, compiled_dict)
-            practice_context=self.expert_practice.risk_from_evidence(
-                q, section or "", "",
-                ["MISSING_INFORMATION"] if compiled.rule_type in {"presence","mandatory_document"} else
-                ["CROSS_SECTION_MISMATCH"] if compiled.rule_type=="numeric_crosscheck" else
-                ["INSUFFICIENT_JUSTIFICATION"],
-                normative_context
-            )
+            if include_practice:
+                practice_context=self.expert_practice.risk_from_evidence(
+                    q, section or "", "",
+                    ["MISSING_INFORMATION"] if compiled.rule_type in {"presence","mandatory_document"} else
+                    ["CROSS_SECTION_MISMATCH"] if compiled.rule_type=="numeric_crosscheck" else
+                    ["INSUFFICIENT_JUSTIFICATION"],
+                    normative_context
+                )
+            else:
+                practice_context={}
             results.append({**item,'compiled_rule':compiled_dict,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
-    def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None) -> list[dict[str,Any]]:
-        results = self.evaluate(documents, comparisons, findings, source_file=source_file, section=section)
+    def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:
+        results = self.evaluate(documents, comparisons, findings, source_file=source_file, section=section, include_practice=include_practice)
         if section:
             selected = self._selected_findings(findings, documents, section)
             results.extend(evaluate_pp87(section, selected))

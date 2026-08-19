@@ -42,6 +42,8 @@ from .visual_document_intelligence import recover_text_from_scanned_pages
 from .project_object_recovery import recover_project_objects_from_pages
 from .evidence_graph import build_evidence_graph
 from .normative_knowledge import NormativeKnowledgeLayer
+from .normative_validity import NormativeValidityChecker
+from .automatic_review import AutomaticProjectReview
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
@@ -306,7 +308,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "8.1.0-engineering-intelligence-alpha1"
+        item["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -437,17 +439,35 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     normative_reference_audit = scan_normative_references(findings)
     normative_layer = NormativeKnowledgeLayer(root / "knowledge")
     normative_reference_audit = normative_layer.enrich(normative_reference_audit)
+    normative_validity_checker = NormativeValidityChecker(root / "knowledge")
+    normative_validity_audit = normative_validity_checker.audit_uploaded_pdfs(pdf_files, legacy.read_pdf)
+    if not normative_validity_audit:
+        normative_validity_audit = normative_validity_checker.audit_findings(findings)
+    normative_validity_summary = normative_validity_checker.summary(normative_validity_audit)
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "8.1.0-engineering-intelligence-alpha1"
+        item["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
     pp87_project_profile = detect_pp87_profile(findings, documents)
+    progress(93, "Автоматические чек-листы", "Определяем разделы и запускаем подходящие корпоративные чек-листы")
+    project_context = {
+        "project_type": str(pp87_project_profile.get("project_type") or pp87_project_profile.get("profile") or "") if isinstance(pp87_project_profile, dict) else str(pp87_project_profile or ""),
+        "name": " ".join(str(x.get("Файл") or "") for x in documents[:5]),
+        "description": " ".join(str(x.get("Раздел") or x.get("Тип документа") or "") for x in documents),
+    }
+    try:
+        automatic_review = AutomaticProjectReview(root / "knowledge").execute(
+            documents, comparisons, findings, project_context=project_context
+        )
+    except Exception as exc:
+        automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
+        pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     for doc in documents:
-        doc["core_version"] = "8.1.0-engineering-intelligence-alpha1"
+        doc["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -540,7 +560,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["learning_engine_summary"] = {"examples_loaded": len(learning_examples), "rules_applied": learning_applied}
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit
+        doc["normative_validity_audit"] = normative_validity_audit
+        doc["normative_validity_summary"] = normative_validity_summary
         doc["normative_knowledge_summary"] = normative_layer.summary()
+        doc["automatic_checklist_review"] = automatic_review
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}

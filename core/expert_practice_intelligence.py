@@ -19,14 +19,14 @@ class ExpertPracticeIntelligence:
         key=str(root)
         cached=self._CACHE.get(key)
         if cached is not None:
-            self.patterns,self.remarks,self.rules,self.summary_data,self._tokens,self._idf,self._by_id,self._inverted=cached
+            self.patterns,self.remarks,self.rules,self.summary_data,self._tokens,self._idf,self._by_id,self._inverted,self._rule_tokens=cached
             return
         self.patterns=self._load(root/"expert_practice_patterns_v1.json")
         self.remarks=self._load(root/"expert_remarks_verified.json")
         self.rules=self._load(root/"expert_practice_rules_v1.json")
         self.summary_data=self._load_obj(root/"expert_practice_summary.json")
         self._build_index()
-        self._CACHE[key]=(self.patterns,self.remarks,self.rules,self.summary_data,self._tokens,self._idf,self._by_id,self._inverted)
+        self._CACHE[key]=(self.patterns,self.remarks,self.rules,self.summary_data,self._tokens,self._idf,self._by_id,self._inverted,self._rule_tokens)
     @staticmethod
     def _load(path):
         try:
@@ -54,6 +54,10 @@ class ExpertPracticeIntelligence:
             for t in ts:
                 inv[t].append(i)
         self._inverted=dict(inv)
+        self._rule_tokens=[
+            _tokens(" ".join(r.get("example_texts") or [])+" "+str(r.get("target_code") or "")+" "+str(r.get("section_family") or ""))
+            for r in self.rules
+        ]
     def classify(self,text:str):
         low=normalize_text(text)
         ranked=[]
@@ -110,13 +114,14 @@ class ExpertPracticeIntelligence:
     def recurrent_rules(self,text:str="",section_family:str="",target_code:str="",issue_family:str="",limit:int=6):
         low=normalize_text(text)
         ranked=[]
-        for r in self.rules:
+        query_tokens=_tokens(low)
+        for idx,r in enumerate(self.rules):
             score=0
             if section_family and r.get("section_family")==section_family: score+=6
             if target_code and r.get("target_code")==target_code: score+=7
             if issue_family and r.get("issue_family")==issue_family: score+=8
-            examples=" ".join(r.get("example_texts") or [])
-            score+=sum(1 for t in _tokens(low) if t in _tokens(examples))
+            rule_tokens=self._rule_tokens[idx] if idx < len(self._rule_tokens) else set()
+            score+=len(query_tokens & rule_tokens)
             score+=min(5,int(r.get("project_count") or 0)/3)
             if score: ranked.append((score,r))
         ranked.sort(key=lambda x:x[0],reverse=True)

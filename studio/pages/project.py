@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 import pandas as pd
+from core.display_localization import parameter_label, status_label
 import streamlit as st
 from studio.components import hero, card, section, empty, project_status_bar, timeline
 from studio.data import excel_report
@@ -232,7 +233,7 @@ def _dashboard(ctx):
                     rows.append({
                       'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
                       'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
-                      'Код показателя':prop.get('parameter_code'),'Разделы':', '.join(prop.get('sections') or []),
+                      'Код показателя':parameter_label(prop.get('parameter_code')),'Разделы':', '.join(prop.get('sections') or []),
                       'Доказательств':prop.get('evidence_count',0),
                       'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
                       'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
@@ -263,7 +264,7 @@ def _dashboard(ctx):
             show=pd.DataFrame([{
                 'Требование':x.get('requirement_text'),
                 'Объект':x.get('object_name') or '—',
-                'Показатель':x.get('parameter_code') or '—',
+                'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
                 'Требуемое значение':(str(x.get('required_value'))+' '+str(x.get('unit') or '')).strip() if x.get('required_value') is not None else '—',
                 'Результат':x.get('status'),
                 'Достоверность привязки':f"{float(x.get('match_confidence') or 0)*100:.0f}%",

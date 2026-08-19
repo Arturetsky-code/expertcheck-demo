@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from core.display_localization import parameter_label, localize_parameter_list, status_label
 import streamlit as st
 
 from studio.components import card, empty, section
@@ -198,7 +199,7 @@ def render(ctx):
             st.dataframe(pd.DataFrame([{'Раздел':k,'Статус':v} for k,v in matrix.items()]),hide_index=True,width='stretch',height=250)
         missing=passport.get('missing_expected_parameter_codes') or []
         if missing:
-            st.warning('Не найдены ожидаемые для этого типа объекта характеристики: ' + ', '.join(missing))
+            st.warning('Не найдены ожидаемые для этого типа объекта характеристики: ' + ', '.join(localize_parameter_list(missing)))
         else:
             st.success('Ожидаемые типовые характеристики по доступной модели объекта найдены.')
         aliases=passport.get('aliases') or []
@@ -213,7 +214,7 @@ def render(ctx):
             rows=[]
             for item in passport.get('characteristics',[]):
                 vals=item.get('values_by_section') or {}
-                row={'Характеристика':item.get('parameter_name') or item.get('parameter_code'),'Ед. изм.':item.get('unit') or '—','Статус':item.get('status') or '—'}
+                row={'Характеристика':item.get('parameter_name') or parameter_label(item.get('parameter_code')),'Ед. изм.':item.get('unit') or '—','Статус':status_label(item.get('status'))}
                 for sec in ['ПЗ','ПЗУ','АР','ТХ','ИОС','ПОС','ООС']:
                     row[sec]=vals.get(sec,'—') if isinstance(vals,dict) else '—'
                 rows.append(row)

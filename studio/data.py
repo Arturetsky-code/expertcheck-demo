@@ -5,6 +5,7 @@ import math
 import re
 from datetime import datetime, date
 import pandas as pd
+from core.display_localization import parameter_label, status_label, scope_label
 from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
@@ -338,7 +339,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             understanding_rows.append({
               'ID объекта':obj.get('object_id'),'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
               'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
-              'Код показателя':prop.get('parameter_code'),'Разделы':', '.join(prop.get('sections') or []),
+              'Код показателя':parameter_label(prop.get('parameter_code')),'Разделы':', '.join(prop.get('sections') or []),
               'Количество доказательств':prop.get('evidence_count',0),
               'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
               'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
@@ -350,7 +351,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'ID требования':x.get('requirement_id'),
         'Требование Задания':x.get('requirement_text'),
         'Объект':x.get('object_name') or '—',
-        'Показатель':x.get('parameter_code') or '—',
+        'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
         'Требуемое значение':x.get('required_value'),
         'Ед. изм.':x.get('unit'),
         'Результат':x.get('status'),

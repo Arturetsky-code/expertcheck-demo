@@ -20,7 +20,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 9.5 Alpha 1.2 · Binding Integrity & Risk Hotfix'
+VERSION='ExpertCheck 9.6 Alpha 1 · Evidence Provenance & Trust Gate'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')

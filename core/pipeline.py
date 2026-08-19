@@ -54,6 +54,7 @@ from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
 from .entity_property_binding import annotate_findings as annotate_entity_property_bindings
 from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
+from .project_understanding import build_project_object_model, understanding_quality
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:

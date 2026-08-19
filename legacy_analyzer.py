@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
 from dataclasses import asdict, dataclass
@@ -1101,6 +1102,14 @@ def _authoritative_object_by_position(findings: list[Finding]) -> dict[str,str]:
     return {pos:max(rows,key=lambda x:x[0])[1] for pos,rows in candidates.items() if rows}
 
 
+
+def _stable_comparison_object_id(name:str,position:str="")->str:
+    pos=re.sub(r"\s+","",str(position or ""))
+    if pos:
+        return "OBJ-POS-"+re.sub(r"[^0-9A-Za-zА-Яа-я]+","-",pos).strip("-").upper()[:32]
+    key=normalized_search_text(name).strip()
+    return "OBJ-"+hashlib.blake2b(key.encode("utf-8"),digest_size=6).hexdigest().upper()
+
 def compare_findings(findings: list[Finding], parameters: list[dict], engineering_rules: list[dict] | None = None) -> list[dict]:
     """Выполняет доказательную межраздельную сверку.
 
@@ -1125,12 +1134,13 @@ def compare_findings(findings: list[Finding], parameters: list[dict], engineerin
             else:
                 # Safer to omit one uncertain value than create a false inter-section mismatch.
                 continue
+        object_id=_stable_comparison_object_id(object_hint,str(finding.genplan_position or ""))
         groups.setdefault(
-            (object_hint, finding.parameter_code, normalize_unit(finding.unit)), []
+            (object_id, object_hint, finding.parameter_code, normalize_unit(finding.unit)), []
         ).append(finding)
 
     rows: list[dict] = []
-    for (object_hint, code, unit), items in groups.items():
+    for (object_id, object_hint, code, unit), items in groups.items():
         parameter = parameter_map.get(code, {})
         rule = _comparison_rule(parameter, engineering_rule_map.get(code))
         eligible_items = [
@@ -1151,6 +1161,8 @@ def compare_findings(findings: list[Finding], parameters: list[dict], engineerin
         base = {
             "check_code": check_code,
             "object": object_hint,
+            "object_id": object_id,
+            "binding_key": f"{object_id}|{code}|default",
             "parameter_code": code,
             "parameter_name": items[0].parameter_name,
             "unit": unit,
@@ -1210,7 +1222,7 @@ def compare_findings(findings: list[Finding], parameters: list[dict], engineerin
             "documents": ", ".join(sorted(representatives)),
             "document_values": doc_values,
             "sources": " | ".join(
-                f"{doc}, стр. {item.page}: {item.value_text}"
+                f"{doc}, стр. {item.page}: {object_hint} · {items[0].parameter_name} — {item.value:g} {unit or ''}".strip()
                 for doc, item in sorted(representatives.items())
             ),
             "comment": rule["failure_message"] if mismatch else rule["success_message"],

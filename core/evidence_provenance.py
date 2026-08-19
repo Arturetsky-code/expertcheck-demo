@@ -7,6 +7,7 @@ from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, is_parameter_entity_name
 from .table_row_integrity import is_integrity_blocked
+from .source_binding import source_locator
 
 STRONG_BINDINGS = {"ROW_LOCKED", "POSITION_LOCKED", "EXACT_OBJECT"}
 STRUCTURED_METHOD_TOKENS = (
@@ -67,6 +68,7 @@ def assess_evidence(item: dict[str, Any]) -> dict[str, Any]:
 
     reasons: list[str] = []
     factors: dict[str, int] = {}
+    locator = source_locator(item)
 
     if is_integrity_blocked(item):
         return {
@@ -78,6 +80,7 @@ def assess_evidence(item: dict[str, Any]) -> dict[str, Any]:
             "mismatch_eligible": False,
             "reasons": ["Запись заблокирована контролем целостности строки таблицы."],
             "factors": {"integrity_block": -100},
+            "source_locator": locator,
         }
 
     if not obj or is_parameter_entity_name(obj):
@@ -90,6 +93,7 @@ def assess_evidence(item: dict[str, Any]) -> dict[str, Any]:
             "mismatch_eligible": False,
             "reasons": ["Не подтверждён инженерный объект, которому принадлежит показатель."],
             "factors": {"invalid_object": -100},
+            "source_locator": locator,
         }
 
     # Binding to the physical row/object is intentionally weighted higher than
@@ -106,9 +110,19 @@ def assess_evidence(item: dict[str, Any]) -> dict[str, Any]:
     if any(token in method for token in STRUCTURED_METHOD_TOKENS):
         factors["structured_source"] = 16
         reasons.append("Значение извлечено из структурированного источника.")
-    if item.get("table_evidence") or item.get("table_index") is not None or item.get("row_index") is not None:
-        factors["table_trace"] = 8
-        reasons.append("Сохранён табличный след источника.")
+    trace_level = locator.get("physical_trace_level")
+    if trace_level == "CELL_TRACE":
+        factors["physical_trace"] = 15
+        reasons.append("Сохранён физический след до ячейки/координат источника.")
+    elif trace_level == "ROW_TRACE":
+        factors["physical_trace"] = 11
+        reasons.append("Сохранён физический след до строки таблицы.")
+    elif trace_level == "PAGE_TRACE":
+        factors["physical_trace"] = 5
+        reasons.append("Сохранена страница источника, но нет строки/ячейки.")
+    elif item.get("table_evidence"):
+        factors["table_trace"] = 5
+        reasons.append("Сохранён текстовый табличный след источника.")
     if item.get("document") and item.get("page"):
         factors["source_location"] = 7
     if item.get("unit"):
@@ -155,6 +169,7 @@ def assess_evidence(item: dict[str, Any]) -> dict[str, Any]:
         "mismatch_eligible": mismatch_eligible,
         "reasons": reasons,
         "factors": factors,
+        "source_locator": locator,
     }
 
 
@@ -171,6 +186,9 @@ def annotate_evidence_provenance(findings: list[dict[str, Any]]) -> dict[str, in
         item["evidence_quality_decision"] = passport["decision"]
         item["evidence_comparison_eligible"] = passport["comparison_eligible"]
         item["evidence_mismatch_eligible"] = passport["mismatch_eligible"]
+        item["source_locator"] = passport.get("source_locator") or {}
+        item["source_fingerprint"] = (passport.get("source_locator") or {}).get("source_fingerprint")
+        item["physical_trace_level"] = (passport.get("source_locator") or {}).get("physical_trace_level")
         decision = passport["decision"]
         if decision == "VERIFIED":
             stats["verified"] += 1

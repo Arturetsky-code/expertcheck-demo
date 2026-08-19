@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code
+from .normative_requirement_quality import requirement_quality
 
 class NormativeIntelligence:
     """Evidence-first normative retrieval and applicability engine.
@@ -13,10 +14,25 @@ class NormativeIntelligence:
     """
     def __init__(self, knowledge_root: str|Path):
         root=Path(knowledge_root)
-        self.requirements=self._load(root/"normative_requirements_v2.json")
+        self.requirements=self._load(root/"normative_requirements_v3.json")
+        if not self.requirements:
+            self.requirements=self._load(root/"normative_requirements_v2.json")
         if not self.requirements:
             self.requirements=self._load(root/"normative_requirements_v1.json")
         self.documents=self._load(root/"normative_documents_registry.json")
+        try:
+            validity=json.loads((root/"normative_validity_registry.json").read_text(encoding="utf-8"))
+            validity_map={str(x.get("canonical_id")):x for x in validity.get("records") or []}
+        except Exception:
+            validity_map={}
+        for doc in self.documents:
+            rec=validity_map.get(str(doc.get("validity_canonical_id") or ""))
+            if rec:
+                doc["status"]=rec.get("status")
+                doc["verified_on"]=rec.get("verified_on")
+                doc["verified_revision"]=rec.get("verified_revision")
+                doc["official_source_kind"]=rec.get("official_source_kind")
+                doc["replacement"]=rec.get("replacement")
         self.docs={str(x.get("document_id")):x for x in self.documents}
 
     @staticmethod
@@ -66,6 +82,9 @@ class NormativeIntelligence:
                 item["applicability_score"]=round(app_score,2)
                 item["applicability_basis"]=why
                 item["legal_confidence"]=self.legal_confidence(item)
+                doc=self.docs.get(str(item.get("document_id") or ""))
+                item["normative_quality"]=requirement_quality(item,doc)
+                item["categorical_conclusion_allowed"]=item["normative_quality"]["conclusion_mode"]=="CATEGORICAL_ALLOWED"
                 ranked.append((score,item))
         ranked.sort(key=lambda x:x[0],reverse=True)
         return [x[1] for x in ranked[:limit]]
@@ -95,4 +114,6 @@ class NormativeIntelligence:
 
     def summary(self):
         verified=sum(1 for x in self.requirements if self.legal_confidence(x)=="Верифицированное нормативное основание")
-        return {"documents":len(self.documents),"requirements":len(self.requirements),"verified_requirements":verified}
+        clause_verified=sum(1 for x in self.requirements if requirement_quality(x,self.docs.get(str(x.get("document_id") or "")))["verified_clause"])
+        categorical=sum(1 for x in self.requirements if requirement_quality(x,self.docs.get(str(x.get("document_id") or "")))["conclusion_mode"]=="CATEGORICAL_ALLOWED")
+        return {"documents":len(self.documents),"requirements":len(self.requirements),"verified_requirements":verified,"clause_verified_requirements":clause_verified,"categorical_requirements":categorical}

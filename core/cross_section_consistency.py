@@ -11,6 +11,7 @@ from .entity_property_binding import stable_object_id, validate_entity_property
 from .table_row_integrity import is_integrity_blocked
 from .object_identity import ObjectIdentityEngine
 from .property_intelligence import normalize_engineering_value, parameter_display_name
+from .source_binding import independent_source_key
 
 # Абсолютный допуск, относительный допуск, приоритет проверки.
 TOLERANCES: dict[str, tuple[float, float, str]] = {
@@ -199,9 +200,9 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             round(value, 8),
             str(item.get("unit") or ""),
         )
-        score = float(item.get("core2_confidence") or item.get("confidence") or 0.0)
+        score = (int(item.get("evidence_trust_score") or 0), float(item.get("core2_confidence") or item.get("confidence") or 0.0))
         current = best.get(key)
-        current_score = float((current or {}).get("core2_confidence") or (current or {}).get("confidence") or 0.0)
+        current_score = (int((current or {}).get("evidence_trust_score") or 0), float((current or {}).get("core2_confidence") or (current or {}).get("confidence") or 0.0))
         if current is None or score > current_score:
             best[key] = item
     return list(best.values())
@@ -270,7 +271,7 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 if len(vals) > 1 and any(not _same(vals[0], v, code) for v in vals[1:]):
                     internal_conflicts.append(section)
                 # Берём наиболее уверенную запись только для представления, не как истину.
-                best_item = max(section_items, key=lambda x: float(x.get("core2_confidence") or x.get("confidence") or 0.0))
+                best_item = max(section_items, key=lambda x: (bool(x.get("evidence_mismatch_eligible")), int(x.get("evidence_trust_score") or 0), float(x.get("core2_confidence") or x.get("confidence") or 0.0)))
                 best_value = numeric_value(best_item)
                 if best_value is not None:
                     section_values[section] = best_value
@@ -290,10 +291,14 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                     or bool(x.get('genplan_position'))
                     or float(x.get('core2_confidence') or x.get('confidence') or 0.0) >= 0.82
                 )
-            strong_evidence_count = sum(1 for x in object_items if _mismatch_trusted(x))
+            strong_sources = {independent_source_key(x) for x in object_items if _mismatch_trusted(x)}
+            strong_evidence_count = len(strong_sources)
+            strong_sections = {section_family(x) for x in object_items if _mismatch_trusted(x)}
+            # A cross-section discrepancy requires trusted evidence from at least two
+            # independent section families; duplicated extraction of one row is not corroboration.
             if internal_conflicts and strong_evidence_count >= 2:
                 status = "КОНФЛИКТ ВНУТРИ РАЗДЕЛА"
-            elif cross_mismatch and strong_evidence_count >= 2:
+            elif cross_mismatch and strong_evidence_count >= 2 and len(strong_sections) >= 2:
                 status = "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ"
             elif cross_mismatch:
                 status = "НЕДОСТАТОЧНО ДАННЫХ"
@@ -352,6 +357,8 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 "comparison_scope": comparison_scope,
                 "unit": unit,
                 "priority": priority,
+                "independent_trusted_sources": strong_evidence_count,
+                "trusted_section_families": sorted(strong_sections),
                 "rule_name": "Межраздельная согласованность характеристик",
                 "category": "Межраздельная сверка",
                 "check_type": "Сводная межраздельная проверка",

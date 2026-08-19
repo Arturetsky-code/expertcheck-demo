@@ -103,6 +103,12 @@ def value_scope(item: dict[str, Any]) -> str:
 def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
     obj = str(item.get("semantic_anchor_name") or item.get("object_hint") or "").strip()
+    # Project Understanding 4.0 guardrail: once the ontology layer has run,
+    # only properties attached to a confirmed registry object may create an
+    # inter-section comparison. Ambiguous evidence stays visible elsewhere.
+    pu_binding=str(item.get("project_understanding_binding") or "")
+    if pu_binding and pu_binding!="Подтверждено":
+        return False
     if is_parameter_entity_name(obj):
         return False
     if normalize_text(obj)==normalize_text(str(item.get("parameter_name") or "")):

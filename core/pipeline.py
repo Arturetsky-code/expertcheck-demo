@@ -423,6 +423,22 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(80, 'Паспорта объектов', 'Формируем итоговый реестр и цифровые паспорта')
     object_passports = build_object_passports(object_registry, findings, comparisons)
     object_passport_summary = passport_summary(object_passports)
+
+    # Project Understanding Engine 4.0: a property can only attach to a confirmed
+    # project object. Ambiguous properties remain unresolved instead of creating
+    # a false cross-section mismatch.
+    progress(80, "Понимание проекта", "Связываем объекты, показатели, значения и источники в единую модель проекта")
+    project_understanding = build_project_object_model(object_registry, findings)
+    project_understanding_quality = understanding_quality(project_understanding)
+
+    # Final high-trust cross-section pass. Earlier extraction comparisons remain
+    # useful diagnostics, but the final engineering comparisons are rebuilt only
+    # from properties attached to confirmed objects.
+    comparisons = [row for row in comparisons if str(row.get("category") or "") != "Межраздельная сверка"]
+    cross_section_checks = build_cross_section_checks(findings)
+    comparisons.extend(cross_section_checks)
+    _enrich_rules(comparisons, registry)
+
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
@@ -584,6 +600,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_requirement_audit"] = normative_requirement_audit
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
+        doc["project_understanding"] = project_understanding
+        doc["project_understanding_quality"] = project_understanding_quality
         doc["assignment_requirements"] = assignment_requirements
         doc["assignment_compliance"] = assignment_compliance
         doc["assignment_compliance_summary"] = assignment_compliance_summary

@@ -51,6 +51,7 @@ from .composition_registry import build_composition_baseline, merge_baseline_wit
 from .pz_complex_object_register import extract_pz_complex_object_register_from_uploaded, enforce_authoritative_pz_registry
 from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
+from .entity_property_binding import annotate_findings as annotate_entity_property_bindings
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -308,7 +309,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
+        item["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -319,6 +320,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(object_gate_audit_2.get(k,0)) for k in set(object_gate_audit)|set(object_gate_audit_2)}
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
+    entity_property_binding_audit = annotate_entity_property_bindings(findings)
     trusted_object_audit.extend(annotate_findings(findings))
     # Генплан является опорным реестром: повторно и консервативно привязываем ТЭП
     # после универсального поиска объектов, затем строим проверки состава.
@@ -447,7 +449,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
+        item["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -467,7 +469,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     for doc in documents:
-        doc["core_version"] = "9.1.0-automatic-review-normative-validity-alpha1"
+        doc["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -565,6 +567,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
+        doc["entity_property_binding_summary"] = entity_property_binding_audit
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph

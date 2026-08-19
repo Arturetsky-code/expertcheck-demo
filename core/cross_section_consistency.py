@@ -6,7 +6,8 @@ from collections import defaultdict
 from typing import Any
 
 from .normalization import normalize_text
-from .object_semantics import canonical_parameter_code, classify_object, parameter_applicability
+from .object_semantics import canonical_parameter_code, classify_object, parameter_applicability, is_parameter_entity_name
+from .entity_property_binding import stable_object_id, validate_entity_property
 from .object_identity import ObjectIdentityEngine
 from .property_intelligence import normalize_engineering_value, parameter_display_name
 
@@ -102,6 +103,10 @@ def value_scope(item: dict[str, Any]) -> str:
 def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
     obj = str(item.get("semantic_anchor_name") or item.get("object_hint") or "").strip()
+    if is_parameter_entity_name(obj):
+        return False
+    if normalize_text(obj)==normalize_text(str(item.get("parameter_name") or "")):
+        return False
     confidence = float(item.get("core2_confidence") or item.get("confidence") or 0.0)
     position = str(item.get("genplan_position") or "").strip()
     binding = str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
@@ -272,11 +277,15 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 status = "НЕДОСТАТОЧНО ДАННЫХ"
 
             name = _representative_name(object_items)
+            position = next((str(x.get("genplan_position") or "") for x in object_items if x.get("genplan_position")), "")
+            ep_binding=validate_entity_property(name,parameter_display_name(code),code,position)
+            if not ep_binding.get("valid"):
+                continue
+            object_id=ep_binding["object_id"]
             object_type = classify_object(name).code
             applicability = parameter_applicability(object_type, code)
             if applicability == "not_applicable":
                 continue
-            position = next((str(x.get("genplan_position") or "") for x in object_items if x.get("genplan_position")), "")
             parameter_name = parameter_display_name(code)
             normalized_first = next((normalize_engineering_value(x) for x in object_items if normalize_engineering_value(x)), None)
             unit = normalized_first.unit if normalized_first else str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
@@ -288,7 +297,7 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             for item in sorted(object_items, key=lambda x: (section_family(x), str(x.get("document") or ""), int(x.get("page") or 0))):
                 evidence_parts.append(
                     f"{section_family(item)} — {item.get('document')}, стр. {item.get('page') or '-'}: "
-                    f"{numeric_value(item):g} {item.get('unit') or unit}".strip()
+                    f"{name} · {parameter_name} — {numeric_value(item):g} {item.get('unit') or unit}".strip()
                 )
 
             check_id = re.sub(r"[^A-Za-zА-Яа-я0-9]+", "-", f"{position}-{name}").strip("-")[:38]
@@ -307,6 +316,8 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             rows.append({
                 "check_code": f"CORE-XSEC-{code}-{check_id}",
                 "object": name,
+                "object_id": object_id,
+                "binding_key": f"{object_id}|{code}|{comparison_scope}",
                 "genplan_position": position,
                 "parameter_code": code,
                 "parameter_name": parameter_name,

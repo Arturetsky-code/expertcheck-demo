@@ -21,6 +21,23 @@ def _norm(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "").lower()).strip()
 
 
+
+def _safe_score(value: Any, default: int = 0) -> int:
+    """Convert risk values safely.
+
+    Accepts ints, floats and strings such as "71.0" / "71,0".
+    Invalid values never crash Risks or Reports pages.
+    """
+    if value in (None, "", [], {}):
+        return int(default)
+    try:
+        number=float(str(value).strip().replace(",","."))
+        if number != number:  # NaN
+            return int(default)
+        return int(round(number))
+    except (TypeError, ValueError, OverflowError):
+        return int(default)
+
 def _level(score: int) -> str:
     if score >= 70: return "Высокий"
     if score >= 40: return "Средний"
@@ -71,8 +88,8 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
     if not best or best_score < 22:
         risk.update({"scenario_id":"","scenario_title":"","recurrence":0,"analog_projects":[],"knowledge_match_score":0,"matched_signals":[]})
         return risk
-    recurrence=int(best.get("recurrence") or 0)
-    base=max(int(risk.get("score") or 0), int(best.get("severity") or 0))
+    recurrence=_safe_score(best.get("recurrence"),0)
+    base=max(_safe_score(risk.get("score"),0), _safe_score(best.get("severity"),0))
     evidence_bonus=8 if risk.get("sources") else 0
     recurrence_bonus=min(12, recurrence*2)
     risk["score"]=min(100,base+evidence_bonus+recurrence_bonus)
@@ -121,7 +138,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         parameter=_text(row,"parameter_name","parameter","Параметр","parameter_code") or "показатель"
         priority=_text(row,"priority","Приоритет") or "Средний"
         kind="mismatch" if any(t in status for t in ("расхожд","конфликт")) else "insufficient"
-        score=int(row.get("engineering_risk_score") or 0) or (52 if kind=="mismatch" else 34)
+        score=_safe_score(row.get("engineering_risk_score"),0) or (52 if kind=="mismatch" else 34)
         if priority.lower().startswith("выс"): score+=18
         elif priority.lower().startswith("низ"): score-=8
         sources=row.get("sources") or row.get("Источники") or row.get("sections") or row.get("document_values") or ""
@@ -153,8 +170,8 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
     unique={}
     for risk in risks:
         key=(risk.get("scenario_id") or risk["category"],risk["object"].lower(),risk["parameter"].lower())
-        if key not in unique or int(risk["score"])>int(unique[key]["score"]): unique[key]=risk
-    return sorted(unique.values(),key=lambda x:(-int(x["score"]),x["category"],x["object"]))
+        if key not in unique or _safe_score(risk.get("score"),0)>_safe_score(unique[key].get("score"),0): unique[key]=risk
+    return sorted(unique.values(),key=lambda x:(-_safe_score(x.get("score"),0),x["category"],x["object"]))
 
 
 def summarize_risks(risks:list[dict[str,Any]])->dict[str,Any]:

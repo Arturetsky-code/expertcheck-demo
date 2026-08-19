@@ -55,6 +55,7 @@ from .expert_practice_intelligence import ExpertPracticeIntelligence
 from .entity_property_binding import annotate_findings as annotate_entity_property_bindings
 from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
 from .project_understanding import build_project_object_model, understanding_quality
+from .table_row_integrity import apply_table_row_integrity_guard
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -321,6 +322,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     structure_guard_audit = {k: int(structure_guard_audit.get(k,0))+int(structure_guard_audit_2.get(k,0)) for k in set(structure_guard_audit)|set(structure_guard_audit_2)}
     object_gate_audit_2 = apply_hard_object_gate(findings)
     object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(object_gate_audit_2.get(k,0)) for k in set(object_gate_audit)|set(object_gate_audit_2)}
+
+    progress(69, "Контроль строк таблиц", "Проверяем, что показатель не был сдвинут на соседний объект при чтении PDF")
+    table_row_integrity_audit = apply_table_row_integrity_guard(findings)
+
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
     entity_property_binding_audit = annotate_entity_property_bindings(findings)
@@ -435,7 +440,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # Final high-trust cross-section pass. Earlier extraction comparisons remain
     # useful diagnostics, but the final engineering comparisons are rebuilt only
     # from properties attached to confirmed objects.
-    comparisons = [row for row in comparisons if str(row.get("category") or "") != "Межраздельная сверка"]
+    comparisons = [
+        row for row in comparisons
+        if str(row.get("category") or "") != "Межраздельная сверка"
+        and str(row.get("check_type") or "") not in {"Межраздельная сверка","Сводная межраздельная проверка"}
+    ]
     cross_section_checks = build_cross_section_checks(findings)
     comparisons.extend(cross_section_checks)
     _enrich_rules(comparisons, registry)
@@ -608,6 +617,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["assignment_compliance_summary"] = assignment_compliance_summary
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["entity_property_binding_summary"] = entity_property_binding_audit
+        doc["table_row_integrity_summary"] = table_row_integrity_audit
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph

@@ -7,6 +7,7 @@ from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code,is_parameter_entity_name,is_service_object_candidate
 from .entity_property_binding import stable_object_id
 from .checklist_routing import canonical_section
+from .table_row_integrity import is_integrity_blocked
 
 AUTHORITATIVE_SECTION_WEIGHT={"ПЗ":100,"ПЗУ":96,"АР":88,"КР":88,"ТХ":92,"ИОС1":84,"ИОС2":84,"ИОС3":84,"ИОС4":84,"ИОС5":84,"ПОС":68,"ООС":60}
 PARAMETER_OWNER_HINTS={
@@ -58,14 +59,22 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
     for f in findings or []:
         code=canonical_parameter_code(f.get("parameter_code"))
         if code in {"OBJECT_ENTRY","OBJECT_CANDIDATE"}:continue
-        raw_obj=str(f.get("semantic_anchor_name") or f.get("object_hint") or "").strip()
+        if is_integrity_blocked(f):
+            stats["properties_rejected"]+=1
+            continue
+        binding_status=str(f.get("binding_status") or f.get("property_binding_status") or "").upper()
+        row_locked=binding_status in {"ROW_LOCKED","POSITION_LOCKED","EXACT_OBJECT"} or str(f.get("row_integrity_status") or "").startswith("CONFIRMED")
+        # A row-bound property owns its original object label. Semantic anchoring
+        # is allowed only for non-tabular/loose evidence.
+        raw_obj=str((f.get("object_hint") if row_locked else (f.get("semantic_anchor_name") or f.get("object_hint"))) or "").strip()
         if not raw_obj or is_parameter_entity_name(raw_obj):
             stats["properties_rejected"]+=1;continue
         binding=f.get("entity_property_binding") or {}
         if binding and binding.get("valid") is False:
             stats["properties_rejected"]+=1;continue
         candidate_ids=[]
-        pos=re.sub(r"\s+","",str(f.get("semantic_anchor_position") or f.get("genplan_position") or ""))
+        pos_source=f.get("genplan_position") if row_locked else (f.get("semantic_anchor_position") or f.get("genplan_position"))
+        pos=re.sub(r"\s+","",str(pos_source or ""))
         if pos and pos in positions:candidate_ids=list(positions[pos])
         if not candidate_ids:
             n=normalize_text(raw_obj)

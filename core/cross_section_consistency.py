@@ -8,6 +8,7 @@ from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, classify_object, parameter_applicability, is_parameter_entity_name
 from .entity_property_binding import stable_object_id, validate_entity_property
+from .table_row_integrity import is_integrity_blocked
 from .object_identity import ObjectIdentityEngine
 from .property_intelligence import normalize_engineering_value, parameter_display_name
 
@@ -102,7 +103,11 @@ def value_scope(item: dict[str, Any]) -> str:
 
 def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
-    obj = str(item.get("semantic_anchor_name") or item.get("object_hint") or "").strip()
+    if is_integrity_blocked(item):
+        return False
+    binding = str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
+    row_locked = binding in {"ROW_LOCKED","POSITION_LOCKED","EXACT_OBJECT"} or str(item.get("row_integrity_status") or "").startswith("CONFIRMED")
+    obj = str((item.get("object_hint") if row_locked else (item.get("semantic_anchor_name") or item.get("object_hint"))) or "").strip()
     # Project Understanding 4.0 guardrail: once the ontology layer has run,
     # only properties attached to a confirmed registry object may create an
     # inter-section comparison. Ambiguous evidence stays visible elsewhere.
@@ -115,7 +120,6 @@ def _usable(item: dict[str, Any]) -> bool:
         return False
     confidence = float(item.get("core2_confidence") or item.get("confidence") or 0.0)
     position = str(item.get("genplan_position") or "").strip()
-    binding = str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
     strong_binding = binding in {"ROW_LOCKED", "POSITION_LOCKED", "EXACT_OBJECT"}
     # Без позиции или жёсткой привязки принимаются только сведения с высокой уверенностью.
     binding_ok = bool(position) or strong_binding or confidence >= 0.82

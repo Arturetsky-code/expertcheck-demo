@@ -5,6 +5,6 @@ def test_area_mismatch_matches_knowledge():
     assert risks and risks[0]['scenario_id']=='GGE-TEP-001'
     assert risks[0]['level']=='Высокий'
 
-def test_knowledge_summary():
+def test_knowledge_summary_does_not_promote_unsupported_checklist_negative():
     risks=build_expert_risks([],checklist_results=[{'item_no':'1.1','question':'Проверить комплектность разделов по ПП 87','status':'Нет'}])
-    assert summarize_risks(risks)['matched_knowledge'] >= 1
+    assert summarize_risks(risks)['total'] == 0

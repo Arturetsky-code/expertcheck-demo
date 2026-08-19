@@ -43,6 +43,7 @@ from .project_object_recovery import recover_project_objects_from_pages
 from .evidence_graph import build_evidence_graph
 from .normative_knowledge import NormativeKnowledgeLayer
 from .normative_validity import NormativeValidityChecker
+from .normative_requirement_analyzer import NormativeRequirementAnalyzer
 from .automatic_review import AutomaticProjectReview
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
@@ -457,6 +458,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     if not normative_validity_audit:
         normative_validity_audit = normative_validity_checker.audit_findings(findings)
     normative_validity_summary = normative_validity_checker.summary(normative_validity_audit)
+    try:
+        normative_requirement_audit = NormativeRequirementAnalyzer(root / "knowledge").audit_uploaded_pdfs(pdf_files, legacy.read_pdf)
+    except Exception as exc:
+        normative_requirement_audit = []
+        pipeline_errors.append({"stage":"normative_requirement_analysis","error":str(exc)})
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
@@ -575,6 +581,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_reference_audit"] = normative_reference_audit
         doc["normative_validity_audit"] = normative_validity_audit
         doc["normative_validity_summary"] = normative_validity_summary
+        doc["normative_requirement_audit"] = normative_requirement_audit
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
         doc["assignment_requirements"] = assignment_requirements

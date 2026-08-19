@@ -89,48 +89,160 @@ def extract_requirements(files,reader)->list[dict[str,Any]]:
 def _norm_unit(value:str)->str:
     return normalize_text(value).replace(" ","").replace("м2","м²").replace("м3","м³")
 
+
+_STOPWORDS={"предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","проект","проектом","проектной","документации","объект","объекта","сведения","решения"}
+
+def _semantic_tokens(text:str)->set[str]:
+    low=normalize_text(text)
+    words=set(re.findall(r"[а-яa-z0-9-]{4,}",low,re.I))
+    return {w for w in words if w not in _STOPWORDS}
+
+def _semantic_evidence_candidates(requirement:str,findings:list[dict[str,Any]],object_name:str="",limit:int=6)->list[dict[str,Any]]:
+    q=_semantic_tokens(requirement)
+    obj=normalize_text(object_name)
+    ranked=[]
+    for f in findings:
+        blob=" ".join(str(f.get(k) or "") for k in ("context","section_title","table_title","table_evidence","value_text","parameter_name","object_hint","semantic_anchor_name"))
+        tokens=_semantic_tokens(blob)
+        overlap=q & tokens
+        if not overlap:
+            continue
+        score=len(overlap)*3
+        fobj=normalize_text(f.get("semantic_anchor_name") or f.get("object_hint") or "")
+        if obj:
+            if obj in fobj or fobj in obj:
+                score+=7
+            elif fobj and not is_parameter_entity_name(fobj):
+                score-=2
+        if f.get("page"):score+=1
+        if f.get("value") is not None:score+=1
+        if score>=5:
+            ranked.append((score,f,sorted(overlap)))
+    ranked.sort(key=lambda x:x[0],reverse=True)
+    return [{
+      "score":score,
+      "document":f.get("document"),"page":f.get("page"),
+      "object":f.get("semantic_anchor_name") or f.get("object_hint") or "",
+      "parameter":f.get("parameter_name") or "",
+      "value_text":f.get("value_text") or "",
+      "context":str(f.get("context") or f.get("table_evidence") or "")[:500],
+      "matched_terms":terms,
+    } for score,f,terms in ranked[:limit]]
+
+def _registry_object_matches(object_name:str,registry:list[dict[str,Any]])->list[dict[str,Any]]:
+    q=normalize_text(object_name)
+    if not q:return []
+    qwords=_semantic_tokens(q)
+    scored=[]
+    for r in registry:
+        name=str(r.get("name") or r.get("object_name") or r.get("Наименование") or "")
+        n=normalize_text(name)
+        if not n or is_parameter_entity_name(name):continue
+        if q==n:
+            score=100
+        elif q in n or n in q:
+            score=90
+        else:
+            nw=_semantic_tokens(n)
+            inter=qwords&nw
+            score=round(100*len(inter)/max(1,len(qwords|nw))) if inter else 0
+        if score>=70:scored.append((score,r,name))
+    scored.sort(key=lambda x:x[0],reverse=True)
+    return [{"score":score,"name":name,"row":r} for score,r,name in scored[:5]]
+
+
 def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str,Any]],registry:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
+    """Conservative compliance evaluation.
+
+    Automatic compliance is allowed only for strong structured evidence.
+    Semantic resemblance is evidence for review, never proof of compliance.
+    """
     registry=registry or []
     out=[]
     for req in requirements:
-        obj=normalize_text(req.get("object_name") or "")
+        obj=str(req.get("object_name") or "")
+        obj_norm=normalize_text(obj)
         code=canonical_parameter_code(req.get("parameter_code"))
-        status="Требуется смысловая проверка";evidence=[];difference=None
+        status="Требуется смысловая проверка"
+        evidence=[]
+        evidence_candidates=[]
+        difference=None
+        match_confidence=0.0
+        decision_basis=""
+
         if req.get("requirement_type")=="OBJECT" and obj:
-            matches=[r for r in registry if obj in normalize_text(r.get("name") or r.get("object_name") or r.get("Наименование") or "")]
-            if matches:
+            matches=_registry_object_matches(obj,registry)
+            if matches and matches[0]["score"]>=90:
                 status="Соответствует заданию"
-                evidence=[str(m.get("name") or m.get("object_name") or m.get("Наименование") or "") for m in matches[:4]]
+                match_confidence=min(.98,matches[0]["score"]/100)
+                evidence=[m["name"] for m in matches[:4]]
+                decision_basis="Объект подтверждён реестром проекта с высокой степенью совпадения."
+            elif matches:
+                status="Требование не подтверждено"
+                match_confidence=matches[0]["score"]/100
+                evidence=[m["name"] for m in matches[:4]]
+                decision_basis="Найдены только похожие объекты; автоматическое подтверждение запрещено."
             else:
                 status="Требование не подтверждено"
+                decision_basis="Объект не найден в подтверждённом реестре проекта."
+
         elif req.get("requirement_type")=="NUMERIC" and code:
             candidates=[]
             for f in findings:
                 if canonical_parameter_code(f.get("parameter_code"))!=code: continue
-                fobj=normalize_text(f.get("semantic_anchor_name") or f.get("object_hint") or "")
-                if obj and obj not in fobj and fobj not in obj: continue
-                if is_parameter_entity_name(fobj): continue
-                val=f.get("value")
-                try: val=float(val)
+                fobj=str(f.get("semantic_anchor_name") or f.get("object_hint") or "")
+                fnorm=normalize_text(fobj)
+                if not fnorm or is_parameter_entity_name(fobj): continue
+                # Numeric compliance requires explicit same-object binding.
+                if obj_norm and not (obj_norm==fnorm or obj_norm in fnorm or fnorm in obj_norm):
+                    continue
+                binding=f.get("entity_property_binding") or {}
+                if binding and binding.get("valid") is False:
+                    continue
+                try: val=float(f.get("value"))
                 except Exception: continue
                 candidates.append((val,f))
             if not candidates:
                 status="Требование не подтверждено"
+                decision_basis="Не найдено структурированное значение для того же объекта и показателя."
             else:
                 required=float(req["required_value"])
                 same=[(v,f) for v,f in candidates if math.isclose(v,required,rel_tol=.002,abs_tol=.05)]
                 if same:
                     status="Соответствует заданию"
-                    evidence=[f"{f.get('document')}, стр. {f.get('page')}: {f.get('object_hint')} · {f.get('parameter_name')} — {v:g} {f.get('unit') or ''}" for v,f in same[:5]]
+                    match_confidence=.96
+                    evidence=[f"{f.get('document')}, стр. {f.get('page')}: {fobj if (fobj:=str(f.get('semantic_anchor_name') or f.get('object_hint') or '')) else obj} · {f.get('parameter_name')} — {v:g} {f.get('unit') or ''}" for v,f in same[:5]]
+                    decision_basis="Совпало структурированное числовое значение для того же объекта и показателя."
                 else:
                     status="Выявлено отклонение"
+                    match_confidence=.92
                     difference=min(abs(v-required) for v,_ in candidates)
-                    evidence=[f"{f.get('document')}, стр. {f.get('page')}: {f.get('object_hint')} · {f.get('parameter_name')} — {v:g} {f.get('unit') or ''}" for v,f in candidates[:5]]
-        out.append({**req,"status":status,"evidence":evidence,"difference":difference,
-                    "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else
-                                     "Найти подтверждение требования в ПД либо проверить применимость требования специалистом." if status in {"Требование не подтверждено","Требуется смысловая проверка"} else
-                                     "Дополнительное действие не требуется."})
+                    evidence=[f"{f.get('document')}, стр. {f.get('page')}: {str(f.get('semantic_anchor_name') or f.get('object_hint') or obj)} · {f.get('parameter_name')} — {v:g} {f.get('unit') or ''}" for v,f in candidates[:5]]
+                    decision_basis="Для того же объекта/показателя найдены иные числовые значения."
+
+        else:
+            evidence_candidates=_semantic_evidence_candidates(str(req.get("requirement_text") or ""),findings,obj,limit=6)
+            # Similar text is not compliance. It merely prepares evidence for AI/specialist review.
+            if evidence_candidates:
+                status="Требуется смысловая проверка"
+                match_confidence=min(.75,(evidence_candidates[0]["score"] or 0)/20)
+                evidence=[f"{x.get('document')}, стр. {x.get('page')}: {x.get('context') or x.get('value_text')}" for x in evidence_candidates[:4]]
+                decision_basis="Найдены смыслово связанные фрагменты, но они не доказывают выполнение требования."
+            else:
+                status="Требование не подтверждено"
+                decision_basis="Связанные проектные доказательства не найдены."
+
+        out.append({
+          **req,"status":status,"evidence":evidence,"evidence_candidates":evidence_candidates,
+          "difference":difference,"match_confidence":round(match_confidence,2),
+          "decision_basis":decision_basis,
+          "recommendation":
+            "Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else
+            "Проверить применимость требования и подтвердить его выполнение конкретным проектным решением." if status in {"Требование не подтверждено","Требуется смысловая проверка"} else
+            "Дополнительное действие не требуется."
+        })
     return out
+
 
 def summary(rows:list[dict[str,Any]])->dict[str,int]:
     result={"total":len(rows),"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0}

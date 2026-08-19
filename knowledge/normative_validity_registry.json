@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "status_policy": {
     "verified_current": "Действует",
     "verified_current_with_changes": "Действует с изменениями",
@@ -20,6 +20,12 @@
       "title": "Официальное опубликование правовых актов",
       "purpose": "Федеральные законы, постановления Правительства, приказы ФОИВ и иные НПА",
       "url": "https://publication.pravo.gov.ru/"
+    },
+    {
+      "kind": "ROSSTANDART",
+      "title": "Росстандарт — Федеральный информационный фонд стандартов",
+      "purpose": "ГОСТ, ГОСТ Р, сведения о статусе, заменяемых и заменяющих стандартах",
+      "url": "https://protect.gost.ru/"
     }
   ],
   "records": [
@@ -34,11 +40,11 @@
         "Федеральный закон №384-ФЗ"
       ],
       "document_kind": "FZ",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
+      "status": "Действует с изменениями",
+      "verified_on": "2026-08-19",
+      "verified_revision": "имеются изменения; точная консолидированная редакция контролируется отдельно",
       "official_source_kind": "PRAVO",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status_basis": "Официальный портал опубликования содержит Федеральный закон №653-ФЗ о внесении изменений в Федеральный закон «Технический регламент о безопасности зданий и сооружений». Это подтверждает действие 384-ФЗ с изменениями; применимую редакцию необходимо определять на дату проектирования.",
       "expert_occurrences": 1736,
       "expert_projects": [
         "2024/02/01-097",
@@ -107,7 +113,18 @@
         "2026/03/19-079-0117-02"
       ],
       "priority_score": 3472.0,
-      "verification_priority": "P1"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "act": "Федеральный закон от 25.12.2023 № 653-ФЗ",
+          "published": "2023-12-25",
+          "kind": "amendment"
+        }
+      ],
+      "verification_evidence": [
+        "PRAVO: 0001202312250053"
+      ]
     },
     {
       "canonical_id": "PP:87",
@@ -203,9 +220,9 @@
       "document_kind": "SP",
       "status": "Действует с изменениями",
       "verified_on": "2026-08-19",
-      "verified_revision": "Изменение № 1 опубликовано Минстроем России",
+      "verified_revision": "СП 47.13330.2016 + Изменение №1",
       "official_source_kind": "MINSTROY",
-      "status_basis": "Минстрой России публикует СП 47.13330.2016 и Изменение № 1 в каталоге документов.",
+      "status_basis": "Минстрой России публикует СП 47.13330.2016 и Изменение №1 к нему.",
       "expert_occurrences": 819,
       "expert_projects": [
         "2024/02/01-097",
@@ -252,7 +269,18 @@
         "2026/03/19-079-0024-01"
       ],
       "priority_score": 1638.0,
-      "verification_priority": "P1"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "published": "2020-12-30"
+        }
+      ],
+      "verification_evidence": [
+        "MINSTROY: СП 47.13330.2016",
+        "MINSTROY: Изменение №1, опубликовано 30.12.2020"
+      ]
     },
     {
       "canonical_id": "SP:482.1325800.2020",
@@ -310,9 +338,9 @@
       "document_kind": "SP",
       "status": "Действует с изменениями",
       "verified_on": "2026-08-19",
-      "verified_revision": "Изменения № 1 и № 2 опубликованы Минстроем России",
+      "verified_revision": "СП 48.13330.2019 + Изменения №1 и №2",
       "official_source_kind": "MINSTROY",
-      "status_basis": "Минстрой России публикует СП 48.13330.2019 и последующие изменения в каталоге документов.",
+      "status_basis": "Минстрой России публикует СП 48.13330.2019, Изменение №1 и Изменение №2.",
       "expert_occurrences": 173,
       "expert_projects": [
         "2024/02/01-097",
@@ -354,7 +382,21 @@
         "2026/03/20-071-0055-01"
       ],
       "priority_score": 346.0,
-      "verification_priority": "P1"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1"
+        },
+        {
+          "name": "Изменение №2"
+        }
+      ],
+      "verification_evidence": [
+        "MINSTROY: приказ 861/пр от 24.12.2019",
+        "MINSTROY: Изменение №1",
+        "MINSTROY: Изменение №2"
+      ]
     },
     {
       "canonical_id": "GOST:21.101-2020",
@@ -363,11 +405,11 @@
         "ГОСТ 21.101-2020"
       ],
       "document_kind": "GOST",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Заменён",
+      "verified_on": "2026-08-19",
+      "verified_revision": "ГОСТ Р 21.101-2020",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Росстандарт указывает ГОСТ Р 21.101-2026 как действующий с 01.04.2026 и заменяющий ГОСТ Р 21.101-2020.",
       "expert_occurrences": 142,
       "expert_projects": [
         "2024/02/01-097",
@@ -429,7 +471,13 @@
         "2026/03/19-079-0159-01"
       ],
       "priority_score": 284.0,
-      "verification_priority": "P1"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "replacement": "ГОСТ Р 21.101-2026",
+      "replacement_effective_from": "2026-04-01",
+      "verification_evidence": [
+        "ROSSTANDART: ГОСТ Р 21.101-2026, приказ 129-ст от 12.02.2026"
+      ]
     },
     {
       "canonical_id": "FZ:123-фз",
@@ -5479,6 +5527,32 @@
       ],
       "priority_score": 2.2,
       "verification_priority": "P3"
+    },
+    {
+      "canonical_id": "GOST:21.101-2026",
+      "reference": "ГОСТ Р 21.101-2026",
+      "aliases": [
+        "ГОСТ Р 21.101-2026",
+        "ГОСТ Р21.101-2026"
+      ],
+      "document_kind": "GOST",
+      "status": "Действует",
+      "verified_on": "2026-08-19",
+      "verified_revision": "ГОСТ Р 21.101-2026",
+      "effective_from": "2026-04-01",
+      "official_source_kind": "ROSSTANDART",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "status_basis": "Росстандарт: ГОСТ Р 21.101-2026 действует с 01.04.2026; заменяет ГОСТ Р 21.101-2020.",
+      "verification_evidence": [
+        "ROSSTANDART: приказ 129-ст от 12.02.2026"
+      ],
+      "expert_occurrences": 0,
+      "expert_projects": [],
+      "expert_project_count": 0,
+      "expert_sections": [],
+      "source_remark_ids": [],
+      "priority_score": 0,
+      "verification_priority": "P3"
     }
   ],
   "generated_from": {
@@ -5487,5 +5561,6 @@
     "unique_normative_signatures": 261,
     "registry_top": 150,
     "generated_on": "2026-08-19"
-  }
+  },
+  "verification_snapshot_date": "2026-08-19"
 }

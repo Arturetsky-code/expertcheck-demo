@@ -208,9 +208,11 @@ def _dashboard(ctx):
             c1.metric('Найдено ссылок',validity_summary.get('references',len(validity)))
             c2.metric('Действует',statuses.get('Действует',0)+statuses.get('Действует с изменениями',0))
             c3.metric('Требуют верификации',statuses.get('Требует верификации',0)+statuses.get('Возможна устаревшая редакция',0))
-            c4.metric('P1 / высокий приоритет',validity_summary.get('p1_attention',0))
+            c4.metric('Устаревшие редакции',validity_summary.get('outdated_editions',0))
             show=pd.DataFrame([{
                 'НТД':x.get('reference'),'Статус':x.get('status'),
+                'Редакция':(x.get('edition_assessment') or {}).get('edition_status',''),
+                'Актуальная замена':(x.get('edition_assessment') or {}).get('current_reference',''),
                 'Файл':x.get('document'),'Стр.':x.get('page'),
                 'Риск влияния':x.get('impact_risk'),
                 'Приоритет базы':x.get('verification_priority'),
@@ -218,6 +220,20 @@ def _dashboard(ctx):
                 'Проверять по':x.get('official_source')
             } for x in validity])
             st.dataframe(show,hide_index=True,width='stretch')
+            try:
+                from core.normative_verification import NormativeVerificationEngine
+                verification_engine=NormativeVerificationEngine(ctx.config_dir/'knowledge')
+                qsum=verification_engine.queue_summary()
+                with st.expander('Очередь верификации нормативной базы',expanded=False):
+                    q1,q2,q3=st.columns(3)
+                    q1.metric('Всего в реестре',qsum.get('total',0))
+                    q2.metric('Проверено',qsum.get('verified',0))
+                    q3.metric('P1 ожидают проверки',qsum.get('p1_pending',0))
+                    queue_rows=verification_engine.queue(pending_only=True,limit=30)
+                    if queue_rows:
+                        st.dataframe(pd.DataFrame(queue_rows),hide_index=True,width='stretch')
+            except Exception:
+                pass
         else:
             refs = first_doc.get('normative_reference_audit') or []
             if refs:

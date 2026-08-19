@@ -87,7 +87,7 @@ def render(ctx):
             if provider:
                 batch=[]
                 for idx,r in enumerate(auto_results):
-                    if r.get('execution_class') not in {'SEMANTIC','EXPERT'} or r.get('status') not in {'Нет','Требует проверки','Нет данных'}:
+                    if r.get('execution_class') not in {'SEMANTIC','EXPERT'} or r.get('status') not in {'Нет','Требует проверки','Нет данных','Не проверено системой'}:
                         continue
                     compiled=r.get('compiled_rule') or {}
                     terms=compiled.get('evidence_terms') or []
@@ -122,7 +122,7 @@ def render(ctx):
               'AI': ({'yes':'Да','no':'Нет','partial':'Частично','requires_review':'Требует проверки','insufficient_data':'Недостаточно данных'}.get(str((r.get('_auto_ai_result') or {}).get('result') or ''),'') if r.get('_auto_ai_result') else ''),
               'Тип':r.get('execution_class')
             } for r in auto_results])
-            attention=result_df[result_df['Результат'].isin(['Нет','Требует проверки','Нет данных'])]
+            attention=result_df[result_df['Результат'].isin(['Нет','Требует проверки','Нет данных','Не проверено системой'])]
             if not attention.empty:
                 st.dataframe(attention,hide_index=True,width='stretch')
             else:
@@ -177,7 +177,7 @@ def render(ctx):
             if provider:
                 batch_items=[]
                 for idx,r in enumerate(results):
-                    if r.get('is_heading') or r.get('status') not in {'Нет','Требует проверки','Нет данных'}:
+                    if r.get('is_heading') or r.get('status') not in {'Нет','Требует проверки','Нет данных','Не проверено системой'}:
                         continue
                     terms=(r.get('compiled_rule') or {}).get('evidence_terms') or []
                     evidence_rows=[]
@@ -219,7 +219,7 @@ def render(ctx):
         with a:card('Пунктов',summary['total'],'Без группирующих заголовков')
         with b:card('Да',summary['yes'],'Соответствие подтверждено','ok')
         with c:card('Нет',summary['no'],'Выявлено несоответствие','bad')
-        with d:card('К проверке',summary['review']+summary['no_data']+sum(1 for x in results if x.get('status')=='Частично'),'Недостаточно автоматических доказательств','warn')
+        with d:card('К проверке',summary['review']+summary['no_data']+summary.get('unsupported',0)+sum(1 for x in results if x.get('status')=='Частично'),'Недостаточно автоматических доказательств','warn')
 
         rows=[]
         details={}
@@ -258,7 +258,7 @@ def render(ctx):
             if st.session_state.get('expert_mode') and detail.get('compiled_rule'):
                 with st.expander('Скомпилированное правило'):
                     st.json(detail.get('compiled_rule'))
-            if st.session_state.get('ai_assisted_extraction') and detail.get('status') in {'Нет','Требует проверки','Нет данных'}:
+            if st.session_state.get('ai_assisted_extraction') and detail.get('status') in {'Нет','Требует проверки','Нет данных','Не проверено системой'}:
                 provider=provider_for_role('extraction', st.session_state, st.secrets)
                 if provider and st.button('Провести смысловой AI-анализ пункта',key='ai_checklist_item_btn'):
                     evidence_rows=[]

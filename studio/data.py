@@ -242,15 +242,18 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_rows=[]
     assignment_rows=[]
     assignment_summary={}
+    normative_requirement_rows=[]
     if hasattr(docs,'empty') and not docs.empty:
         first_doc=docs.iloc[0].to_dict()
         normative_rows=list(first_doc.get('normative_validity_audit') or [])
         assignment_rows=list(first_doc.get('assignment_compliance') or [])
         assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
+        normative_requirement_rows=list(first_doc.get('normative_requirement_audit') or [])
     elif isinstance(docs,list) and docs:
         normative_rows=list((docs[0] or {}).get('normative_validity_audit') or [])
         assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
         assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
+        normative_requirement_rows=list((docs[0] or {}).get('normative_requirement_audit') or [])
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -311,6 +314,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
     })
     checklist_problem_df = pd.DataFrame([{
+        'Раздел': r.get('automatic_section') or r.get('section') or r.get('Раздел') or 'Не определён',
+        'Чек-лист': r.get('automatic_checklist') or r.get('source_file') or r.get('Чек-лист') or '',
         'Пункт': f"{r.get('item_no') or r.get('position') or ''} — {r.get('question') or r.get('Позиция по чек-листу') or ''}".strip(' —'),
         'Результат': r.get('status') or r.get('Соответствие') or r.get('result'),
         'Обоснование': r.get('evidence') or r.get('Обоснование') or '',
@@ -330,6 +335,20 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Доказательства':' | '.join(x.get('evidence') or []),
         'Рекомендация':x.get('recommendation'),
     } for x in assignment_rows])
+
+    normative_requirement_df = pd.DataFrame([{
+        'НТД':x.get('reference'),
+        'Пункт / статья':x.get('clause') or '—',
+        'Тип требования':x.get('modality'),
+        'Контекст в проекте':x.get('project_context'),
+        'Статус НТД':x.get('normative_status'),
+        'Статус редакции':x.get('edition_status'),
+        'Структурированное требование':x.get('curated_requirement') or 'Не загружено',
+        'Статус анализа требования':x.get('analysis_status'),
+        'Файл':x.get('document'),
+        'Страница':x.get('page'),
+        'Риск влияния':x.get('impact_risk'),
+    } for x in normative_requirement_rows])
 
     normative_df = pd.DataFrame([{
         'НТД':x.get('reference'),
@@ -353,6 +372,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     recommendations_df = _excel_safe_frame(recommendations_df)
     normative_df = _excel_safe_frame(normative_df)
     assignment_df = _excel_safe_frame(assignment_df)
+    normative_requirement_df = _excel_safe_frame(normative_requirement_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     if not risks_df.empty:
@@ -363,13 +383,20 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if report_kind == 'technical' and not object_df.empty:
         sheets.append(('Состав проекта', object_df))
     if report_kind != 'manager' and not checklist_problem_df.empty:
-        sheets.append(('Чек-листы — вопросы', checklist_problem_df))
+        checklist_problem_df=checklist_problem_df.sort_values(['Раздел','Чек-лист','Пункт'],kind='stable')
+        sheets.append(('Чек-листы — сводка', checklist_problem_df))
+        # One compact sheet per section: the user immediately sees which requirement belongs where.
+        for section_name, section_frame in checklist_problem_df.groupby('Раздел',dropna=False):
+            safe_section=str(section_name or 'Не определён')
+            sheets.append((_safe_sheet_name('ЧЛ '+safe_section), section_frame.reset_index(drop=True)))
     if report_kind == 'manager' and not normative_df.empty:
         attention_norm=normative_df[~normative_df['Статус'].isin(['Действует','Действует с изменениями'])].head(12)
         if not attention_norm.empty:
             sheets.append(('НТД — внимание', attention_norm))
     elif report_kind in {'gip','technical'} and not normative_df.empty:
         sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
+    if report_kind in {'gip','technical'} and not normative_requirement_df.empty:
+        sheets.append(('Требования НТД', normative_requirement_df if report_kind=='technical' else normative_requirement_df.head(100)))
     if report_kind == 'manager' and not assignment_df.empty:
         assignment_attention=assignment_df[assignment_df['Результат'].isin(['Выявлено отклонение','Требование не подтверждено','Требуется смысловая проверка'])].head(12)
         if not assignment_attention.empty:
@@ -381,6 +408,27 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
             if not frame.empty:
                 sheets.append((_safe_sheet_name(sheet_name), frame))
+
+
+    header_ru = {
+      "document":"Документ","document_type":"Тип документа","page":"Страница","parameter_code":"Код показателя",
+      "parameter_name":"Показатель","object":"Объект","object_id":"ID объекта","object_hint":"Объект",
+      "value":"Значение","value_text":"Исходное значение","unit":"Ед. изм.","status":"Статус",
+      "category":"Категория","finding":"Выявленная проблема","recommendation":"Рекомендация",
+      "sources":"Источники","source":"Источник","confidence":"Достоверность","reason":"Обоснование",
+      "section":"Раздел","section_family":"Раздел","checklist":"Чек-лист","question":"Проверка",
+      "result":"Результат","priority":"Приоритет","risk_score":"Оценка риска","risk_level":"Уровень риска",
+      "genplan_position":"Позиция по ГП","comparison_scope":"Контур сравнения","binding_key":"Ключ привязки",
+      "project":"Проект","project_name":"Проект","analysis_time":"Дата проверки","core_version":"Версия ядра",
+      "requirement_id":"ID требования","requirement_text":"Требование","required_value":"Требуемое значение",
+      "automatic_section":"Раздел","automatic_checklist":"Чек-лист","execution_class":"Тип проверки",
+    }
+    normalized_sheets=[]
+    for sheet_name,frame in sheets:
+        if isinstance(frame,pd.DataFrame):
+            frame=frame.rename(columns={c:header_ru.get(str(c),str(c)) for c in frame.columns})
+        normalized_sheets.append((sheet_name,frame))
+    sheets=normalized_sheets
 
     # XlsxWriter creates a clean OOXML package and avoids repair messages that
     # Excel can show for workbooks containing complex openpyxl metadata.

@@ -233,6 +233,8 @@ def _dashboard(ctx):
                 'Показатель':x.get('parameter_code') or '—',
                 'Требуемое значение':(str(x.get('required_value'))+' '+str(x.get('unit') or '')).strip() if x.get('required_value') is not None else '—',
                 'Результат':x.get('status'),
+                'Достоверность привязки':f"{float(x.get('match_confidence') or 0)*100:.0f}%",
+                'Основание вывода':x.get('decision_basis') or '',
                 'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
                 'Доказательства':' | '.join(x.get('evidence') or []),
             } for x in assignment_rows])

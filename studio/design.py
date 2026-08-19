@@ -13,8 +13,8 @@ CSS = r'''
 html,body,[class*="css"]{font-family:"Segoe UI",Arial,sans-serif}
 .stApp{
  background:
-   linear-gradient(rgba(47,111,237,.018) 1px,transparent 1px),
-   linear-gradient(90deg,rgba(47,111,237,.018) 1px,transparent 1px),
+   linear-gradient(rgba(47,111,237,.038) 1px,transparent 1px),
+   linear-gradient(90deg,rgba(47,111,237,.038) 1px,transparent 1px),
    var(--ec-bg);
  background-size:32px 32px,32px 32px,auto;
  color:var(--ec-text);
@@ -28,7 +28,7 @@ html,body,[class*="css"]{font-family:"Segoe UI",Arial,sans-serif}
  top:5.5rem;
  width:250px;
  height:170px;
- opacity:.045;
+ opacity:.095;
  background:
    linear-gradient(90deg,transparent 49.6%,#2F6FED 49.6%,#2F6FED 50.4%,transparent 50.4%),
    linear-gradient(transparent 49.6%,#2F6FED 49.6%,#2F6FED 50.4%,transparent 50.4%),
@@ -47,11 +47,32 @@ html,body,[class*="css"]{font-family:"Segoe UI",Arial,sans-serif}
  width:330px;
  padding-top:8px;
  border-top:1px solid rgba(47,111,237,.16);
- color:rgba(47,111,237,.12);
+ color:rgba(47,111,237,.20);
  font:600 11px/1 "Cascadia Mono","Consolas",monospace;
  letter-spacing:10px;
 }
 .block-container,[data-testid="stSidebar"]{position:relative;z-index:1}
+.block-container::before{
+ content:"";
+ position:absolute;
+ pointer-events:none;
+ z-index:-1;
+ inset:.55rem .45rem auto auto;
+ width:92px;height:92px;
+ border-top:1px solid rgba(47,111,237,.16);
+ border-right:1px solid rgba(47,111,237,.16);
+ background:
+   linear-gradient(90deg,transparent 0 19px,rgba(47,111,237,.09) 20px 21px,transparent 22px),
+   linear-gradient(transparent 0 19px,rgba(47,111,237,.09) 20px 21px,transparent 22px);
+ background-size:22px 22px;
+}
+.ec-section h3::before{
+ content:"⌜";
+ margin-right:.35rem;
+ color:rgba(47,111,237,.38);
+ font-family:"Cascadia Mono","Consolas",monospace;
+ font-weight:400;
+}
 .block-container{max-width:1560px;padding-top:1.1rem;padding-bottom:2.5rem}
 #MainMenu,footer{visibility:hidden}header[data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{background:var(--ec-sidebar);border-right:1px solid #263440}

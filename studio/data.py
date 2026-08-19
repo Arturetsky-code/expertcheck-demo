@@ -240,11 +240,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     # Normative validity is attached to every document by the pipeline; use the first
     # project record as the shared audit payload to avoid duplicating rows.
     normative_rows=[]
+    assignment_rows=[]
+    assignment_summary={}
     if hasattr(docs,'empty') and not docs.empty:
         first_doc=docs.iloc[0].to_dict()
         normative_rows=list(first_doc.get('normative_validity_audit') or [])
+        assignment_rows=list(first_doc.get('assignment_compliance') or [])
+        assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
     elif isinstance(docs,list) and docs:
         normative_rows=list((docs[0] or {}).get('normative_validity_audit') or [])
+        assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
+        assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -269,6 +275,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД действуют / с изменениями', normative_statuses.get('Действует',0)+normative_statuses.get('Действует с изменениями',0)],
         ['НТД требуют внимания', normative_attention],
         ['Нормативных рисков высокого влияния', normative_high],
+        ['Требований Задания проверено', assignment_summary.get('total',len(assignment_rows))],
+        ['Соответствуют Заданию', assignment_summary.get('compliant',0)],
+        ['Отклонений от Задания', assignment_summary.get('deviation',0)],
+        ['Требования Задания требуют проверки', assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)],
         ['Итоговый вывод', report['conclusion']],
     ]
 
@@ -307,6 +317,20 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Источники': r.get('sources') or r.get('Источники') or '',
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
     recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+    assignment_df = pd.DataFrame([{
+        'ID требования':x.get('requirement_id'),
+        'Требование Задания':x.get('requirement_text'),
+        'Объект':x.get('object_name') or '—',
+        'Показатель':x.get('parameter_code') or '—',
+        'Требуемое значение':x.get('required_value'),
+        'Ед. изм.':x.get('unit'),
+        'Результат':x.get('status'),
+        'Документ':x.get('source_document'),
+        'Страница':x.get('page'),
+        'Доказательства':' | '.join(x.get('evidence') or []),
+        'Рекомендация':x.get('recommendation'),
+    } for x in assignment_rows])
+
     normative_df = pd.DataFrame([{
         'НТД':x.get('reference'),
         'Статус':x.get('status'),
@@ -328,6 +352,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
     normative_df = _excel_safe_frame(normative_df)
+    assignment_df = _excel_safe_frame(assignment_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     if not risks_df.empty:
@@ -345,6 +370,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             sheets.append(('НТД — внимание', attention_norm))
     elif report_kind in {'gip','technical'} and not normative_df.empty:
         sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
+    if report_kind == 'manager' and not assignment_df.empty:
+        assignment_attention=assignment_df[assignment_df['Результат'].isin(['Выявлено отклонение','Требование не подтверждено','Требуется смысловая проверка'])].head(12)
+        if not assignment_attention.empty:
+            sheets.append(('Задание — внимание',assignment_attention))
+    elif report_kind in {'gip','technical'} and not assignment_df.empty:
+        sheets.append(('Задание на проектирование',assignment_df))
     sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
         for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():

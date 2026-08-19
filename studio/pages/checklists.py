@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.checklist_engine import ChecklistEngine
+from core.automatic_review import AutomaticProjectReview
 from core.ai_gateway import analyze_checklist_evidence, analyze_checklist_batch, diagnostic_message, provider_for_role
 from studio.components import card, empty, section
 from studio.ai_presenter import render_ai_result, render_unstructured_ai_text
@@ -29,7 +30,32 @@ def render(ctx):
     if not engine.items:return empty('Каталог чек-листов не загружен.')
 
     first_doc=docs.iloc[0].to_dict() if not docs.empty else {}
-    auto=first_doc.get('automatic_checklist_review') or {}
+    pipeline_auto=first_doc.get('automatic_checklist_review') or {}
+    st.markdown('### Проверка всего комплекта')
+    st.caption('ExpertCheck сам распознаёт разделы, сопоставляет их с доступными корпоративными чек-листами и запускает проверку. Разделы без корпоративного чек-листа показываются отдельно, а не пропускаются молча.')
+    if st.button('Проверить весь комплект по чек-листам',type='primary',width='stretch',key='run_all_checklists'):
+        reviewer=AutomaticProjectReview(ctx.config_dir/'knowledge')
+        project_context={
+            'project_type':str((first_doc.get('pp87_project_profile') or {}).get('project_type') or ''),
+            'name':str(st.session_state.get('project_name') or ''),
+            'description':' '.join(str(x) for x in docs.get('Тип документа',pd.Series(dtype=str)).tolist())
+        }
+        with st.spinner('Определяем разделы и выполняем все доступные проверки по чек-листам...'):
+            st.session_state['all_checklists_review']=reviewer.execute(
+                docs.to_dict('records'),
+                comparisons.to_dict('records'),
+                findings.to_dict('records'),
+                project_context=project_context
+            )
+        # Store for reports/risk engine as the latest project-wide checklist run.
+        st.session_state.checklist_run={
+            'section':'Все распознанные разделы',
+            'source_file':'Все доступные чек-листы',
+            'mode':'Автоматическая',
+            'results':list(st.session_state['all_checklists_review'].get('results') or [])
+        }
+        st.rerun()
+    auto=st.session_state.get('all_checklists_review') or pipeline_auto
     auto_summary=auto.get('summary') or {}
     if auto_summary and not auto_summary.get('error'):
         st.markdown('### Автоматическая проверка')
@@ -39,9 +65,18 @@ def render(ctx):
         c3.metric('Требуют внимания',int(auto_summary.get('no',0))+int(auto_summary.get('review',0)))
         c4.metric('AI/специалист',auto_summary.get('semantic_pending_ai',0))
         programme=auto.get('runs') or []
+        routing=auto.get('routing') or {}
         if programme:
             with st.expander('Программа автоматической проверки',expanded=False):
                 st.dataframe(pd.DataFrame(programme),hide_index=True,width='stretch')
+        covered=routing.get('covered_sections') or []
+        uncovered=routing.get('uncovered_sections') or []
+        if covered:
+            st.success('Чек-листы автоматически сопоставлены с разделами: '+', '.join(covered))
+        if uncovered:
+            st.warning('Распознаны разделы без корпоративного чек-листа: '+', '.join(uncovered)+'. Они не считаются проверенными по корпоративному чек-листу; для них сохраняется нормативная/межраздельная проверка.')
+        if routing.get('unknown_document_count'):
+            st.info(f"Не удалось однозначно классифицировать документов: {routing.get('unknown_document_count')}.")
         auto_results=[r for r in (auto.get('results') or []) if not r.get('is_heading')]
         # Automatic semantic AI review: no checklist/section selection is required.
         ai_level=str(st.session_state.get('ai_pipeline_level') or 'Отключён')

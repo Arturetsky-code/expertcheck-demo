@@ -11,7 +11,47 @@ CSS = r'''
  --ec-ok:#21875A;--ec-warn:#C48616;--ec-alert:#D96C22;--ec-bad:#C83C3C;--ec-neutral:#66717E;
 }
 html,body,[class*="css"]{font-family:"Segoe UI",Arial,sans-serif}
-.stApp{background:var(--ec-bg);color:var(--ec-text)}
+.stApp{
+ background:
+   linear-gradient(rgba(47,111,237,.018) 1px,transparent 1px),
+   linear-gradient(90deg,rgba(47,111,237,.018) 1px,transparent 1px),
+   var(--ec-bg);
+ background-size:32px 32px,32px 32px,auto;
+ color:var(--ec-text);
+}
+.stApp::before{
+ content:"";
+ position:fixed;
+ pointer-events:none;
+ z-index:0;
+ right:1.2rem;
+ top:5.5rem;
+ width:250px;
+ height:170px;
+ opacity:.045;
+ background:
+   linear-gradient(90deg,transparent 49.6%,#2F6FED 49.6%,#2F6FED 50.4%,transparent 50.4%),
+   linear-gradient(transparent 49.6%,#2F6FED 49.6%,#2F6FED 50.4%,transparent 50.4%),
+   radial-gradient(circle at 50% 50%,transparent 0 28px,#2F6FED 29px 30px,transparent 31px),
+   linear-gradient(135deg,transparent 48.8%,#2F6FED 49%,#2F6FED 50%,transparent 50.2%);
+ border:1px solid #2F6FED;
+ border-left-width:2px;
+}
+.stApp::after{
+ content:"A     1        2        3";
+ position:fixed;
+ pointer-events:none;
+ z-index:0;
+ right:2rem;
+ bottom:1.6rem;
+ width:330px;
+ padding-top:8px;
+ border-top:1px solid rgba(47,111,237,.16);
+ color:rgba(47,111,237,.12);
+ font:600 11px/1 "Cascadia Mono","Consolas",monospace;
+ letter-spacing:10px;
+}
+.block-container,[data-testid="stSidebar"]{position:relative;z-index:1}
 .block-container{max-width:1560px;padding-top:1.1rem;padding-bottom:2.5rem}
 #MainMenu,footer{visibility:hidden}header[data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{background:var(--ec-sidebar);border-right:1px solid #263440}

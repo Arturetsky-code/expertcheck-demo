@@ -171,7 +171,7 @@ def _dashboard(ctx):
     with q2: card('2. Объекты','Готово' if object_gate else 'Требуется', 'Пользовательское подтверждение', 'ok' if object_gate else 'warn')
     with q3: card('3. Сверка ТЭП','Доступна' if object_gate else 'Заблокирована','Только по Trusted Object Registry','ok' if object_gate else 'info')
 
-    tab_summary, tab_documents, tab_completeness, tab_ird = st.tabs(['Сводка', 'Документы', 'Комплектность', 'Исходные документы'])
+    tab_summary, tab_documents, tab_completeness, tab_assignment, tab_ird = st.tabs(['Сводка', 'Документы', 'Комплектность', 'Задание на проектирование', 'Исходные документы'])
     with tab_summary:
         first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
         pp87_profile = first_doc.get('pp87_project_profile') or {}
@@ -213,6 +213,31 @@ def _dashboard(ctx):
         render_documents(ctx)
     with tab_completeness:
         render_completeness(ctx)
+
+    with tab_assignment:
+        section('Соответствие Заданию на проектирование','Требования Задания извлекаются отдельно и сопоставляются с объектами, ТЭП и найденными проектными решениями.')
+        first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+        assignment_rows=first_doc.get('assignment_compliance') or []
+        assignment_summary=first_doc.get('assignment_compliance_summary') or {}
+        if not assignment_rows:
+            st.info('Задание на проектирование не распознано в комплекте либо машинно-интерпретируемые требования не извлечены. При необходимости укажите тип документа «Задание на проектирование» на этапе загрузки.')
+        else:
+            a1,a2,a3,a4=st.columns(4)
+            a1.metric('Требований',assignment_summary.get('total',len(assignment_rows)))
+            a2.metric('Соответствуют',assignment_summary.get('compliant',0))
+            a3.metric('Отклонения',assignment_summary.get('deviation',0))
+            a4.metric('Требуют проверки',assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0))
+            show=pd.DataFrame([{
+                'Требование':x.get('requirement_text'),
+                'Объект':x.get('object_name') or '—',
+                'Показатель':x.get('parameter_code') or '—',
+                'Требуемое значение':(str(x.get('required_value'))+' '+str(x.get('unit') or '')).strip() if x.get('required_value') is not None else '—',
+                'Результат':x.get('status'),
+                'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
+                'Доказательства':' | '.join(x.get('evidence') or []),
+            } for x in assignment_rows])
+            st.dataframe(show,hide_index=True,width='stretch')
+            st.caption('Автоматическая проверка не подменяет инженерную интерпретацию Задания. Смысловые требования без структурированного параметра остаются на проверку специалисту.')
 
     with tab_ird:
         section('Исходные и подтверждающие документы', 'Автоматический контроль наличия ключевых исходных материалов. Статус «Требует проверки» означает, что применимость и актуальность необходимо подтвердить специалисту.')

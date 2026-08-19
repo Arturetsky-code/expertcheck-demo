@@ -114,6 +114,12 @@ def _usable(item: dict[str, Any]) -> bool:
     pu_binding=str(item.get("project_understanding_binding") or "")
     if pu_binding and pu_binding!="Подтверждено":
         return False
+    # Evidence Provenance Gate: when the new trust passport is present, only
+    # verified/supported facts may enter the comparison pool. Older direct
+    # unit tests and legacy callers without the passport keep their behavior.
+    quality_decision=str(item.get("evidence_quality_decision") or "")
+    if quality_decision and not bool(item.get("evidence_comparison_eligible")):
+        return False
     if is_parameter_entity_name(obj):
         return False
     if normalize_text(obj)==normalize_text(str(item.get("parameter_name") or "")):
@@ -274,7 +280,17 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             cross_mismatch = len(comparable_values) >= 2 and any(
                 not _same(comparable_values[0], value, code) for value in comparable_values[1:]
             )
-            strong_evidence_count = sum(1 for x in object_items if str(x.get('binding_status') or x.get('property_binding_status') or '').upper() in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'} or x.get('genplan_position') or float(x.get('core2_confidence') or x.get('confidence') or 0.0) >= 0.82)
+            def _mismatch_trusted(x: dict[str, Any]) -> bool:
+                # New provenance passport takes precedence. If absent, preserve
+                # the pre-9.6 fallback for compatibility with legacy callers.
+                if str(x.get('evidence_quality_decision') or ''):
+                    return bool(x.get('evidence_mismatch_eligible'))
+                return (
+                    str(x.get('binding_status') or x.get('property_binding_status') or '').upper() in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'}
+                    or bool(x.get('genplan_position'))
+                    or float(x.get('core2_confidence') or x.get('confidence') or 0.0) >= 0.82
+                )
+            strong_evidence_count = sum(1 for x in object_items if _mismatch_trusted(x))
             if internal_conflicts and strong_evidence_count >= 2:
                 status = "КОНФЛИКТ ВНУТРИ РАЗДЕЛА"
             elif cross_mismatch and strong_evidence_count >= 2:

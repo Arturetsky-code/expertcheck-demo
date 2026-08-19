@@ -92,6 +92,14 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
           "section":section,"document":f.get("document"),"page":f.get("page"),
           "context":str(f.get("context") or f.get("table_evidence") or "")[:600],
           "confidence":float(f.get("core2_confidence") or f.get("confidence") or 0),
+          "evidence_id":f.get("evidence_id"),
+          "evidence_trust_score":f.get("evidence_trust_score"),
+          "evidence_trust_grade":f.get("evidence_trust_grade"),
+          "evidence_quality_decision":f.get("evidence_quality_decision"),
+          "row_integrity_status":f.get("row_integrity_status"),
+          "binding_status":f.get("binding_status") or f.get("property_binding_status"),
+          "match_method":f.get("match_method"),
+          "genplan_position":f.get("genplan_position"),
           "owner_section":section in PARAMETER_OWNER_HINTS.get(code,set()),
         }
         objects[oid]["properties"][code].append(ev)

@@ -56,6 +56,7 @@ from .entity_property_binding import annotate_findings as annotate_entity_proper
 from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
 from .project_understanding import build_project_object_model, understanding_quality
 from .table_row_integrity import apply_table_row_integrity_guard
+from .evidence_provenance import annotate_evidence_provenance
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -313,7 +314,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
+        item["core_version"] = "9.6.0-evidence-provenance-trust-gate-alpha1"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -333,6 +334,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # Генплан является опорным реестром: повторно и консервативно привязываем ТЭП
     # после универсального поиска объектов, затем строим проверки состава.
     general_plan_anchor_audit.extend(anchor_findings_to_general_plan(findings, gp_findings))
+    evidence_provenance_audit = annotate_evidence_provenance(findings)
     general_plan_field_checks = build_general_plan_field_checks(gp_findings, general_plan_audit)
     general_plan_document_checks, general_plan_coverage = build_general_plan_document_checks(findings, gp_findings)
     # Пересобираем сводную сверку после добавления генплана и семантических якорей.
@@ -492,7 +494,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
+        item["core_version"] = "9.6.0-evidence-provenance-trust-gate-alpha1"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -512,7 +514,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     for doc in documents:
-        doc["core_version"] = "9.2.0-processing-binding-reliability-alpha1"
+        doc["core_version"] = "9.6.0-evidence-provenance-trust-gate-alpha1"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -618,6 +620,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["entity_property_binding_summary"] = entity_property_binding_audit
         doc["table_row_integrity_summary"] = table_row_integrity_audit
+        doc["evidence_provenance_summary"] = evidence_provenance_audit
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph

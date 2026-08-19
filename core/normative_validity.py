@@ -4,6 +4,7 @@ import json, re
 from pathlib import Path
 from typing import Any, Iterable
 from .normalization import normalize_text
+from .normative_verification import NormativeVerificationEngine
 
 REF_PATTERNS=[
     re.compile(r"\bГОСТ(?:\s+Р)?\s+[A-Za-zА-Яа-я0-9.\-/]+",re.I),
@@ -40,6 +41,7 @@ class NormativeValidityChecker:
         except Exception:self.data={"records":[],"official_sources":[]}
         self.records=list(self.data.get("records") or [])
         self.sources={x.get("kind"):x for x in self.data.get("official_sources") or []}
+        self.verification_engine=NormativeVerificationEngine(root)
 
     def extract_from_text(self,text:str)->list[str]:
         out=[];seen=set()
@@ -77,12 +79,12 @@ class NormativeValidityChecker:
         if any(x in low for x in medium):return "Средний"
         return "Низкий"
 
-    def check(self,reference:str,*,document:str="",page=None,context:str="")->dict[str,Any]:
+    def check(self,reference:str,*,document:str="",page=None,context:str="",as_of_date=None)->dict[str,Any]:
         rec=self.lookup(reference)
         if rec:
             status=rec.get("status") or "Требует верификации"
             source=self.sources.get(rec.get("official_source_kind")) or {}
-            return {
+            row={
               "reference":reference,"canonical_id":rec.get("canonical_id"),"status":status,
               "verified_on":rec.get("verified_on",""),"verified_revision":rec.get("verified_revision",""),
               "replacement":rec.get("replacement",""),"effective_until":rec.get("effective_until",""),
@@ -93,8 +95,8 @@ class NormativeValidityChecker:
               "verification_priority":rec.get("verification_priority",""),"priority_score":rec.get("priority_score",0),
               "requires_specialist":status not in {"Действует","Действует с изменениями"}
             }
+            return self.verification_engine.enrich_row(row,rec,as_of_date=as_of_date)
         low=normalize_text(reference)
-        # Legacy SNiP references are not automatically called invalid: applicability/status needs verification.
         edition_risk="Возможна устаревшая редакция" if "снип" in low else "Требует верификации"
         source_kind="MINSTROY" if any(x in low for x in ("сп ","снип","гост")) else "PRAVO"
         source=self.sources.get(source_kind) or {}
@@ -106,9 +108,10 @@ class NormativeValidityChecker:
           "context":str(context or "")[:800],
           "verification_basis":"Документ отсутствует в кураторском реестре ExpertCheck; категоричный вывод о статусе запрещён.",
           "expert_occurrences":0,"expert_project_count":0,"verification_priority":"","priority_score":0,
-          "requires_specialist":True
+          "requires_specialist":True,
+          "edition_assessment":{"edition_status":"Проверить редакцию","edition_outdated":False,"edition_reason":"Нет верифицированной записи для сравнения редакций."},
+          "verification_freshness":{"freshness":"Не проверено","days_since_verification":None,"needs_refresh":True}
         }
-
 
     def audit_uploaded_pdfs(self,files,reader,limit:int=3000)->list[dict[str,Any]]:
         """Scan actual page text, including normative lists that produce no engineering finding."""
@@ -155,5 +158,7 @@ class NormativeValidityChecker:
           "high_impact_attention":sum(1 for r in rows if r.get("impact_risk")=="Высокий" and r.get("status") not in {"Действует","Действует с изменениями"}),
           "p1_attention":sum(1 for r in rows if r.get("verification_priority")=="P1" and r.get("status") not in {"Действует","Действует с изменениями"}),
           "curated_registry_records":len(self.records),
+          "outdated_editions":sum(1 for r in rows if (r.get("edition_assessment") or {}).get("edition_outdated")),
+          "edition_attention":sum(1 for r in rows if (r.get("edition_assessment") or {}).get("edition_status") in {"Устаревшая редакция","Проверить редакцию"}),
           "verified_registry_records":sum(1 for r in self.records if r.get("status") in {"Действует","Действует с изменениями","Утратил силу","Заменён"})
         }

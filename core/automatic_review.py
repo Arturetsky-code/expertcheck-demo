@@ -7,34 +7,7 @@ from typing import Any
 from .normalization import normalize_text
 from .checklist_engine import ChecklistEngine
 from .pp87_compliance import PP87Compliance
-
-SECTION_ALIASES={
- "ПЗ":("пояснительн запис","раздел 1"),
- "ПЗУ":("пзу","генеральн план","схема планировочн"),
- "АР":("архитектур"),
- "КР":("конструктив","кж","км"),
- "ТХ":("технологическ"),
- "ИОС1":("иос1","электроснаб","эс","эом"),
- "ИОС2":("иос2","водоснаб","водоотвед","вк"),
- "ИОС4":("иос4","отоплен","вентиляц","ов"),
- "ПОС":("пос","организац строител"),
- "ООС":("оос","охрана окружа","овос"),
- "ПБ":("пожарн безопас"),
- "СМ":("смет"),
- "ГТС":("гтс","гидротех","хвостохранилищ","дамб","плотин"),
-}
-
-def canonical_section(value:str)->str:
-    low=normalize_text(value)
-    words=set(re.findall(r"[а-яa-z0-9]+",low,re.I))
-    for code,tokens in SECTION_ALIASES.items():
-        if low==normalize_text(code):
-            return code
-        for token in tokens:
-            nt=normalize_text(token)
-            if (len(nt)<=3 and nt in words) or (len(nt)>3 and nt in low):
-                return code
-    return str(value or "").strip()
+from .checklist_routing import ChecklistRoutingEngine, canonical_section
 
 class AutomaticProjectReview:
     """Builds and executes a project-specific checklist programme automatically.
@@ -46,28 +19,20 @@ class AutomaticProjectReview:
         root=Path(knowledge_root)
         self.checklists=ChecklistEngine(root/"checklist_catalog.json")
         self.pp87=PP87Compliance(root)
+        self.router=ChecklistRoutingEngine(self.checklists)
 
     def document_inventory(self,documents:list[dict[str,Any]])->dict[str,list[dict[str,Any]]]:
-        inv={}
-        for d in documents:
-            raw=" ".join(str(d.get(k) or "") for k in ("Раздел","Тип документа","document_type","family","Файл"))
-            code=canonical_section(raw)
-            inv.setdefault(code,[]).append(d)
-        return inv
+        return self.router.route(documents)["inventory"]
 
     def programme(self,documents:list[dict[str,Any]],project_context:dict[str,Any]|None=None)->list[dict[str,Any]]:
-        inv=self.document_inventory(documents)
-        present=set(inv)
+        routing=self.router.route(documents)
+        inv=routing["inventory"]
         rows=[]
-        for source_file in self.checklists.checklist_files():
-            primary=canonical_section(self.checklists.primary_section(source_file))
-            if primary not in present:
-                continue
+        for route in routing["routes"]:
             rows.append({
-              "checklist":source_file,"section":primary,
-              "document_count":len(inv.get(primary,[])),
-              "reason":"Раздел обнаружен в загруженном комплекте",
-              "automatic":True
+              "checklist":route["checklist"],"section":route["section"],
+              "document_count":route["document_count"],
+              "reason":route["reason"],"automatic":True
             })
         # PP87 profile is recorded in the programme even when there is no corporate checklist.
         pp=self.pp87.checklist_contract(project_context or {})
@@ -116,8 +81,14 @@ class AutomaticProjectReview:
             )
         counts=Counter(str(x.get("status") or "Нет данных") for x in actionable)
         semantic_pending=sum(1 for x in actionable if (x.get("execution_class") in {"SEMANTIC","EXPERT"} and x.get("status") in {"Требует проверки","Нет данных"}))
+        routing=self.router.route(documents)
         return {
           "programme":programme,"runs":runs,"results":all_results,
+          "routing":{
+            "covered_sections":routing["covered_sections"],
+            "uncovered_sections":routing["uncovered_sections"],
+            "unknown_document_count":len(routing["unknown_documents"])
+          },
           "summary":{
             "checklists_run":len(runs),"checks":len(actionable),
             "yes":counts.get("Да",0),"no":counts.get("Нет",0),

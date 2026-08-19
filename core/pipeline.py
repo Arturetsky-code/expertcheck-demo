@@ -52,6 +52,7 @@ from .pz_complex_object_register import extract_pz_complex_object_register_from_
 from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
 from .entity_property_binding import annotate_findings as annotate_entity_property_bindings
+from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -423,6 +424,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     object_passport_summary = passport_summary(object_passports)
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
+    progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
+    try:
+        assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
+        assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry)
+        assignment_compliance_summary = assignment_summary(assignment_compliance)
+    except Exception as exc:
+        assignment_requirements, assignment_compliance = [], []
+        assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"error":str(exc)}
+        pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
+
     # Цифровая инженерная модель строится только из извлечённых доказательств.
     progress(82, "Межраздельная сверка", "Сравниваем инженерные характеристики и формируем объяснения")
     dem = build_dem(findings, project_name="Новый проект")
@@ -566,6 +577,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_validity_summary"] = normative_validity_summary
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
+        doc["assignment_requirements"] = assignment_requirements
+        doc["assignment_compliance"] = assignment_compliance
+        doc["assignment_compliance_summary"] = assignment_compliance_summary
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["entity_property_binding_summary"] = entity_property_binding_audit
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}

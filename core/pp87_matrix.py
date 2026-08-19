@@ -105,12 +105,12 @@ def _evaluate_rule(rule: dict[str,Any], blob: str, *, prefix: str='ПП №87') 
     terms=[normalize_text(t) for t in rule.get('terms') or []]
     matched=[t for t in terms if t and t in blob]
     threshold=max(1,min(3,(len(terms)+1)//2))
-    status='Да' if len(matched)>=threshold else ('Требует проверки' if matched else 'Нет')
+    status='Да' if len(matched)>=threshold else ('Требует проверки' if matched else 'Не проверено системой')
     return {
         'item_no':rule['id'],
         'question':prefix+' · '+rule['question'],
         'status':status,
-        'evidence':'Найдены признаки: '+', '.join(matched) if matched else 'Релевантные сведения автоматически не найдены.',
+        'evidence':'Найдены признаки: '+', '.join(matched) if matched else 'Релевантные сведения автоматически не найдены; отсутствие требования в разделе не доказано.',
         'automation_level':'B','is_heading':False,'source_file':'Контрольная матрица ПП №87','compiled_rule':{
             'rule_type':'pp87_baseline','evidence_terms':rule.get('terms') or [],'requires_semantic_review':True,'source':PP87_SOURCE,
         },

@@ -316,7 +316,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.7.1-localization-risk-stability-hotfix"
+        item["core_version"] = "9.8.0-engineering-knowledge-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -497,7 +497,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.7.1-localization-risk-stability-hotfix"
+        item["core_version"] = "9.8.0-engineering-knowledge-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -518,7 +518,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     for doc in documents:
-        doc["core_version"] = "9.7.1-localization-risk-stability-hotfix"
+        doc["core_version"] = "9.8.0-engineering-knowledge-core"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

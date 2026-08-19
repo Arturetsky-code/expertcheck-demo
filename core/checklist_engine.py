@@ -11,6 +11,7 @@ from .checklist_compiler import compile_item
 from .pp87_matrix import evaluate_pp87
 from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
+from .typed_check_engine import execute_typed_check
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -190,24 +191,14 @@ class ChecklistEngine:
                             status='Да'; evidence=f'Найдено структурированных значений: {len(present)}. Источник: выбранный раздел.'
                         else:
                             status='Требует проверки'; evidence='Для параметра не найден достаточный структурированный результат.'
-                elif compiled.rule_type=='presence':
-                    matched=[w for w in compiled.evidence_terms if w in blob]
-                    threshold=max(1,min(3,(len(compiled.evidence_terms)+2)//3))
-                    if len(matched)>=threshold:
-                        status='Да'; evidence='Найдены релевантные признаки: '+', '.join(matched[:6])+'.'
+                elif compiled.rule_type in {'presence','semantic_review'} or compiled.typed_check in {'DRAWING_TITLE_BLOCK_CHECK','DRAWING_PRESENCE_CHECK','DOCUMENT_CONTENT_PRESENCE','ENGINEERING_SEMANTIC_REVIEW','NORMATIVE_CONTENT_REVIEW','SPECIALIST_REVIEW'}:
+                    typed=execute_typed_check(compiled.to_dict(),selected_findings,documents)
+                    if typed:
+                        status=typed['status']; evidence=typed['evidence']
                     else:
-                        status='Нет'; evidence='В выбранном разделе не найдено достаточных доказательств требуемого содержания.'
-                elif compiled.rule_type=='semantic_review':
-                    matched=[w for w in compiled.evidence_terms if w in blob]
-                    if matched:
-                        status='Требует проверки'; evidence='Найдены потенциально релевантные фрагменты: '+', '.join(matched[:6])+'. Нужна смысловая оценка.'
-                    else:
-                        # Отсутствие ключевого слова не доказывает отсутствие проектного решения.
-                        # Для SEMANTIC/EXPERT отрицательный вывод допустим только после анализа доказательств.
-                        status='Нет данных' if not selected_findings else 'Требует проверки'
-                        evidence='Достаточные смысловые доказательства автоматически не выявлены; отрицательный вывод без AI/специалиста не формируется.'
+                        status='Не проверено системой'; evidence='Для пункта отсутствует доказательный автоматический алгоритм.'
                 else:
-                    status='Требует проверки'; evidence='Пункт пока не имеет надёжного автоматического правила.'
+                    status='Не проверено системой'; evidence='Пункт пока не имеет надёжного автоматического правила.'
             compiled_dict=compiled.to_dict()
             normative_context=self.review_engine.checklist_context(q, compiled_dict)
             if include_practice:
@@ -220,7 +211,7 @@ class ChecklistEngine:
                 )
             else:
                 practice_context={}
-            results.append({**item,'compiled_rule':compiled_dict,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled_dict,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:
@@ -238,4 +229,5 @@ class ChecklistEngine:
             'no':sum(1 for x in results if x['status']=='Нет'),
             'review':sum(1 for x in results if x['status']=='Требует проверки'),
             'no_data':sum(1 for x in results if x['status']=='Нет данных'),
+            'unsupported':sum(1 for x in results if x['status']=='Не проверено системой'),
         }

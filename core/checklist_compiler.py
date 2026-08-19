@@ -18,6 +18,7 @@ class CompiledChecklistRule:
     required_section_roles: tuple[str, ...] = ()
     evidence_types: tuple[str, ...] = ()
     negative_result_policy: str = 'CONSERVATIVE'
+    typed_check: str = 'SPECIALIST_REVIEW'
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -56,15 +57,15 @@ def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
         if any(token in question for token in tokens): codes.append(code)
     terms=tuple(dict.fromkeys(w for w in re.findall(r'[а-яa-z0-9-]{4,}', question) if w not in STOP))[:12]
     if any(x in question for x in MANDATORY_DOCUMENT):
-        return CompiledChecklistRule('mandatory_document','source_document',terms,tuple(codes),False,'Проверка наличия обязательного/исходно-разрешительного документа.','AUTO',('PROJECT_SET',),('DOCUMENT_IDENTITY','PAGE_REFERENCE'),'CONSERVATIVE')
+        return CompiledChecklistRule('mandatory_document','source_document',terms,tuple(codes),False,'Проверка наличия обязательного/исходно-разрешительного документа.','AUTO',('PROJECT_SET',),('DOCUMENT_IDENTITY','PAGE_REFERENCE'),'CONSERVATIVE','DOCUMENT_CONTENT_PRESENCE')
     if any(x in question for x in SECTION_STRUCTURE):
-        return CompiledChecklistRule('section_structure','pp87_requirement',terms,tuple(codes),True,'Проверка структуры и обязательного содержания раздела ПД.','SEMANTIC',('SELECTED_SECTION',),('NORMATIVE_CONTEXT','RELEVANT_FRAGMENT','PAGE_REFERENCE'),'AI_WITH_EVIDENCE')
+        return CompiledChecklistRule('section_structure','pp87_requirement',terms,tuple(codes),True,'Проверка структуры и обязательного содержания раздела ПД.','SEMANTIC',('SELECTED_SECTION',),('NORMATIVE_CONTEXT','RELEVANT_FRAGMENT','PAGE_REFERENCE'),'AI_WITH_EVIDENCE','NORMATIVE_CONTENT_REVIEW')
     if codes and any(x in question for x in ('свер', 'соответств', 'совпад')):
-        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'),('STRUCTURED_VALUE','SOURCE_SECTION'),'STRICT')
+        return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'),('STRUCTURED_VALUE','SOURCE_SECTION'),'STRICT','ENGINEERING_VALUE_CROSSCHECK')
     if any(x in question for x in PRESENCE):
-        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',),('TEXT_OR_TABLE','PAGE_REFERENCE'),'CONSERVATIVE')
+        return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',),('TEXT_OR_TABLE','PAGE_REFERENCE'),'CONSERVATIVE','DRAWING_PRESENCE_CHECK' if any(x in question for x in ('план','чертеж','чертёж','разрез','фасад','схем')) else 'DOCUMENT_CONTENT_PRESENCE')
     if any(x in question for x in SEMANTIC):
-        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'),('RELEVANT_FRAGMENT','NORMATIVE_CONTEXT','REMARK_ANALOG'),'AI_WITH_EVIDENCE')
+        return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'),('RELEVANT_FRAGMENT','NORMATIVE_CONTEXT','REMARK_ANALOG'),'AI_WITH_EVIDENCE','ENGINEERING_SEMANTIC_REVIEW')
     if codes:
-        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',),('STRUCTURED_VALUE','PAGE_REFERENCE'),'CONSERVATIVE')
-    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'),('ENGINEERING_EVIDENCE','SPECIALIST_REVIEW'),'SPECIALIST')
+        return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',),('STRUCTURED_VALUE','PAGE_REFERENCE'),'CONSERVATIVE','ENGINEERING_PARAMETER_PRESENCE')
+    return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'),('ENGINEERING_EVIDENCE','SPECIALIST_REVIEW'),'SPECIALIST','DRAWING_TITLE_BLOCK_CHECK' if any(x in question for x in ('основн надпис','штамп','основная надпись')) else 'SPECIALIST_REVIEW')

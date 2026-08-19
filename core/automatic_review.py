@@ -69,7 +69,7 @@ class AutomaticProjectReview:
         actionable=[x for x in all_results if not x.get("is_heading")]
         # Expert-practice search is expensive and most useful for problems, not passed checks.
         # Enrich only the first actionable issues, prioritising negative and uncertain results.
-        attention=[x for x in actionable if x.get("status") in {"Нет","Требует проверки","Нет данных"}]
+        attention=[x for x in actionable if x.get("status") in {"Нет","Требует проверки","Нет данных","Не проверено системой"}]
         for r in attention[:60]:
             compiled=r.get("compiled_rule") or {}
             rule_type=compiled.get("rule_type") or ""
@@ -80,7 +80,7 @@ class AutomaticProjectReview:
                 str(r.get("question") or ""),str(r.get("automatic_section") or ""),"",fam,r.get("normative_context") or []
             )
         counts=Counter(str(x.get("status") or "Нет данных") for x in actionable)
-        semantic_pending=sum(1 for x in actionable if (x.get("execution_class") in {"SEMANTIC","EXPERT"} and x.get("status") in {"Требует проверки","Нет данных"}))
+        semantic_pending=sum(1 for x in actionable if (x.get("execution_class") in {"SEMANTIC","EXPERT"} and x.get("status") in {"Требует проверки","Нет данных","Не проверено системой"}))
         routing=self.router.route(documents)
         return {
           "programme":programme,"runs":runs,"results":all_results,
@@ -92,7 +92,7 @@ class AutomaticProjectReview:
           "summary":{
             "checklists_run":len(runs),"checks":len(actionable),
             "yes":counts.get("Да",0),"no":counts.get("Нет",0),
-            "review":counts.get("Требует проверки",0),"no_data":counts.get("Нет данных",0),
+            "review":counts.get("Требует проверки",0),"no_data":counts.get("Нет данных",0),"unsupported":counts.get("Не проверено системой",0),
             "semantic_pending_ai":semantic_pending,
             "automatic":True
           }

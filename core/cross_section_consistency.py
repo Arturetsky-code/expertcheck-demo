@@ -12,6 +12,8 @@ from .table_row_integrity import is_integrity_blocked
 from .object_identity import ObjectIdentityEngine
 from .property_intelligence import normalize_engineering_value, parameter_display_name
 from .source_binding import independent_source_key
+from .fact_admission import assess_fact_admission
+from .applicability_matrix import expected_sections, section_expectations
 
 # Абсолютный допуск, относительный допуск, приоритет проверки.
 TOLERANCES: dict[str, tuple[float, float, str]] = {
@@ -106,6 +108,14 @@ def _usable(item: dict[str, Any]) -> bool:
     code = canonical_parameter_code(item.get("parameter_code"))
     if is_integrity_blocked(item):
         return False
+    admission_decision=str(item.get("fact_admission_decision") or "")
+    if admission_decision:
+        if admission_decision != "ADMIT":
+            return False
+    elif str(item.get("project_understanding_binding") or ""):
+        # Project Understanding already ran: only confirmed admitted facts are usable.
+        if str(item.get("project_understanding_binding")) != "Подтверждено":
+            return False
     binding = str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
     row_locked = binding in {"ROW_LOCKED","POSITION_LOCKED","EXACT_OBJECT"} or str(item.get("row_integrity_status") or "").startswith("CONFIRMED")
     obj = str((item.get("object_hint") if row_locked else (item.get("semantic_anchor_name") or item.get("object_hint"))) or "").strip()
@@ -321,7 +331,8 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
             normalized_first = next((normalize_engineering_value(x) for x in object_items if normalize_engineering_value(x)), None)
             unit = normalized_first.unit if normalized_first else str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
             abs_tol, rel_tol, priority = TOLERANCES[code]
-            expected = EXPECTED_SECTION_HINTS.get(code, ())
+            applicability_matrix = section_expectations(object_type, code)
+            expected = tuple(expected_sections(object_type, code))
             missing_hints = [section for section in expected if section not in section_values]
             source_parts = [f"{section}: {value:g} {unit}".strip() for section, value in sorted(section_values.items())]
             evidence_parts = []
@@ -354,6 +365,7 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 "parameter_name": parameter_name,
                 "object_type_code": object_type,
                 "parameter_applicability": applicability,
+                "section_applicability": applicability_matrix,
                 "comparison_scope": comparison_scope,
                 "unit": unit,
                 "priority": priority,

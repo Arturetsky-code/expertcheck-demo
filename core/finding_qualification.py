@@ -42,10 +42,10 @@ def qualify_checklist(row: dict[str, Any]) -> dict[str, Any]:
     if explicit_negative and sources and not diagnostic_language:
         return {"finding_class":"CONFIRMED_ISSUE","user_status":"Выявлено несоответствие","risk_eligible":True,"max_risk_level":"Средний","reason":"Отрицательный результат подтверждён конкретным источником."}
     if explicit_negative and not diagnostic_language:
-        return {"finding_class":"REVIEW","user_status":"Требует проверки","risk_eligible":True,"max_risk_level":"Средний","reason":"Явный отрицательный результат требует проверки, но без источника не считается доказанным нарушением."}
+        return {"finding_class":"REVIEW","user_status":"Требует проверки","risk_eligible":False,"max_risk_level":"Низкий","reason":"Отрицательный результат без конкретного доказательного источника не допускается в реестр рисков."}
     if explicit_negative:
         return {"finding_class":"UNVERIFIED_BY_SYSTEM","user_status":"Не проверено системой","risk_eligible":False,"max_risk_level":"Недостаточно данных","reason":"Отрицательный статус получен только потому, что автоматический алгоритм не нашёл достаточных доказательств."}
-    if status in {"частично", "требует проверки", "нет данных"}:
+    if status in {"частично", "требует проверки", "нет данных", "не проверено системой"}:
         return {"finding_class":"UNVERIFIED_BY_SYSTEM","user_status":"Не проверено системой","risk_eligible":False,"max_risk_level":"Недостаточно данных","reason":"Пункт требует специалиста или более сильного алгоритма проверки."}
     return {"finding_class":"OK","user_status":"Проверено","risk_eligible":False,"max_risk_level":"Недостаточно данных","reason":"Оснований для риска нет."}
 

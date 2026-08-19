@@ -9,6 +9,7 @@ from .entity_property_binding import stable_object_id
 from .checklist_routing import canonical_section
 from .table_row_integrity import is_integrity_blocked
 from .object_scope_guard import assess_scope_binding
+from .fact_admission import assess_fact_admission
 
 AUTHORITATIVE_SECTION_WEIGHT={"ПЗ":100,"ПЗУ":96,"АР":88,"КР":88,"ТХ":92,"ИОС1":84,"ИОС2":84,"ИОС3":84,"ИОС4":84,"ИОС5":84,"ПОС":68,"ООС":60}
 PARAMETER_OWNER_HINTS={
@@ -90,13 +91,15 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
         oid=candidate_ids[0];section=_source_section(f)
         scope_guard=assess_scope_binding(f,objects[oid]["name"],objects[oid]["position"])
         f.update(scope_guard)
-        if scope_guard["scope_binding_decision"] == "REJECT":
+        admission=assess_fact_admission(f)
+        f.update(admission)
+        if admission["fact_admission_decision"] == "REJECT":
             stats["properties_rejected"]+=1
-            f["project_understanding_binding"]="Отклонено: границы объекта"
+            f["project_understanding_binding"]="Отклонено: границы объекта" if scope_guard.get("scope_binding_decision")=="REJECT" else "Отклонено: Fact Admission Gate"
             continue
-        if scope_guard["scope_binding_decision"] == "HOLD":
+        if admission["fact_admission_decision"] != "ADMIT":
             stats["properties_unresolved"]+=1
-            f["project_understanding_binding"]="Требует проверки границ объекта"
+            f["project_understanding_binding"]="Требует проверки границ объекта" if scope_guard.get("scope_binding_decision")=="HOLD" else "Требует подтверждения инженерного факта"
             continue
         ev={
           "parameter_code":code,"parameter_name":f.get("parameter_name") or code,
@@ -116,6 +119,9 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
           "scope_binding_score":scope_guard.get("scope_binding_score"),
           "scope_binding_decision":scope_guard.get("scope_binding_decision"),
           "scope_binding_reasons":scope_guard.get("scope_binding_reasons"),
+          "fact_admission_score":admission.get("fact_admission_score"),
+          "fact_admission_decision":admission.get("fact_admission_decision"),
+          "fact_admission_reasons":admission.get("fact_admission_reasons"),
         }
         objects[oid]["properties"][code].append(ev)
         f["project_understanding_object_id"]=oid

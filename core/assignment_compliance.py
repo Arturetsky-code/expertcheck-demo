@@ -30,6 +30,38 @@ def _sentences(text:str)->list[str]:
     parts=re.split(r"(?<=[.!?;])\s+|(?=\d+[.)]\s+)",text)
     return [x.strip() for x in parts if len(x.strip())>=18]
 
+
+def _atomic_fragments(text:str)->list[dict[str,str]]:
+    """Split assignment text into atomic, traceable requirements.
+
+    PDF table extraction often glues several rows into one sentence. We first
+    recover numbered rows, then split only on strong requirement boundaries.
+    The parser intentionally prefers smaller reviewable atoms over a long
+    semantic paragraph containing several unrelated obligations.
+    """
+    raw=str(text or "").replace("\r","\n")
+    raw=re.sub(r"[ \t]+"," ",raw)
+    # Preserve row numbers when they survive extraction.
+    marked=re.sub(r"(?<!\d)(\d{1,3})[.)]\s+(?=[А-ЯA-Z])",r"\n@@ROW:\1@@ ",raw)
+    chunks=[x.strip() for x in re.split(r"\n+",marked) if x.strip()]
+    out=[]
+    for chunk in chunks:
+        m=re.match(r"@@ROW:(\d+)@@\s*(.*)",chunk,re.S)
+        row_no=m.group(1) if m else ""
+        body=(m.group(2) if m else chunk).strip()
+        if len(body)<10: continue
+        # Strong separators: semicolon, bullet, or a new obligation verb after
+        # punctuation. Commas alone are kept to avoid destroying conditions.
+        parts=re.split(r"\s*[•▪–—]\s+|;\s+|(?<=[.!?])\s+(?=(?:предусмотреть|предусматривается|должен|должна|должны|необходимо|требуется|обеспечить|принять|выполнить|разработать|представить)\b)",body,flags=re.I)
+        for part in parts:
+            part=re.sub(r"\s+"," ",part).strip(" .;:-")
+            if len(part)<12: continue
+            out.append({"row_no":row_no,"text":part})
+    # Fallback for fully flattened text.
+    if not out:
+        out=[{"row_no":"","text":x} for x in _sentences(raw)]
+    return out
+
 def _object_name(sentence:str)->str:
     low=normalize_text(sentence)
     for token in sorted(OBJECT_HINTS,key=len,reverse=True):
@@ -66,23 +98,30 @@ def extract_requirements(files,reader)->list[dict[str,Any]]:
         if not (_assignment_file(name,doc_type) or any(x in normalize_text(first) for x in ASSIGNMENT_TYPES)):
             continue
         for page,text in pages:
-            for sentence in _sentences(text):
+            for atom in _atomic_fragments(text):
+                sentence=atom["text"]
                 low=normalize_text(sentence)
-                if not any(v in low for v in REQ_VERBS):
+                # A table row can be a direct condition (e.g. "Продолжительность смены 12 часов")
+                # even without an imperative verb. Require either a verb, a numeric metric,
+                # or a recognised object to keep the extraction conservative.
+                obj=_object_name(sentence)
+                code,value,unit=_parameter(sentence)
+                has_requirement_verb=any(v in low for v in REQ_VERBS)
+                if not (has_requirement_verb or (code and value is not None) or obj):
                     continue
                 key=normalize_text(sentence)
                 if key in seen: continue
                 seen.add(key)
-                obj=_object_name(sentence)
-                code,value,unit=_parameter(sentence)
-                rid="ASSIGN-"+hashlib.blake2b(f"{name}|{page}|{key}".encode(),digest_size=7).hexdigest().upper()
+                rid="ASSIGN-"+hashlib.blake2b(f"{name}|{page}|{atom.get('row_no')}|{key}".encode(),digest_size=7).hexdigest().upper()
                 rows.append({
                   "requirement_id":rid,"source_document":name,"page":page,
+                  "source_row":atom.get("row_no") or "",
                   "requirement_text":sentence[:1500],"object_name":obj,
                   "object_id":stable_object_id(obj) if obj else "",
                   "parameter_code":canonical_parameter_code(code),"required_value":value,"unit":unit,
-                  "requirement_type":"NUMERIC" if code and value is not None else "OBJECT" if obj else "SEMANTIC",
-                  "confidence":0.88 if code and value is not None else 0.72 if obj else 0.58
+                  "requirement_type":"NUMERIC" if code and value is not None else "OBJECT" if obj and not has_requirement_verb else "SEMANTIC",
+                  "atomic":True,
+                  "confidence":0.90 if code and value is not None else 0.78 if atom.get("row_no") else 0.70 if obj else 0.60
                 })
     return rows
 

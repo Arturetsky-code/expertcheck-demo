@@ -199,10 +199,30 @@ def _dashboard(ctx):
             st.dataframe(show, hide_index=True, width='stretch')
         else:
             st.info('Автоматический аудит исходных документов пока не сформирован.')
-        refs = first_doc.get('normative_reference_audit') or []
-        if refs:
-            with st.expander(f'Нормативные ссылки, требующие контроля актуальности ({len(refs)})'):
-                st.dataframe(pd.DataFrame(refs), hide_index=True, width='stretch')
+        validity = first_doc.get('normative_validity_audit') or []
+        validity_summary = first_doc.get('normative_validity_summary') or {}
+        if validity:
+            statuses=validity_summary.get('statuses') or {}
+            st.markdown('#### Проверка актуальности НТД')
+            c1,c2,c3,c4=st.columns(4)
+            c1.metric('Найдено ссылок',validity_summary.get('references',len(validity)))
+            c2.metric('Действует',statuses.get('Действует',0)+statuses.get('Действует с изменениями',0))
+            c3.metric('Требуют верификации',statuses.get('Требует верификации',0)+statuses.get('Возможна устаревшая редакция',0))
+            c4.metric('P1 / высокий приоритет',validity_summary.get('p1_attention',0))
+            show=pd.DataFrame([{
+                'НТД':x.get('reference'),'Статус':x.get('status'),
+                'Файл':x.get('document'),'Стр.':x.get('page'),
+                'Риск влияния':x.get('impact_risk'),
+                'Приоритет базы':x.get('verification_priority'),
+                'Замечаний экспертизы':x.get('expert_occurrences',0),
+                'Проверять по':x.get('official_source')
+            } for x in validity])
+            st.dataframe(show,hide_index=True,width='stretch')
+        else:
+            refs = first_doc.get('normative_reference_audit') or []
+            if refs:
+                with st.expander(f'Нормативные ссылки, требующие контроля актуальности ({len(refs)})'):
+                    st.dataframe(pd.DataFrame(refs), hide_index=True, width='stretch')
 
 
 def render(ctx):

@@ -243,17 +243,23 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     assignment_rows=[]
     assignment_summary={}
     normative_requirement_rows=[]
+    project_understanding={}
+    project_understanding_quality={}
     if hasattr(docs,'empty') and not docs.empty:
         first_doc=docs.iloc[0].to_dict()
         normative_rows=list(first_doc.get('normative_validity_audit') or [])
         assignment_rows=list(first_doc.get('assignment_compliance') or [])
         assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
         normative_requirement_rows=list(first_doc.get('normative_requirement_audit') or [])
+        project_understanding=dict(first_doc.get('project_understanding') or {})
+        project_understanding_quality=dict(first_doc.get('project_understanding_quality') or {})
     elif isinstance(docs,list) and docs:
         normative_rows=list((docs[0] or {}).get('normative_validity_audit') or [])
         assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
         assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
         normative_requirement_rows=list((docs[0] or {}).get('normative_requirement_audit') or [])
+        project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
+        project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -282,6 +288,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Соответствуют Заданию', assignment_summary.get('compliant',0)],
         ['Отклонений от Задания', assignment_summary.get('deviation',0)],
         ['Требования Задания требуют проверки', assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)],
+        ['Объектов в модели проекта', project_understanding_quality.get('objects',0)],
+        ['Объектов с привязанными показателями', project_understanding_quality.get('objects_with_properties',0)],
+        ['Неразрешённых привязок объект–показатель', project_understanding_quality.get('unresolved_properties',0)],
+        ['Качество объектно-параметрической привязки, %', project_understanding_quality.get('binding_precision_proxy_pct',0)],
         ['Итоговый вывод', report['conclusion']],
     ]
 
@@ -322,6 +332,20 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Источники': r.get('sources') or r.get('Источники') or '',
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
     recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+    understanding_rows=[]
+    for obj in project_understanding.get('objects') or []:
+        for prop in obj.get('property_summary') or []:
+            understanding_rows.append({
+              'ID объекта':obj.get('object_id'),'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
+              'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
+              'Код показателя':prop.get('parameter_code'),'Разделы':', '.join(prop.get('sections') or []),
+              'Количество доказательств':prop.get('evidence_count',0),
+              'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
+              'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
+              'Значения':' | '.join(str(x) for x in prop.get('values') or []),
+            })
+    understanding_df=pd.DataFrame(understanding_rows)
+
     assignment_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
         'Требование Задания':x.get('requirement_text'),
@@ -372,6 +396,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     recommendations_df = _excel_safe_frame(recommendations_df)
     normative_df = _excel_safe_frame(normative_df)
     assignment_df = _excel_safe_frame(assignment_df)
+    understanding_df = _excel_safe_frame(understanding_df)
     normative_requirement_df = _excel_safe_frame(normative_requirement_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
@@ -397,6 +422,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
     if report_kind in {'gip','technical'} and not normative_requirement_df.empty:
         sheets.append(('Требования НТД', normative_requirement_df if report_kind=='technical' else normative_requirement_df.head(100)))
+    if report_kind in {'gip','technical'} and not understanding_df.empty:
+        sheets.append(('Модель проекта', understanding_df if report_kind=='technical' else understanding_df.head(150)))
     if report_kind == 'manager' and not assignment_df.empty:
         assignment_attention=assignment_df[assignment_df['Результат'].isin(['Выявлено отклонение','Требование не подтверждено','Требуется смысловая проверка'])].head(12)
         if not assignment_attention.empty:

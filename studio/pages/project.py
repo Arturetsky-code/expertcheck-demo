@@ -171,7 +171,7 @@ def _dashboard(ctx):
     with q2: card('2. Объекты','Готово' if object_gate else 'Требуется', 'Пользовательское подтверждение', 'ok' if object_gate else 'warn')
     with q3: card('3. Сверка ТЭП','Доступна' if object_gate else 'Заблокирована','Только по Trusted Object Registry','ok' if object_gate else 'info')
 
-    tab_summary, tab_documents, tab_completeness, tab_assignment, tab_ird = st.tabs(['Сводка', 'Документы', 'Комплектность', 'Задание на проектирование', 'Исходные документы'])
+    tab_summary, tab_model, tab_documents, tab_completeness, tab_assignment, tab_ird = st.tabs(['Сводка', 'Модель проекта', 'Документы', 'Комплектность', 'Задание на проектирование', 'Исходные документы'])
     with tab_summary:
         first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
         pp87_profile = first_doc.get('pp87_project_profile') or {}
@@ -209,6 +209,39 @@ def _dashboard(ctx):
         if confirmed:
             events.append(('Состав проекта подтверждён пользователем', 'готово'))
         timeline(events)
+    with tab_model:
+        first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+        model=first_doc.get('project_understanding') or {}
+        quality=first_doc.get('project_understanding_quality') or {}
+        section('Модель понимания проекта','Проверяем, насколько надёжно ExpertCheck связал объекты с их характеристиками и источниками. Неоднозначные сведения не используются как доказательство расхождения.')
+        if not model.get('objects'):
+            st.info('Модель проекта не сформирована.')
+        else:
+            c1,c2,c3,c4=st.columns(4)
+            c1.metric('Объектов',quality.get('objects',0))
+            c2.metric('С показателями',quality.get('objects_with_properties',0))
+            c3.metric('Неразрешённых привязок',quality.get('unresolved_properties',0))
+            c4.metric('Качество привязки',str(quality.get('binding_precision_proxy_pct',0))+'%')
+            if quality.get('quality_status')=='Требует внимания':
+                st.warning('Качество объектно-параметрической привязки требует проверки. ExpertCheck намеренно не формирует часть межраздельных выводов.')
+            else:
+                st.success('Модель проекта пригодна для дальнейшей межраздельной проверки с установленными ограничениями.')
+            rows=[]
+            for obj in model.get('objects') or []:
+                for prop in obj.get('property_summary') or []:
+                    rows.append({
+                      'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
+                      'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
+                      'Код показателя':prop.get('parameter_code'),'Разделы':', '.join(prop.get('sections') or []),
+                      'Доказательств':prop.get('evidence_count',0),
+                      'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
+                      'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
+                    })
+            if rows:
+                st.dataframe(pd.DataFrame(rows),hide_index=True,width='stretch')
+            with st.expander('Принцип формирования модели',expanded=False):
+                st.write('Показатель не может создавать объект. Сначала объект должен попасть в подтверждённый реестр проекта; только после этого площадь, объём, высота, мощность, расход и другие характеристики могут быть привязаны к нему. Неоднозначная привязка остаётся нерешённой и не используется для автоматического замечания.')
+
     with tab_documents:
         render_documents(ctx)
     with tab_completeness:

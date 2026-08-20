@@ -8,6 +8,7 @@ import re
 
 from .remark_learning import RemarkLearningEngine
 from .finding_qualification import qualify_comparison, qualify_checklist
+from .global_finding_gate import classify_finding
 from .nonfinding_policy import can_create_negative_finding
 
 
@@ -134,14 +135,15 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
     scenarios=load_risk_scenarios(scenario_path)
     remark_engine=RemarkLearningEngine(Path(__file__).resolve().parents[1] / "knowledge")
     for index,row in enumerate(comparisons):
+        gate=classify_finding(row,source_kind="comparison")
         qualification=qualify_comparison(row)
         row.update({
             "finding_class":qualification["finding_class"],
-            "finding_type":qualification.get("finding_type"),
-            "user_status":qualification["user_status"],
-            "finding_qualification_reason":qualification["reason"],
+            "finding_type":gate.get("finding_type"),
+            "user_status":gate.get("user_status"),
+            "finding_qualification_reason":gate.get("reason"),
         })
-        if not qualification["risk_eligible"]:
+        if not gate.get("risk_eligible"):
             continue
         status=_text(row,"status","Статус","result","Результат").lower()
         obj=_text(row,"object","Объект","object_name")
@@ -164,14 +166,15 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
             risk={"risk_id":f"R-OBJ-{index+1:04d}","level":"Средний","score":68 if decision=="blocked" else 48,"category":"Состав проекта","object":name,"parameter":"Принадлежность к составу проекта","finding":f"Позиция включена пользователем, хотя решение Core: {decision or 'не определено'}; статус: {status or 'не определён'}.","possible_remark":_possible_remark("object_gap",name,""),"recommendation":"Проверить официальный источник: состав сложного объекта, XML или экспликацию генплана.","sources":row.get("Основание включения") or row.get("Канонический источник") or "","origin":"Project Engine","evidence_strength":"Средняя"}
             risks.append(_enrich(risk,scenarios))
     for index,row in enumerate(checklist_results):
+        gate=classify_finding(row,source_kind="checklist")
         qualification=qualify_checklist(row)
         row.update({
             "finding_class":qualification["finding_class"],
-            "finding_type":qualification.get("finding_type"),
-            "user_status":qualification["user_status"],
-            "finding_qualification_reason":qualification["reason"],
+            "finding_type":gate.get("finding_type"),
+            "user_status":gate.get("user_status"),
+            "finding_qualification_reason":gate.get("reason"),
         })
-        if not qualification["risk_eligible"]:
+        if not gate.get("risk_eligible"):
             continue
         status=_text(row,"status","Соответствие","result").lower()
         item_no=_text(row,"item_no","Позиция","position"); question=_text(row,"question","Вопрос","Позиция по чек-листу")

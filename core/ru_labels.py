@@ -11,6 +11,15 @@ _LABELS = {
  'CONFIRMED_ISSUE':'Подтверждённое несоответствие','REVIEW':'Требует проверки','INSUFFICIENT_DATA':'Недостаточно данных','UNVERIFIED_BY_SYSTEM':'Не проверено системой','OK':'Проверено',
  'ROW_LOCKED':'Привязано к строке','POSITION_LOCKED':'Привязано к позиции','HOLD':'Не допущено в модель','SUPPORTED':'Подтверждено','REJECT':'Отклонено',
  'CELL_TABLE':'Ячейка таблицы','TABLE_CELL':'Ячейка таблицы','GEOMETRIC_FALLBACK':'Геометрическое восстановление','TEXT_FALLBACK':'Текстовое восстановление',
+
+ 'TABLE_CELL_LOCKED':'Ячейка таблицы восстановлена и зафиксирована',
+ 'VERIFIED_SET_EVIDENCE':'Подтверждённое доказательство состава',
+ 'SYSTEM_LIMITATION':'Ограничение автоматической проверки','PROJECT_FINDING':'Проблема проекта','REVIEW_QUESTION':'Вопрос специалисту','INFORMATIONAL':'Информация','PROJECT_STATUS':'Статус проекта',
+ 'SEMANTIC_CONTRACT_MATCH':'Смысловое сопоставление с контрактом доказательства',
+ 'DIRECTED_VALUE':'Направленно найденное числовое доказательство','REQUIREMENT_DIRECTED_TEXT':'Направленный поиск по требованию',
+ 'building_footprint':'Площадь застройки здания','room_area':'Площадь помещения','room_schedule_sum':'Сумма площадей помещений по экспликации','site_area':'Площадь площадки','equipment_metric':'Показатель оборудования',
+ 'MINSTROY':'Минстрой России','VERIFIED_OFFICIAL_SOURCE':'Официальный источник подтверждён','SOURCE_CURATION_REQUIRED':'Требуется проверка официального источника','CURATION_REQUIRED':'Требуется кураторская проверка пункта','VERIFIED_CLAUSE':'Пункт верифицирован',
+ 'coverage_status':'Статус покрытия','project_risk_applicable':'Применимость риска к проекту','canonical_id':'Канонический идентификатор','official_source':'Официальный источник','official_source_kind':'Тип официального источника','verified_on':'Дата проверки','verified_revision':'Проверенная редакция','replacement':'Заменяющий документ','effective_until':'Действует до','impact_risk':'Влияние на проект','table_title':'Наименование таблицы','table_row':'Строка таблицы','explanation':'Пояснение','reference':'Нормативная ссылка',
 }
 
 def ru_label(value: Any) -> str:

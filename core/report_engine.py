@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from typing import Any
+from .global_finding_gate import classify_finding
 
 
 def _group(status: Any) -> str:
@@ -56,19 +57,26 @@ def build_structured_report(
 
     problems: list[dict[str, Any]] = []
     counts = Counter()
+    finding_class_counts=Counter()
+    system_limitations=[]
+    review_questions=[]
+    project_findings=[]
     for index, row in enumerate(comparisons):
+        gate=classify_finding(row,source_kind="comparison")
+        finding_class_counts[gate.get("finding_type") or "INFORMATIONAL"] += 1
+        if gate.get("finding_type")=="SYSTEM_LIMITATION":
+            system_limitations.append(dict(row, global_finding_reason=gate.get("reason")))
+            continue
+        if gate.get("finding_type")=="REVIEW_QUESTION":
+            review_questions.append(dict(row, global_finding_reason=gate.get("reason")))
+        if gate.get("finding_type")=="PROJECT_FINDING":
+            project_findings.append(dict(row, global_finding_reason=gate.get("reason")))
+        if not gate.get("report_eligible"):
+            continue
         level = _group(row.get("status") or row.get("result"))
         counts[level] += 1
-        if str(row.get("finding_type") or "").upper() == "SYSTEM_LIMITATION":
-            continue
         if level not in {"high", "medium"}:
-            continue
-        # Applicability-aware reporting: absence of a second source is diagnostic,
-        # not an action for the GIP unless cross-section confirmation is actually required.
-        status_text=_text(row, "status", "result", "Результат").upper()
-        applicability_proven=bool(row.get("applicability_proven") or row.get("cross_section_required") or row.get("required_confirmation"))
-        if level == "medium" and any(t in status_text for t in ("НЕДОСТАТОЧ", "НЕТ ДАННЫХ", "НЕ ПОДТВЕРЖ")) and not applicability_proven:
-            continue
+            level="medium"
         problems.append({
             "id": _text(row, "comparison_id", "check_code", "rule_id") or f"XCHK-{index+1:03d}",
             "object": _text(row, "object", "Объект", "object_name") or "Объект не определён",
@@ -115,11 +123,23 @@ def build_structured_report(
                 excluded_objects.append(compact)
     else:
         confirmed_objects = [{
-            "position": _text(row, "position", "position_gp"),
-            "name": _text(row, "name", "object_name", "value_text"),
-            "status": _text(row, "design_status", "status") or "Подтверждён",
-            "source": _text(row, "canonical_source", "source"),
-        } for row in registry]
+            "position": _text(row, "position", "position_gp", "Позиция", "Позиция по ГП"),
+            "name": _text(row, "name", "object_name", "value_text", "Наименование объекта", "Наименование"),
+            "status": _text(row, "design_status", "status", "Статус") or "Подтверждён",
+            "source": _text(row, "canonical_source", "source", "Источники", "Основной источник"),
+        } for row in registry if (_text(row, "name", "object_name", "value_text", "Наименование объекта", "Наименование") or _text(row, "position", "position_gp", "Позиция", "Позиция по ГП"))]
+
+    # Object Confirmation Model: if the UI assembly has not yet persisted inclusion flags,
+    # the conservative Project Understanding registry is still a valid model count.
+    if not confirmed_objects:
+        pu=(first.get("project_understanding") or {}) if isinstance(first,dict) else {}
+        for obj in pu.get("objects") or []:
+            if not obj.get("name"): continue
+            confirmed_objects.append({
+                "position":str(obj.get("position") or ""),"name":str(obj.get("name") or ""),
+                "status":"Подтверждено моделью проекта" if (obj.get("evidence_count") or obj.get("registry_confidence")) else "Идентифицировано",
+                "source":str(obj.get("sources") or "Модель понимания проекта"),
+            })
 
     recommendations: list[str] = []
     for risk in high_risks + medium_risks:
@@ -156,6 +176,9 @@ def build_structured_report(
             "checklist_total": checklist_summary.get("total", 0),
             "checklist_no": checklist_summary.get("no", 0),
             "checklist_review": checklist_summary.get("review", 0) + checklist_summary.get("partial", 0),
+            "project_findings": finding_class_counts.get("PROJECT_FINDING",0),
+            "review_questions": finding_class_counts.get("REVIEW_QUESTION",0),
+            "system_limitations": finding_class_counts.get("SYSTEM_LIMITATION",0),
         },
         "conclusion": conclusion,
         "problems": problems,
@@ -171,6 +194,9 @@ def build_structured_report(
             "comparisons": comparisons,
             "registry": registry,
             "assembly_rows": assembly_rows,
+            "system_limitations": system_limitations,
+            "review_questions": review_questions,
+            "project_findings": project_findings,
         },
     }
 

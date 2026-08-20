@@ -68,9 +68,27 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
         row_locked=binding_status in {"ROW_LOCKED","POSITION_LOCKED","EXACT_OBJECT"} or str(f.get("row_integrity_status") or "").startswith("CONFIRMED")
         # A row-bound property owns its original object label. Semantic anchoring
         # is allowed only for non-tabular/loose evidence.
-        raw_obj=str((f.get("object_hint") if row_locked else (f.get("semantic_anchor_name") or f.get("object_hint"))) or "").strip()
+        original_owner=str(f.get("object_hint") or "").strip()
+        semantic_owner=str(f.get("semantic_anchor_name") or "").strip()
+        # Fact Lineage Integrity Gate: a fact that was extracted without an owner
+        # cannot silently acquire one during assembly. Semantic recovery is allowed
+        # only when the upstream stage explicitly marked the anchor as verified.
+        lineage_verified=bool(f.get("semantic_anchor_verified") or f.get("owner_recovery_verified") or f.get("binding_status") in {"ROW_LOCKED","POSITION_LOCKED","EXACT_OBJECT"})
+        if row_locked:
+            raw_obj=original_owner
+        elif original_owner:
+            raw_obj=semantic_owner or original_owner
+        elif semantic_owner and lineage_verified:
+            raw_obj=semantic_owner
+        else:
+            raw_obj=""
+            if semantic_owner:
+                f["fact_lineage_decision"]="HOLD"
+                f["fact_lineage_reason"]="Исходный факт не имел владельца; поздняя семантическая привязка не подтверждена независимым доказательством."
         if not raw_obj or is_parameter_entity_name(raw_obj):
-            stats["properties_rejected"]+=1;continue
+            stats["properties_rejected"]+=1
+            f["project_understanding_binding"]="Отклонено: не подтверждена линия владельца факта"
+            continue
         binding=f.get("entity_property_binding") or {}
         if binding and binding.get("valid") is False:
             stats["properties_rejected"]+=1;continue

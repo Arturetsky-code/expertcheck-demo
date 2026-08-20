@@ -191,5 +191,8 @@ def build_general_plan_field_checks(gp_findings: Iterable[dict[str, Any]], audit
             "explanation": "Позиция подтверждена на поле чертежа." if confirmed else "Позиция есть в экспликации, но независимое подтверждение на поле чертежа не получено.",
             "recommendation": "" if confirmed else "Визуально проверить наличие позиции на поле генерального плана.",
             "confidence": float(gp.get("confidence") or 0),
+            "finding_type": "PROJECT_STATUS" if confirmed else "SYSTEM_LIMITATION",
+            "user_status": "Проверено" if confirmed else "Ограничение автоматической проверки",
+            "risk_eligible": False,
         })
     return checks

@@ -5,6 +5,7 @@ import math
 import re
 from datetime import datetime, date
 import pandas as pd
+from core.ru_labels import ru_label, ru_join
 from core.display_localization import parameter_label, status_label, scope_label
 from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
@@ -368,11 +369,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'ID требования':x.get('requirement_id'),
         'Строка Задания':x.get('source_row') or '—',
         'Раздел / вопрос Задания':x.get('source_row_title') or '—',
-        'Тип проверки':x.get('requirement_type') or '—',
-        'Область требования':x.get('requirement_scope') or (x.get('evidence_contract_v2') or {}).get('scope') or '—',
-        'Метод проверки':(x.get('evidence_contract_v2') or {}).get('check_method') or '—',
+        'Тип проверки':ru_label(x.get('requirement_type')),
+        'Область требования':ru_label(x.get('requirement_scope') or (x.get('evidence_contract_v2') or {}).get('scope')),
+        'Метод проверки':ru_label((x.get('evidence_contract_v2') or {}).get('check_method')),
         'Ожидаемые разделы':', '.join((x.get('evidence_contract_v2') or {}).get('expected_sections') or []),
-        'Способ восстановления':x.get('cell_reconstruction') or '—',
+        'Способ восстановления':ru_label(x.get('cell_reconstruction')),
         'Требование Задания':x.get('requirement_text'),
         'Объект':x.get('object_name') or '—',
         'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
@@ -382,7 +383,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Документ':x.get('source_document'),
         'Страница':x.get('page'),
         'Доказательства':' | '.join(x.get('evidence') or []),
-        'Качество доказательства':x.get('evidence_quality_state') or '—',
+        'Качество доказательства':ru_label(x.get('evidence_quality_state')),
         'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
         'Основание вывода':x.get('decision_basis') or '',
@@ -393,7 +394,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'НТД':x.get('reference'),
         'Пункт / статья':x.get('clause') or '—',
         'Тип требования':x.get('modality'),
-        'Тип проверки':x.get('check_kind') or '—',
+        'Тип проверки':ru_label(x.get('check_kind')) or '—',
         'Качество нормативного основания':x.get('requirement_quality') or '—',
         'Контекст в проекте':x.get('project_context'),
         'Статус НТД':x.get('normative_status'),
@@ -429,16 +430,16 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
-        'Тип знания':x.get('knowledge_kind') or 'LAW_REQUIREMENT',
+        'Тип знания':ru_label(x.get('knowledge_kind') or 'LAW_REQUIREMENT'),
         'НТД':x.get('source'),
         'Пункт / статья':x.get('paragraph') or '—',
         'Тема':x.get('topic'),
         'Требование':x.get('requirement'),
-        'Тип проверки':x.get('check_kind'),
+        'Тип проверки':ru_label(x.get('check_kind')),
         'Пункт верифицирован':'Да' if x.get('verified_clause') else 'Нет',
         'Готово для AI-review':'Да' if x.get('ai_review_ready') else 'Нет',
         'Результат':x.get('status'),
-        'Покрытие':x.get('coverage_state') or '—',
+        'Покрытие':ru_label(x.get('coverage_state')),
         'Основание вывода':x.get('decision_basis'),
         'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
     } for x in normative_compliance_rows])

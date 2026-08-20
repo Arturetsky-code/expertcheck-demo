@@ -44,6 +44,7 @@ from .evidence_graph import build_evidence_graph
 from .normative_knowledge import NormativeKnowledgeLayer
 from .normative_validity import NormativeValidityChecker
 from .normative_requirement_analyzer import NormativeRequirementAnalyzer
+from .normative_compliance_engine import NormativeComplianceEngine
 from .automatic_review import AutomaticProjectReview
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
@@ -317,7 +318,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.8.1-drawing-intelligence-2"
+        item["core_version"] = "9.9.0-requirements-intelligence"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -474,7 +475,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         assignment_compliance_summary = assignment_summary(assignment_compliance)
     except Exception as exc:
         assignment_requirements, assignment_compliance = [], []
-        assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"error":str(exc)}
+        assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"error":str(exc)}
         pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
@@ -500,15 +501,23 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     if not normative_validity_audit:
         normative_validity_audit = normative_validity_checker.audit_findings(findings)
     normative_validity_summary = normative_validity_checker.summary(normative_validity_audit)
+    normative_reference_summary = normative_validity_checker.aggregate_reference_audit(normative_validity_audit)
     try:
         normative_requirement_audit = NormativeRequirementAnalyzer(root / "knowledge").audit_uploaded_pdfs(pdf_files, legacy.read_pdf)
     except Exception as exc:
         normative_requirement_audit = []
         pipeline_errors.append({"stage":"normative_requirement_analysis","error":str(exc)})
+    try:
+        normative_compliance_audit = NormativeComplianceEngine(root / "knowledge").review(findings)
+        normative_compliance_summary = NormativeComplianceEngine.summary(normative_compliance_audit)
+    except Exception as exc:
+        normative_compliance_audit = []
+        normative_compliance_summary = {"requirements":0,"verified_clause":0,"ai_review_ready":0,"requires_kb_verification":0,"project_review":0,"error":str(exc)}
+        pipeline_errors.append({"stage":"normative_compliance","error":str(exc)})
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.8.1-drawing-intelligence-2"
+        item["core_version"] = "9.9.0-requirements-intelligence"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -529,7 +538,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     for doc in documents:
-        doc["core_version"] = "9.8.1-drawing-intelligence-2"
+        doc["core_version"] = "9.9.0-requirements-intelligence"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -628,7 +637,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["decision_coverage"] = decision_coverage
         doc["normative_validity_audit"] = normative_validity_audit
         doc["normative_validity_summary"] = normative_validity_summary
+        doc["normative_reference_summary"] = normative_reference_summary
         doc["normative_requirement_audit"] = normative_requirement_audit
+        doc["normative_compliance_audit"] = normative_compliance_audit
+        doc["normative_compliance_summary"] = normative_compliance_summary
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
         doc["project_understanding"] = project_understanding

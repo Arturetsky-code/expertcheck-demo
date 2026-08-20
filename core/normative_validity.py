@@ -7,15 +7,16 @@ from .normalization import normalize_text
 from .normative_verification import NormativeVerificationEngine
 
 REF_PATTERNS=[
-    re.compile(r"\bГОСТ(?:\s+Р)?\s+[A-Za-zА-Яа-я0-9.\-/]+",re.I),
+    # Patterns are intentionally strict: partial tokens such as "СНиП от" or
+    # "СНиП 23-" are reference noise, not normative documents.
+    re.compile(r"\bГОСТ(?:\s+Р|\s+Р\s+ЕН|\s+Р\s+ИСО)?\s+[A-Za-zА-Яа-я0-9]+(?:[.\-/][A-Za-zА-Яа-я0-9]+)+(?:\*|\s*\(.*?\))?",re.I),
     re.compile(r"\bСП\s+\d+(?:\.\d+){1,4}(?:-\d{4})?",re.I),
-    re.compile(r"\bСНиП\s+[A-Za-zА-Яа-я0-9.\-*]+",re.I),
+    re.compile(r"\bСНиП\s+(?:[IVXLC]+-\d+(?:-\d+)+|\d+(?:[.\-]\d+)+(?:-\d{2,4})?)\*?",re.I),
     re.compile(r"\bФедеральн(?:ый|ого)\s+закон(?:а)?(?:\s+от\s+\d{2}\.\d{2}\.\d{4})?\s+№\s*[\d\-ФЗфз]+",re.I),
     re.compile(r"\b(?:ФЗ|Федеральный закон)\s*№?\s*\d+\s*-\s*ФЗ\b",re.I),
     re.compile(r"\bПостановлен(?:ие|ия|ию|ии|ием)\s+(?:Правительства\s+(?:Российской Федерации|РФ)\s+)?(?:от\s+\d{2}\.\d{2}\.\d{4}\s+)?№\s*\d+",re.I),
     re.compile(r"\bПриказ(?:а)?\s+[А-Яа-яA-Za-z .«»\"-]{0,80}?№\s*[\d/А-Яа-я-]+",re.I),
 ]
-
 def _clean_ref(value:str)->str:
     return re.sub(r"\s+"," ",str(value or "")).strip(" .;,()")
 
@@ -147,6 +148,38 @@ class NormativeValidityChecker:
                 seen.add(key)
                 out.append(self.check(ref,document=str(item.get("document") or ""),page=item.get("page"),context=context))
                 if len(out)>=limit:return out
+        return out
+
+    def aggregate_reference_audit(self, rows):
+        """Collapse repeated citations into one project-level reference record."""
+        grouped={}
+        for row in rows or []:
+            ref=str(row.get("reference") or "").strip()
+            rec=self.lookup(ref)
+            key=str((rec or {}).get("canonical_id") or normalize_text(ref))
+            if not key: continue
+            g=grouped.setdefault(key,{
+                "reference":str((rec or {}).get("reference") or ref),
+                "canonical_id":str((rec or {}).get("canonical_id") or ""),
+                "status":row.get("status"),"replacement":row.get("replacement") or "",
+                "official_source":row.get("official_source") or "",
+                "verified_on":row.get("verified_on") or "",
+                "verification_priority":row.get("verification_priority") or "",
+                "impact_risk":row.get("impact_risk") or "Низкий",
+                "edition_assessment":row.get("edition_assessment") or {},
+                "mentions":0,"documents":set(),"pages":[],"contexts":[]
+            })
+            g["mentions"]+=1
+            if row.get("document"):g["documents"].add(str(row.get("document")))
+            if row.get("page") not in (None,"") and len(g["pages"])<25:g["pages"].append(f"{row.get('document')}: {row.get('page')}")
+            if row.get("context") and len(g["contexts"])<3:g["contexts"].append(str(row.get("context"))[:350])
+            rank={"Низкий":1,"Средний":2,"Высокий":3}
+            if rank.get(str(row.get("impact_risk")),0)>rank.get(str(g.get("impact_risk")),0):g["impact_risk"]=row.get("impact_risk")
+        out=[]
+        for g in grouped.values():
+            g["documents_count"]=len(g["documents"]);g["documents"]=sorted(g["documents"]);g["pages"]=list(dict.fromkeys(g["pages"]))
+            out.append(g)
+        out.sort(key=lambda x:(x.get("status") in {"Действует","Действует с изменениями"},-int(x.get("mentions") or 0),x.get("reference") or ""))
         return out
 
     def summary(self,rows):

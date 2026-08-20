@@ -62,6 +62,8 @@ from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
 from .requirements_ai_reasoner import review_assignment_rows
+from .directed_evidence import build_page_corpus, attach_directed_evidence
+from .table_semantic_scope import annotate_table_semantic_scope
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -349,6 +351,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # Генплан является опорным реестром: повторно и консервативно привязываем ТЭП
     # после универсального поиска объектов, затем строим проверки состава.
     general_plan_anchor_audit.extend(anchor_findings_to_general_plan(findings, gp_findings))
+    table_semantic_scope_audit = annotate_table_semantic_scope(findings)
     evidence_provenance_audit = annotate_evidence_provenance(findings)
     drawing_intelligence_summary = annotate_drawing_evidence(findings)
     general_plan_field_checks = build_general_plan_field_checks(gp_findings, general_plan_audit)
@@ -472,12 +475,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
     try:
         assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
+        assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf)
+        assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, assignment_page_corpus)
         assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry)
         assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
         if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
             assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_compliance, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
         assignment_compliance_summary = assignment_summary(assignment_compliance)
         assignment_compliance_summary["ai_evidence_review"]=assignment_ai_summary
+        assignment_compliance_summary["directed_evidence"]=assignment_directed_evidence_summary
     except Exception as exc:
         assignment_requirements, assignment_compliance = [], []
         assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"ai_evidence_review":{"reviewed":0,"confirmed":0,"contradicted":0},"error":str(exc)}

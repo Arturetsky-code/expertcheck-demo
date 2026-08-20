@@ -9,6 +9,8 @@ from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, is_parameter_entity_name
 from .entity_property_binding import stable_object_id
 from .requirement_contracts import build_contract, evidence_packet, SCOPE_PROJECT, SCOPE_SITE, SCOPE_SYSTEM, SCOPE_DOCUMENT, SCOPE_OBJECT, SCOPE_EQUIPMENT
+from .object_hierarchy import build_hierarchy, group_is_satisfied
+from .directed_evidence import units_compatible
 
 ASSIGNMENT_TYPES=("задание на проектирование","техническое задание","тз на проектирование","знп")
 REQ_VERBS=("предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","определить")
@@ -430,6 +432,7 @@ def _set_compare(req:dict[str,Any],registry:list[dict[str,Any]])->tuple[str,list
     if not expected:
         return "Не проверено системой",[],"В Задании есть ссылка на состав объектов, но приложение не удалось структурировать.",0.0
     actual=[]
+    hierarchy=build_hierarchy(registry)
     for r in registry:
         name=str(r.get("Наименование объекта") or r.get("name") or r.get("object_name") or "").strip()
         pos=str(r.get("Позиция по ГП") or r.get("position") or "").strip()
@@ -438,8 +441,13 @@ def _set_compare(req:dict[str,Any],registry:list[dict[str,Any]])->tuple[str,list
     for exp in expected:
         pos=normalize_text(exp.get("position") or ""); name=str(exp.get("name") or "")
         matches=[a for a in actual if (pos and normalize_text(a[0])==pos) or normalize_text(name) in normalize_text(a[1]) or normalize_text(a[1]) in normalize_text(name)]
-        if matches:evidence.append(f"Требуется: {exp.get('position')} {name} → найдено: {matches[0][0]} {matches[0][1]}")
-        else:missing.append(f"{exp.get('position')} {name}".strip())
+        if matches:
+            evidence.append(f"Требуется: {exp.get('position')} {name} → найдено: {matches[0][0]} {matches[0][1]}")
+        elif pos and group_is_satisfied(pos,hierarchy):
+            children=(hierarchy.get('nodes') or {}).get(pos,{}).get('children') or []
+            evidence.append(f"Требуется: {exp.get('position')} {name} → подтверждено дочерними позициями: {', '.join(children[:8])}")
+        else:
+            missing.append(f"{exp.get('position')} {name}".strip())
     if missing:
         return "Требует проверки",evidence+["Не сопоставлены: "+"; ".join(missing[:12])],"Состав объектов сопоставлен по позициям/наименованиям; часть обязательных позиций не подтверждена.",0.92
     return "Соответствует заданию",evidence[:12],"Все структурированные позиции приложения сопоставлены с реестром объектов проекта.",0.96
@@ -463,12 +471,26 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         if rtype==TYPE_SET:
             status,evidence,basis,confidence=_set_compare(req,registry)
         elif rtype==TYPE_VALUE and code:
+            directed=list(req.get('directed_evidence_candidates') or [])
             # Critical quality gate: a value without an identifiable owner/subject is
             # not compared against arbitrary project facts with the same metric code.
             if not obj_norm and scope in {SCOPE_OBJECT,SCOPE_EQUIPMENT}:
                 status="Требует проверки";basis="Числовое требование относится к конкретной сущности, но её владелец не установлен; автоматическое сравнение запрещено."
             else:
                 numeric=[]
+                verified=[]
+                for d in directed:
+                    if canonical_parameter_code(d.get('parameter_code'))!=code: continue
+                    if str(d.get('evidence_state') or '')!='verified_candidate': continue
+                    if req.get('unit') and not units_compatible(req.get('unit'),d.get('unit'),code): continue
+                    try: val=float(d.get('value'))
+                    except Exception: continue
+                    pseudo={
+                        'document':d.get('document'),'page':d.get('page'),'semantic_anchor_name':obj or ('Проект' if scope==SCOPE_PROJECT else ''),
+                        'object_hint':obj,'parameter_name':code,'parameter_code':code,'unit':d.get('unit'),'context':d.get('context'),
+                        'directed_evidence':True,'evidence_quality_decision':'VERIFIED','fact_admission_decision':'ADMIT'
+                    }
+                    numeric.append((val,pseudo)); verified.append(d)
                 expected_sections=[normalize_text(x) for x in contract.get("expected_sections") or []]
                 for f in findings:
                     if canonical_parameter_code(f.get("parameter_code"))!=code:continue
@@ -480,6 +502,7 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
                     if expected_sections and section and not any(x in section or section in x for x in expected_sections):continue
                     if (f.get("entity_property_binding") or {}).get("valid") is False:continue
                     if str(f.get("fact_admission_decision") or "ADMIT").upper() in {"HOLD","REJECT"}:continue
+                    if req.get('unit') and f.get('unit') and not units_compatible(req.get('unit'),f.get('unit'),code):continue
                     try:val=float(str(f.get("value")).replace(",","."))
                     except Exception:continue
                     numeric.append((val,f))
@@ -505,8 +528,11 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
                 evidence=[f"{x.get('document')}, стр. {x.get('page')}: {x.get('context') or x.get('value_text')}" for x in candidates[:4]]
             else:
                 status="Не проверено системой";basis=f"Для типа {rtype} нет достаточного специализированного алгоритма/доказательств; отсутствие находки не считается невыполнением требования."
+        if req.get('directed_evidence_candidates'):
+            candidates=list(req.get('directed_evidence_candidates') or []) + list(candidates or [])
         packet=evidence_packet(req,candidates)
-        out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
+        evidence_quality_state='VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE')
+        out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"evidence_quality_state":evidence_quality_state,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
                     "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
     return out
 

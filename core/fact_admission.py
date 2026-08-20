@@ -33,6 +33,7 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     row_status = str(finding.get("row_integrity_status") or "").upper()
     quality = str(finding.get("evidence_quality_decision") or "").upper()
     scope_decision = str(finding.get("scope_binding_decision") or "ALLOW").upper()
+    table_scope_decision = str(finding.get("table_semantic_scope_decision") or "ALLOW").upper()
     obj = str(finding.get("object_hint") or finding.get("semantic_anchor_name") or "").strip()
     page = finding.get("page")
     document = str(finding.get("document") or "").strip()
@@ -65,6 +66,14 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
             "fact_admission_score": 0,
             "fact_admission_reasons": ["источник заблокирован контролем целостности строки таблицы"],
             "fact_who_score": 0, "fact_what_score": 0, "fact_value_score": 0, "fact_where_score": 0,
+        }
+    if table_scope_decision == "HOLD":
+        return {
+            "fact_admission_decision": HOLD,
+            "fact_admission_score": 45,
+            "fact_admission_reasons": list(finding.get("table_semantic_scope_reasons") or ["смысловой уровень таблицы не подтверждает владельца показателя"]),
+            "fact_who_score": 20, "fact_what_score": 50, "fact_value_score": 50, "fact_where_score": 50,
+            "fact_scope_score": 20,
         }
     if scope_decision == "REJECT":
         return {

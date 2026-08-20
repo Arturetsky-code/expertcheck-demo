@@ -18,7 +18,10 @@ REF_PATTERNS=[
     re.compile(r"\bПриказ(?:а)?\s+[А-Яа-яA-Za-z .«»\"-]{0,80}?№\s*[\d/А-Яа-я-]+",re.I),
 ]
 def _clean_ref(value:str)->str:
-    return re.sub(r"\s+"," ",str(value or "")).strip(" .;,()")
+    raw=re.sub(r"\s+"," ",str(value or "")).strip(" .;,()")
+    raw=re.sub(r"\s*\((?:или\s+аналог|справочно|далее).*?$","",raw,flags=re.I).strip(" .;,()")
+    raw=re.sub(r"^(ГОСТ\s*Р)(?=\d)",r"ГОСТ Р ",raw,flags=re.I)
+    return raw
 
 
 def _reference_signature(value:str)->tuple[str,str]:
@@ -91,6 +94,8 @@ class NormativeValidityChecker:
               "replacement":rec.get("replacement",""),"effective_until":rec.get("effective_until",""),
               "official_source":source.get("title",""),"official_source_kind":rec.get("official_source_kind",""),
               "document":document,"page":page,"impact_risk":self.impact_risk(context),
+              "coverage_status":"Проверено по реестру" if status in {"Действует","Действует с изменениями","Утратил силу","Заменён"} else "Требует наполнения KB",
+              "project_risk_applicable":status in {"Действует","Действует с изменениями"},
               "context":str(context or "")[:800],"verification_basis":rec.get("status_basis",""),
               "expert_occurrences":rec.get("expert_occurrences",0),"expert_project_count":rec.get("expert_project_count",0),
               "verification_priority":rec.get("verification_priority",""),"priority_score":rec.get("priority_score",0),
@@ -106,6 +111,8 @@ class NormativeValidityChecker:
           "verified_on":"","verified_revision":"","replacement":"","effective_until":"",
           "official_source":source.get("title",""),"official_source_kind":source_kind,
           "document":document,"page":page,"impact_risk":self.impact_risk(context),
+          "coverage_status":"Требует наполнения KB",
+          "project_risk_applicable":False,
           "context":str(context or "")[:800],
           "verification_basis":"Документ отсутствует в кураторском реестре ExpertCheck; категоричный вывод о статусе запрещён.",
           "expert_occurrences":0,"expert_project_count":0,"verification_priority":"","priority_score":0,
@@ -166,6 +173,7 @@ class NormativeValidityChecker:
                 "verified_on":row.get("verified_on") or "",
                 "verification_priority":row.get("verification_priority") or "",
                 "impact_risk":row.get("impact_risk") or "Низкий",
+                "coverage_status":row.get("coverage_status") or "Требует наполнения KB",
                 "edition_assessment":row.get("edition_assessment") or {},
                 "mentions":0,"documents":set(),"pages":[],"contexts":[]
             })
@@ -173,7 +181,7 @@ class NormativeValidityChecker:
             if row.get("document"):g["documents"].add(str(row.get("document")))
             if row.get("page") not in (None,"") and len(g["pages"])<25:g["pages"].append(f"{row.get('document')}: {row.get('page')}")
             if row.get("context") and len(g["contexts"])<3:g["contexts"].append(str(row.get("context"))[:350])
-            rank={"Низкий":1,"Средний":2,"Высокий":3}
+            rank={"Не оценивается":0,"Низкий":1,"Средний":2,"Высокий":3}
             if rank.get(str(row.get("impact_risk")),0)>rank.get(str(g.get("impact_risk")),0):g["impact_risk"]=row.get("impact_risk")
         out=[]
         for g in grouped.values():
@@ -188,7 +196,8 @@ class NormativeValidityChecker:
         for r in rows:counts[r.get("status","Требует верификации")]=counts.get(r.get("status","Требует верификации"),0)+1
         return {
           "references":len(rows),"statuses":counts,
-          "high_impact_attention":sum(1 for r in rows if r.get("impact_risk")=="Высокий" and r.get("status") not in {"Действует","Действует с изменениями"}),
+          "high_impact_attention":sum(1 for r in rows if r.get("impact_risk")=="Высокий" and r.get("status") in {"Действует","Действует с изменениями"}),
+          "kb_gaps":sum(1 for r in rows if r.get("coverage_status")=="Требует наполнения KB"),
           "p1_attention":sum(1 for r in rows if r.get("verification_priority")=="P1" and r.get("status") not in {"Действует","Действует с изменениями"}),
           "curated_registry_records":len(self.records),
           "outdated_editions":sum(1 for r in rows if (r.get("edition_assessment") or {}).get("edition_outdated")),

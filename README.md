@@ -1,4 +1,4 @@
-# ExpertCheck 9.8 Alpha 2 — Drawing Intelligence 2.0
+# ExpertCheck 10.0 Alpha 1 — Evidence-Driven Requirements Engine
 
 # ExpertCheck 7.1 Alpha 1 — Trusted Engineering Intelligence
 

@@ -8,6 +8,7 @@ from .normalization import normalize_text
 from .checklist_engine import ChecklistEngine
 from .pp87_compliance import PP87Compliance
 from .checklist_routing import ChecklistRoutingEngine, canonical_section
+from .checklist_verification import qualify_checklist_results
 
 class AutomaticProjectReview:
     """Builds and executes a project-specific checklist programme automatically.
@@ -66,6 +67,7 @@ class AutomaticProjectReview:
                 r["automatic_section"]=section
             all_results.extend(results)
             runs.append({"checklist":p["checklist"],"section":section,"results":len(results),"documents":len(docs)})
+        all_results=qualify_checklist_results(all_results)
         actionable=[x for x in all_results if not x.get("is_heading")]
         # Expert-practice search is expensive and most useful for problems, not passed checks.
         # Enrich only the first actionable issues, prioritising negative and uncertain results.
@@ -94,6 +96,10 @@ class AutomaticProjectReview:
             "yes":counts.get("Да",0),"no":counts.get("Нет",0),
             "review":counts.get("Требует проверки",0),"no_data":counts.get("Нет данных",0),"unsupported":counts.get("Не проверено системой",0),
             "semantic_pending_ai":semantic_pending,
+            "verified_completed":sum(1 for x in actionable if x.get("verification_kind") in {"VERIFIED_OK","PROJECT_FINDING"}),
+            "system_limitations":sum(1 for x in actionable if x.get("verification_kind")=="SYSTEM_LIMITATION"),
+            "review_questions":sum(1 for x in actionable if x.get("verification_kind")=="REVIEW_QUESTION"),
+            "automatic_coverage_pct":round(100*sum(1 for x in actionable if x.get("verification_kind") in {"VERIFIED_OK","PROJECT_FINDING"})/max(1,len(actionable)),1),
             "automatic":True
           }
         }

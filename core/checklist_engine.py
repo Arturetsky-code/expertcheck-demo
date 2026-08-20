@@ -174,27 +174,32 @@ class ChecklistEngine:
             compiled=compile_item(item)
             applicable=self._matches_doc(required,doc_types)
             evidence=''
+            proof_kind='UNSUPPORTED'
             if item.get('is_heading'):
                 status='Раздел'
                 evidence='Группирующая позиция чек-листа.'
+                proof_kind='HEADING'
             elif not applicable or not documents:
                 status='Нет данных'
                 evidence='Выбранный раздел или документ не соответствует пункту чек-листа.'
+                proof_kind='NOT_APPLICABLE_OR_MISSING_SCOPE'
             else:
                 codes=set(compiled.parameter_codes)
                 if compiled.rule_type in {'numeric_crosscheck','parameter_evidence'} and codes:
                     status,evidence=self._comparison_status(comparisons,codes,selected_doc_names)
+                    if status is not None:
+                        proof_kind='STRUCTURED_COMPARISON'
                     if status is None:
                         # A parameter may be present in one selected document but not yet cross-comparable.
                         present=[f for f in selected_findings if str(f.get('parameter_code') or '').upper() in codes]
                         if present and compiled.rule_type=='parameter_evidence':
-                            status='Да'; evidence=f'Найдено структурированных значений: {len(present)}. Источник: выбранный раздел.'
+                            status='Да'; evidence=f'Найдено структурированных значений: {len(present)}. Источник: выбранный раздел.'; proof_kind='STRUCTURED_VALUE'
                         else:
-                            status='Требует проверки'; evidence='Для параметра не найден достаточный структурированный результат.'
+                            status='Не проверено системой'; evidence='Для параметра не получено достаточного структурированного доказательства.'; proof_kind='UNSUPPORTED'
                 elif compiled.rule_type in {'presence','semantic_review'} or compiled.typed_check in {'DRAWING_TITLE_BLOCK_CHECK','DRAWING_PRESENCE_CHECK','DOCUMENT_CONTENT_PRESENCE','ENGINEERING_SEMANTIC_REVIEW','NORMATIVE_CONTENT_REVIEW','SPECIALIST_REVIEW'}:
                     typed=execute_typed_check(compiled.to_dict(),selected_findings,documents)
                     if typed:
-                        status=typed['status']; evidence=typed['evidence']
+                        status=typed['status']; evidence=typed['evidence']; proof_kind=typed.get('proof_kind','UNSUPPORTED')
                     else:
                         status='Не проверено системой'; evidence='Для пункта отсутствует доказательный автоматический алгоритм.'
                 else:
@@ -211,7 +216,7 @@ class ChecklistEngine:
                 )
             else:
                 practice_context={}
-            results.append({**item,'compiled_rule':compiled_dict,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled_dict,'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:

@@ -105,6 +105,8 @@ def value_scope(item: dict[str, Any]) -> str:
     return normalized.scope if normalized else "default"
 
 def _usable(item: dict[str, Any]) -> bool:
+    if bool(item.get("comparison_excluded")):
+        return False
     code = canonical_parameter_code(item.get("parameter_code"))
     if is_integrity_blocked(item):
         return False

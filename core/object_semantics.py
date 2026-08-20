@@ -25,7 +25,7 @@ ENGINEERING_PARAMETERS = {
     "PRESSURE", "TEMPERATURE", "DIAMETER", "FLOW_RATE", "VOLTAGE", "DEPTH",
     "POWER_CALCULATED", "PERSONNEL", "LENGTH", "QUANTITY",
     "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT", "TEMPERATURE",
-    "VOLUME", "DEPTH", "WIDTH",
+    "VOLUME", "DEPTH", "WIDTH", "AREA_ROOM", "AREA_ROOM_SUM",
 }
 
 FILE_EXTENSIONS = (".pdf", ".xml", ".sig", ".zip", ".rar", ".7z", ".dwg", ".dxf", ".docx", ".xlsx")

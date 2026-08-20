@@ -58,6 +58,7 @@ from .project_understanding import build_project_object_model, understanding_qua
 from .table_row_integrity import apply_table_row_integrity_guard
 from .evidence_provenance import annotate_evidence_provenance
 from .drawing_intelligence import annotate_drawing_evidence
+from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
@@ -316,7 +317,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.8.0-engineering-knowledge-core"
+        item["core_version"] = "9.8.1-drawing-intelligence-2"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -328,6 +329,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
 
     progress(69, "Контроль строк таблиц", "Проверяем, что показатель не был сдвинут на соседний объект при чтении PDF")
     table_row_integrity_audit = apply_table_row_integrity_guard(findings)
+
+    progress(69, "Drawing Intelligence", "Строим граф листов, экспликаций и ревизий АР без догадок по ближайшему тексту")
+    try:
+        drawing_graph = DrawingIntelligenceV2().extract_uploaded(pdf_files, document_types, legacy.read_pdf)
+        drawing_v2_findings = drawing_graph_findings(drawing_graph)
+        findings.extend(drawing_v2_findings)
+    except Exception as exc:
+        drawing_graph = {"version":"2.0-alpha1","summary":{"error":str(exc)},"objects":[],"sheets":[],"room_schedules":[],"revisions":[],"withheld":[]}
+        drawing_v2_findings = []
+        pipeline_errors.append({"stage":"drawing_intelligence_v2","error":str(exc)})
 
     _enrich_semantics(findings)
     enrich_findings_with_object_semantics(findings)
@@ -497,7 +508,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.8.0-engineering-knowledge-core"
+        item["core_version"] = "9.8.1-drawing-intelligence-2"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -518,7 +529,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     for doc in documents:
-        doc["core_version"] = "9.8.0-engineering-knowledge-core"
+        doc["core_version"] = "9.8.1-drawing-intelligence-2"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -612,6 +623,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["mandatory_document_audit"] = mandatory_document_audit
         doc["normative_reference_audit"] = normative_reference_audit
         doc["drawing_intelligence_summary"] = drawing_intelligence_summary
+        doc["drawing_intelligence_v2"] = drawing_graph
+        doc["drawing_intelligence_v2_summary"] = drawing_graph.get("summary", {})
         doc["decision_coverage"] = decision_coverage
         doc["normative_validity_audit"] = normative_validity_audit
         doc["normative_validity_summary"] = normative_validity_summary

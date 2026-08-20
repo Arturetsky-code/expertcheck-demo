@@ -22,7 +22,7 @@ def source_locator(item: dict[str, Any]) -> dict[str, Any]:
         "row_index": item.get("row_index", item.get("table_row")),
         "column_index": item.get("column_index", item.get("table_column")),
         "cell_ref": _clean(item.get("cell_ref") or item.get("source_cell")),
-        "source_span": _clean(item.get("source_span") or item.get("bbox") or item.get("coordinates")),
+        "source_span": _clean(item.get("source_span") or item.get("bbox") or item.get("source_bbox") or item.get("coordinates")),
     }
     raw = "|".join(_clean(locator[k]) for k in ("document","page","table_index","row_index","column_index","cell_ref","source_span"))
     if not raw.strip("|"):

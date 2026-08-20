@@ -41,6 +41,19 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     value = _num(finding.get("value"))
 
     reasons: list[str] = []
+    scope_entity_type = str(finding.get("scope_entity_type") or "").upper().strip()
+    metric_scope = str(finding.get("metric_semantic_scope") or "").lower().strip()
+    # Drawing semantic boundary: room/schedule areas are valid evidence but are
+    # not building TEPs. They stay in the Drawing Graph and must not be promoted
+    # to the project object model as AREA_TOTAL/AREA_BUILD.
+    if finding.get("comparison_excluded") or scope_entity_type in {"ROOM", "ROOM_SCHEDULE"} or metric_scope in {"room_area", "room_area_sum", "room_schedule_sum"}:
+        return {
+            "fact_admission_decision": HOLD,
+            "fact_admission_score": 70 if finding.get("drawing_evidence") else 50,
+            "fact_admission_reasons": [str(finding.get("comparison_exclusion_reason") or "показатель относится к локальной сущности чертежа и не является ТЭП объекта")],
+            "fact_who_score": 50, "fact_what_score": 50, "fact_value_score": 50, "fact_where_score": 50,
+            "fact_scope_score": 100,
+        }
     who = 0
     what = 0
     value_score = 0
@@ -127,4 +140,5 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
         "fact_what_score": min(100, what),
         "fact_value_score": min(100, value_score),
         "fact_where_score": min(100, where),
+        "fact_scope_score": 100,
     }

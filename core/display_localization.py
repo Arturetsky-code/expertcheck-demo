@@ -24,6 +24,8 @@ PARAMETER_LABELS = {
     'PERSONNEL': 'Численность персонала',
     'TEMPERATURE': 'Температура',
     'LINE_COUNT': 'Количество линий',
+    'AREA_ROOM': 'Площадь помещения',
+    'AREA_ROOM_SUM': 'Сумма площадей помещений по экспликации',
 }
 
 STATUS_LABELS = {
@@ -48,6 +50,8 @@ SCOPE_LABELS = {
     'total': 'Суммарное значение',
     'per_unit': 'На единицу',
     'room_area_sum': 'Сумма площадей помещений',
+    'room_area': 'Площадь помещения',
+    'room_schedule_sum': 'Сумма площадей помещений по экспликации',
     'building_total_area': 'Общая площадь здания',
     'site_area': 'Площадь территории/площадки',
     'building_footprint': 'Площадь застройки объекта',

@@ -241,24 +241,33 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     # Normative validity is attached to every document by the pipeline; use the first
     # project record as the shared audit payload to avoid duplicating rows.
     normative_rows=[]
+    normative_reference_details=[]
     assignment_rows=[]
     assignment_summary={}
     normative_requirement_rows=[]
+    normative_compliance_rows=[]
+    normative_compliance_summary={}
     project_understanding={}
     project_understanding_quality={}
     if hasattr(docs,'empty') and not docs.empty:
         first_doc=docs.iloc[0].to_dict()
-        normative_rows=list(first_doc.get('normative_validity_audit') or [])
+        normative_reference_details=list(first_doc.get('normative_validity_audit') or [])
+        normative_rows=list(first_doc.get('normative_reference_summary') or normative_reference_details)
         assignment_rows=list(first_doc.get('assignment_compliance') or [])
         assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
         normative_requirement_rows=list(first_doc.get('normative_requirement_audit') or [])
+        normative_compliance_rows=list(first_doc.get('normative_compliance_audit') or [])
+        normative_compliance_summary=dict(first_doc.get('normative_compliance_summary') or {})
         project_understanding=dict(first_doc.get('project_understanding') or {})
         project_understanding_quality=dict(first_doc.get('project_understanding_quality') or {})
     elif isinstance(docs,list) and docs:
-        normative_rows=list((docs[0] or {}).get('normative_validity_audit') or [])
+        normative_reference_details=list((docs[0] or {}).get('normative_validity_audit') or [])
+        normative_rows=list((docs[0] or {}).get('normative_reference_summary') or normative_reference_details)
         assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
         assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
         normative_requirement_rows=list((docs[0] or {}).get('normative_requirement_audit') or [])
+        normative_compliance_rows=list((docs[0] or {}).get('normative_compliance_audit') or [])
+        normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
     normative_statuses={}
@@ -281,7 +290,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Рисков высокого уровня', summary['risks_high']],
         ['Рисков среднего уровня', summary['risks_medium']],
         ['Рассмотрено пунктов чек-листов', summary['checklist_total']],
-        ['Нормативных ссылок проверено', len(normative_rows)],
+        ['Уникальных НТД в проекте', len(normative_rows)],
+        ['Упоминаний НТД проанализировано', len(normative_reference_details)],
         ['НТД действуют / с изменениями', normative_statuses.get('Действует',0)+normative_statuses.get('Действует с изменениями',0)],
         ['НТД требуют внимания', normative_attention],
         ['Нормативных рисков высокого влияния', normative_high],
@@ -289,6 +299,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Соответствуют Заданию', assignment_summary.get('compliant',0)],
         ['Отклонений от Задания', assignment_summary.get('deviation',0)],
         ['Требования Задания требуют проверки', assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)],
+        ['Требования Задания не проверены системой', assignment_summary.get('not_checked',0)],
+        ['Структурированных требований НТД в базе', normative_compliance_summary.get('requirements',0)],
+        ['Верифицированных пунктов НТД', normative_compliance_summary.get('verified_clause',0)],
         ['Объектов в модели проекта', project_understanding_quality.get('objects',0)],
         ['Объектов с привязанными показателями', project_understanding_quality.get('objects_with_properties',0)],
         ['Неразрешённых привязок объект–показатель', project_understanding_quality.get('unresolved_properties',0)],
@@ -349,6 +362,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
 
     assignment_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
+        'Строка Задания':x.get('source_row') or '—',
+        'Раздел / вопрос Задания':x.get('source_row_title') or '—',
+        'Тип проверки':x.get('requirement_type') or '—',
         'Требование Задания':x.get('requirement_text'),
         'Объект':x.get('object_name') or '—',
         'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
@@ -358,6 +374,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Документ':x.get('source_document'),
         'Страница':x.get('page'),
         'Доказательства':' | '.join(x.get('evidence') or []),
+        'Ожидаемое доказательство':x.get('expected_evidence') or '',
+        'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation'),
     } for x in assignment_rows])
 
@@ -365,6 +383,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'НТД':x.get('reference'),
         'Пункт / статья':x.get('clause') or '—',
         'Тип требования':x.get('modality'),
+        'Тип проверки':x.get('check_kind') or '—',
+        'Качество нормативного основания':x.get('requirement_quality') or '—',
         'Контекст в проекте':x.get('project_context'),
         'Статус НТД':x.get('normative_status'),
         'Статус редакции':x.get('edition_status'),
@@ -380,11 +400,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Статус':x.get('status'),
         'Статус редакции':(x.get('edition_assessment') or {}).get('edition_status',''),
         'Актуальная редакция / замена':(x.get('edition_assessment') or {}).get('current_reference','') or x.get('replacement',''),
-        'Файл':x.get('document'),
-        'Страница':x.get('page'),
+        'Количество упоминаний':x.get('mentions',1),
+        'Документов':x.get('documents_count',1 if x.get('document') else 0),
+        'Где встречается':'; '.join(x.get('pages') or []) if isinstance(x.get('pages'),list) else f"{x.get('document') or ''}, стр. {x.get('page') or ''}",
         'Риск влияния':x.get('impact_risk'),
         'Приоритет базы':x.get('verification_priority'),
-        'Замечаний экспертизы':x.get('expert_occurrences',0),
         'Дата проверки':x.get('verified_on') or x.get('last_verified_at') or '',
         'Источник проверки':x.get('official_source'),
     } for x in normative_rows])
@@ -395,10 +415,25 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     object_df = _excel_safe_frame(object_df)
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
+
+    normative_compliance_df = pd.DataFrame([{
+        'ID требования':x.get('requirement_id'),
+        'НТД':x.get('source'),
+        'Пункт / статья':x.get('paragraph') or '—',
+        'Тема':x.get('topic'),
+        'Требование':x.get('requirement'),
+        'Тип проверки':x.get('check_kind'),
+        'Пункт верифицирован':'Да' if x.get('verified_clause') else 'Нет',
+        'Готово для AI-review':'Да' if x.get('ai_review_ready') else 'Нет',
+        'Результат':x.get('status'),
+        'Основание вывода':x.get('decision_basis'),
+        'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
+    } for x in normative_compliance_rows])
     normative_df = _excel_safe_frame(normative_df)
     assignment_df = _excel_safe_frame(assignment_df)
     understanding_df = _excel_safe_frame(understanding_df)
     normative_requirement_df = _excel_safe_frame(normative_requirement_df)
+    normative_compliance_df = _excel_safe_frame(normative_compliance_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     if not risks_df.empty:
@@ -421,8 +456,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             sheets.append(('НТД — внимание', attention_norm))
     elif report_kind in {'gip','technical'} and not normative_df.empty:
         sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
-    if report_kind in {'gip','technical'} and not normative_requirement_df.empty:
-        sheets.append(('Требования НТД', normative_requirement_df if report_kind=='technical' else normative_requirement_df.head(100)))
+    if report_kind in {'gip','technical'} and not normative_compliance_df.empty:
+        sheets.append(('Проверка требований НТД', normative_compliance_df if report_kind=='technical' else normative_compliance_df.head(100)))
+    if report_kind == 'technical' and not normative_requirement_df.empty:
+        sheets.append(('Контекст ссылок НТД', normative_requirement_df))
     if report_kind in {'gip','technical'} and not understanding_df.empty:
         sheets.append(('Модель проекта', understanding_df if report_kind=='technical' else understanding_df.head(150)))
     if report_kind == 'manager' and not assignment_df.empty:
@@ -432,6 +469,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     elif report_kind in {'gip','technical'} and not assignment_df.empty:
         sheets.append(('Задание на проектирование',assignment_df))
     sheets.append(('План действий', recommendations_df))
+    if report_kind == 'technical' and normative_reference_details:
+        detailed_normative_df=pd.DataFrame(normative_reference_details)
+        if not detailed_normative_df.empty:
+            sheets.append(('НТД — все упоминания', _excel_safe_frame(detailed_normative_df)))
     if report_kind == 'technical':
         for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
             if not frame.empty:

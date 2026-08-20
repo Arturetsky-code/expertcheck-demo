@@ -284,14 +284,18 @@ def _dashboard(ctx):
             a1.metric('Требований',assignment_summary.get('total',len(assignment_rows)))
             a2.metric('Соответствуют',assignment_summary.get('compliant',0))
             a3.metric('Отклонения',assignment_summary.get('deviation',0))
-            a4.metric('Требуют проверки',assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0))
+            a4.metric('Требуют проверки / не проверены',assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)+assignment_summary.get('not_checked',0))
             show=pd.DataFrame([{
+                'Строка':x.get('source_row') or '—',
+                'Раздел / вопрос':x.get('source_row_title') or '—',
+                'Тип проверки':x.get('requirement_type') or '—',
                 'Требование':x.get('requirement_text'),
                 'Объект':x.get('object_name') or '—',
                 'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
                 'Требуемое значение':(str(x.get('required_value'))+' '+str(x.get('unit') or '')).strip() if x.get('required_value') is not None else '—',
                 'Результат':x.get('status'),
                 'Достоверность привязки':f"{float(x.get('match_confidence') or 0)*100:.0f}%",
+                'Ожидаемое доказательство':x.get('expected_evidence') or '',
                 'Основание вывода':x.get('decision_basis') or '',
                 'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
                 'Доказательства':' | '.join(x.get('evidence') or []),
@@ -308,13 +312,14 @@ def _dashboard(ctx):
             st.dataframe(show, hide_index=True, width='stretch')
         else:
             st.info('Автоматический аудит исходных документов пока не сформирован.')
-        validity = first_doc.get('normative_validity_audit') or []
+        validity_details = first_doc.get('normative_validity_audit') or []
+        validity = first_doc.get('normative_reference_summary') or validity_details
         validity_summary = first_doc.get('normative_validity_summary') or {}
         if validity:
             statuses=validity_summary.get('statuses') or {}
             st.markdown('#### Проверка актуальности НТД')
             c1,c2,c3,c4=st.columns(4)
-            c1.metric('Найдено ссылок',validity_summary.get('references',len(validity)))
+            c1.metric('Уникальных НТД',len(validity))
             c2.metric('Действует',statuses.get('Действует',0)+statuses.get('Действует с изменениями',0))
             c3.metric('Требуют верификации',statuses.get('Требует верификации',0)+statuses.get('Возможна устаревшая редакция',0))
             c4.metric('Устаревшие редакции',validity_summary.get('outdated_editions',0))
@@ -322,7 +327,8 @@ def _dashboard(ctx):
                 'НТД':x.get('reference'),'Статус':x.get('status'),
                 'Редакция':(x.get('edition_assessment') or {}).get('edition_status',''),
                 'Актуальная замена':(x.get('edition_assessment') or {}).get('current_reference',''),
-                'Файл':x.get('document'),'Стр.':x.get('page'),
+                'Упоминаний':x.get('mentions',1),'Документов':x.get('documents_count',1 if x.get('document') else 0),
+                'Где встречается':'; '.join(x.get('pages') or []) if isinstance(x.get('pages'),list) else f"{x.get('document') or ''}, стр. {x.get('page') or ''}",
                 'Риск влияния':x.get('impact_risk'),
                 'Приоритет базы':x.get('verification_priority'),
                 'Замечаний экспертизы':x.get('expert_occurrences',0),

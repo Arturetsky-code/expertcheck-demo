@@ -20,7 +20,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 10.0 Alpha 4 · Evidence Semantics & Finding Qualification'
+VERSION='ExpertCheck 10.0 Alpha 5 · Trust Pipeline & Focused Workflow'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -53,14 +53,22 @@ with st.sidebar:
     sidebar_group('Этапы проверки')
     has_result = bool(st.session_state.result)
     object_gate = bool(st.session_state.get('object_registry_confirmed'))
-    guided_pages = ['Мои проекты', 'Проект']
-    if has_result:
-        guided_pages.extend(['Состав объектов', 'Чек-листы'])
-    if object_gate:
-        guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
-    guided_pages.append('Настройки')
+    if st.session_state.get('expert_mode'):
+        guided_pages = ['Мои проекты', 'Проект']
+        if has_result:
+            guided_pages.extend(['Состав объектов', 'Чек-листы'])
+        if object_gate:
+            guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
+        guided_pages.append('Настройки')
+    else:
+        guided_pages=['Мои проекты','Проект']
+        if has_result:
+            guided_pages.append('Центр проверки')
+        if object_gate:
+            guided_pages.extend(['Результаты','Отчёт'])
+        guided_pages.append('Настройки')
     if st.session_state.get('page') not in guided_pages:
-        st.session_state.page = 'Состав объектов' if has_result else 'Мои проекты'
+        st.session_state.page = ('Центр проверки' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'
     page=st.radio('Раздел',guided_pages,label_visibility='collapsed',key='page')
     if not has_result:
         st.caption('Следующий этап откроется после загрузки проекта.')

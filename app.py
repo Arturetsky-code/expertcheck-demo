@@ -20,7 +20,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 10.0 Alpha 5 · Trust Pipeline & Focused Workflow'
+VERSION='ExpertCheck 10.1 Alpha 1 · Review Planner & Verification Core'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -61,19 +61,18 @@ with st.sidebar:
             guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
     else:
+        # Рабочий интерфейс: только пользовательский маршрут.
         guided_pages=['Мои проекты','Проект']
         if has_result:
-            guided_pages.append('Центр проверки')
-        if object_gate:
-            guided_pages.extend(['Результаты','Отчёт'])
+            guided_pages.extend(['Проверка','Результаты','Отчёт'])
         guided_pages.append('Настройки')
     if st.session_state.get('page') not in guided_pages:
-        st.session_state.page = ('Центр проверки' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'
+        st.session_state.page = ('Проверка' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'
     page=st.radio('Раздел',guided_pages,label_visibility='collapsed',key='page')
     if not has_result:
         st.caption('Следующий этап откроется после загрузки проекта.')
     elif not object_gate:
-        st.caption('Сверка, риски и отчёт откроются после подтверждения состава объектов.')
+        st.caption('Результаты до подтверждения состава считаются предварительными.')
     else:
         st.caption('Все основные этапы доступны.')
     user=st.session_state.get('auth_user') or {}
@@ -92,6 +91,9 @@ with st.sidebar:
         key='interface_mode_toggle',
     )
     st.caption('Рабочий режим' if not st.session_state.expert_mode else 'Отображаются технические данные')
+    if not st.session_state.expert_mode:
+        with st.expander('Дополнительно', expanded=False):
+            st.caption('История проектов и расширенные настройки доступны в режиме разработчика.')
     st.caption(VERSION)
 header(VERSION)
 docs,findings,raw_comparisons=frames(st.session_state.result)

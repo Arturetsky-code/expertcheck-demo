@@ -1,4 +1,8 @@
-# ExpertCheck 10.0 Alpha 1 — Evidence-Driven Requirements Engine
+# ExpertCheck 10.1 Alpha 1 — Review Planner & Verification Core
+
+Основной пользовательский контур: **Проект → Проверка → Результаты → Отчёт**. Проверка строится вокруг трёх вопросов: соответствие Заданию на проектирование, НТД и корпоративным чек-листам. Технические engines работают как поставщики доказательств и скрыты в обычном режиме.
+
+Подробности: `REVIEW_PLANNER_101.md` и `RELEASE_NOTES_101_ALPHA1.md`.
 
 # ExpertCheck 7.1 Alpha 1 — Trusted Engineering Intelligence
 

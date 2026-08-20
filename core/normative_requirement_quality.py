@@ -16,7 +16,8 @@ def requirement_quality(requirement: dict[str, Any], document_record: dict[str, 
     req_status = str(requirement.get("verification_status") or requirement.get("status") or "").strip()
     doc_status = str((document_record or {}).get("status") or "").strip()
     verified_doc = bool(document_id and document_record and doc_status in VERIFIED_DOCUMENT_STATUSES)
-    verified_clause = bool(clause and verified_doc)
+    explicit_clause_verified = bool(requirement.get('clause_verified') or requirement.get('verified_clause_text') or str(requirement.get('verification_status') or '').strip().lower() in {'верифицировано','verified','пункт верифицирован'})
+    verified_clause = bool(clause and verified_doc and explicit_clause_verified)
     policy = str(requirement.get("conclusion_policy") or "PRELIMINARY_ONLY").upper()
 
     if verified_clause and policy in {"CATEGORICAL_ALLOWED", "VERIFIED_ONLY"}:

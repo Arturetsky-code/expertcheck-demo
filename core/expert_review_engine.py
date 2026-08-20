@@ -8,6 +8,7 @@ import re
 
 from .remark_learning import RemarkLearningEngine
 from .finding_qualification import qualify_comparison, qualify_checklist
+from .nonfinding_policy import can_create_negative_finding
 
 
 def _text(row: dict[str, Any], *keys: str) -> str:
@@ -180,7 +181,14 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         for index,row in enumerate(audit):
             if row.get('status') == 'Найдено':
                 continue
-            risk={"risk_id":f"R-IRD-{index+1:03d}","level":"Средний","score":46,"category":"Исходные и разрешительные документы","object":"","parameter":row.get('title') or row.get('code'),"finding":"Автоматический анализ не подтвердил наличие документа или сведений.","possible_remark":"Не подтверждена полнота исходных данных и документов, необходимых для обоснования проектных решений.","recommendation":row.get('recommendation') or 'Проверить наличие, применимость и актуальность документа.',"sources":"","origin":"Engineering Intelligence","evidence_strength":"Средняя"}
+            # Global Non-Finding Rule: a failed automatic search is diagnostic only.
+            # IRD can enter the risk register only if an explicit contradictory source
+            # or a verified negative fact is present.
+            evidence=row.get('evidence') or row.get('sources') or row.get('source') or ''
+            explicit=bool(row.get('explicit_absence') or row.get('verified_negative'))
+            if not can_create_negative_finding(status=row.get('status'),basis=row.get('reason') or row.get('evidence'),evidence=evidence,explicit_contradiction=explicit):
+                continue
+            risk={"risk_id":f"R-IRD-{index+1:03d}","level":"Средний","score":46,"category":"Исходные и разрешительные документы","object":"","parameter":row.get('title') or row.get('code'),"finding":"Наличие обязательного документа опровергнуто проверяемым источником.","possible_remark":"Требуется проверить полноту исходных данных и документов, необходимых для обоснования проектных решений.","recommendation":row.get('recommendation') or 'Проверить наличие, применимость и актуальность документа.',"sources":evidence,"origin":"Engineering Intelligence","evidence_strength":"Средняя"}
             risks.append(_enrich(risk,scenarios))
     risks=[_attach_historical_remarks(r,remark_engine) for r in risks]
     unique={}

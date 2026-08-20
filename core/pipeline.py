@@ -61,6 +61,7 @@ from .evidence_provenance import annotate_evidence_provenance
 from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
+from .requirements_ai_reasoner import review_assignment_rows
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -318,7 +319,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "9.9.0-requirements-intelligence"
+        item["core_version"] = "10.0.0-evidence-driven-requirements"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -472,10 +473,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     try:
         assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
         assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry)
+        assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
+        if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
+            assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_compliance, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
         assignment_compliance_summary = assignment_summary(assignment_compliance)
+        assignment_compliance_summary["ai_evidence_review"]=assignment_ai_summary
     except Exception as exc:
         assignment_requirements, assignment_compliance = [], []
-        assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"error":str(exc)}
+        assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"ai_evidence_review":{"reviewed":0,"confirmed":0,"contradicted":0},"error":str(exc)}
         pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
@@ -508,8 +513,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         normative_requirement_audit = []
         pipeline_errors.append({"stage":"normative_requirement_analysis","error":str(exc)})
     try:
-        normative_compliance_audit = NormativeComplianceEngine(root / "knowledge").review(findings)
+        normative_engine = NormativeComplianceEngine(root / "knowledge")
+        normative_compliance_audit = normative_engine.review(findings, project_type=str(pp87_project_profile.get("project_type") or "") if isinstance(pp87_project_profile,dict) else "")
         normative_compliance_summary = NormativeComplianceEngine.summary(normative_compliance_audit)
+        normative_compliance_summary["knowledge_coverage"] = normative_engine.coverage()
     except Exception as exc:
         normative_compliance_audit = []
         normative_compliance_summary = {"requirements":0,"verified_clause":0,"ai_review_ready":0,"requires_kb_verification":0,"project_review":0,"error":str(exc)}
@@ -517,7 +524,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "9.9.0-requirements-intelligence"
+        item["core_version"] = "10.0.0-evidence-driven-requirements"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -538,7 +545,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     for doc in documents:
-        doc["core_version"] = "9.9.0-requirements-intelligence"
+        doc["core_version"] = "10.0.0-evidence-driven-requirements"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

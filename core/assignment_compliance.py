@@ -8,6 +8,7 @@ from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, is_parameter_entity_name
 from .entity_property_binding import stable_object_id
+from .requirement_contracts import build_contract, evidence_packet, SCOPE_PROJECT, SCOPE_SITE, SCOPE_SYSTEM, SCOPE_DOCUMENT, SCOPE_OBJECT, SCOPE_EQUIPMENT
 
 ASSIGNMENT_TYPES=("задание на проектирование","техническое задание","тз на проектирование","знп")
 REQ_VERBS=("предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","определить")
@@ -95,6 +96,63 @@ def _join_column(lines:list[dict[str,Any]],x_min:float,x_max:float,y0:float,y1:f
         words=[w[4] for w in line["words"] if w[0]>=x_min and w[0]<x_max]
         if words: parts.append(" ".join(words))
     return re.sub(r"\s+"," "," ".join(parts)).strip()
+
+
+
+
+def _table_cells_from_pdf(data:bytes)->list[dict[str,Any]]:
+    """Primary Assignment parser: recover real table cells with PyMuPDF find_tables().
+
+    Section divider rows and table headers are kept out of requirement cells. Empty-number
+    continuation rows are merged only when they contain right-column content, preventing
+    labels such as «Состав объекта» from leaking into the previous requirement.
+    """
+    try:
+        import fitz
+        doc=fitz.open(stream=data,filetype="pdf")
+    except Exception:
+        return []
+    result=[]; active=None; section_title=""
+    for pidx,page in enumerate(doc):
+        low=normalize_text(page.get_text("text") or "")
+        if pidx>1 and "приложение 1 к заданию" in low:
+            break
+        try:
+            tables=page.find_tables().tables
+        except Exception:
+            tables=[]
+        for table in tables:
+            if getattr(table,'col_count',0) < 3:
+                continue
+            for raw in table.extract() or []:
+                cells=[re.sub(r"\s+"," ",str(x or "")).strip() for x in (list(raw)+["",""])[:3]]
+                no,title,content=cells
+                nmatch=re.fullmatch(r"\d{1,3}",no)
+                # Repeated page header.
+                if normalize_text(no).startswith("№") or "перечень данных" in normalize_text(title):
+                    continue
+                if nmatch:
+                    row={"row_no":int(no),"row_title":title,"content":content,"page":pidx+1,"section_title":section_title,"cell_reconstruction":"TABLE_CELL_LOCKED"}
+                    result.append(row); active=row
+                    continue
+                # A one-cell divider such as «Состав объекта» / «Требования к проектным решениям».
+                nonempty=[x for x in cells if x]
+                if len(nonempty)==1 and not content:
+                    section_title=nonempty[0]
+                    active=None
+                    continue
+                # Continuation of a row split across a page: only right-column text is merged.
+                if active and content and not no and not title:
+                    active["content"]=(active.get("content","")+" "+content).strip()
+                elif active and content and not no and title and len(title)<8:
+                    active["content"]=(active.get("content","")+" "+content).strip()
+    # De-duplicate by row number + normalized cells, preserving page continuations.
+    out=[]; seen=set()
+    for r in result:
+        key=(r['row_no'],normalize_text(r.get('row_title')),normalize_text(r.get('content')))
+        if key in seen: continue
+        seen.add(key); out.append(r)
+    return out
 
 
 def _layout_rows_from_pdf(data:bytes)->list[dict[str,Any]]:
@@ -275,13 +333,13 @@ def extract_requirements(files,reader)->list[dict[str,Any]]:
         except Exception: continue
         first=" ".join(t for _,t in pages[:2])
         if not (_assignment_file(name,doc_type) or any(x in normalize_text(first) for x in ASSIGNMENT_TYPES)): continue
-        structured=_layout_rows_from_pdf(data)
+        structured=_table_cells_from_pdf(data) or _layout_rows_from_pdf(data)
         appendix_objects=_extract_appendix_objects(data)
         atoms=[]
         if structured:
             for sr in structured:
                 for part in _split_requirement_atoms(sr.get("content") or ""):
-                    atoms.append({"row_no":sr["row_no"],"row_title":sr.get("row_title","")[:350],"text":part,"page":sr.get("page")})
+                    atoms.append({"row_no":sr["row_no"],"row_title":sr.get("row_title","")[:350],"section_title":sr.get("section_title","")[:350],"text":part,"page":sr.get("page"),"cell_reconstruction":sr.get("cell_reconstruction","")})
         else:
             for page,text in pages:
                 for atom in _plain_atomic_fragments(text): atoms.append({**atom,"page":page})
@@ -304,9 +362,13 @@ def extract_requirements(files,reader)->list[dict[str,Any]]:
               "source_row_title":title,"requirement_text":sentence[:1800],"object_name":obj,
               "object_id":stable_object_id(obj) if obj else "","parameter_code":canonical_parameter_code(code),
               "required_value":value,"unit":unit,"requirement_type":req_type,"atomic":True,
-              "confidence":0.96 if structured and req_type==TYPE_VALUE else 0.92 if structured else 0.68,
+              "confidence":0.98 if atom.get("cell_reconstruction")=="TABLE_CELL_LOCKED" else 0.96 if structured and req_type==TYPE_VALUE else 0.92 if structured else 0.68,
               "expected_evidence":_expected_evidence(req_type,title,sentence),
+              "source_section":atom.get("section_title") or "",
+              "cell_reconstruction":atom.get("cell_reconstruction") or ("GEOMETRIC_ROW" if structured else "TEXT_FALLBACK"),
             }
+            item["evidence_contract_v2"]=build_contract(item)
+            item["requirement_scope"]=item["evidence_contract_v2"].get("scope")
             if req_type==TYPE_SET and appendix_objects:
                 item["expected_objects"]=[dict(x) for x in appendix_objects]
             rows.append(item)
@@ -393,6 +455,7 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
     registry=registry or [];out=[]
     for req in requirements:
         obj=str(req.get("object_name") or ""); obj_norm=normalize_text(obj);code=canonical_parameter_code(req.get("parameter_code"));rtype=req.get("requirement_type") or TYPE_SEMANTIC
+        contract=req.get("evidence_contract_v2") or build_contract(req); scope=contract.get("scope")
         if rtype=="NUMERIC": rtype=TYPE_VALUE
         elif rtype=="OBJECT": rtype=TYPE_PRESENCE
         elif rtype=="SEMANTIC": rtype=TYPE_SEMANTIC
@@ -402,21 +465,29 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         elif rtype==TYPE_VALUE and code:
             # Critical quality gate: a value without an identifiable owner/subject is
             # not compared against arbitrary project facts with the same metric code.
-            if not obj_norm:
-                status="Требует проверки";basis="Числовое требование распознано, но инженерная сущность-владелец значения не установлена; автоматическое сравнение запрещено."
+            if not obj_norm and scope in {SCOPE_OBJECT,SCOPE_EQUIPMENT}:
+                status="Требует проверки";basis="Числовое требование относится к конкретной сущности, но её владелец не установлен; автоматическое сравнение запрещено."
             else:
                 numeric=[]
+                expected_sections=[normalize_text(x) for x in contract.get("expected_sections") or []]
                 for f in findings:
                     if canonical_parameter_code(f.get("parameter_code"))!=code:continue
                     fobj=str(f.get("semantic_anchor_name") or f.get("object_hint") or "");fn=normalize_text(fobj)
-                    if not fn or is_parameter_entity_name(fobj):continue
-                    if not (obj_norm==fn or obj_norm in fn or fn in obj_norm):continue
+                    if scope in {SCOPE_OBJECT,SCOPE_EQUIPMENT}:
+                        if not fn or is_parameter_entity_name(fobj):continue
+                        if not (obj_norm==fn or obj_norm in fn or fn in obj_norm):continue
+                    section=normalize_text(f.get("document_type") or f.get("section_family") or f.get("section") or "")
+                    if expected_sections and section and not any(x in section or section in x for x in expected_sections):continue
                     if (f.get("entity_property_binding") or {}).get("valid") is False:continue
+                    if str(f.get("fact_admission_decision") or "ADMIT").upper() in {"HOLD","REJECT"}:continue
                     try:val=float(str(f.get("value")).replace(",","."))
                     except Exception:continue
                     numeric.append((val,f))
                 if not numeric:
-                    status="Требование не подтверждено";basis="Для того же объекта/сущности и показателя структурированное значение в ПД не найдено. Это не доказывает невыполнение требования."
+                    if req.get("evidence_contract_v2"):
+                        status="Не проверено системой";basis="Структурированное значение по контракту доказательств не найдено. Это является пробелом автоматического покрытия, а не доказательством невыполнения требования."
+                    else:
+                        status="Требование не подтверждено";basis="Для того же объекта/сущности и показателя структурированное значение в ПД не найдено. Это не доказывает невыполнение требования."
                 else:
                     required=float(req["required_value"]);same=[(v,f) for v,f in numeric if math.isclose(v,required,rel_tol=.002,abs_tol=.05)]
                     if same:
@@ -434,13 +505,15 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
                 evidence=[f"{x.get('document')}, стр. {x.get('page')}: {x.get('context') or x.get('value_text')}" for x in candidates[:4]]
             else:
                 status="Не проверено системой";basis=f"Для типа {rtype} нет достаточного специализированного алгоритма/доказательств; отсутствие находки не считается невыполнением требования."
-        out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
+        packet=evidence_packet(req,candidates)
+        out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
                     "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
     return out
 
 
-def summary(rows:list[dict[str,Any]])->dict[str,int]:
+def summary(rows:list[dict[str,Any]])->dict[str,Any]:
     result={"total":len(rows),"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0}
+    by_type={}; by_scope={}; deterministic_ready=0; ai_ready=0
     for r in rows:
         s=r.get("status")
         if s=="Соответствует заданию":result["compliant"]+=1
@@ -448,6 +521,16 @@ def summary(rows:list[dict[str,Any]])->dict[str,int]:
         elif s=="Не проверено системой":result["not_checked"]+=1
         elif s=="Требуется смысловая проверка":result["semantic"]+=1
         else:result["unconfirmed"]+=1
+        typ=str(r.get("requirement_type") or "UNCLASSIFIED"); by_type[typ]=by_type.get(typ,0)+1
+        scope=str(r.get("requirement_scope") or (r.get("evidence_contract_v2") or {}).get("scope") or "UNRESOLVED"); by_scope[scope]=by_scope.get(scope,0)+1
+        method=str((r.get("evidence_contract_v2") or {}).get("check_method") or "")
+        if method in {"VALUE_COMPARISON","SET_COMPARISON","CALCULATION_PRESENCE"}: deterministic_ready+=1
+        if (r.get("evidence_contract_v2") or {}).get("ai_allowed"): ai_ready+=1
+    result.update({
+      "by_type":by_type,"by_scope":by_scope,"deterministic_ready":deterministic_ready,"ai_ready":ai_ready,
+      "automatic_coverage_pct":round(100*(result["compliant"]+result["deviation"])/max(1,len(rows)),1),
+      "structured_requirement_pct":round(100*sum(1 for r in rows if r.get("cell_reconstruction")=="TABLE_CELL_LOCKED")/max(1,len(rows)),1),
+    })
     return result
 
 # Backward-compatible helper used by the 9.8 regression suite.

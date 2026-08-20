@@ -1,0 +1,11 @@
+{
+  "benchmark_id": "AR2_DRAWING_GOLDEN_V1",
+  "purpose": "Golden Drawing Set для проверки Drawing Intelligence без отраслевой привязки логики",
+  "source_document": "Раздел ПД №3_АР2.pdf",
+  "cases": [
+    {"position":"4.12","object":"Модуль обеспыливания","page":20,"room":"Помещение для обеспыливания","area":12.7,"schedule_total":12.7,"must_not_promote_to":["AREA_TOTAL","AREA_BUILD"]},
+    {"position":"4.13","object":"Здание проборазделки","page":22,"room":"Венткамера","area":32.6,"schedule_total":72.0,"must_not_promote_to":["AREA_TOTAL","AREA_BUILD"]},
+    {"position":"4.16","object":"Электрощитовая","page":28,"rooms":[{"name":"Электрощитовая N1","area":58.7},{"name":"Электрощитовая N2","area":28.4}],"schedule_total":87.1,"must_not_promote_to":["AREA_TOTAL","AREA_BUILD"]},
+    {"position":"4.5","object":"Компрессорная","page":36,"room":"Помещение компрессорной","area":25.4,"schedule_total":25.4,"must_not_promote_to":["AREA_TOTAL","AREA_BUILD"]}
+  ]
+}

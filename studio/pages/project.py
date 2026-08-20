@@ -243,6 +243,30 @@ def _dashboard(ctx):
             with st.expander('Принцип формирования модели',expanded=False):
                 st.write('Показатель не может создавать объект. Сначала объект должен попасть в подтверждённый реестр проекта; только после этого площадь, объём, высота, мощность, расход и другие характеристики могут быть привязаны к нему. Неоднозначная привязка остаётся нерешённой и не используется для автоматического замечания.')
 
+            drawing=first_doc.get('drawing_intelligence_v2') or {}
+            dsum=drawing.get('summary') or {}
+            if dsum.get('documents'):
+                st.markdown('#### Понимание чертежей')
+                d1,d2,d3,d4=st.columns(4)
+                d1.metric('Объектных комплектов',dsum.get('objects',0))
+                d2.metric('Чертёжных листов',dsum.get('sheets',0))
+                d3.metric('Экспликаций помещений',dsum.get('room_schedules',0))
+                d4.metric('Помещений',dsum.get('rooms',0))
+                st.caption('Площади помещений и итог экспликации хранятся как локальные показатели чертежа и не приравниваются автоматически к общей площади или площади застройки объекта.')
+                with st.expander('Экспликации помещений и доказательства',expanded=False):
+                    dr=[]
+                    for sched in drawing.get('room_schedules') or []:
+                        dr.append({
+                            'Объект':sched.get('parent_object'),'Позиция':sched.get('position') or '—','Страница':sched.get('page'),
+                            'Помещений':len(sched.get('rows') or []),'Итого по экспликации, м²':sched.get('reported_total'),
+                            'Сумма строк, м²':sched.get('calculated_total'),'Проверка суммы':'Совпадает' if sched.get('total_matches_rows') else 'Требует проверки',
+                            'Привязка владельца':'По основной надписи' if sched.get('owner_binding')=='TITLE_BLOCK_EXACT' else 'Требует проверки',
+                        })
+                    if dr:
+                        st.dataframe(pd.DataFrame(dr),hide_index=True,width='stretch')
+                    if dsum.get('withheld_bindings'):
+                        st.info(f"Неоднозначных привязок листов удержано без догадки: {dsum.get('withheld_bindings')}")
+
     with tab_documents:
         render_documents(ctx)
     with tab_completeness:

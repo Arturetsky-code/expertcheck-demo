@@ -185,5 +185,29 @@
     ],
     "priority": "Средний",
     "source": "legacy migration"
+  },
+  {
+    "id": "AREA_ROOM",
+    "name": "Площадь помещения",
+    "unit": "м²",
+    "aliases": [
+      "площадь помещения"
+    ],
+    "group": "Локальные показатели чертежа",
+    "comparable_with": [],
+    "priority": "Средний",
+    "source": "Drawing Intelligence 2.0"
+  },
+  {
+    "id": "AREA_ROOM_SUM",
+    "name": "Сумма площадей помещений по экспликации",
+    "unit": "м²",
+    "aliases": [
+      "итого экспликации помещений"
+    ],
+    "group": "Локальные показатели чертежа",
+    "comparable_with": [],
+    "priority": "Средний",
+    "source": "Drawing Intelligence 2.0"
   }
 ]

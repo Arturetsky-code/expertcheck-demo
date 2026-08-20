@@ -80,3 +80,42 @@ def scope_label(value: Any) -> str:
 
 def localize_parameter_list(values: Any) -> list[str]:
     return [parameter_label(v) for v in (values or [])]
+
+EVIDENCE_LABELS = {
+    'VERIFIED_EVIDENCE':'Подтверждённое доказательство',
+    'VERIFIED_SET_EVIDENCE':'Подтверждённое структурное доказательство',
+    'CANDIDATE_EVIDENCE':'Кандидат в доказательства',
+    'NO_EVIDENCE':'Доказательства не найдены',
+    'TABLE_CELL_LOCKED':'Ячейка таблицы восстановлена',
+    'GEOMETRIC_ROW':'Строка восстановлена по геометрии',
+    'TEXT_FALLBACK':'Резервное текстовое извлечение',
+    'PROJECT_FINDING':'Проблема проекта',
+    'REVIEW_QUESTION':'Вопрос специалисту',
+    'SYSTEM_LIMITATION':'Ограничение автоматической проверки',
+    'PROJECT_STATUS':'Статус проекта',
+    'REQUIREMENT_DIRECTED_TEXT':'Направленный поиск по требованию',
+    'SEMANTIC_CONTRACT_MATCH':'Смысловое сопоставление с контрактом доказательства',
+}
+
+HEADER_LABELS = {
+    'table_title':'Наименование таблицы','table_row':'Строка таблицы','explanation':'Пояснение',
+    'reference':'Ссылка/обозначение','canonical_id':'Канонический ID','verified_on':'Дата верификации',
+    'verified_revision':'Верифицированная редакция','replacement':'Заменяющий документ',
+    'effective_until':'Действует до','official_source':'Официальный источник','official_source_kind':'Тип официального источника',
+    'impact_risk':'Оценка влияния','cell_reconstruction':'Способ восстановления','evidence_quality_state':'Качество доказательства',
+    'requirement_scope':'Область требования','requirement_type':'Тип требования','finding_type':'Тип результата',
+    'promotion_method':'Способ подтверждения','semantic_evidence_score':'Смысловая достоверность',
+}
+
+def evidence_label(value: Any) -> str:
+    text=str(value or '').strip()
+    return EVIDENCE_LABELS.get(text.upper(), text or '—')
+
+def header_label(value: Any) -> str:
+    text=str(value or '').strip()
+    return HEADER_LABELS.get(text, text)
+
+def localize_service_value(value: Any) -> Any:
+    if not isinstance(value,str): return value
+    text=value.strip()
+    return EVIDENCE_LABELS.get(text.upper(), STATUS_LABELS.get(text.upper(), SCOPE_LABELS.get(text,text)))

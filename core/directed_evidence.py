@@ -12,7 +12,7 @@ from .requirement_contracts import SCOPE_PROJECT, SCOPE_SITE, SCOPE_SYSTEM, SCOP
 # engineering metrics that can appear in any industry profile.
 METRIC_PATTERNS: dict[str, tuple[str, ...]] = {
     'SHIFT_DURATION': (r'продолжительност[ьи]\s+смены', r'смен[аы]\s*(?:составляет|[-–—:])?'),
-    'CAPACITY': (r'производительност[ьи]', r'производственн(?:ая|ой)\s+мощност[ьи]', r'проектн(?:ая|ой)\s+мощност[ьи]'),
+    'CAPACITY': (r'производительност[ьи]', r'производственн(?:ая|ой)\s+мощност[ьи]', r'проектн(?:ая|ой)\s+мощност[ьи]', r'мощност[ьи]'),
     'AREA_BUILD': (r'площад[ьи]\s+застройки',),
     'AREA_TOTAL': (r'общ(?:ая|ей)\s+площад[ьи]',),
     'BODY_VOLUME': (r'об[ъь]?[её]м(?:ом)?\s+кузова',),
@@ -48,15 +48,21 @@ SECTION_ALIASES = {
 
 
 def normalize_engineering_unit(unit: Any) -> str:
-    u=normalize_text(unit).replace(' ', '')
-    u=u.replace('тонн','т').replace('часов','ч').replace('часа','ч').replace('час','ч')
+    raw=normalize_text(unit).lower().replace('ё','е')
+    compact=re.sub(r'\s+','',raw).replace('³','3').replace('²','2')
+    compact=compact.replace('тонн','т').replace('тонны','т').replace('тонну','т')
+    compact=compact.replace('часов','ч').replace('часа','ч').replace('час','ч')
+    compact=compact.replace('вгод','/год').replace('загод','/год').replace('вчас','/ч')
+    compact=compact.replace('тыс.','тыс').replace('тыс','тыс.')
+    compact=compact.replace('м3','м3').replace('м2','м2')
     aliases={
-        'м2':'м2','м²':'м2','м3':'м3','м³':'м3','шт.':'шт','шт':'шт',
-        'т/ч':'т/ч','т/год':'т/год','тыс.т/год':'тыс.т/год','тыс.тоннвгод':'тыс.т/год',
+        'м2':'м2','м3':'м3','шт.':'шт','шт':'шт',
+        'т/ч':'т/ч','т/год':'т/год','тыс.т/год':'тыс.т/год',
+        'тыс.тгод':'тыс.т/год','тыс.т/год.':'тыс.т/год',
         'м3/ч':'м3/ч','л/с':'л/с','квт':'квт','мвт':'мвт','ква':'ква',
         'ч':'ч','м':'м','км':'км','мм':'мм','см':'см',
     }
-    return aliases.get(u,u)
+    return aliases.get(compact,compact)
 
 def units_compatible(required_unit: Any, candidate_unit: Any, code: str='') -> bool:
     ru=normalize_engineering_unit(required_unit); cu=normalize_engineering_unit(candidate_unit)

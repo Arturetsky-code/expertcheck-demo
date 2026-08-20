@@ -59,6 +59,8 @@ def build_structured_report(
     for index, row in enumerate(comparisons):
         level = _group(row.get("status") or row.get("result"))
         counts[level] += 1
+        if str(row.get("finding_type") or "").upper() == "SYSTEM_LIMITATION":
+            continue
         if level not in {"high", "medium"}:
             continue
         # Applicability-aware reporting: absence of a second source is diagnostic,

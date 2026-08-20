@@ -11,6 +11,7 @@ from .entity_property_binding import stable_object_id
 from .requirement_contracts import build_contract, evidence_packet, SCOPE_PROJECT, SCOPE_SITE, SCOPE_SYSTEM, SCOPE_DOCUMENT, SCOPE_OBJECT, SCOPE_EQUIPMENT
 from .object_hierarchy import build_hierarchy, group_is_satisfied
 from .directed_evidence import units_compatible
+from .evidence_semantics import promote_candidates
 
 ASSIGNMENT_TYPES=("задание на проектирование","техническое задание","тз на проектирование","знп")
 REQ_VERBS=("предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","определить")
@@ -471,7 +472,7 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         if rtype==TYPE_SET:
             status,evidence,basis,confidence=_set_compare(req,registry)
         elif rtype==TYPE_VALUE and code:
-            directed=list(req.get('directed_evidence_candidates') or [])
+            directed=promote_candidates(req, list(req.get('directed_evidence_candidates') or []))
             # Critical quality gate: a value without an identifiable owner/subject is
             # not compared against arbitrary project facts with the same metric code.
             if not obj_norm and scope in {SCOPE_OBJECT,SCOPE_EQUIPMENT}:
@@ -531,7 +532,7 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         if req.get('directed_evidence_candidates'):
             candidates=list(req.get('directed_evidence_candidates') or []) + list(candidates or [])
         packet=evidence_packet(req,candidates)
-        evidence_quality_state='VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE')
+        evidence_quality_state=('VERIFIED_SET_EVIDENCE' if rtype==TYPE_SET and status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE')))
         out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"evidence_quality_state":evidence_quality_state,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
                     "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
     return out

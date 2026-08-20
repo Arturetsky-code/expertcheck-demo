@@ -4,6 +4,7 @@ from typing import Any
 import json
 from .normalization import normalize_text
 from .normative_requirement_quality import requirement_quality
+from .normative_golden_pack import golden_pack_summary
 
 KIND_LAW='LAW_REQUIREMENT'
 KIND_ENGINEERING='ENGINEERING_RULE'
@@ -50,6 +51,7 @@ class NormativeKnowledgeBaseV4:
 
     def coverage(self)->dict[str,Any]:
         law=self.law_requirements
+        pack=golden_pack_summary(self.root)
         return {
           'law_requirements':len(law),
           'verified_clauses':sum(1 for x in law if x.get('verified_clause')),
@@ -57,4 +59,8 @@ class NormativeKnowledgeBaseV4:
           'expert_practice_rules':len(self.expert_rules),
           'categorical_ready':sum(1 for x in law if x.get('conclusion_mode')=='CATEGORICAL_ALLOWED'),
           'coverage_pct':round(100*sum(1 for x in law if x.get('verified_clause'))/max(1,len(law)),1),
+          'golden_pack_documents':pack.get('documents',0),
+          'golden_pack_official_sources_verified':pack.get('official_sources_verified',0),
+          'golden_pack_verified_clauses':pack.get('verified_clauses',0),
+          'golden_pack_curation_required':pack.get('curation_required',0),
         }

@@ -5,6 +5,7 @@ from typing import Any
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, is_parameter_entity_name
 from .table_row_integrity import is_integrity_blocked
+from .entity_scope_graph import infer_entity_level, metric_scope_compatible
 
 
 ADMIT = "ADMIT"
@@ -35,6 +36,7 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     scope_decision = str(finding.get("scope_binding_decision") or "ALLOW").upper()
     table_scope_decision = str(finding.get("table_semantic_scope_decision") or "ALLOW").upper()
     obj = str(finding.get("object_hint") or finding.get("semantic_anchor_name") or "").strip()
+    entity_level=infer_entity_level(obj, finding.get("genplan_position") or finding.get("semantic_anchor_position"), finding.get("context") or finding.get("table_title"))
     page = finding.get("page")
     document = str(finding.get("document") or "").strip()
     position = str(finding.get("genplan_position") or finding.get("semantic_anchor_position") or "").strip()
@@ -44,6 +46,14 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
     scope_entity_type = str(finding.get("scope_entity_type") or "").upper().strip()
     metric_scope = str(finding.get("metric_semantic_scope") or "").lower().strip()
+    if metric_scope and not metric_scope_compatible(metric_scope, entity_level):
+        return {
+            "fact_admission_decision": HOLD,
+            "fact_admission_score": 40,
+            "fact_admission_reasons": [f"смысловой уровень показателя «{metric_scope}» несовместим с уровнем сущности «{entity_level}»"],
+            "fact_who_score": 20, "fact_what_score": 50, "fact_value_score": 50, "fact_where_score": 50,
+            "fact_scope_score": 0, "entity_scope_level": entity_level,
+        }
     # Drawing semantic boundary: room/schedule areas are valid evidence but are
     # not building TEPs. They stay in the Drawing Graph and must not be promoted
     # to the project object model as AREA_TOTAL/AREA_BUILD.
@@ -150,4 +160,5 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
         "fact_value_score": min(100, value_score),
         "fact_where_score": min(100, where),
         "fact_scope_score": 100,
+        "entity_scope_level": entity_level,
     }

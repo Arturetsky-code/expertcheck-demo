@@ -137,6 +137,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         qualification=qualify_comparison(row)
         row.update({
             "finding_class":qualification["finding_class"],
+            "finding_type":qualification.get("finding_type"),
             "user_status":qualification["user_status"],
             "finding_qualification_reason":qualification["reason"],
         })
@@ -166,6 +167,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         qualification=qualify_checklist(row)
         row.update({
             "finding_class":qualification["finding_class"],
+            "finding_type":qualification.get("finding_type"),
             "user_status":qualification["user_status"],
             "finding_qualification_reason":qualification["reason"],
         })

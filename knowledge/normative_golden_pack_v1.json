@@ -1,0 +1,46 @@
+[
+  {
+    "pack_id": "NGP-001",
+    "document_id": "СП 18.13330.2019",
+    "title": "Производственные объекты. Планировочная организация земельного участка",
+    "official_source": "Минстрой России",
+    "official_source_url": "https://minstroyrf.gov.ru/docs/",
+    "document_verification": "VERIFIED_OFFICIAL_SOURCE",
+    "clause_verification": "CURATION_REQUIRED",
+    "priority": "Высокий",
+    "target_checks": ["Планировочная организация", "Размещение производственных объектов", "Расстояния и проезды"]
+  },
+  {
+    "pack_id": "NGP-002",
+    "document_id": "СП 131.13330.2020",
+    "title": "Строительная климатология",
+    "official_source": "Минстрой России",
+    "official_source_url": "https://minstroyrf.gov.ru/docs/",
+    "document_verification": "VERIFIED_OFFICIAL_SOURCE",
+    "clause_verification": "CURATION_REQUIRED",
+    "priority": "Высокий",
+    "target_checks": ["Климатические параметры", "Расчётные температуры"]
+  },
+  {
+    "pack_id": "NGP-003",
+    "document_id": "СП 4.13130.2013",
+    "title": "Системы противопожарной защиты. Ограничение распространения пожара на объектах защиты",
+    "official_source": "Нормативный документ, подлежащий кураторской проверке редакции",
+    "official_source_url": "",
+    "document_verification": "SOURCE_CURATION_REQUIRED",
+    "clause_verification": "CURATION_REQUIRED",
+    "priority": "Высокий",
+    "target_checks": ["Противопожарные расстояния", "Пожарная безопасность генерального плана"]
+  },
+  {
+    "pack_id": "NGP-004",
+    "document_id": "СП 14.13330.2018",
+    "title": "Строительство в сейсмических районах",
+    "official_source": "Минстрой России / официальный фонд — требуется фиксация редакции",
+    "official_source_url": "",
+    "document_verification": "SOURCE_CURATION_REQUIRED",
+    "clause_verification": "CURATION_REQUIRED",
+    "priority": "Высокий",
+    "target_checks": ["Сейсмичность площадки", "Применимость расчётных требований"]
+  }
+]

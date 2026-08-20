@@ -6,7 +6,7 @@ import re
 from datetime import datetime, date
 import pandas as pd
 from core.ru_labels import ru_label, ru_join
-from core.display_localization import parameter_label, status_label, scope_label
+from core.display_localization import parameter_label, status_label, scope_label, header_label, localize_service_value
 from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
@@ -505,11 +505,22 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
       "project":"Проект","project_name":"Проект","analysis_time":"Дата проверки","core_version":"Версия ядра",
       "requirement_id":"ID требования","requirement_text":"Требование","required_value":"Требуемое значение",
       "automatic_section":"Раздел","automatic_checklist":"Чек-лист","execution_class":"Тип проверки",
+      "table_title":"Наименование таблицы","table_row":"Строка таблицы","explanation":"Пояснение",
+      "reference":"Ссылка/обозначение","canonical_id":"Канонический ID","verified_on":"Дата верификации",
+      "verified_revision":"Верифицированная редакция","replacement":"Заменяющий документ",
+      "effective_until":"Действует до","official_source":"Официальный источник","official_source_kind":"Тип официального источника",
+      "impact_risk":"Оценка влияния","cell_reconstruction":"Способ восстановления требования",
+      "evidence_quality_state":"Качество доказательства","requirement_scope":"Область требования",
+      "requirement_type":"Тип требования","finding_type":"Тип результата","promotion_method":"Способ подтверждения",
+      "semantic_evidence_score":"Смысловая достоверность",
     }
     normalized_sheets=[]
     for sheet_name,frame in sheets:
         if isinstance(frame,pd.DataFrame):
-            frame=frame.rename(columns={c:header_ru.get(str(c),str(c)) for c in frame.columns})
+            frame=frame.rename(columns={c:header_ru.get(str(c),header_label(c)) for c in frame.columns})
+            for col in frame.columns:
+                if frame[col].dtype == object:
+                    frame[col]=frame[col].map(localize_service_value)
         normalized_sheets.append((sheet_name,frame))
     sheets=normalized_sheets
 

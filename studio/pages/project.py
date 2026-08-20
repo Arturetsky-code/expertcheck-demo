@@ -33,7 +33,25 @@ def _upload(ctx):
             'extended':'Рекомендуемый режим перед экспертизой: ПД + ИИ + ключевая ИРД.',
             'full':'Максимальная глубина. Для больших комплектов обработка может занимать существенно больше времени.'
         }[mode_code])
-        uploads = st.file_uploader('Комплект проекта', type=['pdf', 'xml', 'zip'], accept_multiple_files=True)
+        upload_mode = st.radio(
+            'Способ загрузки комплекта',
+            ['ZIP-архив — рекомендуется', 'Отдельные PDF/XML'],
+            index=0, horizontal=True, key='project_upload_transport_mode',
+            help='Для комплектов из нескольких томов ZIP надёжнее: браузер выполняет одну передачу вместо множества параллельных загрузок.'
+        )
+        if upload_mode.startswith('ZIP'):
+            st.caption('Рекомендуемый режим для полного проекта: упакуйте PDF/XML в один ZIP без пароля. Структура папок внутри архива сохраняется.')
+            zip_upload = st.file_uploader(
+                'Комплект проекта — ZIP', type=['zip'], accept_multiple_files=False,
+                key='project_zip_uploader',
+            )
+            uploads = [zip_upload] if zip_upload is not None else []
+        else:
+            st.caption('Резервный режим. При загрузке большого количества файлов Streamlit/облачный прокси может прервать параллельные передачи. Если появляются красные значки «!», используйте ZIP-режим.')
+            uploads = st.file_uploader(
+                'Комплект проекта — отдельные файлы', type=['pdf', 'xml'],
+                accept_multiple_files=True, key='project_multi_uploader',
+            ) or []
         prepared = []
         edited = pd.DataFrame()
         confirmed = False

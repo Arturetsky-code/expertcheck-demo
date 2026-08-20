@@ -14,7 +14,14 @@ def render(ctx):
         hero('Новая проверка проекта','Загрузите PDF, XML или ZIP-комплект. Перед запуском можно проверить состав и исправить типы документов.','01 · Загрузка → 02 · Проверка состава → 03 · Анализ → 04 · Результат')
         with st.container(border=True):
             name=st.text_input('Наименование проекта',value=st.session_state.project_name)
-            uploads=st.file_uploader('Комплект проекта',type=['pdf','xml','zip'],accept_multiple_files=True)
+            upload_mode=st.radio('Способ загрузки комплекта',['ZIP-архив — рекомендуется','Отдельные PDF/XML'],index=0,horizontal=True,key='overview_upload_transport_mode',help='ZIP надёжнее для многотомных комплектов: браузер выполняет одну передачу.')
+            if upload_mode.startswith('ZIP'):
+                st.caption('Для полного проекта рекомендуется один ZIP без пароля. Структура папок сохраняется.')
+                zip_upload=st.file_uploader('Комплект проекта — ZIP',type=['zip'],accept_multiple_files=False,key='overview_zip_uploader')
+                uploads=[zip_upload] if zip_upload is not None else []
+            else:
+                st.caption('Если при множественной загрузке появляются красные значки «!», переключитесь на ZIP-режим.')
+                uploads=st.file_uploader('Комплект проекта — отдельные файлы',type=['pdf','xml'],accept_multiple_files=True,key='overview_multi_uploader') or []
             prepared=[];edited=pd.DataFrame();confirmed=False;errors=[]
             if uploads:
                 upload_status=st.status('Подготавливаем загруженный комплект…',expanded=False)

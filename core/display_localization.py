@@ -26,6 +26,9 @@ PARAMETER_LABELS = {
     'LINE_COUNT': 'Количество линий',
     'AREA_ROOM': 'Площадь помещения',
     'AREA_ROOM_SUM': 'Сумма площадей помещений по экспликации',
+    'SHIFT_DURATION': 'Продолжительность смены',
+    'BODY_VOLUME': 'Объём кузова',
+    'BUCKET_VOLUME': 'Объём ковша',
 }
 
 STATUS_LABELS = {

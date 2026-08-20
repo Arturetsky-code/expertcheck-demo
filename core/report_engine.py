@@ -61,6 +61,12 @@ def build_structured_report(
         counts[level] += 1
         if level not in {"high", "medium"}:
             continue
+        # Applicability-aware reporting: absence of a second source is diagnostic,
+        # not an action for the GIP unless cross-section confirmation is actually required.
+        status_text=_text(row, "status", "result", "Результат").upper()
+        applicability_proven=bool(row.get("applicability_proven") or row.get("cross_section_required") or row.get("required_confirmation"))
+        if level == "medium" and any(t in status_text for t in ("НЕДОСТАТОЧ", "НЕТ ДАННЫХ", "НЕ ПОДТВЕРЖ")) and not applicability_proven:
+            continue
         problems.append({
             "id": _text(row, "comparison_id", "check_code", "rule_id") or f"XCHK-{index+1:03d}",
             "object": _text(row, "object", "Объект", "object_name") or "Объект не определён",

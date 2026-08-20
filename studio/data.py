@@ -275,7 +275,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         status=str(row.get('status') or 'Требует верификации')
         normative_statuses[status]=normative_statuses.get(status,0)+1
     normative_attention=sum(v for k,v in normative_statuses.items() if k not in {'Действует','Действует с изменениями'})
-    normative_high=sum(1 for x in normative_rows if x.get('impact_risk')=='Высокий' and x.get('status') not in {'Действует','Действует с изменениями'})
+    normative_high=sum(1 for x in normative_rows if x.get('status') in {'Заменён','Утратил силу'} and x.get('impact_risk')=='Высокий')
 
     summary_rows = [
         ['Наименование проекта', project],
@@ -294,7 +294,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Упоминаний НТД проанализировано', len(normative_reference_details)],
         ['НТД действуют / с изменениями', normative_statuses.get('Действует',0)+normative_statuses.get('Действует с изменениями',0)],
         ['НТД требуют внимания', normative_attention],
-        ['Нормативных рисков высокого влияния', normative_high],
+        ['Подтверждённых проблем актуальности НТД высокого влияния', normative_high],
         ['Требований Задания проверено', assignment_summary.get('total',len(assignment_rows))],
         ['Соответствуют Заданию', assignment_summary.get('compliant',0)],
         ['Отклонений от Задания', assignment_summary.get('deviation',0)],
@@ -302,6 +302,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Требования Задания не проверены системой', assignment_summary.get('not_checked',0)],
         ['Структурированных требований НТД в базе', normative_compliance_summary.get('requirements',0)],
         ['Верифицированных пунктов НТД', normative_compliance_summary.get('verified_clause',0)],
+        ['Покрытие НТД верифицированными пунктами, %', normative_compliance_summary.get('verified_coverage_pct',0)],
+        ['НТД готовы к проверке по доказательствам, %', normative_compliance_summary.get('review_ready_pct',0)],
+        ['Структурированность требований Задания, %', assignment_summary.get('structured_requirement_pct',0)],
+        ['Автоматическое покрытие Задания, %', assignment_summary.get('automatic_coverage_pct',0)],
         ['Объектов в модели проекта', project_understanding_quality.get('objects',0)],
         ['Объектов с привязанными показателями', project_understanding_quality.get('objects_with_properties',0)],
         ['Неразрешённых привязок объект–показатель', project_understanding_quality.get('unresolved_properties',0)],
@@ -365,6 +369,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Строка Задания':x.get('source_row') or '—',
         'Раздел / вопрос Задания':x.get('source_row_title') or '—',
         'Тип проверки':x.get('requirement_type') or '—',
+        'Область требования':x.get('requirement_scope') or (x.get('evidence_contract_v2') or {}).get('scope') or '—',
+        'Метод проверки':(x.get('evidence_contract_v2') or {}).get('check_method') or '—',
+        'Ожидаемые разделы':', '.join((x.get('evidence_contract_v2') or {}).get('expected_sections') or []),
+        'Способ восстановления':x.get('cell_reconstruction') or '—',
         'Требование Задания':x.get('requirement_text'),
         'Объект':x.get('object_name') or '—',
         'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
@@ -418,6 +426,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
+        'Тип знания':x.get('knowledge_kind') or 'LAW_REQUIREMENT',
         'НТД':x.get('source'),
         'Пункт / статья':x.get('paragraph') or '—',
         'Тема':x.get('topic'),
@@ -426,6 +435,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Пункт верифицирован':'Да' if x.get('verified_clause') else 'Нет',
         'Готово для AI-review':'Да' if x.get('ai_review_ready') else 'Нет',
         'Результат':x.get('status'),
+        'Покрытие':x.get('coverage_state') or '—',
         'Основание вывода':x.get('decision_basis'),
         'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
     } for x in normative_compliance_rows])
@@ -451,7 +461,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             safe_section=str(section_name or 'Не определён')
             sheets.append((_safe_sheet_name('ЧЛ '+safe_section), section_frame.reset_index(drop=True)))
     if report_kind == 'manager' and not normative_df.empty:
-        attention_norm=normative_df[~normative_df['Статус'].isin(['Действует','Действует с изменениями'])].head(12)
+        attention_norm=normative_df[normative_df['Статус'].isin(['Заменён','Утратил силу'])].head(12)
         if not attention_norm.empty:
             sheets.append(('НТД — внимание', attention_norm))
     elif report_kind in {'gip','technical'} and not normative_df.empty:

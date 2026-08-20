@@ -46,6 +46,7 @@ from .normative_validity import NormativeValidityChecker
 from .normative_requirement_analyzer import NormativeRequirementAnalyzer
 from .normative_compliance_engine import NormativeComplianceEngine
 from .automatic_review import AutomaticProjectReview
+from .project_review_planner import build_review_plan
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
@@ -321,7 +322,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "10.0.0-evidence-driven-requirements"
+        item["core_version"] = "10.1.0-review-planner-verification-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -530,7 +531,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "10.0.0-evidence-driven-requirements"
+        item["core_version"] = "10.1.0-review-planner-verification-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -550,8 +551,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
+    review_plan = build_review_plan(
+        assignment_rows=assignment_compliance,
+        normative_rows=normative_compliance_audit,
+        checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+        comparisons=cross_section_checks,
+    )
     for doc in documents:
-        doc["core_version"] = "10.0.0-evidence-driven-requirements"
+        doc["core_version"] = "10.1.0-review-planner-verification-core"
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit
@@ -656,6 +663,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["normative_compliance_summary"] = normative_compliance_summary
         doc["normative_knowledge_summary"] = normative_layer.summary()
         doc["automatic_checklist_review"] = automatic_review
+        doc["project_review_plan"] = review_plan
         doc["project_understanding"] = project_understanding
         doc["project_understanding_quality"] = project_understanding_quality
         doc["assignment_requirements"] = assignment_requirements

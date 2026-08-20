@@ -47,11 +47,12 @@ def test_report_checklists_are_grouped_by_section_and_headers_russian():
     ]
     payload=structured_excel_report("Тест","9.4",docs,pd.DataFrame([]),pd.DataFrame([]),report_kind="gip",risks=[],checklist_results=checks,assembly_rows_data=[])
     wb=load_workbook(io.BytesIO(payload),read_only=True)
-    assert "Чек-листы — сводка" in wb.sheetnames
-    assert any(x.startswith("ЧЛ ИОС1") for x in wb.sheetnames)
-    assert any(x.startswith("ЧЛ ПЗУ") for x in wb.sheetnames)
-    ws=wb["Чек-листы — сводка"]
+    # Since 10.1 the GIP report is deliberately compact; checklist diagnostics
+    # are aggregated in the verification sheet and per-section detail is technical-only.
+    assert "Проверка требований" in wb.sheetnames
+    assert "Чек-листы — сводка" not in wb.sheetnames
+    ws=wb["Проверка требований"]
     headers=[c.value for c in next(ws.iter_rows(min_row=1,max_row=1))]
-    assert "Раздел" in headers and "Чек-лист" in headers
+    assert "Контур проверки" in headers and "Результат" in headers
     assert "automatic_section" not in headers
     wb.close()

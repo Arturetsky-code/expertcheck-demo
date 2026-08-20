@@ -317,6 +317,8 @@ def _dashboard(ctx):
                 'Основание вывода':x.get('decision_basis') or '',
                 'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
                 'Доказательства':' | '.join(x.get('evidence') or []),
+                'Качество доказательства':x.get('evidence_quality_state') or '—',
+                'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
             } for x in assignment_rows])
             st.dataframe(show,hide_index=True,width='stretch')
             st.caption('Автоматическая проверка не подменяет инженерную интерпретацию Задания. Смысловые требования без структурированного параметра остаются на проверку специалисту.')

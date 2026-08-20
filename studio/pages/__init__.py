@@ -9,6 +9,8 @@ PAGES={
     'Чек-листы': checklists.render,
     'Отчёт': reports.render,
     'Центр проверки': review_center.render,
+    'Проверка': review_center.render,
+    'Проверка': review_center.render,
     'Результаты': results_center.render,
     'Настройки': settings.render,
 }

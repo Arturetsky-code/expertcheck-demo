@@ -10,6 +10,8 @@ from core.display_localization import parameter_label, status_label, scope_label
 from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
+from core.project_review_planner import build_review_plan
+from core.verification_core import verification_label
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -271,6 +273,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
+    review_plan=build_review_plan(
+        docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or []),
+        checklist_results or [],
+    )
+    review_domains=review_plan.get('domains') or {}
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -278,39 +285,27 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_attention=sum(v for k,v in normative_statuses.items() if k not in {'Действует','Действует с изменениями'})
     normative_high=sum(1 for x in normative_rows if x.get('status') in {'Заменён','Утратил силу'} and x.get('impact_risk')=='Высокий')
 
+    assignment_plan=review_domains.get('Задание на проектирование',{})
+    normative_plan=review_domains.get('НТД',{})
+    checklist_plan=review_domains.get('Чек-листы',{})
     summary_rows = [
         ['Наименование проекта', project],
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
         ['Версия ExpertCheck', version],
-        ['Вид отчёта', {'manager':'Резюме руководителя','gip':'Отчёт ГИПа','technical':'Техническое приложение'}.get(report_kind, report_kind)],
         ['Комплектность', summary['completeness']],
         ['Загружено документов', summary['documents']],
         ['Подтверждено объектов', summary['objects']],
-        ['Проверено характеристик', summary['checks']],
-        ['Результатов, требующих внимания', summary['requires_attention']],
-        ['Рисков высокого уровня', summary['risks_high']],
-        ['Рисков среднего уровня', summary['risks_medium']],
-        ['Рассмотрено пунктов чек-листов', summary['checklist_total']],
-        ['Уникальных НТД в проекте', len(normative_rows)],
-        ['Упоминаний НТД проанализировано', len(normative_reference_details)],
-        ['НТД действуют / с изменениями', normative_statuses.get('Действует',0)+normative_statuses.get('Действует с изменениями',0)],
-        ['НТД требуют внимания', normative_attention],
-        ['Подтверждённых проблем актуальности НТД высокого влияния', normative_high],
-        ['Требований Задания проверено', assignment_summary.get('total',len(assignment_rows))],
-        ['Соответствуют Заданию', assignment_summary.get('compliant',0)],
-        ['Отклонений от Задания', assignment_summary.get('deviation',0)],
-        ['Требования Задания требуют проверки', assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)],
-        ['Требования Задания не проверены системой', assignment_summary.get('not_checked',0)],
-        ['Структурированных требований НТД в базе', normative_compliance_summary.get('requirements',0)],
-        ['Верифицированных пунктов НТД', normative_compliance_summary.get('verified_clause',0)],
-        ['Покрытие НТД верифицированными пунктами, %', normative_compliance_summary.get('verified_coverage_pct',0)],
-        ['НТД готовы к проверке по доказательствам, %', normative_compliance_summary.get('review_ready_pct',0)],
-        ['Структурированность требований Задания, %', assignment_summary.get('structured_requirement_pct',0)],
-        ['Автоматическое покрытие Задания, %', assignment_summary.get('automatic_coverage_pct',0)],
-        ['Объектов в модели проекта', project_understanding_quality.get('objects',0)],
-        ['Объектов с привязанными показателями', project_understanding_quality.get('objects_with_properties',0)],
-        ['Неразрешённых привязок объект–показатель', project_understanding_quality.get('unresolved_properties',0)],
-        ['Качество объектно-параметрической привязки, %', project_understanding_quality.get('binding_precision_proxy_pct',0)],
+        ['Доказанных проблем проекта', summary.get('project_findings',0)],
+        ['Вопросов специалисту', summary.get('review_questions',0)],
+        ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
+        ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
+        ['Задание: выявлено несоответствий', assignment_plan.get('issue',0)],
+        ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
+        ['НТД: подтверждено требований', normative_plan.get('confirmed',0)],
+        ['НТД: выявлено несоответствий', normative_plan.get('issue',0)],
+        ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
+        ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
+        ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
         ['Итоговый вывод', report['conclusion']],
     ]
 
@@ -351,6 +346,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Источники': r.get('sources') or r.get('Источники') or '',
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
     recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+    review_plan_df = pd.DataFrame([{
+        'Контур проверки':x.get('domain'),
+        'Проверка':x.get('title'),
+        'Результат':verification_label(x.get('status')),
+        'Область':ru_label(x.get('scope')) if x.get('scope') else '—',
+        'Тип проверки':ru_label(x.get('check_type')) if x.get('check_type') else '—',
+        'Ожидаемое доказательство':x.get('expected_evidence') or '',
+    } for x in review_plan.get('items') or [] if x.get('status') in {'CONFIRMED','ISSUE','REVIEW'}])
     understanding_rows=[]
     for obj in project_understanding.get('objects') or []:
         for prop in obj.get('property_summary') or []:
@@ -427,6 +430,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     object_df = _excel_safe_frame(object_df)
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
+    review_plan_df = _excel_safe_frame(review_plan_df)
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
@@ -450,44 +454,28 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
-    if not risks_df.empty:
-        sheets.append(('Ключевые риски', risks_df))
+    # Основные отчёты показывают только квалифицированные пользовательские результаты.
     if not problems_df.empty:
-        sheets.append(('Межраздельные вопросы', problems_df))
-    # Состав проекта в стандартном отчёте не дублируется: только в техническом приложении.
-    if report_kind == 'technical' and not object_df.empty:
-        sheets.append(('Состав проекта', object_df))
-    if report_kind != 'manager' and not checklist_problem_df.empty:
-        checklist_problem_df=checklist_problem_df.sort_values(['Раздел','Чек-лист','Пункт'],kind='stable')
-        sheets.append(('Чек-листы — сводка', checklist_problem_df))
-        # One compact sheet per section: the user immediately sees which requirement belongs where.
-        for section_name, section_frame in checklist_problem_df.groupby('Раздел',dropna=False):
-            safe_section=str(section_name or 'Не определён')
-            sheets.append((_safe_sheet_name('ЧЛ '+safe_section), section_frame.reset_index(drop=True)))
-    if report_kind == 'manager' and not normative_df.empty:
-        attention_norm=normative_df[normative_df['Статус'].isin(['Заменён','Утратил силу'])].head(12)
-        if not attention_norm.empty:
-            sheets.append(('НТД — внимание', attention_norm))
-    elif report_kind in {'gip','technical'} and not normative_df.empty:
-        sheets.append(('Актуальность НТД', normative_df if report_kind=='technical' else normative_df.head(80)))
-    if report_kind in {'gip','technical'} and not normative_compliance_df.empty:
-        sheets.append(('Проверка требований НТД', normative_compliance_df if report_kind=='technical' else normative_compliance_df.head(100)))
-    if report_kind == 'technical' and not normative_requirement_df.empty:
-        sheets.append(('Контекст ссылок НТД', normative_requirement_df))
-    if report_kind in {'gip','technical'} and not understanding_df.empty:
-        sheets.append(('Модель проекта', understanding_df if report_kind=='technical' else understanding_df.head(150)))
-    if report_kind == 'manager' and not assignment_df.empty:
-        assignment_attention=assignment_df[assignment_df['Результат'].isin(['Выявлено отклонение','Требование не подтверждено','Требуется смысловая проверка'])].head(12)
-        if not assignment_attention.empty:
-            sheets.append(('Задание — внимание',assignment_attention))
-    elif report_kind in {'gip','technical'} and not assignment_df.empty:
-        sheets.append(('Задание на проектирование',assignment_df))
-    sheets.append(('План действий', recommendations_df))
-    if report_kind == 'technical' and normative_reference_details:
-        detailed_normative_df=pd.DataFrame(normative_reference_details)
-        if not detailed_normative_df.empty:
-            sheets.append(('НТД — все упоминания', _excel_safe_frame(detailed_normative_df)))
+        sheets.append(('Несоответствия и вопросы', problems_df))
+    if report_kind in {'gip','technical'} and not review_plan_df.empty:
+        sheets.append(('Проверка требований', review_plan_df))
+    if report_kind == 'gip' and not recommendations_df.empty:
+        sheets.append(('План действий', recommendations_df))
+    elif report_kind == 'manager':
+        if not recommendations_df.empty:
+            sheets.append(('Приоритетные действия', recommendations_df.head(10)))
     if report_kind == 'technical':
+        if not object_df.empty: sheets.append(('Состав проекта', object_df))
+        if not checklist_problem_df.empty: sheets.append(('Чек-листы — диагностика', checklist_problem_df))
+        if not normative_df.empty: sheets.append(('Актуальность НТД', normative_df))
+        if not normative_compliance_df.empty: sheets.append(('Проверка требований НТД', normative_compliance_df))
+        if not normative_requirement_df.empty: sheets.append(('Контекст ссылок НТД', normative_requirement_df))
+        if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))
+        if not assignment_df.empty: sheets.append(('Задание — диагностика', assignment_df))
+        if normative_reference_details:
+            detailed_normative_df=pd.DataFrame(normative_reference_details)
+            if not detailed_normative_df.empty:
+                sheets.append(('НТД — все упоминания', _excel_safe_frame(detailed_normative_df)))
         for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
             if not frame.empty:
                 sheets.append((_safe_sheet_name(sheet_name), frame))

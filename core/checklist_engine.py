@@ -12,6 +12,7 @@ from .pp87_matrix import evaluate_pp87
 from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
 from .typed_check_engine import execute_typed_check
+from .verification_factory import build_factory_catalog, recipe_lookup
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -54,6 +55,12 @@ class ChecklistEngine:
         self.items = json.loads(self.catalog_path.read_text(encoding='utf-8')) if self.catalog_path.exists() else []
         self.review_engine = CrossSectionDependencyEngine(self.catalog_path.parent)
         self.expert_practice = ExpertPracticeIntelligence(self.catalog_path.parent)
+        try:
+            self.verification_factory = build_factory_catalog(self.catalog_path.parent)
+            self.recipe_lookup = recipe_lookup(self.verification_factory)
+        except Exception:
+            self.verification_factory = {'total':0,'trusted_count':0,'experimental_count':0,'by_domain':{}}
+            self.recipe_lookup = {}
         self._mark_hierarchy()
 
     def _mark_hierarchy(self) -> None:
@@ -205,6 +212,15 @@ class ChecklistEngine:
                 else:
                     status='Не проверено системой'; evidence='Пункт пока не имеет надёжного автоматического правила.'
             compiled_dict=compiled.to_dict()
+            recipe=self.recipe_lookup.get(str(item.get('id') or ''))
+            if recipe is None:
+                # Experimental recipe metadata is useful diagnostically, but never grants a positive result.
+                factory_rows=(self.verification_factory.get('experimental') or []) if isinstance(self.verification_factory,dict) else []
+                recipe=next((x for x in factory_rows if str(x.get('source_id') or '')==str(item.get('id') or '')),None)
+            if recipe and recipe.get('recipe_status')!='TRUSTED' and status=='Да':
+                status='Не проверено системой'
+                evidence=(evidence+' ' if evidence else '')+'Автоматический рецепт пока не прошёл critic/regression gate; положительный вывод удержан.'
+                proof_kind='UNSUPPORTED'
             normative_context=self.review_engine.checklist_context(q, compiled_dict)
             if include_practice:
                 practice_context=self.expert_practice.risk_from_evidence(
@@ -216,7 +232,7 @@ class ChecklistEngine:
                 )
             else:
                 practice_context={}
-            results.append({**item,'compiled_rule':compiled_dict,'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled_dict,'verification_recipe':recipe or {},'recipe_id':(recipe or {}).get('recipe_id'),'recipe_status':(recipe or {}).get('recipe_status','EXPERIMENTAL'),'recipe_quality':(recipe or {}).get('critic_score',0),'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:

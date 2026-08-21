@@ -14,7 +14,7 @@ def test_review_plan_three_domains_and_conservative_coverage():
     assert plan['domains']['assignment']['completed']==1
     assert plan['domains']['normative']['system_limitations']==1
     assert plan['domains']['checklist']['verified_ok']==1
-    assert plan['domains']['checklist']['review_questions']==1
+    assert plan['domains']['checklist']['system_limitations']==1
 
 
 def test_unverified_normative_is_not_project_finding():

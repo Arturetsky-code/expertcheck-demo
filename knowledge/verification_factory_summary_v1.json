@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "generated_candidates": 1068,
+  "trusted_recipes": 112,
+  "experimental_recipes": 956,
+  "principle": "Mass generation, conservative admission",
+  "domains": {
+    "checklist": {"total": 761, "trusted": 112, "experimental": 649},
+    "expert_practice": {"total": 278, "trusted": 0, "experimental": 278},
+    "normative": {"total": 29, "trusted": 0, "experimental": 29}
+  },
+  "note": "Rules from expert practice and non-verified normative requirements cannot independently generate a project compliance conclusion."
+}

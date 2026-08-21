@@ -22,6 +22,22 @@ def classify_verification(row:dict[str,Any], domain:str="") -> dict[str,Any]:
     proof=str(row.get("proof_kind") or row.get("evidence_quality_state") or row.get("coverage_state") or "").upper()
     evidence=row.get("evidence") or row.get("evidence_summary") or row.get("decision_basis") or ""
     has_evidence=bool(evidence) and proof not in {"UNSUPPORTED","NO_EVIDENCE","KB_GAP","EVIDENCE_GAP"}
+    level=str(row.get("verification_level") or (row.get("compiled_rule") or {}).get("verification_level") or ("L2_VALUE" if proof=="STRUCTURED_VALUE" else "L3_CROSS_CHECK" if proof=="STRUCTURED_COMPARISON" else "L1_PRESENCE" if proof in {"PRESENCE","STRUCTURED_PRESENCE"} else "")).upper()
+    # Precision-first checklist policy: evidence must be strong enough for the
+    # semantic level of the question. Presence evidence cannot close completeness
+    # or engineering-compliance checks.
+    if domain == "checklist":
+        adequate = {
+            "L1_PRESENCE": {"PRESENCE","STRUCTURED_PRESENCE","DOCUMENT_IDENTITY","STRUCTURED_VALUE","STRUCTURED_COMPARISON"},
+            "L2_VALUE": {"STRUCTURED_VALUE","STRUCTURED_COMPARISON"},
+            "L3_CROSS_CHECK": {"STRUCTURED_COMPARISON"},
+            "L4_COMPLETENESS": {"VERIFIED_SET_EVIDENCE","STRUCTURED_COMPLETENESS"},
+            "L5_ENGINEERING_COMPLIANCE": {"VERIFIED_ENGINEERING_EVIDENCE","NORMATIVE_EVIDENCE"},
+        }.get(level, set())
+        if proof and proof not in adequate:
+            has_evidence=False
+        elif proof in adequate and proof.startswith('STRUCTURED_'):
+            has_evidence=True
 
     # Нормативный вывод допускается только для верифицированного пункта KB.
     # Неверифицированная норма — ограничение покрытия ExpertCheck, а не проблема проекта.
@@ -34,7 +50,10 @@ def classify_verification(row:dict[str,Any], domain:str="") -> dict[str,Any]:
         else:
             kind="REVIEW_QUESTION"; state="Требует проверки специалистом"
     elif any(t in low for t in OK_TOKENS) and "не " not in low[:4]:
-        kind="VERIFIED_OK"; state="Соответствует"
+        if domain == 'checklist' and not has_evidence:
+            kind='SYSTEM_LIMITATION'; state='Не проверено автоматически'
+        else:
+            kind="VERIFIED_OK"; state="Соответствует"
     elif any(t in low for t in LIMIT_TOKENS) or proof in {"UNSUPPORTED","NO_EVIDENCE","KB_GAP","EVIDENCE_GAP"}:
         kind="SYSTEM_LIMITATION"; state="Не проверено автоматически"
     elif any(t in low for t in REVIEW_TOKENS):

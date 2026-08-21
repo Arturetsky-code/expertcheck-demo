@@ -46,6 +46,8 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
     scope_entity_type = str(finding.get("scope_entity_type") or "").upper().strip()
     metric_scope = str(finding.get("metric_semantic_scope") or "").lower().strip()
+    if not metric_scope and code == 'AREA_BUILD':
+        metric_scope='building_footprint'
     if metric_scope and not metric_scope_compatible(metric_scope, entity_level):
         return {
             "fact_admission_decision": HOLD,

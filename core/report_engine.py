@@ -87,6 +87,28 @@ def build_structured_report(
             "explanation": _text(row, "explanation", "Пояснение") or "Проверьте исходные значения и актуальность разделов.",
             "sources": row.get("sources") or row.get("sections") or "",
         })
+    # Finding Continuity Gate: a verified internal conflict in Project Understanding
+    # cannot silently disappear merely because a downstream comparison row was lost.
+    pu=(first.get('project_understanding') or {}) if isinstance(first,dict) else {}
+    existing_keys={(str(x.get('object') or '').lower(),str(x.get('parameter') or '').lower()) for x in problems}
+    for obj in pu.get('objects') or []:
+        for prop in obj.get('property_summary') or []:
+            if not prop.get('value_conflict'): continue
+            sections=list(prop.get('sections') or [])
+            if len(sections)<2: continue
+            key=(str(obj.get('name') or '').lower(),str(prop.get('parameter_name') or '').lower())
+            if key in existing_keys: continue
+            vals=' | '.join(str(v) for v in (prop.get('values') or []))
+            problems.append({
+                'id':f"PU-CONFLICT-{len(problems)+1:03d}", 'object':obj.get('name') or 'Объект не определён',
+                'parameter':prop.get('parameter_name') or prop.get('parameter_code') or 'Показатель',
+                'status':'РАСХОЖДЕНИЕ', 'priority':'Высокий', 'values':vals,
+                'explanation':'Модель проекта содержит разные структурированные значения одного показателя из нескольких разделов. Требуется проверить и согласовать исходные данные.',
+                'sources':', '.join(sections), 'finding_type':'PROJECT_FINDING', 'continuity_source':'PROJECT_UNDERSTANDING'
+            })
+            project_findings.append(problems[-1]); finding_class_counts['PROJECT_FINDING'] += 1; counts['high'] += 1
+            existing_keys.add(key)
+
     # Один инженерный вопрос — одна строка в стандартном отчёте.
     deduped = {}
     for item in problems:

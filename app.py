@@ -20,7 +20,7 @@ except Exception as startup_error:
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 10.1 Alpha 2 · Verification Integrity'
+VERSION='ExpertCheck 10.1 Alpha 3 · Interactive Engineering Review'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -64,7 +64,7 @@ with st.sidebar:
         # Рабочий интерфейс: только пользовательский маршрут.
         guided_pages=['Мои проекты','Проект']
         if has_result:
-            guided_pages.extend(['Проверка','Результаты','Отчёт'])
+            guided_pages.extend(['Подтверждение','Проверка','Чек-листы','Результаты','Отчёт'])
         guided_pages.append('Настройки')
     if st.session_state.get('page') not in guided_pages:
         st.session_state.page = ('Проверка' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'

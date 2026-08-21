@@ -36,6 +36,12 @@ def render(ctx):
     with c3:_domain_card('Корпоративные чек-листы',domains.get('checklist') or {})
 
     st.caption('Покрытие показывает только проверки, завершённые доказательным результатом. Ненайденные сведения и ограничения алгоритма не считаются несоответствиями проекта.')
+
+    checklist_rows=list((first.get('automatic_checklist_review') or {}).get('results') or [])
+    trusted_recipes=sum(1 for x in checklist_rows if x.get('recipe_status')=='TRUSTED')
+    experimental_recipes=sum(1 for x in checklist_rows if x.get('recipe_status')=='EXPERIMENTAL')
+    if trusted_recipes or experimental_recipes:
+        st.caption(f'Фабрика проверок: доверенных рецептов в текущем контуре — {trusted_recipes}; экспериментальных — {experimental_recipes}. Экспериментальный рецепт не имеет права автоматически подтвердить соответствие.')
     checks=list(plan.get('checks') or [])
     if checks:
         rows=[]

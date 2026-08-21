@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+from core.verification_feedback import labeled_case
 
 from core.checklist_engine import ChecklistEngine
 from core.automatic_review import AutomaticProjectReview
@@ -152,8 +153,16 @@ def render(ctx):
                         'Комментарий':st.column_config.TextColumn('Комментарий специалиста'),
                     },key='automatic_checklist_manual_editor')
                 if st.button('Сохранить решения по чек-листам',type='primary',key='save_manual_checklist_decisions'):
+                    labeled_store=st.session_state.setdefault('verification_labeled_cases',[])
+                    known_ids={x.get('case_id') for x in labeled_store if isinstance(x,dict)}
                     for base,edited_row in zip(manual_rows,edited_manual.to_dict('records')):
                         manual_store[base['_key']]={'decision':edited_row.get('Решение специалиста'),'comment':edited_row.get('Комментарий','')}
+                        specialist=str(edited_row.get('Решение специалиста') or '')
+                        if specialist and specialist!='Не рассмотрено':
+                            case=labeled_case(domain='checklist',check_id=base['_key'],automated_result=base.get('Результат ExpertCheck') or '',specialist_result=specialist,comment=str(edited_row.get('Комментарий') or ''))
+                            if case['case_id'] not in known_ids:
+                                labeled_store.append(case); known_ids.add(case['case_id'])
+                    st.session_state.verification_labeled_cases=labeled_store
                     st.session_state.checklist_user_results=manual_store
                     # Persist a non-destructive copy in the checklist results for reporting.
                     for idx,r in enumerate(auto_results):

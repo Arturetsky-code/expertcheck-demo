@@ -337,6 +337,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
     })
+    checklist_all_df = pd.DataFrame([{
+        'Раздел': r.get('automatic_section') or r.get('section') or r.get('Раздел') or 'Не определён',
+        'Чек-лист': r.get('automatic_checklist') or r.get('source_file') or r.get('Чек-лист') or '',
+        'Пункт': f"{r.get('item_no') or r.get('position') or ''} — {r.get('question') or r.get('Позиция по чек-листу') or ''}".strip(' —'),
+        'Результат ExpertCheck': r.get('status') or r.get('Соответствие') or r.get('result'),
+        'Уровень проверки': r.get('verification_level') or r.get('check_level') or r.get('typed_check') or r.get('execution_class') or '—',
+        'Решение специалиста': r.get('specialist_decision') or 'Не рассмотрено',
+        'Комментарий специалиста': r.get('specialist_comment') or '',
+        'Обоснование ExpertCheck': r.get('evidence') or r.get('Обоснование') or '',
+    } for r in report['checklist_results'] if not r.get('is_heading')])
+
     checklist_problem_df = pd.DataFrame([{
         'Раздел': r.get('automatic_section') or r.get('section') or r.get('Раздел') or 'Не определён',
         'Чек-лист': r.get('automatic_checklist') or r.get('source_file') or r.get('Чек-лист') or '',
@@ -429,6 +440,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     problems_df = _excel_safe_frame(problems_df)
     object_df = _excel_safe_frame(object_df)
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
+    checklist_all_df = _excel_safe_frame(checklist_all_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
     review_plan_df = _excel_safe_frame(review_plan_df)
 
@@ -454,16 +466,23 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
-    # Основные отчёты показывают только квалифицированные пользовательские результаты.
+    # Рабочие отчёты снова содержат полезную предметную информацию, но без raw-диагностики.
     if not problems_df.empty:
         sheets.append(('Несоответствия и вопросы', problems_df))
-    if report_kind in {'gip','technical'} and not review_plan_df.empty:
-        sheets.append(('Проверка требований', review_plan_df))
-    if report_kind == 'gip' and not recommendations_df.empty:
-        sheets.append(('План действий', recommendations_df))
-    elif report_kind == 'manager':
-        if not recommendations_df.empty:
-            sheets.append(('Приоритетные действия', recommendations_df.head(10)))
+    if report_kind == 'manager':
+        readiness=pd.DataFrame([
+            {'Контур':'Задание на проектирование','Всего':assignment_plan.get('total',0),'Подтверждено':assignment_plan.get('confirmed',0),'Несоответствия':assignment_plan.get('issue',0),'Покрытие, %':assignment_plan.get('coverage_pct',0)},
+            {'Контур':'НТД','Всего':normative_plan.get('total',0),'Подтверждено':normative_plan.get('confirmed',0),'Несоответствия':normative_plan.get('issue',0),'Покрытие, %':normative_plan.get('coverage_pct',0)},
+            {'Контур':'Чек-листы','Всего':checklist_plan.get('total',0),'Подтверждено':checklist_plan.get('confirmed',0),'Несоответствия':checklist_plan.get('issue',0),'Покрытие, %':checklist_plan.get('coverage_pct',0)},
+        ])
+        sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
+        if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))
+    elif report_kind == 'gip':
+        if not review_plan_df.empty: sheets.append(('Проверка требований', review_plan_df))
+        if not assignment_df.empty: sheets.append(('Задание на проектирование', assignment_df))
+        if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
+        if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
+        if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
         if not object_df.empty: sheets.append(('Состав проекта', object_df))
         if not checklist_problem_df.empty: sheets.append(('Чек-листы — диагностика', checklist_problem_df))

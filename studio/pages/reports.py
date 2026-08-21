@@ -33,10 +33,10 @@ def render(ctx):
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')
     cols=st.columns(3)
     with cols[0]:
-        card('Резюме руководителя','3 листа','Итог, ключевые выводы, действия')
+        card('Резюме руководителя','3–4 листа','Статус проекта, готовность проверки, риски и действия')
         st.download_button('Скачать резюме',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='manager',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Резюме_руководителя.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
     with cols[1]:
-        card('Отчёт ГИПа','до 5 листов','Рабочий результат проверки')
+        card('Отчёт ГИПа','до 6 листов','Резюме, проблемы, Задание, НТД, чек-листы и действия')
         st.download_button('Скачать отчёт ГИПа',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='gip',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Отчёт_ГИПа.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
     with cols[2]:
         card('Техническое приложение','Полное','Evidence, извлечение и диагностика')

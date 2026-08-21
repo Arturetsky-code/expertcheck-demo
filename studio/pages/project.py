@@ -158,7 +158,7 @@ def _upload(ctx):
             update_progress(100, 'Проверка завершена', 'Переходим к подтверждению состава объектов')
             # The sidebar radio with key 'page' already exists in this run.
             # Defer navigation until the next rerun to comply with Streamlit state rules.
-            st.session_state['_navigate_to'] = 'Проверка' if not st.session_state.get('expert_mode') else 'Состав объектов'
+            st.session_state['_navigate_to'] = 'Подтверждение' if not st.session_state.get('expert_mode') else 'Состав объектов'
             st.rerun()
 
 

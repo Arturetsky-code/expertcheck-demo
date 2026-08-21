@@ -127,6 +127,41 @@ def render(ctx):
                 st.dataframe(attention,hide_index=True,width='stretch')
             else:
                 st.success('Автоматическая проверка не выявила пунктов, требующих внимания.')
+
+            st.markdown('#### Участие специалиста')
+            st.caption('Можно подтвердить, отклонить или пометить как неприменимый любой пункт. Ручное решение не стирает автоматический результат и сохраняется отдельно как решение специалиста.')
+            manual_store=st.session_state.setdefault('checklist_user_results',{})
+            manual_rows=[]
+            for idx,r in enumerate(auto_results):
+                item_key=f"{r.get('automatic_checklist') or ''}|{r.get('item_no') or idx}|{r.get('question') or ''}"
+                saved=manual_store.get(item_key,{})
+                manual_rows.append({
+                    '_key':item_key,'Раздел':r.get('automatic_section') or '',
+                    'Позиция':r.get('item_no') or '', 'Проверка':r.get('question') or '',
+                    'Результат ExpertCheck':r.get('status') or '',
+                    'Решение специалиста':saved.get('decision','Не рассмотрено'),
+                    'Комментарий':saved.get('comment',''),
+                })
+            if manual_rows:
+                manual_df=pd.DataFrame(manual_rows)
+                edited_manual=st.data_editor(
+                    manual_df.drop(columns=['_key']),hide_index=True,width='stretch',height=420,
+                    disabled=['Раздел','Позиция','Проверка','Результат ExpertCheck'],
+                    column_config={
+                        'Решение специалиста':st.column_config.SelectboxColumn('Решение специалиста',options=['Не рассмотрено','Соответствует','Не соответствует','Не применимо','Требует доработки'],required=True),
+                        'Комментарий':st.column_config.TextColumn('Комментарий специалиста'),
+                    },key='automatic_checklist_manual_editor')
+                if st.button('Сохранить решения по чек-листам',type='primary',key='save_manual_checklist_decisions'):
+                    for base,edited_row in zip(manual_rows,edited_manual.to_dict('records')):
+                        manual_store[base['_key']]={'decision':edited_row.get('Решение специалиста'),'comment':edited_row.get('Комментарий','')}
+                    st.session_state.checklist_user_results=manual_store
+                    # Persist a non-destructive copy in the checklist results for reporting.
+                    for idx,r in enumerate(auto_results):
+                        key=manual_rows[idx]['_key']; decision=manual_store.get(key,{})
+                        r['specialist_decision']=decision.get('decision','Не рассмотрено')
+                        r['specialist_comment']=decision.get('comment','')
+                    st.session_state.checklist_run={'section':'Все распознанные разделы','source_file':'Все доступные чек-листы','mode':'Гибридная','results':[dict(x) for x in auto_results]}
+                    st.success('Решения специалиста сохранены и будут включены в отчёт ГИПа.')
     elif auto_summary.get('error'):
         st.warning('Автоматическая проверка чек-листов не завершена: '+str(auto_summary.get('error')))
 

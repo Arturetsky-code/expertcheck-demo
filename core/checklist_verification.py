@@ -17,6 +17,9 @@ def qualify_checklist_results(rows:list[dict[str,Any]])->list[dict[str,Any]]:
         if item.get("status")=="Требует проверки" and proof in {"CANDIDATE_EVIDENCE","AI_WITH_EVIDENCE","CONSERVATIVE",""}:
             # Candidate evidence is not a completed check.
             item.setdefault("coverage_note","Найден кандидат в доказательства; автоматическое соответствие не установлено.")
+            item['specialist_review_ready']=True
         item.update(classify_verification(item,"checklist"))
+        if item.get('specialist_review_ready') and item.get('verification_kind')=='SYSTEM_LIMITATION':
+            item.update({'verification_kind':'REVIEW_QUESTION','verification_state':'Требует проверки специалистом','finding_type':'REVIEW_QUESTION'})
         out.append(item)
     return out

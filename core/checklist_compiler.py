@@ -19,6 +19,7 @@ class CompiledChecklistRule:
     evidence_types: tuple[str, ...] = ()
     negative_result_policy: str = 'CONSERVATIVE'
     typed_check: str = 'SPECIALIST_REVIEW'
+    verification_level: str = 'L5_ENGINEERING_COMPLIANCE'
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -50,7 +51,22 @@ PRESENCE = ('наличие', 'представлен', 'приведен', 'п�
 STOP = {'проверить','проверка','соответствие','наличие','раздел','проектной','документации','должен','должна','должны','требования'}
 
 
-def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
+
+
+def infer_verification_level(question: str) -> str:
+    q=normalize_text(question)
+    # L4/L5 must never be closed by a simple presence hit.
+    if any(x in q for x in ('ко всем','для всех','по четырем углам','по четырём углам','в полном объеме','в полном объёме','каждого','всех здан','всех сооруж')):
+        return 'L4_COMPLETENESS'
+    if any(x in q for x in ('соответств','норматив','допустим','обеспечен','достаточ','противопожарн','эвакуац','радиус','уклон','расстояни','освещен')):
+        return 'L5_ENGINEERING_COMPLIANCE'
+    if any(x in q for x in ('свер','совпад','увяз')):
+        return 'L3_CROSS_CHECK'
+    if any(x in q for x in ('значени','величин','площад','объем','объём','высот','длин','ширин','мощност','производительност')):
+        return 'L2_VALUE'
+    return 'L1_PRESENCE'
+
+def _compile_item_base(item: dict[str, Any]) -> CompiledChecklistRule:
     question = normalize_text(item.get('question') or '')
     codes=[]
     for code,tokens in PARAMETERS.items():
@@ -69,3 +85,10 @@ def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
     if codes:
         return CompiledChecklistRule('parameter_evidence','parameter',terms,tuple(codes),False,'Проверка наличия структурированных параметров.','AUTO',('SELECTED_SECTION',),('STRUCTURED_VALUE','PAGE_REFERENCE'),'CONSERVATIVE','ENGINEERING_PARAMETER_PRESENCE')
     return CompiledChecklistRule('semantic_review','general',terms,(),True,'Пункт требует аналитической оценки содержания.','EXPERT',('SELECTED_SECTION','RELATED_SECTIONS'),('ENGINEERING_EVIDENCE','SPECIALIST_REVIEW'),'SPECIALIST','DRAWING_TITLE_BLOCK_CHECK' if any(x in question for x in ('основн надпис','штамп','основная надпись')) else 'SPECIALIST_REVIEW')
+
+
+def compile_item(item: dict[str, Any]) -> CompiledChecklistRule:
+    base=_compile_item_base(item)
+    level=infer_verification_level(str(item.get('question') or ''))
+    data=base.to_dict(); data['verification_level']=level
+    return CompiledChecklistRule(**data)

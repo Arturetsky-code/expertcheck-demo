@@ -557,8 +557,19 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
         comparisons=cross_section_checks,
     )
+    # Deep Evidence Intelligence: reconstruct evidence once, then target every planned check.
+    # This layer is conservative: it may downgrade weak positives, never invent evidence.
+    try:
+        from .deep_evidence_intelligence import run_deep_evidence_review
+        deep_evidence_review = run_deep_evidence_review(
+            review_plan.get("items") or [], documents=documents, facts=findings, comparisons=cross_section_checks
+        )
+    except Exception as exc:
+        deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
+        pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
     for doc in documents:
-        doc["core_version"] = "10.1.0-review-planner-verification-core"
+        doc["core_version"] = "10.2.0-alpha2-deep-evidence-intelligence"
+        doc["deep_evidence_review"] = deep_evidence_review
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

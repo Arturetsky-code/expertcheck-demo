@@ -29,6 +29,11 @@ class Finding:
     structural_zone: str = ""
     extraction_profile: str = "универсальный"
     genplan_position: str = ""
+    binding_status: str = ""
+    table_index: int | str | None = None
+    row_index: int | str | None = None
+    row_text: str = ""
+    source_span: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -726,6 +731,7 @@ def _extract_pzu_building_areas(page_no: int, text: str, filename: str, paramete
         if vm.group("value").startswith("("):
             continue
         context = _context(normalized, best[0], best[1] + vm.end(), window=80)
+        row_index = normalized[:best[0]].count("\n") + 1
         result.append(Finding(
             document=filename,
             document_type="ПЗУ1",
@@ -741,6 +747,11 @@ def _extract_pzu_building_areas(page_no: int, text: str, filename: str, paramete
             match_method="строка таблицы ТЭП ПЗУ",
             structural_zone="ТЭП земельного участка",
             extraction_profile="ПЗУ: экспликация и показатели участка",
+            binding_status="ROW_LOCKED",
+            table_index="ТЭП земельного участка",
+            row_index=row_index,
+            row_text=context,
+            source_span=f"{best[0]}:{best[1] + vm.end()}",
         ))
     return result
 

@@ -1,0 +1,66 @@
+{
+  "benchmark_id": "DSK_VERIFICATION_KERNEL_V1",
+  "purpose": "Регрессионный эталон источников, состава проекта и требований Задания для 10.4 Alpha 1",
+  "policy": "Подтверждение допускается только при профильном источнике и проверяемом локаторе; отсутствие находки не является нарушением.",
+  "cases": [
+    {
+      "case_id": "REG-001",
+      "domain": "object_registry",
+      "input": "EtherNet TX (медь) - EtherNet FX (оптика)",
+      "expected": "EXCLUDE_LEGEND"
+    },
+    {
+      "case_id": "REG-002",
+      "domain": "object_registry",
+      "input": "Позиция 5 — соседняя/перспективная площадка при авторитетной иерархии 4.x",
+      "expected": "OUTSIDE_PROJECT_SCOPE"
+    },
+    {
+      "case_id": "REG-003",
+      "domain": "object_registry",
+      "input": "4.17 с ошибочно присоединённым наименованием 4.18",
+      "expected": "EXCLUDE_SHIFTED_DUPLICATE"
+    },
+    {
+      "case_id": "ASSIGN-001",
+      "domain": "assignment",
+      "requirement": "Предусмотреть мероприятия по защите площадки от подтопления",
+      "expected": "VERIFIED_OK",
+      "expected_section": "ПЗУ"
+    },
+    {
+      "case_id": "ASSIGN-002",
+      "domain": "assignment",
+      "requirement": "Два погрузчика SHANTUI L76-C5, ковш 4,5 м3",
+      "expected": "PROJECT_FINDING",
+      "expected_section": "ТХ"
+    },
+    {
+      "case_id": "ASSIGN-003",
+      "domain": "assignment",
+      "requirement": "500 т/ч, две независимые технологические линии",
+      "expected": "PROJECT_FINDING",
+      "expected_section": "ТХ"
+    },
+    {
+      "case_id": "CHK-001",
+      "domain": "checklist",
+      "requirement": "ИОС2: расчётные расходы и напоры",
+      "forbidden_source": "ПЗ",
+      "expected": "ABSTAIN_ON_WRONG_SECTION"
+    },
+    {
+      "case_id": "EVD-001",
+      "domain": "assignment",
+      "requirement": "Фрагмент Задания не может доказывать выполнение того же требования",
+      "forbidden_source": "Задание на проектирование",
+      "expected": "ABSTAIN_ON_CIRCULAR_EVIDENCE"
+    },
+    {
+      "case_id": "RPT-001",
+      "domain": "report",
+      "requirement": "Межраздельная сверка сохраняет показатель и значения",
+      "expected": "CANONICAL_SCHEMA"
+    }
+  ]
+}

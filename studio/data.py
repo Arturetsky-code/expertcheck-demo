@@ -25,7 +25,7 @@ def frames(result):
 def status_group(value: str) -> str:
     t=str(value or '').upper()
     if 'РАСХОЖД' in t or 'КОНФЛИКТ' in t:return 'bad'
-    if 'УТОЧ' in t or 'НЕДОСТАТОЧ' in t or 'НЕ ПРОВЕРЕНО' in t:return 'warn'
+    if any(x in t for x in ('УТОЧ','НЕДОСТАТОЧ','НЕ ПРОВЕРЕНО','ПРЕДВАРИТ','ЧАСТИЧ','КАНДИДАТ')):return 'warn'
     if 'СОВПАД' in t or 'ПОДТВЕРЖ' in t:return 'ok'
     return 'info'
 
@@ -148,7 +148,11 @@ def _compact_technical_frames(docs, findings, comparisons, report):
     finding_columns = [
         'document','document_type','page','section_title','table_title','table_row',
         'parameter_code','parameter_name','object_hint','genplan_position','value_text',
-        'unit','confidence','binding_status','match_method','structural_zone',
+        'unit','confidence','binding_status','row_integrity_status','row_integrity_reason',
+        'fact_admission_decision','fact_admission_score','fact_admission_reasons',
+        'evidence_quality_decision','evidence_trust_grade','physical_trace_level',
+        'source_locator','project_understanding_binding','comparison_excluded',
+        'match_method','structural_zone',
     ]
     object_columns = [
         'Ключ','Позиция по ГП','Наименование объекта','Статус проектирования',
@@ -237,6 +241,10 @@ def _report_context(project, docs, comparisons, risks=None, checklist_results=No
 
 
 def structured_excel_report(project, version, docs, findings, comparisons, *, report_kind='gip', risks=None, checklist_results=None, assembly_rows_data=None):
+    doc_records=docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or [])
+    first_record=(doc_records[0] or {}) if doc_records else {}
+    if not checklist_results:
+        checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
     report = _report_context(project, docs, comparisons, risks, checklist_results, assembly_rows_data)
     summary = report['summary']
     out = io.BytesIO()
@@ -273,10 +281,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
-    review_plan=build_review_plan(
-        docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or []),
-        checklist_results or [],
-    )
+    # Prefer the plan produced after Deep Evidence adjudication.  Rebuilding it
+    # from legacy statuses would discard adversarial downgrades.
+    review_plan=dict(first_record.get('project_review_plan') or {})
+    if not review_plan:
+        review_plan=build_review_plan(doc_records,checklist_results or [])
     review_domains=review_plan.get('domains') or {}
     normative_statuses={}
     for row in normative_rows:
@@ -288,26 +297,58 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     assignment_plan=review_domains.get('Задание на проектирование',{})
     normative_plan=review_domains.get('НТД',{})
     checklist_plan=review_domains.get('Чек-листы',{})
+    report_quality_gate=dict(first_record.get('report_quality_gate') or {})
+    normative_registry_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру')
+    total_project_findings=int(summary.get('project_findings',0) or 0)+int(review_plan.get('project_findings',0) or 0)
+    total_review_questions=int(summary.get('review_questions',0) or 0)+int(review_plan.get('review_questions',0) or 0)
+    total_system_limitations=int(summary.get('system_limitations',0) or 0)+int(review_plan.get('system_limitations',0) or 0)
+    conclusion_parts=[]
+    if total_project_findings:
+        conclusion_parts.append(f"Подтверждённых несоответствий проекта: {total_project_findings}.")
+    if total_review_questions:
+        conclusion_parts.append(f"Вопросов, требующих проверки специалистом: {total_review_questions}.")
+    if total_system_limitations:
+        conclusion_parts.append(f"Проверок вне текущего автоматического покрытия: {total_system_limitations}.")
+    final_conclusion=' '.join(conclusion_parts) or report['conclusion']
     summary_rows = [
         ['Наименование проекта', project],
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
         ['Версия ExpertCheck', version],
         ['Комплектность', summary['completeness']],
         ['Загружено документов', summary['documents']],
-        ['Подтверждено объектов', summary['objects']],
-        ['Доказанных проблем проекта', summary.get('project_findings',0)],
-        ['Вопросов специалисту', summary.get('review_questions',0)],
+        ['Подтверждено объектов', summary.get('objects_confirmed',summary['objects'])],
+        ['Объектов требуют подтверждения источника', summary.get('objects_unresolved',0)],
+        ['Подтверждённых несоответствий проекта', total_project_findings],
+        ['Вопросов специалисту', total_review_questions],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
         ['Задание: выявлено несоответствий', assignment_plan.get('issue',0)],
         ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
         ['НТД: подтверждено требований', normative_plan.get('confirmed',0)],
         ['НТД: выявлено несоответствий', normative_plan.get('issue',0)],
+        ['НТД: обнаружено уникальных ссылок', len(normative_rows)],
+        ['НТД: проверено по реестру актуальности', normative_registry_verified],
         ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
         ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
-        ['Итоговый вывод', report['conclusion']],
+        ['Контроль согласованности отчёта', 'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует проверки'],
+        ['Итоговый вывод', final_conclusion],
     ]
+    if report_kind=='manager':
+        manager_metrics={
+            'Наименование проекта','Дата и время проверки','Версия ExpertCheck','Комплектность',
+            'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
+            'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
+            'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
+            'Контроль согласованности отчёта','Итоговый вывод',
+        }
+        summary_rows=[row for row in summary_rows if row[0] in manager_metrics]
+    elif report_kind=='gip':
+        # The GIP view keeps decision metrics but omits developer-oriented NTD
+        # inventory detail, which remains in the technical appendix.
+        summary_rows=[row for row in summary_rows if row[0] not in {
+            'НТД: обнаружено уникальных ссылок','НТД: проверено по реестру актуальности'
+        }]
 
     selected_risks = [r for r in report['risks'] if r.get('level') in ({'Высокий','Средний'} if report_kind != 'technical' else {'Высокий','Средний','Низкий'})]
     if report_kind == 'manager': selected_risks = selected_risks[:12]
@@ -346,6 +387,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Решение специалиста': r.get('specialist_decision') or 'Не рассмотрено',
         'Комментарий специалиста': r.get('specialist_comment') or '',
         'Обоснование ExpertCheck': r.get('evidence') or r.get('Обоснование') or '',
+        'Итоговый класс проверки': verification_label(r.get('final_verification_kind') or r.get('verification_kind')),
+        'Deep Evidence': ru_label(r.get('deep_evidence_state')),
+        'Причины ограничения': ' | '.join(r.get('deep_evidence_reasons') or []),
     } for r in report['checklist_results'] if not r.get('is_heading')])
 
     checklist_problem_df = pd.DataFrame([{
@@ -364,6 +408,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Область':ru_label(x.get('scope')) if x.get('scope') else '—',
         'Тип проверки':ru_label(x.get('check_type')) if x.get('check_type') else '—',
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
+        'Итоговый класс':verification_label(x.get('verification_kind')),
+        'Проверка достаточности':ru_label(x.get('adversarial_state') or x.get('deep_evidence_state')),
+        'Причина ограничения':' | '.join(x.get('adversarial_reasons') or x.get('deep_evidence_reasons') or []),
     } for x in review_plan.get('items') or [] if x.get('status') in {'CONFIRMED','ISSUE','REVIEW'}])
     understanding_rows=[]
     for obj in project_understanding.get('objects') or []:
@@ -402,7 +449,15 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
         'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation'),
+        'Итоговый класс проверки':verification_label(x.get('final_verification_kind') or x.get('verification_kind')),
+        'Deep Evidence':ru_label(x.get('deep_evidence_state')),
+        'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or []),
     } for x in assignment_rows])
+    assignment_gip_df=_excel_safe_frame(assignment_df,columns=[
+        'ID требования','Раздел / вопрос Задания','Требование Задания','Объект','Показатель',
+        'Требуемое значение','Ед. изм.','Результат','Документ','Страница','Доказательства',
+        'Основание вывода','Рекомендация','Итоговый класс проверки','Deep Evidence','Причины ограничения',
+    ])
 
     normative_requirement_df = pd.DataFrame([{
         'НТД':x.get('reference'),
@@ -433,6 +488,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Приоритет базы':x.get('verification_priority'),
         'Дата проверки':x.get('verified_on') or x.get('last_verified_at') or '',
         'Источник проверки':x.get('official_source'),
+        'Рекомендуемый официальный источник':x.get('official_source_candidate') or '',
     } for x in normative_rows])
 
     summary_df = _excel_safe_frame(pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']))
@@ -472,14 +528,15 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if report_kind == 'manager':
         readiness=pd.DataFrame([
             {'Контур':'Задание на проектирование','Всего':assignment_plan.get('total',0),'Подтверждено':assignment_plan.get('confirmed',0),'Несоответствия':assignment_plan.get('issue',0),'Покрытие, %':assignment_plan.get('coverage_pct',0)},
-            {'Контур':'НТД','Всего':normative_plan.get('total',0),'Подтверждено':normative_plan.get('confirmed',0),'Несоответствия':normative_plan.get('issue',0),'Покрытие, %':normative_plan.get('coverage_pct',0)},
+            {'Контур':'НТД — ссылки и редакции','Всего':len(normative_rows),'Подтверждено':normative_registry_verified,'Несоответствия':normative_attention,'Покрытие, %':round(100*normative_registry_verified/max(1,len(normative_rows)),1)},
+            {'Контур':'НТД — доказательные требования','Всего':normative_plan.get('total',0),'Подтверждено':normative_plan.get('confirmed',0),'Несоответствия':normative_plan.get('issue',0),'Покрытие, %':normative_plan.get('coverage_pct',0)},
             {'Контур':'Чек-листы','Всего':checklist_plan.get('total',0),'Подтверждено':checklist_plan.get('confirmed',0),'Несоответствия':checklist_plan.get('issue',0),'Покрытие, %':checklist_plan.get('coverage_pct',0)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
         if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))
     elif report_kind == 'gip':
         if not review_plan_df.empty: sheets.append(('Проверка требований', review_plan_df))
-        if not assignment_df.empty: sheets.append(('Задание на проектирование', assignment_df))
+        if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
@@ -613,7 +670,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                     worksheet.conditional_format(1, 0, last_row, last_col, {
                         'type': 'text', 'criteria': 'containing', 'value': 'Совпадает', 'format': ok_fmt})
                     worksheet.conditional_format(1, 0, last_row, last_col, {
-                        'type': 'text', 'criteria': 'containing', 'value': 'Подтвержден', 'format': ok_fmt})
+                        'type': 'text', 'criteria': 'containing', 'value': 'Подтверждено источником', 'format': ok_fmt})
+                    worksheet.conditional_format(1, 0, last_row, last_col, {
+                        'type': 'text', 'criteria': 'containing', 'value': 'Соответствует', 'format': ok_fmt})
 
     payload = out.getvalue()
     if not payload.startswith(b'PK'):

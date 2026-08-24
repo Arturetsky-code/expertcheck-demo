@@ -9,7 +9,7 @@ def _group(status: Any) -> str:
     text = str(status or "").upper()
     if "РАСХОЖД" in text or "КОНФЛИКТ" in text or "НЕ СООТВЕТ" in text:
         return "high"
-    if any(token in text for token in ("НЕДОСТАТОЧ", "УТОЧ", "НЕ ПОДТВЕРЖ", "ТРЕБУЕТ", "НЕТ ДАННЫХ", "ЧАСТИЧНО")):
+    if any(token in text for token in ("НЕДОСТАТОЧ", "УТОЧ", "НЕ ПОДТВЕРЖ", "ТРЕБУЕТ", "НЕТ ДАННЫХ", "ЧАСТИЧНО", "ПРЕДВАРИТ", "КАНДИДАТ")):
         return "medium"
     if "СОВПАД" in text or "ПОДТВЕРЖ" in text or text.strip() == "ДА":
         return "ok"
@@ -144,24 +144,32 @@ def build_structured_report(
             else:
                 excluded_objects.append(compact)
     else:
-        confirmed_objects = [{
-            "position": _text(row, "position", "position_gp", "Позиция", "Позиция по ГП"),
-            "name": _text(row, "name", "object_name", "value_text", "Наименование объекта", "Наименование"),
-            "status": _text(row, "design_status", "status", "Статус") or "Подтверждён",
-            "source": _text(row, "canonical_source", "source", "Источники", "Основной источник"),
-        } for row in registry if (_text(row, "name", "object_name", "value_text", "Наименование объекта", "Наименование") or _text(row, "position", "position_gp", "Позиция", "Позиция по ГП"))]
+        for row in registry:
+            name=_text(row,"name","object_name","value_text","Наименование объекта","Наименование")
+            position=_text(row,"position","position_gp","Позиция","Позиция по ГП")
+            if not (name or position):
+                continue
+            source=_text(row,"canonical_source","source","Источники","Основной источник","pz_document","general_plan_document")
+            compact={
+                "position":position,"name":name,
+                "status":_text(row,"design_status","status","Статус") or ("Подтверждён" if source else "Требует подтверждения источника"),
+                "source":source or "Источник не подтверждён",
+            }
+            (confirmed_objects if source else unresolved_objects).append(compact)
 
     # Object Confirmation Model: if the UI assembly has not yet persisted inclusion flags,
     # the conservative Project Understanding registry is still a valid model count.
-    if not confirmed_objects:
+    if not confirmed_objects and not unresolved_objects:
         pu=(first.get("project_understanding") or {}) if isinstance(first,dict) else {}
         for obj in pu.get("objects") or []:
             if not obj.get("name"): continue
-            confirmed_objects.append({
+            physical_source=str(obj.get('source_lineage_status') or '')=='VERIFIED_SOURCE'
+            compact={
                 "position":str(obj.get("position") or ""),"name":str(obj.get("name") or ""),
-                "status":"Подтверждено моделью проекта" if (obj.get("evidence_count") or obj.get("registry_confidence")) else "Идентифицировано",
-                "source":str(obj.get("sources") or "Модель понимания проекта"),
-            })
+                "status":"Подтверждено источником" if physical_source else "Требует подтверждения источника",
+                "source":str(obj.get("sources") or "Источник не подтверждён"),
+            }
+            (confirmed_objects if physical_source else unresolved_objects).append(compact)
 
     recommendations: list[str] = []
     for risk in high_risks + medium_risks:
@@ -185,7 +193,11 @@ def build_structured_report(
         "project": project_name,
         "summary": {
             "documents": len(documents),
-            "objects": len(confirmed_objects),
+            # ``objects`` remains the compatibility total; management reports
+            # must use ``objects_confirmed`` and show unresolved separately.
+            "objects": len(confirmed_objects)+len(unresolved_objects),
+            "objects_confirmed":len(confirmed_objects),
+            "objects_unresolved":len(unresolved_objects),
             "checks": len(comparisons),
             "confirmed": counts["ok"],
             "requires_attention": counts["high"] + counts["medium"],

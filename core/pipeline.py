@@ -47,6 +47,9 @@ from .normative_requirement_analyzer import NormativeRequirementAnalyzer
 from .normative_compliance_engine import NormativeComplianceEngine
 from .automatic_review import AutomaticProjectReview
 from .project_review_planner import build_review_plan
+from .verification_core import domain_summary
+from .report_quality_gate import validate_review_plan
+from .fact_admission import assess_fact_admission
 from .remark_learning import RemarkLearningEngine
 from .learning_engine import apply_learning_examples
 from .object_discovery_orchestrator import ensure_general_plan_registry_visibility, needs_object_recovery
@@ -322,7 +325,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "10.1.0-review-planner-verification-core"
+        item["core_version"] = "10.3.0-alpha1-quality-gate"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -458,6 +461,15 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(80, "Понимание проекта", "Связываем объекты, показатели, значения и источники в единую модель проекта")
     project_understanding = build_project_object_model(object_registry, findings)
     project_understanding_quality = understanding_quality(project_understanding)
+    # Every extracted engineering fact receives a visible admission decision,
+    # including facts that never reached Project Understanding.  This keeps the
+    # technical appendix auditable and prevents raw HOLD/REJECT records from
+    # looking equivalent to admitted evidence.
+    for finding in findings:
+        if str(finding.get('parameter_code') or '') in {'OBJECT_ENTRY','OBJECT_CANDIDATE'}:
+            continue
+        if not finding.get('fact_admission_decision'):
+            finding.update(assess_fact_admission(finding))
 
     # Final high-trust cross-section pass. Earlier extraction comparisons remain
     # useful diagnostics, but the final engineering comparisons are rebuilt only
@@ -531,7 +543,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "10.1.0-review-planner-verification-core"
+        item["core_version"] = "10.3.0-alpha1-quality-gate"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -560,16 +572,70 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # Deep Evidence Intelligence: reconstruct evidence once, then target every planned check.
     # This layer is conservative: it may downgrade weak positives, never invent evidence.
     try:
-        from .deep_evidence_intelligence import run_deep_evidence_review
+        from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
         deep_evidence_review = run_deep_evidence_review(
             review_plan.get("items") or [], documents=documents, facts=findings, comparisons=cross_section_checks
         )
+        merge_summary=apply_deep_evidence_decisions(
+            deep_evidence_review,
+            assignment_rows=assignment_compliance,
+            normative_rows=normative_compliance_audit,
+            checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+        )
+        deep_evidence_review['merge_summary']=merge_summary
+
+        # Recalculate every public metric from the adjudicated rows.  This is the
+        # critical feedback loop missing in 10.2 Alpha 2.
+        assignment_meta={
+            key:assignment_compliance_summary.get(key)
+            for key in ('ai_evidence_review','directed_evidence')
+            if key in assignment_compliance_summary
+        }
+        assignment_compliance_summary=assignment_summary(assignment_compliance)
+        assignment_compliance_summary.update(assignment_meta)
+        if isinstance(automatic_review,dict):
+            checklist_rows=list(automatic_review.get('results') or [])
+            checklist_domain=domain_summary(checklist_rows,'checklist')
+            actionable=[x for x in checklist_rows if not x.get('is_heading')]
+            checklist_summary=dict(automatic_review.get('summary') or {})
+            checklist_summary.update({
+                'yes':sum(str(x.get('status') or '')=='Да' for x in actionable),
+                'no':sum(str(x.get('status') or '')=='Нет' for x in actionable),
+                'review':sum(str(x.get('status') or '')=='Требует проверки' for x in actionable),
+                'unsupported':sum(str(x.get('status') or '')=='Не проверено системой' for x in actionable),
+                'verified_completed':checklist_domain['completed'],
+                'system_limitations':checklist_domain['system_limitations'],
+                'review_questions':checklist_domain['review_questions'],
+                'automatic_coverage_pct':checklist_domain['automatic_coverage_pct'],
+            })
+            automatic_review['summary']=checklist_summary
+        review_plan=build_review_plan(
+            assignment_rows=assignment_compliance,
+            normative_rows=normative_compliance_audit,
+            checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+            comparisons=cross_section_checks,
+        )
+        deep_evidence_review['final_plan_metrics']={
+            'completed':review_plan.get('completed',0),
+            'project_findings':review_plan.get('project_findings',0),
+            'review_questions':review_plan.get('review_questions',0),
+            'system_limitations':review_plan.get('system_limitations',0),
+        }
+        decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     except Exception as exc:
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
+    report_quality_gate=validate_review_plan(review_plan)
+    if report_quality_gate.get('status')!='PASSED':
+        pipeline_errors.append({
+            'stage':'report_quality_gate',
+            'error':'Нарушены инварианты итоговых метрик.',
+            'issues':report_quality_gate.get('issues') or [],
+        })
     for doc in documents:
-        doc["core_version"] = "10.2.0-alpha2-deep-evidence-intelligence"
+        doc["core_version"] = "10.3.0-alpha1-quality-gate"
         doc["deep_evidence_review"] = deep_evidence_review
+        doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

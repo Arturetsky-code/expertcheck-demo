@@ -32,6 +32,32 @@ def _source_section(f:dict[str,Any])->str:
 def _registry_object_id(row:dict[str,Any])->str:
     return stable_object_id(_name(row),_position(row))
 
+
+def _registry_source_lineage(row:dict[str,Any])->tuple[str,list[dict[str,Any]],str]:
+    records=[dict(x) for x in (row.get('source_records') or []) if isinstance(x,dict)]
+    for kind,doc_key,page_key in (
+        ('PZ_COMPLEX_OBJECT_REGISTER','pz_document','pz_page'),
+        ('GENERAL_PLAN_EXPLICATION','general_plan_document','general_plan_page'),
+    ):
+        document=row.get(doc_key)
+        if document and not any(str(x.get('document') or '')==str(document) for x in records):
+            records.append({'kind':kind,'document':document,'page':row.get(page_key),'position':_position(row)})
+    labels=[]
+    raw=row.get('Источники') or row.get('sources') or ''
+    if isinstance(raw,(list,tuple,set)):
+        labels.extend(str(x).strip() for x in raw if str(x).strip())
+    elif str(raw).strip():
+        labels.append(str(raw).strip())
+    for record in records:
+        document=str(record.get('document') or '').strip()
+        page=record.get('page')
+        if document:
+            labels.append(f"{document}, стр. {page}" if page not in (None,'') else document)
+    labels=list(dict.fromkeys(x for x in labels if x and normalize_text(x)!='модель понимания проекта'))
+    physical=any(str(x.get('document') or '').strip() for x in records)
+    status='VERIFIED_SOURCE' if physical else ('DESCRIBED_SOURCE' if labels else 'UNRESOLVED_SOURCE')
+    return '; '.join(labels),records,status
+
 def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[str,Any]])->dict[str,Any]:
     """Build a conservative project ontology: object -> property -> evidence.
 
@@ -45,12 +71,15 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
         name=_name(row)
         if not name or is_parameter_entity_name(name):continue
         oid=_registry_object_id(row)
+        sources,source_records,source_lineage_status=_registry_source_lineage(row)
         obj={
           "object_id":oid,"name":name,"position":_position(row),
           "object_type":row.get("Тип объекта") or row.get("object_type_name") or "Инженерный объект",
           "status":row.get("Статус") or row.get("status") or "",
           "registry_confidence":row.get("Уверенность") or row.get("confidence") or 0,
-          "sources":row.get("Источники") or row.get("sources") or "",
+          "sources":sources,
+          "source_records":source_records,
+          "source_lineage_status":source_lineage_status,
           "properties":defaultdict(list),"unresolved_evidence":[],
         }
         objects[oid]=obj

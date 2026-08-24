@@ -21,15 +21,38 @@ def build_project_evidence_database(documents:list[dict[str,Any]]|None=None, fac
             page=(p.get('page') if isinstance(p,dict) else None) or i
             records.append({'evidence_id':_id(doc,page,text[:180]),'kind':'DOCUMENT_TEXT','document':doc,'page':page,'text':text,'owner':'','metric':'','value':'','unit':'','trust':'SOURCE'})
     for f in facts or []:
-        owner=_txt(f.get('object_name') or f.get('owner') or f.get('entity_name'))
-        metric=_txt(f.get('metric') or f.get('metric_code') or f.get('indicator') or f.get('parameter'))
+        admission=_txt(f.get('fact_admission_decision')).upper()
+        quality=_txt(f.get('evidence_quality_decision')).upper()
+        integrity=_txt(f.get('row_integrity_status')).upper()
+        if admission in {'HOLD','REJECT'} or quality in {'HOLD','REJECT','BLOCKED'} or integrity.startswith('BLOCKED') or f.get('comparison_excluded'):
+            continue
+        owner=_txt(
+            f.get('object_name') or f.get('project_understanding_object_name')
+            or f.get('object_hint') or f.get('owner') or f.get('entity_name')
+            or f.get('semantic_anchor_name')
+        )
+        metric=_txt(
+            f.get('metric') or f.get('metric_code') or f.get('indicator')
+            or f.get('parameter') or f.get('parameter_code') or f.get('parameter_name')
+        )
         value=f.get('value'); unit=_txt(f.get('unit') or f.get('units'))
         doc=_txt(f.get('document') or f.get('source_document') or f.get('source'))
         page=f.get('page') or f.get('source_page') or ''
-        records.append({'evidence_id':_id(doc,page,owner,metric,value,unit),'kind':'STRUCTURED_FACT','document':doc,'page':page,'text':_txt(f.get('evidence') or f.get('source_text') or f.get('raw_text')),'owner':owner,'metric':metric,'value':value,'unit':unit,'trust':_txt(f.get('trust_state') or 'STRUCTURED'),'source_fact_id':_txt(f.get('fact_id') or f.get('evidence_id'))})
+        binding=_txt(f.get('binding_status') or f.get('property_binding_status')).upper()
+        strong=bool(
+            admission=='ADMIT' or quality in {'VERIFIED','SUPPORTED'}
+            or binding in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'}
+            or f.get('directed_evidence')
+        )
+        kind='STRUCTURED_FACT' if strong else 'CANDIDATE_FACT'
+        records.append({'evidence_id':_id(doc,page,owner,metric,value,unit),'kind':kind,'document':doc,'page':page,'text':_txt(f.get('evidence') or f.get('source_text') or f.get('raw_text') or f.get('context') or f.get('table_evidence')),'owner':owner,'metric':metric,'value':value,'unit':unit,'trust':_txt(f.get('trust_state') or quality or admission or 'CANDIDATE'),'source_fact_id':_txt(f.get('fact_id') or f.get('evidence_id'))})
     for c in comparisons or []:
-        if not bool(c.get('is_conflict') or c.get('conflict') or str(c.get('kind','')).lower() in {'mismatch','conflict'}): continue
-        records.append({'evidence_id':_id('CMP',c.get('object_name'),c.get('metric'),c.get('values')),'kind':'STRUCTURED_CONFLICT','document':_txt(c.get('documents')),'page':'','text':_txt(c.get('explanation') or c.get('evidence')),'owner':_txt(c.get('object_name') or c.get('owner')),'metric':_txt(c.get('metric') or c.get('indicator')),'value':c.get('values') or c.get('value'),'unit':_txt(c.get('unit')),'trust':'VERIFIED_CONFLICT'})
+        status=_txt(c.get('status') or c.get('result')).upper()
+        conflict=bool(c.get('is_conflict') or c.get('conflict') or str(c.get('kind','')).lower() in {'mismatch','conflict'} or any(x in status for x in ('РАСХОЖД','КОНФЛИКТ','НЕ СООТВЕТ')))
+        if not conflict: continue
+        owner=_txt(c.get('object_name') or c.get('object') or c.get('owner'))
+        metric=_txt(c.get('metric') or c.get('indicator') or c.get('parameter_code') or c.get('parameter_name') or c.get('parameter'))
+        records.append({'evidence_id':_id('CMP',owner,metric,c.get('values')),'kind':'STRUCTURED_CONFLICT','document':_txt(c.get('documents') or c.get('sources')),'page':'','text':_txt(c.get('explanation') or c.get('evidence')),'owner':owner,'metric':metric,'value':c.get('values') or c.get('value') or c.get('values_by_section'),'unit':_txt(c.get('unit')),'trust':'VERIFIED_CONFLICT'})
     by_owner={}; by_metric={}
     for r in records:
         if r['owner']: by_owner.setdefault(r['owner'].lower(),[]).append(r['evidence_id'])

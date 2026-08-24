@@ -1,14 +1,19 @@
 from __future__ import annotations
 from typing import Any
-import re
+import math,re
 
 def _tokens(text:str)->set[str]:
     return {x for x in re.findall(r'[a-zа-яё0-9]+',str(text or '').lower()) if len(x)>2}
 
+def _num(value:Any)->float|None:
+    try:return float(str(value).replace('\u00a0','').replace(' ','').replace(',','.'))
+    except (TypeError,ValueError):return None
+
 def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=12)->list[dict[str,Any]]:
     """Multi-strategy deterministic retrieval. AI reranking may be layered on top."""
     qtext=' '.join(str(query.get(k) or '') for k in ('title','requirement','metric','entity','expected_evidence'))
-    qt=_tokens(qtext); entity=str(query.get('entity') or query.get('scope') or '').lower(); metric=str(query.get('metric') or '').lower()
+    qt=_tokens(qtext); entity=str(query.get('entity') or '').lower(); metric=str(query.get('metric') or '').lower()
+    required_value=_num(query.get('required_value')); required_unit=str(query.get('unit') or '').lower().replace(' ','')
     out=[]
     for r in db.get('records') or []:
         score=0; reasons=[]
@@ -17,6 +22,12 @@ def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=12)->list
         if overlap: score+=min(35,overlap*5); reasons.append('semantic_terms')
         if entity and entity in str(r.get('owner') or '').lower(): score+=35; reasons.append('entity_match')
         if metric and metric in str(r.get('metric') or '').lower(): score+=40; reasons.append('metric_match')
+        candidate_value=_num(r.get('value'))
+        if required_value is not None and candidate_value is not None and math.isclose(required_value,candidate_value,rel_tol=.0005,abs_tol=.02):
+            score+=30; reasons.append('value_match')
+        candidate_unit=str(r.get('unit') or '').lower().replace(' ','')
+        if required_unit and candidate_unit and (required_unit==candidate_unit or required_unit in candidate_unit or candidate_unit in required_unit):
+            score+=10; reasons.append('unit_match')
         if r.get('kind')=='STRUCTURED_FACT': score+=10; reasons.append('structured_fact')
         if r.get('kind')=='STRUCTURED_CONFLICT': score+=25; reasons.append('verified_conflict')
         if score:

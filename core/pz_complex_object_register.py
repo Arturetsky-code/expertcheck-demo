@@ -242,6 +242,9 @@ def _parse_stream(stream: list[tuple[int, str]], pages: list[dict[str, Any]]) ->
             'pz_complex_object_register': True,
             'object_lifecycle_status': 'Проектируемый',
             'record_kind': 'project_object',
+            'table_row': pos,
+            'row_index': idx,
+            'row_text': evidence_text[:2000],
         }
         findings.append({
             **base,

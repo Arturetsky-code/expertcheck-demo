@@ -47,8 +47,11 @@ def review_assignment_rows(provider:Any, rows:list[dict[str,Any]], limit:int=12)
             confirmed+=1
             # AI confirmation remains review-level unless a deterministic checker exists.
             if row.get('status') in {'Требуется смысловая проверка','Требует проверки'}:
-                row['status']='Предварительно подтверждено AI'
+                row['status']='Требует проверки'
+                row['ai_evidence_state']='CANDIDATE_SUPPORT'
+                row['ai_review_provisional']=True
                 row['decision_basis']='AI сопоставил конкретное требование с переданным evidence packet. Результат не является категоричным без специализированного checker.'
+                row['recommendation']='Проверить AI-кандидат по указанному источнику; автоматическое соответствие не установлено.'
         elif state=='contradicted':
             contradicted+=1
             row['status']='Требует проверки'

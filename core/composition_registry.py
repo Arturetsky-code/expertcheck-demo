@@ -57,6 +57,14 @@ def build_composition_baseline(
             'Доверие к объекту': 140,
             'composition_baseline': True,
             'composition_source_strength': 'authoritative_pz',
+            'pz_document': item.get('document'),
+            'pz_page': item.get('page'),
+            'source_records': [{
+                'kind':'PZ_COMPLEX_OBJECT_REGISTER',
+                'document':item.get('document'),
+                'page':item.get('page'),
+                'position':pos,
+            }],
         }
 
     for item in gp_findings:
@@ -80,6 +88,10 @@ def build_composition_baseline(
             row['gp_name'] = name
             row['general_plan_document'] = item.get('document')
             row['general_plan_page'] = item.get('page')
+            row.setdefault('source_records',[]).append({
+                'kind':'GENERAL_PLAN_EXPLICATION','document':item.get('document'),
+                'page':item.get('page'),'position':pos,
+            })
             continue
         rows[pos] = {
             'Позиция по ГП': pos,
@@ -97,6 +109,10 @@ def build_composition_baseline(
             'composition_source_strength': 'general_plan_explication',
             'general_plan_document': item.get('document'),
             'general_plan_page': item.get('page'),
+            'source_records': [{
+                'kind':'GENERAL_PLAN_EXPLICATION','document':item.get('document'),
+                'page':item.get('page'),'position':pos,
+            }],
         }
 
     result = sorted(rows.values(), key=lambda r: tuple(int(x) for x in str(r['Позиция по ГП']).split('.')))

@@ -109,7 +109,9 @@ class NormativeValidityChecker:
         return {
           "reference":reference,"canonical_id":"","status":edition_risk,
           "verified_on":"","verified_revision":"","replacement":"","effective_until":"",
-          "official_source":source.get("title",""),"official_source_kind":source_kind,
+          # A source catalogue name is only a verification route, not evidence
+          # that this particular reference was checked there.
+          "official_source":"","official_source_candidate":source.get("title",""),"official_source_kind":source_kind,
           "document":document,"page":page,"impact_risk":self.impact_risk(context),
           "coverage_status":"Требует наполнения KB",
           "project_risk_applicable":False,

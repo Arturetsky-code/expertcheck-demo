@@ -70,6 +70,12 @@ PLAN_OBJECT_TOKENS = (
     "площадка очистных", "площадка склада", "промплощадка", "факельная установка",
     "установка подготовки", "сепаратор", "скважина", "куст скважин",
 )
+SINGLE_OBJECT_HINTS = PLAN_OBJECT_TOKENS + (
+    "компрессорн", "насосн", "операторск", "котельн", "электрощитов",
+    "столов", "раздевал", "склад", "навес", "эстакад", "конвейер",
+    "дробил", "грохот", "бункер", "резервуар", "водовод", "выгреб",
+    "жироулов", "кпп", "лос", "абк", "ктп", "дэс", "зру", "ору",
+)
 
 
 @dataclass
@@ -175,6 +181,12 @@ def _is_plausible_name(value: str) -> bool:
         "проектируемые здания и сооружения", "существующие здания и сооружения",
         "характерные поворотные точки",
     )):
+        return False
+    words=re.findall(r"[a-zа-яё0-9-]+",low)
+    # A lone surname/stamp fragment next to a number is a common PDF-layout
+    # error.  A single-word object is accepted only when it has engineering
+    # semantics (КТП, ДЭС, компрессорная, резервуар, etc.).
+    if len(words)==1 and not any(token in low for token in SINGLE_OBJECT_HINTS):
         return False
     return any(ch.isalpha() for ch in name)
 

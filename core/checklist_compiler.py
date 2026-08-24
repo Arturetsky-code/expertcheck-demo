@@ -51,6 +51,15 @@ PRESENCE = ('наличие', 'представлен', 'приведен', 'п�
 STOP = {'проверить','проверка','соответствие','наличие','раздел','проектной','документации','должен','должна','должны','требования'}
 
 
+def _contains_word(text: str, tokens: tuple[str, ...]) -> bool:
+    """Match control words as words, not as arbitrary substrings.
+
+    For example, ``указан`` must not match ``указаний``: that mistake used to
+    turn "Правильность заполнения общих указаний" into a presence check.
+    """
+    words=set(re.findall(r'[а-яa-zё-]+',text))
+    return any(token in words for token in tokens)
+
 
 
 def infer_verification_level(question: str) -> str:
@@ -58,7 +67,7 @@ def infer_verification_level(question: str) -> str:
     # L4/L5 must never be closed by a simple presence hit.
     if any(x in q for x in ('ко всем','для всех','по четырем углам','по четырём углам','в полном объеме','в полном объёме','каждого','всех здан','всех сооруж')):
         return 'L4_COMPLETENESS'
-    if any(x in q for x in ('соответств','норматив','допустим','обеспечен','достаточ','противопожарн','эвакуац','радиус','уклон','расстояни','освещен')):
+    if any(x in q for x in ('соответств','норматив','допустим','обеспечен','достаточ','правильн','корректн','актуальн','противопожарн','эвакуац','радиус','уклон','расстояни','освещен')):
         return 'L5_ENGINEERING_COMPLIANCE'
     if any(x in q for x in ('свер','совпад','увяз')):
         return 'L3_CROSS_CHECK'
@@ -78,7 +87,7 @@ def _compile_item_base(item: dict[str, Any]) -> CompiledChecklistRule:
         return CompiledChecklistRule('section_structure','pp87_requirement',terms,tuple(codes),True,'Проверка структуры и обязательного содержания раздела ПД.','SEMANTIC',('SELECTED_SECTION',),('NORMATIVE_CONTEXT','RELEVANT_FRAGMENT','PAGE_REFERENCE'),'AI_WITH_EVIDENCE','NORMATIVE_CONTENT_REVIEW')
     if codes and any(x in question for x in ('свер', 'соответств', 'совпад')):
         return CompiledChecklistRule('numeric_crosscheck','parameter',terms,tuple(codes),False,'Числовая межраздельная проверка.','CALC',('PROFILE_OWNER','DEPENDENT'),('STRUCTURED_VALUE','SOURCE_SECTION'),'STRICT','ENGINEERING_VALUE_CROSSCHECK')
-    if any(x in question for x in PRESENCE):
+    if _contains_word(question,PRESENCE):
         return CompiledChecklistRule('presence','document_content',terms,tuple(codes),False,'Проверка наличия требуемых сведений.','AUTO',('SELECTED_SECTION',),('TEXT_OR_TABLE','PAGE_REFERENCE'),'CONSERVATIVE','DRAWING_PRESENCE_CHECK' if any(x in question for x in ('план','чертеж','чертёж','разрез','фасад','схем')) else 'DOCUMENT_CONTENT_PRESENCE')
     if any(x in question for x in SEMANTIC):
         return CompiledChecklistRule('semantic_review','engineering_solution',terms,tuple(codes),True,'Требуется смысловой анализ проектного решения.','SEMANTIC',('SELECTED_SECTION','RELATED_SECTIONS'),('RELEVANT_FRAGMENT','NORMATIVE_CONTEXT','REMARK_ANALOG'),'AI_WITH_EVIDENCE','ENGINEERING_SEMANTIC_REVIEW')

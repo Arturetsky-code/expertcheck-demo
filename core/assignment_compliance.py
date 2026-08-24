@@ -534,7 +534,7 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         packet=evidence_packet(req,candidates)
         evidence_quality_state=('VERIFIED_SET_EVIDENCE' if rtype==TYPE_SET and status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE')))
         out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"evidence_quality_state":evidence_quality_state,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
-                    "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
+                    "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки","Требуется смысловая проверка"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
     return out
 
 

@@ -207,3 +207,49 @@ def attach_directed_evidence(requirements: list[dict[str,Any]], corpus: list[dic
         if cands: stats['with_candidates']+=1
         stats['verified_candidates']+=sum(1 for c in cands if c.get('evidence_state')=='verified_candidate')
     return stats
+
+
+def directed_evidence_facts(rows: list[dict[str,Any]]) -> list[dict[str,Any]]:
+    """Project exact directed hits into the Deep Evidence layer only.
+
+    These records do not enter the object registry or cross-section model. They
+    preserve a deterministic requirement-to-source trace so that the adversarial
+    gate can verify an already established positive result.
+    """
+    facts=[]; seen=set()
+    for row in rows or []:
+        if str(row.get('status') or '') != 'Соответствует заданию':
+            continue
+        code=canonical_parameter_code(row.get('parameter_code'))
+        required=row.get('required_value')
+        if not code or required is None:
+            continue
+        try: required_value=float(required)
+        except (TypeError,ValueError): continue
+        scope=str((row.get('evidence_contract_v2') or {}).get('scope') or row.get('requirement_scope') or '')
+        owner=str(row.get('object_name') or ('Проект' if scope==SCOPE_PROJECT else '')).strip()
+        for candidate in row.get('directed_evidence_candidates') or []:
+            if str(candidate.get('evidence_state') or '')!='verified_candidate':
+                continue
+            if canonical_parameter_code(candidate.get('parameter_code'))!=code:
+                continue
+            if row.get('unit') and not units_compatible(row.get('unit'),candidate.get('unit'),code):
+                continue
+            try: value=float(candidate.get('value'))
+            except (TypeError,ValueError): continue
+            if not math.isclose(value,required_value,rel_tol=.002,abs_tol=.05):
+                continue
+            key=(str(row.get('requirement_id') or ''),str(candidate.get('document') or ''),candidate.get('page'),round(value,6),code)
+            if key in seen: continue
+            seen.add(key)
+            facts.append({
+                'requirement_id':row.get('requirement_id'),
+                'document':candidate.get('document'),'page':candidate.get('page'),
+                'object_hint':owner,'semantic_anchor_name':owner,
+                'parameter_code':code,'parameter_name':code,
+                'value':value,'unit':candidate.get('unit'),'context':candidate.get('context'),
+                'match_method':'REQUIREMENT_DIRECTED_TEXT','directed_evidence':True,
+                'evidence_quality_decision':'VERIFIED','fact_admission_decision':'ADMIT',
+                'binding_status':'EXACT_OBJECT' if owner else '',
+            })
+    return facts

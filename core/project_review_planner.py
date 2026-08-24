@@ -57,6 +57,7 @@ def build_review_plan(
             'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
             'expected_sections':contract.get('expected_sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id') or row.get('source_row')),
+            'recommendation':_txt(row.get('recommendation')),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')
@@ -73,6 +74,7 @@ def build_review_plan(
             'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
             'expected_sections':(row.get('evidence_contract') or {}).get('sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id')),
+            'recommendation':_txt(row.get('recommendation')),
         })
     for i,row in enumerate(checklist,1):
         if row.get('is_heading'):continue
@@ -91,6 +93,7 @@ def build_review_plan(
             'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
             'expected_sections':[row.get('automatic_section')] if row.get('automatic_section') else [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('item_no') or row.get('position')),
+            'recommendation':_txt(row.get('recommendation')),
         })
 
     raw_summaries={

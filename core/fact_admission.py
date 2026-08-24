@@ -36,7 +36,10 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     scope_decision = str(finding.get("scope_binding_decision") or "ALLOW").upper()
     table_scope_decision = str(finding.get("table_semantic_scope_decision") or "ALLOW").upper()
     obj = str(finding.get("object_hint") or finding.get("semantic_anchor_name") or "").strip()
-    entity_level=infer_entity_level(obj, finding.get("genplan_position") or finding.get("semantic_anchor_position"), finding.get("context") or finding.get("table_title"))
+    # A physically locked row owns its value. Page/table headings may describe a
+    # broader site context and must not override the entity named in that row.
+    entity_context = "" if binding in {"ROW_LOCKED", "POSITION_LOCKED", "EXACT_OBJECT"} else (finding.get("context") or finding.get("table_title"))
+    entity_level=infer_entity_level(obj, finding.get("genplan_position") or finding.get("semantic_anchor_position"), entity_context)
     page = finding.get("page")
     document = str(finding.get("document") or "").strip()
     position = str(finding.get("genplan_position") or finding.get("semantic_anchor_position") or "").strip()

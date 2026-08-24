@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from .general_plan_engine import is_service_role_label
 
-def validate_review_plan(plan: dict[str, Any]) -> dict[str, Any]:
+
+def validate_review_plan(plan: dict[str, Any], *, object_registry: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Validate report metrics before they become management conclusions."""
     issues: list[str] = []
     domains = plan.get("domains") or {}
@@ -37,11 +39,19 @@ def validate_review_plan(plan: dict[str, Any]) -> dict[str, Any]:
             issues.append(f"Предварительный результат ошибочно подтверждён: {title}.")
         if item.get("verification_kind") == "VERIFIED_OK" and item.get("adversarial_state") == "BLOCKED":
             issues.append(f"Заблокированный adversarial gate результат остался подтверждённым: {title}.")
+        recommendation = str(item.get("recommendation") or "").lower()
+        if item.get("verification_kind") == "REVIEW_QUESTION" and "дополнительное действие не требуется" in recommendation:
+            issues.append(f"Вопрос специалисту ошибочно помечен как не требующий действия: {title}.")
+
+    for row in object_registry or []:
+        name = str(row.get("Наименование объекта") or row.get("Наименование") or row.get("name") or "").strip()
+        if name and is_service_role_label(name):
+            issues.append(f"В реестр объектов попала служебная роль основной надписи: {name[:100]}.")
 
     return {
         "status": "PASSED" if not issues and checked_domains == 3 else "FAILED",
         "issues": issues,
         "checked_domains": checked_domains,
         "checks": len(plan.get("items") or []),
+        "checked_objects": len(object_registry or []),
     }
-

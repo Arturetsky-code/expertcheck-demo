@@ -29,6 +29,16 @@ SERVICE_NAMES = {
 }
 ROW_NOTES = {"проект", "проект.", "сущ", "сущ.", "существ.", "перспект", "перспект.", "стр", "стр."}
 
+# Служебные роли основной надписи чертежа. Это не отраслевой словарь объектов,
+# а универсальный защитный фильтр PDF-разметки: номер листа рядом с фамилией
+# исполнителя не должен превращаться в позицию генерального плана.
+SERVICE_ROLE_RE = re.compile(
+    r"^(?:нач\.?\s*(?:отд|групп|сектор)\.?|начальник\s+(?:отдела|группы|сектора)|"
+    r"разраб\.?|разработал|пров\.?|проверил|гип|гап|гл\.?\s*спец\.?|"
+    r"н\.?\s*контр\.?|нормоконтроль|утвердил|согласовал|подпись|дата)\b",
+    re.I,
+)
+
 
 def _page_status_policy(page: fitz.Page, textpage: fitz.TextPage | None = None) -> tuple[bool, bool]:
     """Return (mixed_statuses, has_project_marker) for an explication page."""
@@ -163,10 +173,17 @@ def _clean_name(value: str) -> str:
     return " ".join(words).strip(" .;:-")
 
 
+def is_service_role_label(value: str) -> bool:
+    """Return True for title-block roles that cannot be project objects."""
+    return bool(SERVICE_ROLE_RE.search(_clean_name(value)))
+
+
 def _is_plausible_name(value: str) -> bool:
     name = _clean_name(value)
     low = _normalize_text(name)
     if len(name) < 3 or low in SERVICE_NAMES:
+        return False
+    if is_service_role_label(name):
         return False
     if re.fullmatch(r"[\d.,+\-–— ]+", name):
         return False

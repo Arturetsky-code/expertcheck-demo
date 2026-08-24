@@ -66,7 +66,7 @@ from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
 from .requirements_ai_reasoner import review_assignment_rows
-from .directed_evidence import build_page_corpus, attach_directed_evidence
+from .directed_evidence import build_page_corpus, attach_directed_evidence, directed_evidence_facts
 from .table_semantic_scope import annotate_table_semantic_scope
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
@@ -325,7 +325,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "10.3.0-alpha1-quality-gate"
+        item["core_version"] = "10.3.0-alpha2-evidence-recall"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -497,8 +497,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         assignment_compliance_summary = assignment_summary(assignment_compliance)
         assignment_compliance_summary["ai_evidence_review"]=assignment_ai_summary
         assignment_compliance_summary["directed_evidence"]=assignment_directed_evidence_summary
+        assignment_directed_facts = directed_evidence_facts(assignment_compliance)
+        assignment_compliance_summary["directed_evidence"]["admitted_for_deep_review"] = len(assignment_directed_facts)
     except Exception as exc:
-        assignment_requirements, assignment_compliance = [], []
+        assignment_requirements, assignment_compliance, assignment_directed_facts = [], [], []
         assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"ai_evidence_review":{"reviewed":0,"confirmed":0,"contradicted":0},"error":str(exc)}
         pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
 
@@ -531,6 +533,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     except Exception as exc:
         normative_requirement_audit = []
         pipeline_errors.append({"stage":"normative_requirement_analysis","error":str(exc)})
+    pp87_project_profile = detect_pp87_profile(findings, documents)
     try:
         normative_engine = NormativeComplianceEngine(root / "knowledge")
         normative_compliance_audit = normative_engine.review(findings, project_type=str(pp87_project_profile.get("project_type") or "") if isinstance(pp87_project_profile,dict) else "")
@@ -543,12 +546,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "10.3.0-alpha1-quality-gate"
+        item["core_version"] = "10.3.0-alpha2-evidence-recall"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
         item["dem_unassigned_values"] = dem.metadata.get("unassigned_value_count", 0)
-    pp87_project_profile = detect_pp87_profile(findings, documents)
     progress(93, "Автоматические чек-листы", "Определяем разделы и запускаем подходящие корпоративные чек-листы")
     project_context = {
         "project_type": str(pp87_project_profile.get("project_type") or pp87_project_profile.get("profile") or "") if isinstance(pp87_project_profile, dict) else str(pp87_project_profile or ""),
@@ -574,7 +576,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     try:
         from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
         deep_evidence_review = run_deep_evidence_review(
-            review_plan.get("items") or [], documents=documents, facts=findings, comparisons=cross_section_checks
+            review_plan.get("items") or [], documents=documents, facts=findings + assignment_directed_facts, comparisons=cross_section_checks
         )
         merge_summary=apply_deep_evidence_decisions(
             deep_evidence_review,
@@ -625,7 +627,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     except Exception as exc:
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
-    report_quality_gate=validate_review_plan(review_plan)
+    report_quality_gate=validate_review_plan(review_plan, object_registry=object_registry)
     if report_quality_gate.get('status')!='PASSED':
         pipeline_errors.append({
             'stage':'report_quality_gate',
@@ -633,7 +635,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'issues':report_quality_gate.get('issues') or [],
         })
     for doc in documents:
-        doc["core_version"] = "10.3.0-alpha1-quality-gate"
+        doc["core_version"] = "10.3.0-alpha2-evidence-recall"
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary

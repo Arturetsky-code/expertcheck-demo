@@ -167,6 +167,7 @@ def _excel_safe_frame(frame: pd.DataFrame, *, columns: list[str] | None = None, 
 
 
 def _compact_technical_frames(docs, findings, comparisons, report):
+    comparison_items=comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or [])
     registry_columns = [
         'Позиция по ГП','Наименование объекта','Статус проектирования','Статус',
         'Источники','Страницы','Уверенность','Решение инспектора','Причины решения',
@@ -192,9 +193,23 @@ def _compact_technical_frames(docs, findings, comparisons, report):
         'Ключ','Позиция по ГП','Наименование объекта','Статус проектирования',
         'Основание включения','Блокировка','Решение пользователя','Комментарий пользователя',
     ]
+    comparison_rows=[]
+    for index,row in enumerate(comparison_items,1):
+        comparison_rows.append({
+            'check_id':row.get('check_id') or row.get('comparison_id') or row.get('check_code') or f'XCHK-{index:03d}',
+            'object':row.get('object') or row.get('object_name') or row.get('Объект') or 'Объект не определён',
+            'parameter':row.get('parameter') or row.get('parameter_name') or row.get('rule_name') or row.get('Параметр') or 'Проверка',
+            'status':row.get('status') or row.get('result') or row.get('Результат') or '',
+            'priority':row.get('priority') or row.get('engineering_risk_level') or '',
+            'values_by_section':row.get('values_by_section') or row.get('document_values') or row.get('values') or row.get('documents') or '',
+            'explanation':row.get('explanation') or row.get('Пояснение') or '',
+            'sources':row.get('sources') or row.get('sections') or '',
+            'genplan_position':row.get('genplan_position') or row.get('Позиция по ГП') or '',
+            'strong_evidence_count':row.get('strong_evidence_count') or 0,
+        })
     return {
         'Тех_реестр': _excel_safe_frame(registry(docs), columns=registry_columns, max_rows=5000),
-        'Тех_сверки': _excel_safe_frame(comparisons, columns=comparison_columns, max_rows=10000),
+        'Тех_сверки': _excel_safe_frame(pd.DataFrame(comparison_rows), columns=comparison_columns, max_rows=10000),
         'Тех_документы': _excel_safe_frame(docs, columns=document_columns, max_rows=3000),
         'Тех_извлечение': _excel_safe_frame(engineer_findings(findings), columns=finding_columns, max_rows=10000),
         'Тех_исключённые': _excel_safe_frame(pd.DataFrame(report.get('excluded_objects') or []), columns=object_columns, max_rows=5000),
@@ -276,6 +291,7 @@ def _report_context(project, docs, comparisons, risks=None, checklist_results=No
 
 def structured_excel_report(project, version, docs, findings, comparisons, *, report_kind='gip', risks=None, checklist_results=None, assembly_rows_data=None):
     doc_records=docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or [])
+    comparison_records=comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or [])
     first_record=(doc_records[0] or {}) if doc_records else {}
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
@@ -582,7 +598,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             attention=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
             return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Покрытие, %':round(100*(ok+issues)/max(1,total),1)}
         normative_valid_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру' and x.get('status') in {'Действует','Действует с изменениями'})
-        cross_total=int(summary.get('checks',0) or 0); cross_ok=int(summary.get('confirmed',0) or 0); cross_issues=int(summary.get('project_findings',0) or 0)
+        cross_total=len(comparison_records)
+        cross_ok=sum(1 for x in comparison_records if str(x.get('status') or x.get('result') or '').strip().upper() in {'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО'})
+        cross_issues=sum(1 for x in comparison_records if str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' or str(x.get('status') or x.get('result') or '').strip().upper() in {'ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ','РАСХОЖДЕНИЕ','КОНФЛИКТ'})
         cross_attention=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
         readiness=pd.DataFrame([
             readiness_row('Задание на проектирование',assignment_plan),
@@ -611,7 +629,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             detailed_normative_df=pd.DataFrame(normative_reference_details)
             if not detailed_normative_df.empty:
                 sheets.append(('НТД — все упоминания', _excel_safe_frame(detailed_normative_df)))
-        for sheet_name, frame in _compact_technical_frames(docs, findings, comparisons, report).items():
+        for sheet_name, frame in _compact_technical_frames(docs, findings, comparison_records, report).items():
             if not frame.empty:
                 sheets.append((_safe_sheet_name(sheet_name), frame))
 

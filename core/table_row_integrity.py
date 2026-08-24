@@ -25,14 +25,18 @@ def _name(item:dict[str,Any])->str:
     return normalize_text(item.get("object_hint") or "")
 
 def _authoritative(item:dict[str,Any])->bool:
-    method=normalize_text(item.get("match_method") or "")
     binding=str(item.get("binding_status") or item.get("property_binding_status") or "").upper()
     confidence=float(item.get("core2_confidence") or item.get("confidence") or 0)
-    return (
-        binding in STRONG_BINDINGS
-        or any(t in method for t in AUTHORITATIVE_METHOD_TOKENS)
-        or (bool(item.get("genplan_position")) and confidence>=.96)
+    locator=item.get('source_locator') or {}
+    trace=str(item.get('physical_trace_level') or locator.get('physical_trace_level') or '').upper()
+    has_row_trace=bool(
+        item.get('table_row') not in (None,'') or item.get('row_index') not in (None,'')
+        or item.get('row_text') or trace in {'ROW_TRACE','CELL_TRACE'}
     )
+    # Method labels are parser assertions, not independent evidence.  A fact is
+    # authoritative only when a strong binding and a physical row/cell trace
+    # are both present.  High extractor confidence cannot replace either.
+    return binding in STRONG_BINDINGS and has_row_trace and confidence>=.80
 
 def apply_table_row_integrity_guard(findings:list[dict[str,Any]])->dict[str,int]:
     """Blocks shifted values from flattened PDF tables.

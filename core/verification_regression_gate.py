@@ -27,13 +27,27 @@ def synthetic_cases(recipe:dict[str,Any])->list[dict[str,Any]]:
 def regression_gate(recipe:dict[str,Any])->dict[str,Any]:
     critic=float(recipe.get('critic_score') or 0)
     cases=synthetic_cases(recipe)
-    # Safety score: all recipes support abstention by construction; more deterministic methods earn more.
-    deterministic=str(recipe.get('check_method') or '').upper() in {'VALUE_COMPARISON','SET_COMPARISON','ENGINEERING_VALUE_CROSSCHECK','DOCUMENT_CONTENT_PRESENCE','DRAWING_PRESENCE_CHECK','CALCULATION_PRESENCE','STRUCTURED_COMPARISON'}
+    method=str(recipe.get('check_method') or '').upper()
     level=str(recipe.get('verification_level') or '')
-    score=0.62 + (0.18 if deterministic else 0) + (0.08 if level in {'L1_PRESENCE','L2_VALUE','L3_CROSS_CHECK'} else 0)
-    score=min(0.96,score)
-    passed=bool(recipe.get('critic_pass')) and score>=0.78
-    return {'regression_score':round(score,3),'regression_pass':passed,'synthetic_cases':cases,'recipe_status':'TRUSTED' if passed else 'EXPERIMENTAL'}
+    evidence={str(x).upper() for x in (recipe.get('required_evidence') or [])}
+    violations=[]
+    if level=='L1_PRESENCE' and method in {'DOCUMENT_CONTENT_PRESENCE','DRAWING_PRESENCE_CHECK'} and not (evidence & {'STRUCTURED_PRESENCE','DOCUMENT_IDENTITY'}):
+        violations.append('weak_semantic_hit cannot be distinguished from identified_required_artifact')
+    if level=='L2_VALUE' and not (evidence & {'STRUCTURED_VALUE','STRUCTURED_COMPARISON'}):
+        violations.append('value check has no structured value evidence')
+    if level=='L3_CROSS_CHECK' and 'STRUCTURED_COMPARISON' not in evidence:
+        violations.append('cross-check has no structured comparison evidence')
+    if level in {'L4_COMPLETENESS','L5_ENGINEERING_COMPLIANCE'} and not (evidence & {'VERIFIED_SET_EVIDENCE','STRUCTURED_COMPLETENESS','VERIFIED_ENGINEERING_EVIDENCE','NORMATIVE_EVIDENCE','VERIFIED_CLAUSE'}):
+        violations.append('complex check has no executable strong-evidence contract')
+    deterministic=method in {'VALUE_COMPARISON','SET_COMPARISON','ENGINEERING_VALUE_CROSSCHECK','CALCULATION_PRESENCE','STRUCTURED_COMPARISON'}
+    score=max(0.0,min(0.96,critic + (0.08 if deterministic else 0.0) - 0.18*len(violations)))
+    passed=bool(recipe.get('critic_pass')) and not violations and score>=0.78
+    case_results=[{**case,'result':'PASS' if not violations else 'BLOCKED_BY_POLICY'} for case in cases]
+    return {
+        'regression_score':round(score,3),'regression_pass':passed,
+        'synthetic_cases':case_results,'regression_violations':violations,
+        'recipe_status':'TRUSTED' if passed else 'EXPERIMENTAL',
+    }
 
 
 def gate_catalog(rows:list[dict[str,Any]])->list[dict[str,Any]]:

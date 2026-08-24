@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any
+from .normalization import normalize_text
 
 WEAK_EVIDENCE={'TEXT_OR_TABLE','RELEVANT_FRAGMENT','ENGINEERING_EVIDENCE','SPECIALIST_REVIEW','NORMATIVE_CONTEXT'}
 STRONG_EVIDENCE={'STRUCTURED_VALUE','STRUCTURED_COMPARISON','VERIFIED_SET_EVIDENCE','STRUCTURED_COMPLETENESS','VERIFIED_ENGINEERING_EVIDENCE','NORMATIVE_EVIDENCE','VERIFIED_CLAUSE','DOCUMENT_IDENTITY','PAGE_REFERENCE'}
@@ -10,12 +11,17 @@ def critique_recipe(recipe:dict[str,Any])->dict[str,Any]:
     level=str(recipe.get('verification_level') or '')
     evidence=set(str(x).upper() for x in (recipe.get('required_evidence') or []))
     method=str(recipe.get('check_method') or '').upper()
+    title=normalize_text(recipe.get('title') or '')
     if not str(recipe.get('title') or '').strip():
         issues.append('CRITICAL: отсутствует формулировка проверки'); score-=0.5
     if level in {'L4_COMPLETENESS','L5_ENGINEERING_COMPLIANCE'} and not (evidence & STRONG_EVIDENCE):
         issues.append('CRITICAL: сложная проверка не имеет сильного доказательного типа'); score-=0.35
     if level=='L5_ENGINEERING_COMPLIANCE' and method in {'SPECIALIST_REVIEW','ENGINEERING_SEMANTIC_REVIEW','SEMANTIC','NORMATIVE_CONTENT_REVIEW'}:
         issues.append('Смысловой рецепт пока не имеет специализированного checker-а'); score-=0.18
+    if any(token in title for token in ('правильн','корректн','актуальн','достаточн')) and level=='L1_PRESENCE':
+        issues.append('CRITICAL: проверка правильности/качества ошибочно сведена к наличию'); score-=0.45
+    if level=='L1_PRESENCE' and method in {'DOCUMENT_CONTENT_PRESENCE','DRAWING_PRESENCE_CHECK'} and not (evidence & {'STRUCTURED_PRESENCE','DOCUMENT_IDENTITY'}):
+        issues.append('CRITICAL: положительный вывод о наличии не требует структурированного артефакта'); score-=0.35
     if recipe.get('domain')=='normative' and 'VERIFIED_CLAUSE' not in evidence:
         issues.append('CRITICAL: нормативная проверка не требует верифицированного пункта'); score-=0.4
     if not recipe.get('expected_sections') and recipe.get('domain') in {'checklist','assignment'}:

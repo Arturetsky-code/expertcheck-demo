@@ -9,6 +9,12 @@ def adversarial_gate(result:dict[str,Any], evidence:list[dict[str,Any]]|None=Non
     finding=kind=='PROJECT_FINDING'
     if not (positive or finding):
         out['adversarial_state']='NOT_REQUIRED'; return out
+    if positive and out.get('deterministic_gate_passed') and str(out.get('proof_kind') or '').upper() in {
+        'STRUCTURED_COMPLETENESS', 'VERIFIED_SET_EVIDENCE'
+    }:
+        out['adversarial_state']='PASSED'
+        out['adversarial_reasons']=[]
+        return out
     strong=[e for e in evidence if e.get('kind')=='STRUCTURED_FACT' and e.get('retrieval_score',0)>=65 and str(e.get('judge_verdict') or '').upper() not in {'OTHER_ENTITY','OTHER_METRIC','CONTRADICTS','INSUFFICIENT'}]
     concerns=list((critic or {}).get('concerns') or [])
     contrary_to_conclusion=any(

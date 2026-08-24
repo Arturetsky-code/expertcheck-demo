@@ -98,6 +98,13 @@ def _split_sentences(text: str) -> list[str]:
 
 def _split_requirement(text: str) -> list[dict[str, Any]]:
     clean = _clean_text(text)
+    # PDF extraction can remove the line break after this label and glue the
+    # following prohibition to it.  Keep the label as its own unresolved atom
+    # and preserve an exact prohibition clause for evidence matching/reporting.
+    clean = re.sub(
+        r"(Тип\s+применяемых\s+опор)\s*:\s*(?=Прокладк)",
+        r"\1. ", clean, flags=re.I,
+    )
     bullet_parts = _BULLET_RE.split(clean)
     has_bullets = len(bullet_parts) > 1
     prefix = _clean_text(bullet_parts[0]) if has_bullets else ""
@@ -273,13 +280,20 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             seen.add(key)
             unique.append(item)
         return unique
-    return [{**clause, "text": _clean_text(f"{context + ': ' if context else ''}{text}")}]
+    local_decision = any(
+        token in normalize_text(text).lower()
+        for token in ("не предусматривать", "не требуется", "разработка не требуется", "требования отсутствуют")
+    )
+    rendered = text if local_decision else f"{context + ': ' if context else ''}{text}"
+    return [{**clause, "text": _clean_text(rendered)}]
 
 
 def _infer_kind(text: str, inherited: str = "") -> str:
     low = normalize_text(text).lower()
-    if any(token in low for token in ("не предусматривать", "не требуется", "разработка не требуется", "требования отсутствуют")):
+    if "не предусматривать" in low:
         return "PROHIBITION"
+    if any(token in low for token in ("не требуется", "разработка не требуется", "требования отсутствуют")):
+        return "APPLICABILITY_DECLARATION"
     if _NORMATIVE_RE.search(low) and any(token in low for token in ("соответств", "согласно", "требован")):
         return "NORMATIVE_CLAUSE"
     if any(token in low for token in ("согласно ту", "согласно инженерным изысканиям", "документации завода", "предоставляемой заказчиком")):
@@ -302,6 +316,7 @@ def _infer_kind(text: str, inherited: str = "") -> str:
 def _mapped_requirement_type(kind: str) -> str:
     return {
         "PROHIBITION": "PROHIBITION_OR_NOT_REQUIRED",
+        "APPLICABILITY_DECLARATION": "APPLICABILITY_DECLARATION",
         "NORMATIVE_CLAUSE": "NORMATIVE_CLAUSE",
         "TRACEABILITY": "SOURCE_TRACEABILITY",
         "DOCUMENT_DELIVERABLE": "SOURCE_TRACEABILITY",

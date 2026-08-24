@@ -131,7 +131,11 @@ def _page_context(text: str, hit: str, radius: int=320) -> str:
     return re.sub(r'\s+',' ',text[max(0,pos-radius):pos+len(hit)+radius])[:900]
 
 
-def build_page_corpus(files: list[Any], reader: Callable[[bytes,str], list[tuple[int,str]]]) -> list[dict[str,Any]]:
+def build_page_corpus(
+    files: list[Any],
+    reader: Callable[[bytes,str], list[tuple[int,str]]],
+    document_types: dict[str, str] | None = None,
+) -> list[dict[str,Any]]:
     corpus=[]
     for f in files or []:
         name=_file_name(f)
@@ -142,7 +146,12 @@ def build_page_corpus(files: list[Any], reader: Callable[[bytes,str], list[tuple
             continue
         for page,text in pages or []:
             if text and len(str(text).strip())>20:
-                corpus.append({'document':name,'page':page,'text':str(text)})
+                corpus.append({
+                    'document':name,
+                    'document_type':str((document_types or {}).get(name) or ''),
+                    'page':page,
+                    'text':str(text),
+                })
     return corpus
 
 
@@ -220,6 +229,22 @@ def directed_evidence_facts(rows: list[dict[str,Any]]) -> list[dict[str,Any]]:
     for row in rows or []:
         if str(row.get('status') or '') != 'Соответствует заданию':
             continue
+        for candidate in row.get('verification_evidence') or []:
+            if str(candidate.get('evidence_state') or '')!='verified_candidate':
+                continue
+            key=(str(row.get('requirement_id') or ''),str(candidate.get('document') or ''),candidate.get('page'),'PASSAGE')
+            if key in seen:continue
+            seen.add(key)
+            facts.append({
+                'requirement_id':row.get('requirement_id'),
+                'document':candidate.get('document'),'document_type':candidate.get('document_type'),'page':candidate.get('page'),
+                'object_hint':row.get('object_name') or '','semantic_anchor_name':row.get('object_name') or '',
+                'parameter_code':'REQUIREMENT_EVIDENCE','parameter_name':'Доказательство требования Задания',
+                'value':1.0,'unit':'факт','context':str(row.get('requirement_text') or '')+' | '+str(candidate.get('context') or ''),
+                'match_method':str(candidate.get('evidence_kind') or 'QUALIFIED_PROJECT_PASSAGE'),'directed_evidence':True,
+                'direct_artifact_evidence':True,'evidence_quality_decision':'VERIFIED','fact_admission_decision':'ADMIT',
+                'binding_status':'EXACT_REQUIREMENT','proof_kind':'VERIFIED_ENGINEERING_EVIDENCE',
+            })
         code=canonical_parameter_code(row.get('parameter_code'))
         required=row.get('required_value')
         if not code or required is None:

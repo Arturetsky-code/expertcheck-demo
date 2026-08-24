@@ -13,6 +13,7 @@ from .engineering_review_engine import CrossSectionDependencyEngine
 from .expert_practice_intelligence import ExpertPracticeIntelligence
 from .typed_check_engine import execute_typed_check
 from .verification_factory import build_factory_catalog, recipe_lookup
+from .page_evidence_store import section_matches
 
 PARAMETER_HINTS = {
     'площад': {'AREA_BUILD','AREA_TOTAL'},
@@ -128,9 +129,10 @@ class ChecklistEngine:
             dtype=str(f.get('document_type') or f.get('Раздел') or '')
             if names and doc and doc not in names and not any(n in doc or doc in n for n in names):
                 continue
-            if section and dtype and not (dtype.startswith(section) or section.startswith(dtype)):
-                # filename match has priority; otherwise keep only selected section
-                if not doc or not names: continue
+            if section and not section_matches(dtype or doc,[section]):
+                continue
+            if section and not doc and not dtype:
+                continue
             out.append(f)
         return out
 
@@ -155,8 +157,11 @@ class ChecklistEngine:
             if codes and code not in codes: continue
             sources=normalize_text(c.get('sources') or c.get('Источники') or c.get('sections') or '')
             if selected_docs and sources and not any(n in sources or sources in n for n in selected_docs):
-                # comparisons may store section names rather than filenames; do not over-filter
-                pass
+                # Section codes are accepted, but an unrelated comparison must
+                # not become evidence for the selected checklist profile.
+                selected_sections={str(x).upper() for x in selected_docs if len(str(x))<=8}
+                if not any(section_matches(sources,[section]) for section in selected_sections):
+                    continue
             relevant.append(c)
         if not relevant: return None,''
         statuses=[str(c.get('status') or c.get('Статус') or '').upper() for c in relevant]

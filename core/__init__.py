@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "10.3.0-alpha2-evidence-recall"
+__version__ = "10.4.0-alpha1-verification-kernel"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine

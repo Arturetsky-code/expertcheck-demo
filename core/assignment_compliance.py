@@ -12,6 +12,7 @@ from .requirement_contracts import build_contract, evidence_packet, SCOPE_PROJEC
 from .object_hierarchy import build_hierarchy, group_is_satisfied
 from .directed_evidence import units_compatible
 from .evidence_semantics import promote_candidates
+from .assignment_verification_kernel import verify_assignment_requirement
 
 ASSIGNMENT_TYPES=("задание на проектирование","техническое задание","тз на проектирование","знп")
 REQ_VERBS=("предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","определить")
@@ -454,7 +455,7 @@ def _set_compare(req:dict[str,Any],registry:list[dict[str,Any]])->tuple[str,list
     return "Соответствует заданию",evidence[:12],"Все структурированные позиции приложения сопоставлены с реестром объектов проекта.",0.96
 
 
-def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str,Any]],registry:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
+def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str,Any]],registry:list[dict[str,Any]]|None=None,page_corpus:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
     """Typed, conservative Assignment Compliance Engine.
 
     A numeric mismatch is allowed only when the requirement identifies the same
@@ -469,7 +470,11 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         elif rtype=="OBJECT": rtype=TYPE_PRESENCE
         elif rtype=="SEMANTIC": rtype=TYPE_SEMANTIC
         status="Не проверено системой";evidence=[];candidates=[];difference=None;confidence=0.0;basis=""
-        if rtype==TYPE_SET:
+        kernel_result=verify_assignment_requirement(req,page_corpus or []) if page_corpus else None
+        if kernel_result:
+            status=kernel_result['status'];evidence=list(kernel_result.get('evidence') or []);candidates=list(kernel_result.get('evidence_candidates') or [])
+            difference=kernel_result.get('difference');confidence=float(kernel_result.get('match_confidence') or 0);basis=str(kernel_result.get('decision_basis') or '')
+        elif rtype==TYPE_SET:
             status,evidence,basis,confidence=_set_compare(req,registry)
         elif rtype==TYPE_VALUE and code:
             directed=promote_candidates(req, list(req.get('directed_evidence_candidates') or []))
@@ -532,8 +537,9 @@ def compare_requirements(requirements:list[dict[str,Any]],findings:list[dict[str
         if req.get('directed_evidence_candidates'):
             candidates=list(req.get('directed_evidence_candidates') or []) + list(candidates or [])
         packet=evidence_packet(req,candidates)
-        evidence_quality_state=('VERIFIED_SET_EVIDENCE' if rtype==TYPE_SET and status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE')))
+        evidence_quality_state=str((kernel_result or {}).get('evidence_quality_state') or ('VERIFIED_SET_EVIDENCE' if rtype==TYPE_SET and status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('VERIFIED_EVIDENCE' if status in {'Соответствует заданию','Выявлено отклонение'} and evidence else ('CANDIDATE_EVIDENCE' if candidates else 'NO_EVIDENCE'))))
         out.append({**req,"status":status,"evidence":evidence,"evidence_candidates":candidates,"evidence_packet":packet,"evidence_quality_state":evidence_quality_state,"difference":difference,"match_confidence":round(confidence,2),"decision_basis":basis,
+                    "verification_evidence":list((kernel_result or {}).get('verification_evidence') or []),"verification_kernel":(kernel_result or {}).get('verification_kernel'),
                     "recommendation":"Синхронизировать проектное решение с Заданием на проектирование." if status=="Выявлено отклонение" else "Проверить требование по указанному контракту доказательств." if status in {"Требует проверки","Требует смысловой проверки","Требуется смысловая проверка"} else "Автоматическая проверка пока недоступна; проверить специалисту." if status=="Не проверено системой" else "Дополнительное действие не требуется."})
     return out
 

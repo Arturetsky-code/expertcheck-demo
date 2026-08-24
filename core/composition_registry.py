@@ -34,6 +34,8 @@ def build_composition_baseline(
     rows: dict[str, dict[str, Any]] = {}
     pz_count = 0
     gp_count = 0
+    scoped_out = 0
+    duplicate_position_conflicts = 0
 
     for item in pz_findings:
         if item.get('parameter_code') != 'OBJECT_ENTRY' or not item.get('pz_complex_object_register'):
@@ -67,6 +69,9 @@ def build_composition_baseline(
             }],
         }
 
+    authoritative_roots = {pos.split('.')[0] for pos in rows if '.' in pos}
+    authoritative_names = {normalize_text(str(row.get('Наименование объекта') or '')): pos for pos,row in rows.items()}
+
     for item in gp_findings:
         if not item.get('general_plan_explication'):
             continue
@@ -75,6 +80,19 @@ def build_composition_baseline(
         if not pos or not name:
             continue
         gp_count += 1
+        # When PZ contains an explicit complex-object composition, its position
+        # hierarchy defines the project boundary.  Top-level neighbouring or
+        # perspective sites from a situational plan cannot silently expand it.
+        if authoritative_roots and not any(pos == root or pos.startswith(root + '.') for root in authoritative_roots):
+            scoped_out += 1
+            continue
+        norm_name = normalize_text(name)
+        named_position = authoritative_names.get(norm_name)
+        # A PDF-layout shift can attach the next row's name to a reserved/blank
+        # position (e.g. 4.17 <- name of 4.18).  PZ naming authority wins.
+        if named_position and named_position != pos:
+            duplicate_position_conflicts += 1
+            continue
         status = str(item.get('general_plan_design_status') or item.get('object_lifecycle_status') or 'Проектируемый')
         if status == 'Не определён':
             status = 'Проектируемый'
@@ -122,6 +140,8 @@ def build_composition_baseline(
         'baseline_positions': len(result),
         'auto_included': sum(1 for r in result if r.get('Включить')),
         'review_only': sum(1 for r in result if not r.get('Включить')),
+        'scoped_out': scoped_out,
+        'duplicate_position_conflicts': duplicate_position_conflicts,
     }
 
 

@@ -12,8 +12,8 @@ FINAL_STATES={
     'INFORMATIONAL':'Информация',
 }
 
-def run_deep_evidence_review(checks:list[dict[str,Any]], documents:list[dict[str,Any]]|None=None, facts:list[dict[str,Any]]|None=None, comparisons:list[dict[str,Any]]|None=None, judgements:dict[str,list[dict[str,Any]]]|None=None, critics:dict[str,dict[str,Any]]|None=None)->dict[str,Any]:
-    db=build_project_evidence_database(documents,facts,comparisons); results=[]
+def run_deep_evidence_review(checks:list[dict[str,Any]], documents:list[dict[str,Any]]|None=None, facts:list[dict[str,Any]]|None=None, comparisons:list[dict[str,Any]]|None=None, page_corpus:list[dict[str,Any]]|None=None, judgements:dict[str,list[dict[str,Any]]]|None=None, critics:dict[str,dict[str,Any]]|None=None)->dict[str,Any]:
+    db=build_project_evidence_database(documents,facts,comparisons,page_corpus=page_corpus); results=[]
     for check in checks or []:
         cid=str(check.get('plan_id') or check.get('source_id') or len(results)+1)
         candidates=retrieve_evidence(check,db)

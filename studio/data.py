@@ -29,44 +29,76 @@ def status_group(value: str) -> str:
     if 'СОВПАД' in t or 'ПОДТВЕРЖ' in t:return 'ok'
     return 'info'
 
+
+def _evidence_sources(row) -> str:
+    """Build a visible document/page trace from all supported evidence shapes."""
+    direct=row.get('sources') or row.get('Источники')
+    if isinstance(direct,str) and direct.strip():
+        return direct.strip()
+    refs=[]
+    if isinstance(direct,list):
+        refs.extend(direct)
+    for key in ('deep_evidence_candidates','evidence_candidates','evidence_records','supporting_evidence','matched_findings'):
+        value=row.get(key) or []
+        if isinstance(value,list): refs.extend(value)
+    document=row.get('source_document') or row.get('document')
+    if document:
+        refs.append({'document':document,'page':row.get('source_page') or row.get('page')})
+    rendered=[];seen=set()
+    for ref in refs:
+        if isinstance(ref,str): text=ref.strip()
+        elif isinstance(ref,dict):
+            doc=ref.get('document') or ref.get('source_document') or ref.get('source') or ''
+            page=ref.get('page') or ref.get('source_page') or ''
+            text=f"{doc}, стр. {page}" if doc and page else str(doc or '')
+        else: text=''
+        if text and text not in seen:
+            seen.add(text); rendered.append(text)
+    return ' | '.join(rendered) if rendered else 'Источник не сформирован — требуется целевой поиск'
+
 def metrics(df):
     if df.empty or 'status' not in df:return {'total':0,'ok':0,'warn':0,'bad':0}
     g=df['status'].map(status_group);return {'total':len(df),'ok':int(g.eq('ok').sum()),'warn':int(g.eq('warn').sum()),'bad':int(g.eq('bad').sum())}
 
 def engineer_findings(df):
+    if not isinstance(df,pd.DataFrame): df=pd.DataFrame(df or [])
     if df.empty:return df.copy()
     excluded={'PROJECT_NAME','PROJECT_CODE','PROJECT_YEAR','ISSUE_AUTHOR','CHIEF_ENGINEER','SIGNER','DOCUMENT_CODE','DOCUMENT_YEAR','XML_SCHEMA','FILE_NAME','FILE_CHECKSUM','OBJECT_ENTRY','OBJECT_CANDIDATE'}
     out=df.copy()
     if 'parameter_code' in out:out=out[~out['parameter_code'].fillna('').astype(str).isin(excluded)]
     return out
 
+def _first_document_record(docs):
+    if hasattr(docs,'empty'):
+        return {} if docs.empty else docs.iloc[0].to_dict()
+    if isinstance(docs,list) and docs:
+        return dict(docs[0] or {})
+    return {}
+
 def composition_baseline(docs):
-    if docs.empty or 'composition_baseline' not in docs:return pd.DataFrame()
-    return pd.DataFrame(docs.iloc[0].get('composition_baseline') or [])
+    return pd.DataFrame(_first_document_record(docs).get('composition_baseline') or [])
 
 def raw_registry(docs):
-    if docs.empty:return pd.DataFrame()
+    first=_first_document_record(docs)
+    if not first:return pd.DataFrame()
     # Structured project composition is the fail-safe engineer-facing registry.
     # If present, it cannot be replaced by generic narrative extraction results.
     base = composition_baseline(docs)
     if not base.empty:
-        consolidated = pd.DataFrame(docs.iloc[0].get('consolidated_registry') or [])
+        consolidated = pd.DataFrame(first.get('consolidated_registry') or [])
         if not consolidated.empty and 'Позиция по ГП' in consolidated.columns:
             extra_cols=[c for c in consolidated.columns if c not in base.columns]
             if extra_cols:
                 enrich=consolidated[['Позиция по ГП']+extra_cols].drop_duplicates('Позиция по ГП')
                 base=base.merge(enrich,on='Позиция по ГП',how='left')
         return base
-    if 'consolidated_registry' not in docs:return pd.DataFrame()
-    return pd.DataFrame(docs.iloc[0].get('consolidated_registry') or [])
+    return pd.DataFrame(first.get('consolidated_registry') or [])
 
 def raw_candidates(docs):
-    if docs.empty or 'consolidated_candidates' not in docs:return pd.DataFrame()
-    return pd.DataFrame(docs.iloc[0].get('consolidated_candidates') or [])
+    return pd.DataFrame(_first_document_record(docs).get('consolidated_candidates') or [])
 
 def raw_passports(docs):
-    if docs.empty or 'object_passports' not in docs:return []
-    return docs.iloc[0].get('object_passports') or []
+    return _first_document_record(docs).get('object_passports') or []
 
 def assembly_rows(docs, findings=None):
     finding_rows=(findings.to_dict('records') if hasattr(findings,'to_dict') else findings) or []
@@ -118,6 +150,8 @@ def _excel_safe_value(value):
 
 
 def _excel_safe_frame(frame: pd.DataFrame, *, columns: list[str] | None = None, max_rows: int | None = None) -> pd.DataFrame:
+    if frame is not None and not isinstance(frame,pd.DataFrame):
+        frame=pd.DataFrame(frame)
     if frame is None or frame.empty:
         return pd.DataFrame(columns=columns or [])
     result = frame.copy()
@@ -320,6 +354,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Объектов требуют подтверждения источника', summary.get('objects_unresolved',0)],
         ['Подтверждённых несоответствий проекта', total_project_findings],
         ['Вопросов специалисту', total_review_questions],
+        ['Проверок вне автоматического покрытия', total_system_limitations],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
         ['Задание: выявлено несоответствий', assignment_plan.get('issue',0)],
@@ -339,6 +374,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Наименование проекта','Дата и время проверки','Версия ExpertCheck','Комплектность',
             'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
+            'Проверок вне автоматического покрытия',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
             'Контроль согласованности отчёта','Итоговый вывод',
         }
@@ -390,6 +426,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Итоговый класс проверки': verification_label(r.get('final_verification_kind') or r.get('verification_kind')),
         'Deep Evidence': ru_label(r.get('deep_evidence_state')),
         'Причины ограничения': ' | '.join(r.get('deep_evidence_reasons') or []),
+        'Источники': _evidence_sources(r),
     } for r in report['checklist_results'] if not r.get('is_heading')])
 
     checklist_problem_df = pd.DataFrame([{
@@ -398,9 +435,23 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Пункт': f"{r.get('item_no') or r.get('position') or ''} — {r.get('question') or r.get('Позиция по чек-листу') or ''}".strip(' —'),
         'Результат': r.get('status') or r.get('Соответствие') or r.get('result'),
         'Обоснование': r.get('evidence') or r.get('Обоснование') or '',
-        'Источники': r.get('sources') or r.get('Источники') or '',
+        'Источники': _evidence_sources(r),
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
-    recommendations_df = pd.DataFrame({'Приоритетное действие': report['recommendations'] or ['Дополнительные рекомендации не сформированы.']})
+    actions=list(report['recommendations'] or [])
+    def add_action(text):
+        if text and text not in actions: actions.append(text)
+    for label,domain in (
+        ('Задание на проектирование',assignment_plan),('Требования НТД',normative_plan),('Чек-листы',checklist_plan)
+    ):
+        pending=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
+        if pending:
+            add_action(f"{label}: завершить проверку {pending} пунктов, требующих решения специалиста или дополнительных доказательств.")
+    comparison_pending=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
+    if comparison_pending:
+        add_action(f"Межраздельная сверка: получить недостающие доказательства по {comparison_pending} проверкам.")
+    if normative_attention:
+        add_action(f"Ссылки НТД: проверить актуальность и редакции {normative_attention} позиций.")
+    recommendations_df = pd.DataFrame({'Приоритетное действие': actions[:12]})
     review_plan_df = pd.DataFrame([{
         'Контур проверки':x.get('domain'),
         'Проверка':x.get('title'),
@@ -526,11 +577,19 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if not problems_df.empty:
         sheets.append(('Несоответствия и вопросы', problems_df))
     if report_kind == 'manager':
+        def readiness_row(label,domain):
+            total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)
+            attention=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
+            return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Покрытие, %':round(100*(ok+issues)/max(1,total),1)}
+        normative_valid_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру' and x.get('status') in {'Действует','Действует с изменениями'})
+        cross_total=int(summary.get('checks',0) or 0); cross_ok=int(summary.get('confirmed',0) or 0); cross_issues=int(summary.get('project_findings',0) or 0)
+        cross_attention=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
         readiness=pd.DataFrame([
-            {'Контур':'Задание на проектирование','Всего':assignment_plan.get('total',0),'Подтверждено':assignment_plan.get('confirmed',0),'Несоответствия':assignment_plan.get('issue',0),'Покрытие, %':assignment_plan.get('coverage_pct',0)},
-            {'Контур':'НТД — ссылки и редакции','Всего':len(normative_rows),'Подтверждено':normative_registry_verified,'Несоответствия':normative_attention,'Покрытие, %':round(100*normative_registry_verified/max(1,len(normative_rows)),1)},
-            {'Контур':'НТД — доказательные требования','Всего':normative_plan.get('total',0),'Подтверждено':normative_plan.get('confirmed',0),'Несоответствия':normative_plan.get('issue',0),'Покрытие, %':normative_plan.get('coverage_pct',0)},
-            {'Контур':'Чек-листы','Всего':checklist_plan.get('total',0),'Подтверждено':checklist_plan.get('confirmed',0),'Несоответствия':checklist_plan.get('issue',0),'Покрытие, %':checklist_plan.get('coverage_pct',0)},
+            readiness_row('Задание на проектирование',assignment_plan),
+            {'Контур':'НТД — ссылки и редакции','Всего':len(normative_rows),'Завершено автоматически':normative_valid_verified,'Подтверждённые несоответствия':0,'Требует внимания':max(0,len(normative_rows)-normative_valid_verified),'Покрытие, %':round(100*normative_valid_verified/max(1,len(normative_rows)),1)},
+            readiness_row('НТД — доказательные требования',normative_plan),
+            readiness_row('Чек-листы',checklist_plan),
+            {'Контур':'Межраздельная сверка','Всего':cross_total,'Завершено автоматически':cross_ok+cross_issues,'Подтверждённые несоответствия':cross_issues,'Требует внимания':cross_attention,'Покрытие, %':round(100*(cross_ok+cross_issues)/max(1,cross_total),1)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
         if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))

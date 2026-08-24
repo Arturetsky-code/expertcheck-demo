@@ -293,6 +293,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     doc_records=docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or [])
     comparison_records=comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or [])
     first_record=(doc_records[0] or {}) if doc_records else {}
+    register_comparison_codes={'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}
+    register_comparisons=[x for x in comparison_records if str(x.get('parameter_code') or '').upper() in register_comparison_codes]
+    engineering_comparisons=[x for x in comparison_records if str(x.get('parameter_code') or '').upper() not in register_comparison_codes]
+    def _cross_completed(rows):
+        completed_tokens={'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО','ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ','РАСХОЖДЕНИЕ','КОНФЛИКТ','КОНФЛИКТ ВНУТРИ РАЗДЕЛА'}
+        return sum(str(x.get('status') or x.get('result') or '').strip().upper() in completed_tokens for x in rows)
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
     report = _report_context(project, docs, comparisons, risks, checklist_results, assembly_rows_data)
@@ -304,6 +310,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_rows=[]
     normative_reference_details=[]
     assignment_rows=[]
+    assignment_atomic_rows=[]
     assignment_summary={}
     normative_requirement_rows=[]
     normative_compliance_rows=[]
@@ -315,6 +322,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_reference_details=list(first_doc.get('normative_validity_audit') or [])
         normative_rows=list(first_doc.get('normative_reference_summary') or normative_reference_details)
         assignment_rows=list(first_doc.get('assignment_compliance') or [])
+        assignment_atomic_rows=list(first_doc.get('assignment_atomic_compliance') or [])
         assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
         normative_requirement_rows=list(first_doc.get('normative_requirement_audit') or [])
         normative_compliance_rows=list(first_doc.get('normative_compliance_audit') or [])
@@ -325,6 +333,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_reference_details=list((docs[0] or {}).get('normative_validity_audit') or [])
         normative_rows=list((docs[0] or {}).get('normative_reference_summary') or normative_reference_details)
         assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
+        assignment_atomic_rows=list((docs[0] or {}).get('assignment_atomic_compliance') or [])
         assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
         normative_requirement_rows=list((docs[0] or {}).get('normative_requirement_audit') or [])
         normative_compliance_rows=list((docs[0] or {}).get('normative_compliance_audit') or [])
@@ -382,6 +391,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
         ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
+        ['Сверка реестров/чертежей: завершено', f"{_cross_completed(register_comparisons)} из {len(register_comparisons)}"],
+        ['Инженерные параметры: завершено', f"{_cross_completed(engineering_comparisons)} из {len(engineering_comparisons)}"],
         ['Контроль согласованности отчёта', 'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует проверки'],
         ['Итоговый вывод', final_conclusion],
     ]
@@ -392,6 +403,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
+            'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
             'Контроль согласованности отчёта','Итоговый вывод',
         }
         summary_rows=[row for row in summary_rows if row[0] in manager_metrics]
@@ -422,7 +434,18 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Комментарий пользователя': r.get('user_comment') or '',
     } for r in selected_risks])
 
-    selected_problems = report['problems'] if report_kind == 'technical' else report['problems'][:(12 if report_kind == 'manager' else 35)]
+    atomic_problems=[{
+        'id':x.get('atom_id') or x.get('requirement_id'),
+        'object':x.get('object_name') or 'Задание на проектирование',
+        'parameter':x.get('atom_text') or x.get('requirement_text'),
+        'status':'Выявлено несоответствие',
+        'priority':'Высокий' if x.get('atomic_kind') in {'VALUE_COMPARISON','PROHIBITION','EQUIPMENT_IDENTITY'} else 'Средний',
+        'values':x.get('difference') or '',
+        'explanation':x.get('decision_basis') or '',
+        'sources':_evidence_sources(x),
+    } for x in assignment_atomic_rows if str(x.get('verification_kind') or '')=='PROJECT_FINDING']
+    all_problems=list(report['problems'] or [])+atomic_problems
+    selected_problems = all_problems if report_kind == 'technical' else all_problems[:(12 if report_kind == 'manager' else 35)]
     problems_df = pd.DataFrame(selected_problems).rename(columns={
         'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
         'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
@@ -462,12 +485,18 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         pending=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
         if pending:
             add_action(f"{label}: завершить проверку {pending} пунктов, требующих решения специалиста или дополнительных доказательств.")
+    for atom in assignment_atomic_rows:
+        if str(atom.get('verification_kind') or '')=='PROJECT_FINDING':
+            add_action(
+                f"Задание, {atom.get('atom_id') or atom.get('requirement_id')}: "
+                f"{atom.get('recommendation') or 'устранить подтверждённое отклонение либо согласовать изменение Задания.'}"
+            )
     comparison_pending=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
     if comparison_pending:
         add_action(f"Межраздельная сверка: получить недостающие доказательства по {comparison_pending} проверкам.")
     if normative_attention:
         add_action(f"Ссылки НТД: проверить актуальность и редакции {normative_attention} позиций.")
-    recommendations_df = pd.DataFrame({'Приоритетное действие': actions[:12]})
+    recommendations_df = pd.DataFrame({'Приоритетное действие': actions})
     review_plan_df = pd.DataFrame([{
         'Контур проверки':x.get('domain'),
         'Проверка':x.get('title'),
@@ -525,6 +554,30 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Требуемое значение','Ед. изм.','Результат','Документ','Страница','Доказательства',
         'Основание вывода','Рекомендация','Итоговый класс проверки','Deep Evidence','Причины ограничения',
     ])
+    assignment_atomic_df=pd.DataFrame([{
+        'ID атомарного условия':x.get('atom_id') or x.get('requirement_id'),
+        'ID исходного требования':x.get('parent_requirement_id'),
+        'Строка Задания':x.get('source_row') or '—',
+        'Атомарное условие':x.get('atom_text') or x.get('requirement_text'),
+        'Тип атома':ru_label(x.get('atomic_kind')),
+        'Объект':x.get('object_name') or '—',
+        'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else x.get('focus') or '—',
+        'Требуемое значение':x.get('required_value'),
+        'Ед. изм.':x.get('unit'),
+        'Ожидаемые разделы':', '.join((x.get('verification_recipe') or {}).get('expected_sections') or x.get('expected_sections') or []),
+        'Рецепт':x.get('recipe_id'),
+        'Статус рецепта':ru_label(x.get('recipe_status')),
+        'Результат':x.get('status'),
+        'Итоговый класс':verification_label(x.get('final_verification_kind') or x.get('verification_kind')),
+        'Доказательства':' | '.join(x.get('evidence') or []),
+        'Явное различие':x.get('difference') or '',
+        'Основание вывода':x.get('decision_basis') or '',
+        'Рекомендация':x.get('recommendation') or '',
+        'Critic':x.get('critic_state'),
+        'Regression gate':x.get('regression_state'),
+        'Deep Evidence':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
+        'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons') or []),
+    } for x in assignment_atomic_rows])
 
     normative_requirement_df = pd.DataFrame([{
         'НТД':x.get('reference'),
@@ -584,6 +637,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     } for x in normative_compliance_rows])
     normative_df = _excel_safe_frame(normative_df)
     assignment_df = _excel_safe_frame(assignment_df)
+    assignment_atomic_df = _excel_safe_frame(assignment_atomic_df)
     understanding_df = _excel_safe_frame(understanding_df)
     normative_requirement_df = _excel_safe_frame(normative_requirement_df)
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
@@ -607,12 +661,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             {'Контур':'НТД — ссылки и редакции','Всего':len(normative_rows),'Завершено автоматически':normative_valid_verified,'Подтверждённые несоответствия':0,'Требует внимания':max(0,len(normative_rows)-normative_valid_verified),'Покрытие, %':round(100*normative_valid_verified/max(1,len(normative_rows)),1)},
             readiness_row('НТД — доказательные требования',normative_plan),
             readiness_row('Чек-листы',checklist_plan),
-            {'Контур':'Межраздельная сверка','Всего':cross_total,'Завершено автоматически':cross_ok+cross_issues,'Подтверждённые несоответствия':cross_issues,'Требует внимания':cross_attention,'Покрытие, %':round(100*(cross_ok+cross_issues)/max(1,cross_total),1)},
+            {'Контур':'Сверка реестров и чертежей','Всего':len(register_comparisons),'Завершено автоматически':_cross_completed(register_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in register_comparisons),'Требует внимания':max(0,len(register_comparisons)-_cross_completed(register_comparisons)),'Покрытие, %':round(100*_cross_completed(register_comparisons)/max(1,len(register_comparisons)),1)},
+            {'Контур':'Сверка инженерных параметров','Всего':len(engineering_comparisons),'Завершено автоматически':_cross_completed(engineering_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in engineering_comparisons),'Требует внимания':max(0,len(engineering_comparisons)-_cross_completed(engineering_comparisons)),'Покрытие, %':round(100*_cross_completed(engineering_comparisons)/max(1,len(engineering_comparisons)),1)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
         if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))
     elif report_kind == 'gip':
         if not review_plan_df.empty: sheets.append(('Проверка требований', review_plan_df))
+        if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
@@ -625,6 +681,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not normative_requirement_df.empty: sheets.append(('Контекст ссылок НТД', normative_requirement_df))
         if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))
         if not assignment_df.empty: sheets.append(('Задание — диагностика', assignment_df))
+        if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
+        if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
         if normative_reference_details:
             detailed_normative_df=pd.DataFrame(normative_reference_details)
             if not detailed_normative_df.empty:

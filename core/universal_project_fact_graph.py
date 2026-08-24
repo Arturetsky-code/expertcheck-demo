@@ -9,7 +9,7 @@ from .normalization import normalize_text
 from .page_evidence_store import canonical_section, is_assignment_source
 
 
-GRAPH_VERSION = "1.0-universal-project-facts"
+GRAPH_VERSION = "2.0-source-bound-project-facts"
 
 
 def _txt(value: Any) -> str:
@@ -60,12 +60,12 @@ def _admission(row: dict[str, Any]) -> tuple[bool, str]:
         return False, admission or quality
     if integrity.startswith("BLOCKED") or row.get("comparison_excluded"):
         return False, integrity or "COMPARISON_EXCLUDED"
-    if admission == "ADMIT" or quality in {"VERIFIED", "SUPPORTED"}:
-        return True, admission or quality
-    if binding in {"ROW_LOCKED", "POSITION_LOCKED", "EXACT_OBJECT"}:
-        return True, binding
-    if row.get("directed_evidence"):
-        return True, "DIRECTED_EVIDENCE"
+    # Admission, provenance quality and physical binding are separate gates.
+    # A strong-looking row binding alone must never turn a candidate into a fact.
+    if admission == "ADMIT" and quality in {"VERIFIED", "SUPPORTED"}:
+        return True, f"{admission}+{quality}"
+    if row.get("directed_evidence") and quality in {"VERIFIED", "SUPPORTED"}:
+        return True, f"DIRECTED_EVIDENCE+{quality}"
     # Candidate facts remain in a separate layer and cannot close a verdict.
     return False, admission or quality or binding or "CANDIDATE"
 
@@ -174,6 +174,14 @@ def build_universal_project_fact_graph(
             "admission_reason": admission_reason,
             "binding_status": _txt(row.get("binding_status") or row.get("property_binding_status")),
             "requirement_id": _txt(row.get("requirement_id")),
+            "source_locator": dict(row.get("source_locator") or {}),
+            "source_fingerprint": _txt(row.get("source_fingerprint")),
+            "physical_trace_level": _txt(row.get("physical_trace_level") or (row.get("source_locator") or {}).get("physical_trace_level")),
+            "evidence_id": _txt(row.get("evidence_id")),
+            "evidence_quality_decision": _txt(row.get("evidence_quality_decision")),
+            "evidence_trust_score": row.get("evidence_trust_score"),
+            "source_bound_state": _txt(row.get("source_bound_state")),
+            "engineering_plausibility_status": _txt(row.get("engineering_plausibility_status")),
         }
         (facts if admitted else candidates).append(fact)
 
@@ -260,4 +268,3 @@ def fact_lookup(graph: dict[str, Any], *, property_code: str = "", entity_id: st
         wanted = canonical_section(section)
         rows = [row for row in rows if canonical_section(row.get("section")) == wanted]
     return rows
-

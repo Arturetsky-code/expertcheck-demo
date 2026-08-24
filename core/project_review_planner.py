@@ -67,6 +67,11 @@ def build_review_plan(
             'check_type':_txt(row.get('check_kind')),'scope':_txt(row.get('topic')),'expected_evidence':_txt(row.get('decision_basis')),
             'entity':_txt(row.get('object_name') or row.get('entity')),'metric':_txt(row.get('parameter_code') or row.get('topic')),
             'proof_kind':_txt(row.get('proof_kind') or row.get('coverage_state')),
+            'deterministic_gate_passed':bool(
+                row.get('final_verification_kind')=='VERIFIED_OK'
+                and row.get('proof_kind')=='STRUCTURED_COMPLETENESS'
+                and (row.get('structural_check') or {}).get('complete')
+            ),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
             'adversarial_state':_txt(row.get('deep_evidence_state')),
             'deep_evidence_reasons':list(row.get('deep_evidence_reasons') or []),

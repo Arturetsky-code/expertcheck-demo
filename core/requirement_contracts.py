@@ -36,6 +36,39 @@ TEXT_SECTION_HINTS=(
  (('видеонаблюден','волс','связ','автоматизац'),['ИОС5']),
 )
 
+CRITICAL_QUALIFIER_STEMS = (
+ 'самотек','самотечн','заводск','привозн','бутилирован','светодиод',
+ 'воздушн','изолирован','металлическ','естественн','консольн','дистанцион',
+ 'онлайн','аварийн','перегруз','вахтов','заказчик','мачт','ливнев',
+ 'внеплощадочн','выгреб','накопительн','бессточн','герметичн',
+ 'существующ','предприят','склад','недроблен','персонал','калит',
+ 'безопасн','пуск','сблокирован','блокирован',
+ 'прожекторн','молниеприем',
+)
+
+DRAWING_TOKENS = (
+ 'чертеж','чертёж','лист','план ','плане','разрез','фасад','схем',
+ 'узел','экспликац','маркировк','условн обозначен','графическ',
+)
+
+
+def infer_required_modality(requirement:dict[str,Any], rtype:str)->str:
+    text=normalize_text(requirement.get('requirement_text') or '').lower()
+    compiled=requirement.get('compiled_rule') or {}
+    typed=str(compiled.get('typed_check') or requirement.get('typed_check') or '').upper()
+    if rtype=='DRAWING_REQUIREMENT' or typed.startswith('DRAWING_') or any(token in text for token in DRAWING_TOKENS):
+        return 'DRAWING'
+    if rtype=='CALCULATION_PRESENCE' or 'CALCULATION' in typed or any(token in text for token in ('расчет','расчёт','рассчитать','подтвердить расчетом','обоснован расчетом')):
+        return 'CALCULATION'
+    if rtype in {'CROSS_DOCUMENT_TRACE','DOCUMENT_DELIVERABLE'} or typed=='DOCUMENT_CONTENT_PRESENCE':
+        return 'DOCUMENT'
+    return 'TEXT_OR_TABLE'
+
+
+def infer_critical_qualifiers(requirement:dict[str,Any])->list[str]:
+    text=normalize_text(requirement.get('requirement_text') or '').lower()
+    return [stem for stem in CRITICAL_QUALIFIER_STEMS if stem in text]
+
 
 def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
     direct=list(PARAM_SECTION_HINTS.get(code,[]))
@@ -91,12 +124,21 @@ def build_contract(requirement:dict[str,Any])->dict[str,Any]:
         method='APPLICABILITY_REVIEW'; evidence=['Подтверждение области применимости/неприменимости']
     else:
         method='AI_EVIDENCE_REVIEW'; evidence=['Конкретное проектное решение с документом и страницей/листом']
+    modality=infer_required_modality(requirement,rtype)
+    qualifiers=infer_critical_qualifiers(requirement)
     return {
+      'contract_version':'2.0-evidence-contract',
       'scope':scope,
       'check_method':method,
+      'logical_operator':'AND',
       'expected_sections':sections,
       'required_evidence':evidence,
       'minimum_evidence_count':1,
+      'required_modality':modality,
+      'critical_qualifiers':qualifiers,
+      'critical_qualifier_operator':'AND',
+      'same_clause_required':True,
+      'minimum_semantic_coverage':1.0,
       'negative_from_not_found_allowed':False,
       'requires_same_owner':scope in {SCOPE_OBJECT,SCOPE_EQUIPMENT},
       'requires_same_parameter':rtype=='VALUE_COMPARISON',

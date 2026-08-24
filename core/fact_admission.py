@@ -6,6 +6,7 @@ from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code, is_parameter_entity_name
 from .table_row_integrity import is_integrity_blocked
 from .entity_scope_graph import infer_entity_level, metric_scope_compatible
+from .source_binding import source_locator
 
 
 ADMIT = "ADMIT"
@@ -45,6 +46,21 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     position = str(finding.get("genplan_position") or finding.get("semantic_anchor_position") or "").strip()
     confidence = _num(finding.get("core2_confidence") or finding.get("confidence")) or 0.0
     value = _num(finding.get("value"))
+
+    plausibility = str(finding.get("engineering_plausibility_status") or "").upper()
+    if plausibility.startswith("BLOCKED"):
+        reason = str(
+            finding.get("engineering_plausibility_reason")
+            or "значение удержано контролем инженерной правдоподобности"
+        )
+        return {
+            "fact_admission_decision": HOLD,
+            "fact_admission_score": 0,
+            "fact_admission_reasons": [reason],
+            "fact_who_score": 0, "fact_what_score": 0,
+            "fact_value_score": 0, "fact_where_score": 0,
+            "fact_scope_score": 0,
+        }
 
     reasons: list[str] = []
     scope_entity_type = str(finding.get("scope_entity_type") or "").upper().strip()
@@ -133,9 +149,18 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
         reasons.append("не определён исходный документ")
     if page not in (None, ""):
         where += 15
+    locator = finding.get("source_locator") if isinstance(finding.get("source_locator"), dict) else source_locator(finding)
+    trace_level = str(locator.get("physical_trace_level") or "")
     if finding.get("source_fingerprint") or finding.get("evidence_id"):
         where += 15
-    if row_status.startswith("CONFIRMED") or finding.get("table_evidence") or finding.get("row_text"):
+    if trace_level == "CELL_TRACE":
+        where += 15
+    elif trace_level == "ROW_TRACE":
+        where += 10
+    elif trace_level == "PAGE_TRACE":
+        where += 3
+        reasons.append("для числового факта сохранена только страница без строки/ячейки")
+    elif row_status.startswith("CONFIRMED") or finding.get("table_evidence") or finding.get("row_text"):
         where += 10
 
     total = min(100, who + what + value_score + where)
@@ -150,6 +175,9 @@ def assess_fact_admission(finding: dict[str, Any]) -> dict[str, Any]:
     elif quality == "HOLD":
         decision = HOLD
         reasons.append("Evidence Trust Gate требует дополнительного подтверждения")
+    elif value is not None and trace_level not in {"CELL_TRACE", "ROW_TRACE"} and not finding.get("directed_evidence"):
+        decision = HOLD
+        reasons.append("числовое значение не имеет адресного физического следа до строки/ячейки источника")
     else:
         decision = ADMIT
 

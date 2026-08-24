@@ -61,6 +61,7 @@ from .entity_property_binding import annotate_findings as annotate_entity_proper
 from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
 from .project_understanding import build_project_object_model, understanding_quality
 from .table_row_integrity import apply_table_row_integrity_guard
+from .engineering_plausibility import apply_engineering_plausibility_guard
 from .evidence_provenance import annotate_evidence_provenance
 from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
@@ -332,7 +333,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
+        item["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -341,6 +342,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     structure_guard_audit = {k: int(structure_guard_audit.get(k,0))+int(structure_guard_audit_2.get(k,0)) for k in set(structure_guard_audit)|set(structure_guard_audit_2)}
     object_gate_audit_2 = apply_hard_object_gate(findings)
     object_gate_audit = {k: int(object_gate_audit.get(k,0))+int(object_gate_audit_2.get(k,0)) for k in set(object_gate_audit)|set(object_gate_audit_2)}
+
+    progress(69, "Инженерная правдоподобность", "Удерживаем размерно противоречивые значения до проверки исходного документа")
+    engineering_plausibility_audit = apply_engineering_plausibility_guard(findings)
 
     progress(69, "Контроль строк таблиц", "Проверяем, что показатель не был сдвинут на соседний объект при чтении PDF")
     table_row_integrity_audit = apply_table_row_integrity_guard(findings)
@@ -562,7 +566,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     pp87_project_profile = detect_pp87_profile(findings, documents)
     try:
         normative_engine = NormativeComplianceEngine(root / "knowledge")
-        normative_compliance_audit = normative_engine.review(findings, project_type=str(pp87_project_profile.get("project_type") or "") if isinstance(pp87_project_profile,dict) else "")
+        normative_compliance_audit = normative_engine.review(
+            findings,
+            project_type=str(pp87_project_profile.get("project_type") or "") if isinstance(pp87_project_profile,dict) else "",
+            page_corpus=project_page_corpus,
+        )
         normative_compliance_summary = NormativeComplianceEngine.summary(normative_compliance_audit)
         normative_compliance_summary["knowledge_coverage"] = normative_engine.coverage()
     except Exception as exc:
@@ -572,7 +580,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
+        item["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -678,7 +686,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'issues':report_quality_gate.get('issues') or [],
         })
     for doc in documents:
-        doc["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
+        doc["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary
@@ -732,6 +740,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["general_plan_audit"] = general_plan_audit
         doc["pz_complex_object_audit"] = pz_complex_object_audit
         doc["pz_complex_object_count"] = len([x for x in pz_complex_objects if x.get("parameter_code") == "OBJECT_ENTRY"])
+        doc["engineering_plausibility_audit"] = engineering_plausibility_audit
         doc["composition_baseline"] = composition_baseline
         doc["composition_baseline_audit"] = composition_baseline_audit
         doc["pz_authoritative_registry_audit"] = pz_authoritative_audit_consolidated

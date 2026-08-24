@@ -174,6 +174,14 @@ def _find_properties(text: str, base: dict[str, Any]) -> list[dict[str, Any]]:
                 'confidence': 0.98,
                 'match_method': 'PZ Complex Object Register: TEP in same row',
                 'binding_status': 'ROW_LOCKED',
+                # Logical source coordinates inside the explicitly bounded PZ
+                # register row.  These are not model-confidence labels: they
+                # make the exact property span independently auditable.
+                'table_index': 'PZ_COMPLEX_OBJECT_REGISTER',
+                'column_index': 4,
+                'source_span': f'row-char:{m.start()}-{m.end()}',
+                'source_trace': m.group(0),
+                'source_bound_state': 'SOURCE_SPAN_LOCKED',
                 'record_kind': 'object_property',
                 'pz_complex_object_register': True,
             })
@@ -245,6 +253,8 @@ def _parse_stream(stream: list[tuple[int, str]], pages: list[dict[str, Any]]) ->
             'table_row': pos,
             'row_index': idx,
             'row_text': evidence_text[:2000],
+            'table_index': 'PZ_COMPLEX_OBJECT_REGISTER',
+            'source_bound_state': 'LOGICAL_ROW_LOCKED',
         }
         findings.append({
             **base,
@@ -259,6 +269,9 @@ def _parse_stream(stream: list[tuple[int, str]], pages: list[dict[str, Any]]) ->
             'object_intelligence_confidence': 0.995,
             'object_intelligence_reason': 'Строка официального перечня зданий/сооружений в составе сложного объекта ПЗ',
             'object_trust_score': 130,
+            'column_index': 1,
+            'source_span': f'object-row:{pos}',
+            'source_trace': name,
         })
         findings.extend(_find_properties(evidence_text, base))
         audit.append({

@@ -72,7 +72,7 @@ class BaseAdapter:
             "Наименование проекта": project_name,
             "Организация-разработчик": issue_org,
             "ГИП": signer,
-            "core_version": "11.0.0-alpha1-atomic-engineering-verification-core",
+            "core_version": "11.1.0-alpha1-evidence-contract-engine",
         }
         findings: list[dict[str, Any]] = []
 

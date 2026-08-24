@@ -1,0 +1,581 @@
+from __future__ import annotations
+
+import math
+import re
+from collections import Counter, defaultdict
+from typing import Any, Iterable
+
+from .assignment_verification_kernel import verify_assignment_requirement
+from .atomic_requirement_graph import atomize_requirement
+from .directed_evidence import normalize_engineering_unit, units_compatible
+from .normalization import normalize_text
+from .page_evidence_store import canonical_section, is_assignment_source, section_matches
+from .verification_core import KIND_STATES, domain_summary
+from .verification_recipe_compiler_v2 import VerificationRecipeCompilerV2
+
+
+ENGINE_VERSION = "1.0-atomic-verification"
+DESIGN_MARKERS = (
+    "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
+    "оборудуется", "ограждается", "осуществляется", "применяется",
+    "устанавливается", "прокладывается", "выполняется", "обеспечивается",
+)
+STRONG_PROOFS = {
+    "STRUCTURED_VALUE", "STRUCTURED_COMPARISON", "VERIFIED_ENGINEERING_EVIDENCE",
+    "VERIFIED_SET_EVIDENCE", "STRUCTURED_COMPLETENESS", "VERIFIED_CLAUSE",
+}
+
+
+def _norm(value: Any) -> str:
+    return normalize_text(value).lower().replace("ё", "е")
+
+
+def _float(value: Any) -> float | None:
+    try:
+        return float(str(value).replace(" ", "").replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _groups_present(text: str, groups: Iterable[Iterable[str]]) -> list[list[str]]:
+    low = _norm(text)
+    return [list(group) for group in groups or [] if all(_norm(token) in low for token in group)]
+
+
+def _snippet(text: str, tokens: Iterable[str], radius: int = 430) -> str:
+    clean = re.sub(r"\s+", " ", str(text or "")).strip()
+    low = _norm(clean)
+    positions = [low.find(_norm(token)) for token in tokens if token and low.find(_norm(token)) >= 0]
+    pos = min(positions) if positions else 0
+    return clean[max(0, pos - radius): pos + radius * 2][:1200]
+
+
+def _evidence_locator(evidence: dict[str, Any]) -> str:
+    document = str(evidence.get("document") or "").strip()
+    page = evidence.get("page")
+    return f"{document}, стр. {page}" if document and page not in (None, "") else document
+
+
+def _normalise_evidence(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for raw in rows or []:
+        document = str(raw.get("document") or raw.get("source_document") or "").strip()
+        page = raw.get("page") or raw.get("source_page") or ""
+        section = canonical_section(raw.get("document_type") or raw.get("section") or document)
+        if not document or page in (None, "") or not section or is_assignment_source({"document": document, "document_type": section}):
+            continue
+        kind = str(raw.get("kind") or raw.get("evidence_kind") or "SOURCE_PASSAGE")
+        result.append({
+            **raw,
+            "kind": "STRUCTURED_FACT" if kind in {
+                "QUALIFIED_PROJECT_PASSAGE", "TECHNOLOGY_CAPACITY_TOPOLOGY",
+                "EQUIPMENT_REGISTER_ROW", "STRUCTURED_VALUE", "STRUCTURED_COMPARISON",
+                "VERIFIED_PATTERN_EVIDENCE", "VERIFIED_PROHIBITION_DECISION",
+            } else kind,
+            "document": document,
+            "page": page,
+            "section": section,
+            "document_type": section,
+            "text": str(raw.get("text") or raw.get("context") or raw.get("source_trace") or "")[:1600],
+            "source_locator": _evidence_locator({"document": document, "page": page}),
+            "retrieval_score": int(raw.get("retrieval_score") or raw.get("score") or 90),
+            "judge_verdict": str(raw.get("judge_verdict") or "SUPPORTS"),
+        })
+    return result
+
+
+def _result(
+    atom: dict[str, Any], recipe: dict[str, Any], kind: str, *, proof: str,
+    evidence: Iterable[dict[str, Any]] = (), basis: str = "", difference: Any = None,
+    recommendation: str = "", candidates: Iterable[dict[str, Any]] = (),
+) -> dict[str, Any]:
+    evidence_rows = _normalise_evidence(evidence)
+    candidate_rows = _normalise_evidence(candidates) or evidence_rows
+    categorical = kind in {"VERIFIED_OK", "PROJECT_FINDING"}
+    gate_reasons: list[str] = []
+    if categorical and not recipe.get("executable"):
+        gate_reasons.append("Проверочный рецепт не прошёл critic/regression gate.")
+    if categorical and proof not in STRONG_PROOFS:
+        gate_reasons.append("Тип доказательства недостаточен для категоричного вывода.")
+    if categorical and not evidence_rows:
+        gate_reasons.append("Нет доказательства с документом, страницей и профильным разделом.")
+    if kind == "PROJECT_FINDING" and difference in (None, "", [], {}):
+        gate_reasons.append("Не зафиксировано явное противоречие или сравниваемое различие.")
+    if gate_reasons:
+        kind = "REVIEW_QUESTION" if candidate_rows else "SYSTEM_LIMITATION"
+    status = {
+        "VERIFIED_OK": "Соответствует заданию",
+        "PROJECT_FINDING": "Выявлено отклонение",
+        "REVIEW_QUESTION": "Требует проверки",
+        "SYSTEM_LIMITATION": "Не проверено системой",
+    }.get(kind, KIND_STATES.get(kind, "Информация"))
+    return {
+        **atom,
+        "status": status,
+        "verification_kind": kind,
+        "verification_state": KIND_STATES.get(kind, status),
+        "final_verification_kind": kind,
+        "final_verification_state": KIND_STATES.get(kind, status),
+        "proof_kind": proof,
+        "evidence_quality_state": proof,
+        "evidence": [f"{_evidence_locator(row)}: {str(row.get('text') or '')[:900]}" for row in evidence_rows],
+        "verification_evidence": evidence_rows,
+        "evidence_candidates": candidate_rows,
+        "decision_basis": "; ".join(gate_reasons) if gate_reasons else basis,
+        "difference": difference,
+        "recommendation": recommendation,
+        "verification_recipe": recipe,
+        "recipe_id": recipe.get("recipe_id"),
+        "recipe_status": recipe.get("recipe_status"),
+        "recipe_quality": recipe.get("regression_score"),
+        "critic_state": "PASSED" if recipe.get("critic_pass") else "BLOCKED",
+        "regression_state": "PASSED" if recipe.get("regression_pass") else "BLOCKED",
+        "adversarial_state": "PASSED" if categorical and not gate_reasons else ("BLOCKED" if gate_reasons else "NOT_REQUIRED"),
+        "adversarial_reasons": gate_reasons,
+        "atomic_status": kind,
+        "engine_version": ENGINE_VERSION,
+    }
+
+
+def _convert(value: float, source_unit: str, target_unit: str) -> float | None:
+    source = normalize_engineering_unit(source_unit)
+    target = normalize_engineering_unit(target_unit)
+    if source == target:
+        return value
+    factors = {
+        ("км", "м"): 1000.0, ("м", "км"): 0.001,
+        ("м", "мм"): 1000.0, ("мм", "м"): 0.001,
+        ("мвт", "квт"): 1000.0, ("квт", "мвт"): 0.001,
+    }
+    factor = factors.get((source, target))
+    return value * factor if factor is not None else None
+
+
+def _owner_matches(atom: dict[str, Any], fact: dict[str, Any]) -> bool:
+    expected = _norm(atom.get("object_name") or atom.get("scope_entity") or "")
+    if not expected:
+        return True
+    observed = _norm(fact.get("owner") or fact.get("entity_name") or "")
+    if not observed:
+        return False
+    expected_terms = {x for x in re.findall(r"[a-zа-я0-9-]{4,}", expected) if x not in {"объект", "система", "площадка"}}
+    observed_terms = set(re.findall(r"[a-zа-я0-9-]{4,}", observed))
+    return bool(expected_terms and expected_terms & observed_terms)
+
+
+def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: dict[str, Any]) -> dict[str, Any] | None:
+    required = _float(atom.get("required_value"))
+    code = str(atom.get("parameter_code") or "").upper()
+    unit = str(atom.get("unit") or "")
+    if required is None or not code or not unit:
+        return None
+    compatible: list[tuple[float, dict[str, Any]]] = []
+    for fact in fact_graph.get("facts") or []:
+        if str(fact.get("property_code") or "").upper() != code or not _owner_matches(atom, fact):
+            continue
+        observed = _float(fact.get("value"))
+        if observed is None or not units_compatible(unit, fact.get("unit"), code):
+            continue
+        converted = _convert(observed, str(fact.get("unit") or ""), unit)
+        if converted is None and normalize_engineering_unit(unit) == normalize_engineering_unit(fact.get("unit")):
+            converted = observed
+        if converted is not None:
+            compatible.append((converted, fact))
+    if not compatible:
+        return None
+    values = {round(value, 7) for value, _ in compatible}
+    evidence = [{
+        **fact, "kind": "STRUCTURED_VALUE", "text": fact.get("source_trace") or f"{fact.get('property_name') or code}: {value:g} {unit}",
+        "value": value, "retrieval_score": 98,
+    } for value, fact in compatible]
+    if len(values) > 1:
+        return _result(atom, recipe, "REVIEW_QUESTION", proof="STRUCTURED_VALUE", candidates=evidence,
+                       basis=f"В проектных источниках найдены противоречивые значения: {sorted(values)} {unit}.",
+                       recommendation="Уточнить владельца показателя и выбрать авторитетный источник.")
+    observed = next(iter(values))
+    equal = math.isclose(required, observed, rel_tol=0.002, abs_tol=max(0.0001, abs(required) * 0.0005))
+    if equal:
+        return _result(atom, recipe, "VERIFIED_OK", proof="STRUCTURED_VALUE", evidence=evidence,
+                       basis=f"Структурированное значение проекта {observed:g} {unit} совпадает с требованием {required:g} {unit}.")
+    difference = {"required": required, "observed": observed, "unit": unit, "delta": observed - required}
+    return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=evidence,
+                   basis=f"В Задании {required:g} {unit}, в проектном источнике {observed:g} {unit}.", difference=difference,
+                   recommendation="Привести проектное решение в соответствие с Заданием либо оформить согласованное изменение.")
+
+
+def _pattern_check(atom: dict[str, Any], recipe: dict[str, Any], passages: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
+    groups = list(recipe.get("evidence_groups") or [])
+    if not groups:
+        return None
+    expected = list(recipe.get("expected_sections") or [])
+    ranked: list[tuple[int, dict[str, Any], list[list[str]], bool]] = []
+    for passage in passages or []:
+        if is_assignment_source(passage) or not section_matches(passage.get("section") or passage.get("document_type") or passage.get("document"), expected):
+            continue
+        text = str(passage.get("text") or "")
+        matched = _groups_present(text, groups)
+        if not matched:
+            continue
+        low = _norm(text)
+        design = any(marker in low for marker in DESIGN_MARKERS)
+        score = len(matched) * 25 + (25 if design else 0) + (15 if expected else 0)
+        ranked.append((score, passage, matched, design))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    if not ranked:
+        return None
+    all_groups = {tuple(group) for _, _, matched, _ in ranked[:5] for group in matched}
+    strong = len(all_groups) >= int(recipe.get("minimum_groups") or 1) and (
+        not recipe.get("requires_design_marker") or any(design for _, _, _, design in ranked[:5])
+    )
+    evidence = []
+    for score, passage, matched, design in ranked[:4]:
+        tokens = [token for group in matched for token in group]
+        evidence.append({
+            "kind": "VERIFIED_PATTERN_EVIDENCE" if strong else "CANDIDATE_PROJECT_PASSAGE",
+            "document": passage.get("document"), "page": passage.get("page"),
+            "section": passage.get("section") or passage.get("document_type"),
+            "text": _snippet(passage.get("text") or "", tokens), "score": min(100, score),
+            "matched_groups": matched, "design_marker": design,
+        })
+    if not strong:
+        return _result(atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE", candidates=evidence,
+                       basis="Найден профильный фрагмент, но не выполнены все слоты доказательственного контракта.")
+    if str(atom.get("atomic_kind") or "").upper() == "PROHIBITION":
+        affirmative = []
+        negative = []
+        for row in evidence:
+            low = _norm(row.get("text"))
+            if any(token in low for token in ("не предусматривается", "не предусмотрен", "не предусмотрена", "не предусмотрены", "отсутствует необходимость")):
+                negative.append(row)
+            else:
+                affirmative.append(row)
+        if affirmative:
+            return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=affirmative,
+                           basis="Проект содержит явное положительное решение, запрещённое атомарным условием Задания.",
+                           difference={"required": "не предусматривать", "observed": "предусмотрено"},
+                           recommendation="Исключить решение либо согласовать изменение Задания.")
+        if negative:
+            return _result(atom, recipe, "VERIFIED_OK", proof="VERIFIED_ENGINEERING_EVIDENCE", evidence=negative,
+                           basis="В проектном источнике явно зафиксировано, что запрещённое решение не предусматривается.")
+        return None
+    return _result(atom, recipe, "VERIFIED_OK", proof="VERIFIED_ENGINEERING_EVIDENCE", evidence=evidence,
+                   basis=f"Атомарное условие подтверждено проектным решением по паттерну {recipe.get('pattern_id')} в профильном разделе.")
+
+
+def _prohibition_check(atom: dict[str, Any], recipe: dict[str, Any], passages: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
+    raw_text = str(atom.get("atom_text") or atom.get("requirement_text") or "")
+    text = _norm(raw_text)
+    negation = re.search(r"\bне\s+(?:предусмотр|предусматр)\w*", text)
+    if negation:
+        boundary = max(text.rfind(".", 0, negation.start()), text.rfind(";", 0, negation.start()), text.rfind(":", 0, negation.start()))
+        text = text[boundary + 1:negation.end()]
+    stop = {
+        "предусматривать", "предусмотреть", "предусматривается", "проектной",
+        "документации", "выполнить", "требуется", "должен", "должна", "согласно",
+    }
+    terms: list[str] = []
+    for word in re.findall(r"[a-zа-я0-9-]{4,}", text):
+        if word in stop or word == "не":
+            continue
+        stem = word[: max(4, min(len(word), 8))]
+        if stem not in terms:
+            terms.append(stem)
+    if len(terms) < 2:
+        return None
+    expected = list(recipe.get("expected_sections") or [])
+    negative: list[dict[str, Any]] = []
+    affirmative: list[dict[str, Any]] = []
+    for passage in passages or []:
+        if is_assignment_source(passage) or not section_matches(passage.get("section") or passage.get("document_type") or passage.get("document"), expected):
+            continue
+        source = re.sub(r"(?<=[A-Za-zА-Яа-яЁё])-\s+(?=[A-Za-zА-Яа-яЁё])", "", str(passage.get("text") or ""))
+        clauses = [item.strip() for item in re.split(r"(?<=[.;])\s+|\n+", source) if item.strip()]
+        for clause in clauses:
+            low = _norm(clause)
+            hits = [term for term in terms if term in low]
+            if len(hits) < 2:
+                continue
+            negated = bool(re.search(r"\bне\s+(?:предусмотр|предусматр|проклад|выполн|треб)\w*", low))
+            designed = any(marker in low for marker in DESIGN_MARKERS) or "прокладыва" in low
+            # An affirmative contradiction must include the most specific tail
+            # qualifier of the prohibition (here: «в земле»).  A generic phrase
+            # such as «прокладка кабельных линий предусмотрена» is not enough.
+            affirmative_specific = designed and terms[-1] in hits
+            if not (negated or affirmative_specific):
+                continue
+            evidence = {
+                "kind": "VERIFIED_PROHIBITION_DECISION",
+                "document": passage.get("document"), "page": passage.get("page"),
+                "section": passage.get("section") or passage.get("document_type"),
+                "text": clause[:1200], "score": 98 if negated else 92,
+                "matched_subject_terms": hits,
+            }
+            (negative if negated else affirmative).append(evidence)
+    if negative and affirmative:
+        return _result(atom, recipe, "REVIEW_QUESTION", proof="STRUCTURED_COMPARISON",
+                       candidates=negative[:3] + affirmative[:3],
+                       basis="В проекте найдены противоречивые локальные решения по запрещённому предмету.",
+                       recommendation="Устранить противоречие и подтвердить итоговое проектное решение.")
+    if negative:
+        return _result(atom, recipe, "VERIFIED_OK", proof="VERIFIED_ENGINEERING_EVIDENCE", evidence=negative[:4],
+                       basis="Профильный проектный источник локально и явно фиксирует, что запрещённое решение не предусматривается.")
+    if affirmative:
+        return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=affirmative[:4],
+                       basis="Профильный проектный источник локально и явно предусматривает решение, запрещённое Заданием.",
+                       difference={"required": "не предусматривать", "observed": "предусмотрено"},
+                       recommendation="Исключить решение либо согласовать изменение Задания.")
+    return None
+
+
+def _kernel_check(atom: dict[str, Any], recipe: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    raw = verify_assignment_requirement(atom, page_corpus)
+    if not raw:
+        return None
+    evidence = raw.get("verification_evidence") or raw.get("evidence_candidates") or []
+    status = _norm(raw.get("status"))
+    difference = raw.get("difference")
+    focus = str(atom.get("focus") or atom.get("parameter_code") or "").upper()
+    if "отклонен" in status or "не соответств" in status:
+        difference_text = str(difference or raw.get("decision_basis") or "")
+        segments = [part.strip() for part in re.split(r";\s*", difference_text) if part.strip()]
+        if focus == "EQUIPMENT_IDENTITY":
+            relevant = [part for part in segments if any(token in _norm(part) for token in ("марк", "модел", "изготовител", "обозначен"))]
+        elif focus in {"EQUIPMENT_QUANTITY", "QUANTITY"}:
+            relevant = [part for part in segments if "количеств" in _norm(part)]
+        elif str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON" and focus not in {"CAPACITY", "PROCESS_LINE_COUNT"}:
+            focus_tokens = {
+                "CARRY_CAPACITY": ("грузопод",), "BODY_VOLUME": ("кузов",),
+                "BUCKET_VOLUME": ("ковш",), "VOLUME": ("объем", "объём"),
+            }.get(focus, (focus.lower(),))
+            relevant = [part for part in segments if any(token in _norm(part) for token in focus_tokens)]
+        else:
+            relevant = segments
+        if not relevant:
+            return _result(atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE", candidates=evidence,
+                           basis="Найдено отклонение другого атрибута; текущее атомарное условие категорично не закрыто.")
+        focused_difference = "; ".join(relevant)
+        return _result(atom, recipe, "PROJECT_FINDING", proof=str(raw.get("evidence_quality_state") or "STRUCTURED_COMPARISON"),
+                       evidence=evidence, basis=focused_difference, difference=focused_difference,
+                       recommendation="Устранить подтверждённое отклонение либо оформить согласованное изменение Задания.")
+    if "соответств" in status:
+        return _result(atom, recipe, "VERIFIED_OK", proof=str(raw.get("evidence_quality_state") or "VERIFIED_ENGINEERING_EVIDENCE"),
+                       evidence=evidence, basis=str(raw.get("decision_basis") or ""))
+    return _result(atom, recipe, "REVIEW_QUESTION", proof=str(raw.get("evidence_quality_state") or "CANDIDATE_EVIDENCE"),
+                   candidates=evidence, basis=str(raw.get("decision_basis") or "Найден кандидат в доказательства."))
+
+
+def verify_atomic_requirements(
+    atoms: Iterable[dict[str, Any]], *, knowledge_root: str,
+    fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    compiler = VerificationRecipeCompilerV2(knowledge_root)
+    rows: list[dict[str, Any]] = []
+    passages = list(fact_graph.get("passages") or page_corpus or [])
+    for atom in atoms or []:
+        recipe = compiler.compile(atom)
+        result: dict[str, Any] | None = None
+        atom_kind = str(atom.get("atomic_kind") or "").upper()
+        if atom_kind == "PROHIBITION":
+            result = _prohibition_check(atom, recipe, passages)
+        if str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON":
+            result = _fact_value_check(atom, recipe, fact_graph)
+        if result is None and atom_kind != "PROHIBITION":
+            result = _pattern_check(atom, recipe, passages)
+        if result is None and atom_kind not in {"PROHIBITION", "NORMATIVE_CLAUSE", "TRACEABILITY", "DOCUMENT_DELIVERABLE", "DESIGN_DETERMINED"}:
+            result = _kernel_check(atom, recipe, page_corpus)
+        if result is None:
+            limitation = str(atom.get("atomic_kind") or "").upper() in {"NORMATIVE_CLAUSE", "TRACEABILITY", "DOCUMENT_DELIVERABLE", "DESIGN_DETERMINED"} or not recipe.get("executable")
+            result = _result(
+                atom, recipe, "SYSTEM_LIMITATION" if limitation else "SYSTEM_LIMITATION",
+                proof="NO_EVIDENCE", basis=(
+                    "Для нормативного или комплектностного условия отсутствует верифицированный адресный источник."
+                    if limitation else "В профильных разделах не найдено доказательство, достаточное для категоричного вывода."
+                ), recommendation="Проверить условие специалистом по указанным ожидаемым разделам.",
+            )
+        rows.append(result)
+    return rows
+
+
+def aggregate_atomic_results(
+    parent_rows: Iterable[dict[str, Any]], atomic_rows: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for atom in atomic_rows or []:
+        by_parent[str(atom.get("parent_requirement_id") or atom.get("source_requirement_id") or "")].append(atom)
+    output: list[dict[str, Any]] = []
+    for parent in parent_rows or []:
+        parent_id = str(parent.get("requirement_id") or parent.get("id") or "")
+        atoms = by_parent.get(parent_id) or []
+        if not atoms:
+            output.append(dict(parent))
+            continue
+        counts = Counter(str(atom.get("verification_kind") or "SYSTEM_LIMITATION") for atom in atoms)
+        if counts["PROJECT_FINDING"]:
+            kind, status = "PROJECT_FINDING", "Выявлено отклонение"
+        elif counts["VERIFIED_OK"] == len(atoms):
+            kind, status = "VERIFIED_OK", "Соответствует заданию"
+        elif counts["REVIEW_QUESTION"] or counts["VERIFIED_OK"]:
+            kind, status = "REVIEW_QUESTION", "Частично подтверждено" if counts["VERIFIED_OK"] else "Требует проверки"
+        else:
+            kind, status = "SYSTEM_LIMITATION", "Не проверено системой"
+        evidence = [item for atom in atoms for item in (atom.get("evidence") or [])]
+        differences = [atom.get("difference") for atom in atoms if atom.get("verification_kind") == "PROJECT_FINDING" and atom.get("difference") not in (None, "")]
+        output.append({
+            **parent,
+            "status": status,
+            "verification_kind": kind,
+            "verification_state": KIND_STATES.get(kind, status),
+            "final_verification_kind": kind,
+            "final_verification_state": KIND_STATES.get(kind, status),
+            "proof_kind": "ATOMIC_AGGREGATION",
+            "evidence": evidence[:20],
+            "difference": differences,
+            "atomic_condition_count": len(atoms),
+            "atomic_completed": counts["VERIFIED_OK"] + counts["PROJECT_FINDING"],
+            "atomic_verified_ok": counts["VERIFIED_OK"],
+            "atomic_findings": counts["PROJECT_FINDING"],
+            "atomic_review": counts["REVIEW_QUESTION"],
+            "atomic_limitations": counts["SYSTEM_LIMITATION"],
+            "atomic_result_ids": [atom.get("atom_id") for atom in atoms],
+            "decision_basis": (
+                f"Атомарная агрегация: подтверждено {counts['VERIFIED_OK']}, отклонений {counts['PROJECT_FINDING']}, "
+                f"вопросов {counts['REVIEW_QUESTION']}, ограничений {counts['SYSTEM_LIMITATION']} из {len(atoms)} условий."
+            ),
+        })
+    return output
+
+
+def atomic_summary(rows: list[dict[str, Any]], graph_summary: dict[str, Any] | None = None) -> dict[str, Any]:
+    summary = domain_summary(rows, "assignment")
+    summary.update({
+        "compliant": summary["verified_ok"],
+        "deviation": summary["project_findings"],
+        "unconfirmed": summary["review_questions"],
+        "semantic": 0,
+        "not_checked": summary["system_limitations"],
+        "source_requirements": int((graph_summary or {}).get("source_requirements") or 0),
+        "atomic_requirements": len(rows),
+        "additional_conditions": int((graph_summary or {}).get("additional_conditions") or 0),
+        "scope_coverage_pct": float((graph_summary or {}).get("scope_coverage_pct") or 0),
+        "by_kind": dict((graph_summary or {}).get("by_kind") or {}),
+        "principle": "Метрики рассчитаны по атомарным условиям; NOT_FOUND является ограничением, а не нарушением.",
+    })
+    return summary
+
+
+def atomic_evidence_facts(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Expose adjudicated atomic evidence to Deep Evidence without inventing facts."""
+    result: list[dict[str, Any]] = []
+    for row in rows or []:
+        if row.get("verification_kind") not in {"VERIFIED_OK", "PROJECT_FINDING"}:
+            continue
+        for evidence in row.get("verification_evidence") or []:
+            evidence_requirement_id = row.get("checklist_parent_id") or row.get("atom_id")
+            result.append({
+                "fact_id": f"ATOM-EVD-{row.get('atom_id')}-{len(result)+1}",
+                "requirement_id": evidence_requirement_id,
+                "parameter_code": row.get("parameter_code") or row.get("focus") or row.get("atomic_kind"),
+                "parameter_name": row.get("atom_text"),
+                "value": evidence.get("value") if evidence.get("value") not in (None, "") else row.get("verification_kind"),
+                "unit": row.get("unit") or evidence.get("unit") or "",
+                "document": evidence.get("document"), "page": evidence.get("page"),
+                "document_type": evidence.get("section") or evidence.get("document_type"),
+                "source_trace": evidence.get("text"),
+                "fact_admission_decision": "ADMIT", "evidence_quality_decision": "VERIFIED",
+                "binding_status": "EXACT_OBJECT" if row.get("object_name") else "ROW_LOCKED",
+                "object_name": row.get("object_name") or row.get("scope_entity") or "Проект",
+                "directed_evidence": True,
+            })
+    return result
+
+
+def verify_checklist_rows(
+    checklist_rows: list[dict[str, Any]], *, knowledge_root: str,
+    fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Run the same atomic evidence gate over actionable corporate checklist rows.
+
+    Existing checklist results are only promoted when every atomic condition is
+    categorically proved.  A finding likewise requires an explicit, gated
+    contradiction; NOT_FOUND preserves the system limitation.
+    """
+    atoms: list[dict[str, Any]] = []
+    row_by_parent: dict[str, dict[str, Any]] = {}
+    for index, row in enumerate(checklist_rows or [], 1):
+        if row.get("is_heading"):
+            continue
+        parent_id = f"CHECK-{index:04d}"
+        question = str(row.get("question") or row.get("Позиция по чек-листу") or "").strip()
+        if not question:
+            continue
+        section = str(row.get("automatic_section") or row.get("section") or row.get("Раздел") or "").strip()
+        requirement = {
+            "requirement_id": parent_id,
+            "requirement_text": question,
+            "domain": "checklist",
+            "source_row": row.get("item_no") or row.get("position") or index,
+            "source_row_title": row.get("automatic_checklist") or row.get("source_file") or "",
+            "object_name": row.get("object_name") or row.get("entity") or "",
+        }
+        children = atomize_requirement(requirement, domain="checklist")
+        for child in children:
+            if section:
+                child["expected_sections"] = [section]
+                contract = dict(child.get("evidence_contract_v2") or {})
+                contract["expected_sections"] = [section]
+                child["evidence_contract_v2"] = contract
+            child["checklist_parent_id"] = parent_id
+        atoms.extend(children)
+        row_by_parent[parent_id] = row
+
+    verified = verify_atomic_requirements(
+        atoms, knowledge_root=knowledge_root, fact_graph=fact_graph, page_corpus=page_corpus
+    )
+    by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for atom in verified:
+        by_parent[str(atom.get("checklist_parent_id") or atom.get("parent_requirement_id") or "")].append(atom)
+
+    promoted = findings = questions = 0
+    for parent_id, conditions in by_parent.items():
+        row = row_by_parent[parent_id]
+        counts = Counter(str(item.get("verification_kind") or "SYSTEM_LIMITATION") for item in conditions)
+        evidence = [value for item in conditions for value in (item.get("evidence") or [])]
+        row["atomic_conditions"] = conditions
+        row["atomic_condition_count"] = len(conditions)
+        row["atomic_completed"] = counts["VERIFIED_OK"] + counts["PROJECT_FINDING"]
+        if counts["PROJECT_FINDING"]:
+            row.update({
+                "status": "Нет", "proof_kind": "STRUCTURED_COMPARISON",
+                "verification_kind": "PROJECT_FINDING", "verification_state": KIND_STATES["PROJECT_FINDING"],
+                "final_verification_kind": "PROJECT_FINDING", "final_verification_state": KIND_STATES["PROJECT_FINDING"],
+                "evidence": evidence, "decision_basis": "Одно или несколько атомарных условий имеют подтверждённое противоречие.",
+                "recommendation": "Устранить подтверждённое отклонение по атомарным условиям чек-листа.",
+            })
+            findings += 1
+        elif counts["VERIFIED_OK"] == len(conditions):
+            row.update({
+                "status": "Да", "proof_kind": "VERIFIED_ENGINEERING_EVIDENCE",
+                "verification_kind": "VERIFIED_OK", "verification_state": KIND_STATES["VERIFIED_OK"],
+                "final_verification_kind": "VERIFIED_OK", "final_verification_state": KIND_STATES["VERIFIED_OK"],
+                "evidence": evidence, "decision_basis": "Все атомарные условия пункта подтверждены профильными проектными источниками.",
+                "recommendation": "Дополнительное действие не требуется.",
+            })
+            promoted += 1
+        elif counts["REVIEW_QUESTION"] or counts["VERIFIED_OK"]:
+            row.update({
+                "status": "Требует проверки", "proof_kind": "CANDIDATE_EVIDENCE",
+                "verification_kind": "REVIEW_QUESTION", "verification_state": KIND_STATES["REVIEW_QUESTION"],
+                "final_verification_kind": "REVIEW_QUESTION", "final_verification_state": KIND_STATES["REVIEW_QUESTION"],
+                "evidence": evidence, "decision_basis": "Пункт подтверждён частично; категоричный вывод удержан.",
+                "recommendation": "Проверить незакрытые атомарные условия специалистом.",
+            })
+            questions += 1
+    return {
+        "version": ENGINE_VERSION,
+        "atoms": verified,
+        "summary": {
+            "checklist_rows": len(row_by_parent), "atomic_conditions": len(verified),
+            "promoted_verified": promoted, "project_findings": findings,
+            "review_questions": questions,
+        },
+    }

@@ -211,19 +211,24 @@ def _equipment_record(text: str, task_models: list[str], equipment: str) -> str:
     lines = [re.sub(r"\s+", " ", line).strip() for line in str(text or "").splitlines() if line.strip()]
     ranked: list[tuple[int, str]] = []
     for index in range(len(lines)):
-        window = " ".join(lines[max(0, index - 1): min(len(lines), index + 2)])
-        low = _norm(window)
-        if equipment not in low:
-            continue
-        models = _model_tokens(window)
-        score = 25
-        if task_models and any(model in models for model in task_models):
-            score += 80
-        if re.search(r"[-–—]\s*\d{1,3}\s*шт", window, re.I):
-            score += 45
-        if models:
-            score += 15
-        ranked.append((score, window))
+        # Prefer the physical register row itself.  Including the previous row
+        # mixed adjacent truck/loader brands in the same evidence packet.
+        windows = [lines[index]]
+        if index + 1 < len(lines):
+            windows.append(" ".join(lines[index:index + 2]))
+        for window_rank, window in enumerate(windows):
+            low = _norm(window)
+            if equipment not in low:
+                continue
+            models = _model_tokens(window)
+            score = 35 - window_rank * 8
+            if task_models and any(model in models for model in task_models):
+                score += 80
+            if re.search(r"[-–—]\s*\d{1,3}\s*шт", window, re.I):
+                score += 45
+            if models:
+                score += 15
+            ranked.append((score, window))
     if ranked:
         ranked.sort(key=lambda item: item[0], reverse=True)
         return ranked[0][1][:1100]

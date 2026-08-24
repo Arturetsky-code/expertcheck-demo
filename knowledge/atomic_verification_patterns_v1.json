@@ -1,0 +1,375 @@
+{
+  "version": "1.0",
+  "principle": "Паттерн подтверждает только одно атомарное условие в профильном разделе; совпадение слов без проектного маркера остаётся кандидатом.",
+  "patterns": [
+    {
+      "pattern_id": "SITE-FLOOD-PROTECTION",
+      "title": "Защита площадки от подтопления",
+      "triggers": [["защит", "подтоплен"]],
+      "expected_sections": ["ПЗУ"],
+      "evidence_groups": [["защит", "подтоплен"], ["водоотвод"], ["нагорн", "канал"], ["водопропускн", "труб"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SITE-INTERNAL-ROADS",
+      "title": "Внутриплощадочные проезды",
+      "triggers": [["внутриплощадочн", "проезд"], ["дорожн", "сет"]],
+      "expected_sections": ["ПЗУ"],
+      "evidence_groups": [["внутриплощадочн", "проезд"], ["существующ", "дорог"], ["покрыт", "проезд"], ["примыкан", "дорог"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SITE-VEHICLE-PERSONNEL-ACCESS",
+      "title": "Проезд техники и проход персонала",
+      "triggers": [["проезд", "техник"], ["проход", "персонал"]],
+      "expected_sections": ["ПЗУ"],
+      "evidence_groups": [["въезд"], ["проезд"], ["пешеходн"], ["ворот"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SITE-FENCE",
+      "title": "Ограждение территории",
+      "triggers": [["огражден"]],
+      "expected_sections": ["ПЗУ", "КР"],
+      "evidence_groups": [["территор", "огражд"], ["панел", "столб"], ["высот", "огражд"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SITE-GATE-WICKET",
+      "title": "Ворота и калитки",
+      "triggers": [["ворот", "калит"]],
+      "expected_sections": ["ПЗУ", "КР"],
+      "evidence_groups": [["ворот"], ["калит"], ["въезд"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SITE-FACTORY-FENCE",
+      "title": "Ограждение заводского изготовления",
+      "triggers": [["огражден", "заводск"]],
+      "expected_sections": ["ПЗУ", "КР"],
+      "evidence_groups": [["панел"], ["серии"], ["fensys"], ["gs-fence"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "LIGHTING-LED",
+      "title": "Светодиодные светильники",
+      "triggers": [["светодиодн", "светильник"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["светодиодн", "светильник"], ["led", "светильник"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "LIGHTING-MAST",
+      "title": "Прожекторные мачты освещения",
+      "triggers": [["прожекторн", "мачт"], ["мачт", "освещен"]],
+      "expected_sections": ["ИОС1", "ПЗУ"],
+      "evidence_groups": [["мачт", "освещен"], ["прожектор"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "LIGHTING-CONSOLE",
+      "title": "Консольные светильники на опорах",
+      "triggers": [["консольн", "светильник"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["консольн", "светильник"], ["светильник", "опор"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "ELECTRICAL-GROUNDING",
+      "title": "Заземляющее устройство",
+      "triggers": [["заземля", "устройств"], ["защитн", "заземлен"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["заземля", "устройств"], ["контур", "заземлен"], ["систем", "уравниван", "потенциал"]],
+      "minimum_groups": 2,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "ELECTRICAL-LIGHTNING-MAST",
+      "title": "Молниеприёмники на мачтах",
+      "triggers": [["молниеприем", "мачт"], ["молниезащит", "мачт"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["молниеприем", "мачт"], ["молниезащит", "мачт", "освещен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "ELECTRICAL-LIGHTNING-STRUCTURE",
+      "title": "Молниезащита металлическими конструкциями",
+      "triggers": [["молниезащит", "металлическ", "конструкц"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["металлическ", "конструкц", "молниезащит"], ["естественн", "молниеприем"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "WATER-DRINKING-SYSTEM",
+      "title": "Хозяйственно-питьевое водоснабжение",
+      "triggers": [["хозяйственно-питьев", "водоснабжен"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["хозяйственно-питьев", "водоснабжен"], ["питьев", "водоснабжен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "WATER-FIRE-SYSTEM",
+      "title": "Противопожарное водоснабжение",
+      "triggers": [["противопожарн", "водоснабжен"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["противопожарн", "водоснабжен"], ["пожарн", "запас", "вод"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "WATER-IMPORTED-BOTTLED",
+      "title": "Привозная бутилированная вода",
+      "triggers": [["привозн", "бутилированн", "вод"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["привозн", "бутилированн", "вод"], ["питьев", "вод", "торгов", "сет"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "WATER-FACTORY-TANKS",
+      "title": "Водоснабжение от комплектных ёмкостей",
+      "triggers": [["емкост", "комплектн", "поставк"], ["ёмкост", "комплектн", "поставк"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["емкост", "привозн", "вод"], ["резервуар", "привозн", "вод"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-DOMESTIC",
+      "title": "Хозяйственно-бытовая канализация",
+      "triggers": [["хозяйственно-бытов", "канализац"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["хозяйственно-бытов", "канализац"], ["бытов", "сток"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-STORM",
+      "title": "Ливневая канализация",
+      "triggers": [["ливнев", "канализац"], ["ливнев", "сток"]],
+      "expected_sections": ["ИОС2", "ПЗУ"],
+      "evidence_groups": [["ливнев", "канализац"], ["поверхностн", "сток"], ["водоотводн", "канав"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-CESSPIT",
+      "title": "Сбор бытовых стоков в выгреб",
+      "triggers": [["канализац", "выгреб"], ["сток", "выгреб"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["выгреб"], ["накопительн", "емкост"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-OFFSITE-DISPOSAL",
+      "title": "Вывоз бытовых стоков",
+      "triggers": [["вывоз", "сток"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["вывоз", "сток"], ["ассенизац"], ["по мере накоплен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-POLYMER-PIPE",
+      "title": "Полимерные канализационные трубы",
+      "triggers": [["материал", "труб", "полимер"]],
+      "expected_sections": ["ИОС2"],
+      "evidence_groups": [["полимерн", "труб"], ["полиэтилен", "труб"], ["пвх", "труб"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-GRAVITY",
+      "title": "Самотечный сбор стоков",
+      "triggers": [["сбор", "сток", "самотек"], ["самотечн", "канализац"]],
+      "expected_sections": ["ИОС2", "ПЗУ"],
+      "evidence_groups": [["самотек"], ["самотечн"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-TREATMENT",
+      "title": "Очистка ливневых стоков",
+      "triggers": [["очистн", "сооружен"], ["установк", "очистк", "сток"]],
+      "expected_sections": ["ИОС2", "ПЗУ"],
+      "evidence_groups": [["очистн", "сооружен"], ["очистк", "ливнев", "сток"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "SEWER-TREATED-DISCHARGE",
+      "title": "Сброс очищенных вод",
+      "triggers": [["сброс", "очищенн", "вод"]],
+      "expected_sections": ["ИОС2", "ПЗУ"],
+      "evidence_groups": [["сброс", "очищенн", "вод"], ["выпуск", "очищенн", "сток"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-CAMERAS",
+      "title": "Камеры охранного видеонаблюдения",
+      "triggers": [["камер", "видеонаблюден"]],
+      "expected_sections": ["ИОС5", "ИОС1"],
+      "evidence_groups": [["камер", "видеонаблюден"], ["систем", "охранн", "телевиден"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-FIBER",
+      "title": "Передача видео по ВОЛС",
+      "triggers": [["видеоинформац", "волс"], ["виде", "волоконно-оптическ"]],
+      "expected_sections": ["ИОС5"],
+      "evidence_groups": [["волс"], ["волоконно-оптическ", "лини"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-RECORDING",
+      "title": "Цифровая запись видео",
+      "triggers": [["цифров", "запис", "видео"]],
+      "expected_sections": ["ИОС5"],
+      "evidence_groups": [["цифров", "запис"], ["видеозапис"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-ARCHIVE",
+      "title": "Архивирование видеозаписей",
+      "triggers": [["архивирован", "запис"], ["архив", "видео"]],
+      "expected_sections": ["ИОС5"],
+      "evidence_groups": [["архив", "видео"], ["архивирован", "запис"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-RETENTION",
+      "title": "Срок хранения видеозаписей",
+      "triggers": [["хранен", "запис", "сут"]],
+      "expected_sections": ["ИОС5"],
+      "evidence_groups": [["хранен", "запис"], ["архив", "сут"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "VIDEO-UPS",
+      "title": "Резервирование питания видеонаблюдения",
+      "triggers": [["ибп", "резерв"], ["бесперебойн", "питан"]],
+      "expected_sections": ["ИОС5", "ИОС1"],
+      "evidence_groups": [["ибп"], ["бесперебойн", "питан"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-INTERLOCK",
+      "title": "Сблокированный пуск оборудования",
+      "triggers": [["сблокированн", "работ"], ["безопасн", "пуск"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["блокировк"], ["сблокированн", "пуск"], ["последовательн", "пуск"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-EMERGENCY",
+      "title": "Защита от аварийных ситуаций",
+      "triggers": [["защит", "аварийн", "ситуац"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["аварийн", "защит"], ["аварийн", "останов"], ["аварийн", "сигнал"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-OVERLOAD",
+      "title": "Защита механизмов от перегрузки",
+      "triggers": [["защит", "перегрузк"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["защит", "перегрузк"], ["перегрузк", "механизм"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-MEASUREMENT",
+      "title": "Измерение технологических параметров",
+      "triggers": [["измерен", "параметр"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["измерен", "параметр"], ["контрол", "скорост"], ["уровн", "заполнен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-REMOTE-CONTROL",
+      "title": "Дистанционное управление",
+      "triggers": [["дистанционн", "управлен"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["дистанционн", "управлен"], ["арм", "управлен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "AUTOMATION-ONLINE-MONITORING",
+      "title": "Онлайн-мониторинг инженерных систем",
+      "triggers": [["мониторинг", "онлайн"], ["мониторинг", "арм"]],
+      "expected_sections": ["ИОС5", "ТХ"],
+      "evidence_groups": [["мониторинг", "арм"], ["диспетчер", "мониторинг"], ["состояни", "систем"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "POWER-OVERHEAD-INSULATED",
+      "title": "Воздушные линии с изолированными проводами",
+      "triggers": [["воздушн", "лини", "изолированн", "провод"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["воздушн", "лини", "изолированн", "провод"], ["сип"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "POWER-CABLE-TRAY",
+      "title": "Прокладка кабелей в металлических лотках",
+      "triggers": [["металлическ", "кабельн", "лотк"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["металлическ", "лотк"], ["кабельн", "лотк"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "POWER-DIESEL-FIRST-CATEGORY",
+      "title": "ДЭС для потребителей первой категории",
+      "triggers": [["дизельн", "электростанц", "перв", "категор"]],
+      "expected_sections": ["ИОС1"],
+      "evidence_groups": [["дэс", "перв", "категор"], ["дизельн", "электростанц", "i категор"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "STRUCTURE-OPEN-CANOPY",
+      "title": "Открытый навес",
+      "triggers": [["навес", "открыт"]],
+      "expected_sections": ["АР", "КР", "ТХ"],
+      "evidence_groups": [["навес", "открыт"], ["открыт", "сооружен"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    },
+    {
+      "pattern_id": "STRUCTURE-RETAINING-WALL",
+      "title": "Подпорная стена",
+      "triggers": [["подпорн", "стен"]],
+      "expected_sections": ["КР", "ПЗУ", "ТХ"],
+      "evidence_groups": [["подпорн", "стен"], ["поз", "4.1"]],
+      "minimum_groups": 1,
+      "requires_design_marker": true
+    }
+  ]
+}

@@ -5,7 +5,11 @@
     "document_type": "НПА",
     "authority": "Правительство РФ",
     "source_class": "official",
-    "verification_status": "Требует постатейной верификации редакции",
+    "status": "Действует с изменениями",
+    "verification_status": "Статус и пункты 12, 13, 15 проверены по официальному источнику",
+    "verified_on": "2026-08-24",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "edition_reference": "Официальная редакция rdk=30; действие постановления ограничено до 01.09.2028",
     "effective_from": "2008-02-16",
     "effective_to": null,
     "scope": [
@@ -19,7 +23,10 @@
     "document_type": "Федеральный закон",
     "authority": "Российская Федерация",
     "source_class": "official",
-    "verification_status": "Требует постатейной верификации редакции",
+    "status": "Действует с изменениями",
+    "verification_status": "Статус проверен по официальному источнику; постатейная верификация продолжается",
+    "verified_on": "2026-08-24",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102135277&page=1&rdk=2&vkart=card",
     "scope": [
       "BUILDING_SAFETY"
     ],

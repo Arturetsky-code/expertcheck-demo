@@ -68,6 +68,7 @@ from .finding_qualification import coverage_summary
 from .requirements_ai_reasoner import review_assignment_rows
 from .directed_evidence import build_page_corpus, attach_directed_evidence, directed_evidence_facts
 from .table_semantic_scope import annotate_table_semantic_scope
+from .page_evidence_store import is_assignment_source
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -325,7 +326,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "10.3.0-alpha2-evidence-recall"
+        item["core_version"] = "10.4.0-alpha1-verification-kernel"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -486,11 +487,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
+    assignment_page_corpus = []
+    project_page_corpus = []
     try:
         assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
-        assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf)
-        assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, assignment_page_corpus)
-        assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry)
+        assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
+        project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
+        assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
+        assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
         assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
         if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
             assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_compliance, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
@@ -546,7 +550,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "10.3.0-alpha2-evidence-recall"
+        item["core_version"] = "10.4.0-alpha1-verification-kernel"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -576,7 +580,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     try:
         from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
         deep_evidence_review = run_deep_evidence_review(
-            review_plan.get("items") or [], documents=documents, facts=findings + assignment_directed_facts, comparisons=cross_section_checks
+            review_plan.get("items") or [], documents=documents, facts=findings + assignment_directed_facts, comparisons=cross_section_checks,
+            page_corpus=project_page_corpus,
         )
         merge_summary=apply_deep_evidence_decisions(
             deep_evidence_review,
@@ -627,7 +632,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     except Exception as exc:
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
-    report_quality_gate=validate_review_plan(review_plan, object_registry=object_registry)
+    report_quality_gate=validate_review_plan(
+        review_plan,
+        object_registry=object_registry,
+        checklist_rows=(automatic_review.get('results') or []) if isinstance(automatic_review,dict) else [],
+        comparisons=cross_section_checks,
+    )
     if report_quality_gate.get('status')!='PASSED':
         pipeline_errors.append({
             'stage':'report_quality_gate',
@@ -635,7 +645,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'issues':report_quality_gate.get('issues') or [],
         })
     for doc in documents:
-        doc["core_version"] = "10.3.0-alpha2-evidence-recall"
+        doc["core_version"] = "10.4.0-alpha1-verification-kernel"
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary

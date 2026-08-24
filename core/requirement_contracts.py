@@ -26,6 +26,29 @@ PARAM_SECTION_HINTS={
  'QUANTITY':['ПЗ','ПЗУ','ТХ'],
 }
 
+TEXT_SECTION_HINTS=(
+ (('генеральн план','планировочн','внутриплощадочн','проезд','подтоплен','благоустрой','огражден','земельн участ','рельеф','водоотводн канав'),['ПЗУ']),
+ (('технологическ','оборудован','производительност','дроблен','конвейер','погрузчик','самосвал','бункер'),['ТХ']),
+ (('архитектурн','помещен','фасад','ограждающ конструкц'),['АР']),
+ (('конструктивн','фундамент','нагрузк','армирован','металлоконструкц'),['КР']),
+ (('электроснабжен','освещен','заземлен','молниезащит','напряжен'),['ИОС1']),
+ (('водоснабжен','канализац','водоотведен','расход вод','напор','сточн'),['ИОС2']),
+ (('видеонаблюден','волс','связ','автоматизац'),['ИОС5']),
+)
+
+
+def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
+    direct=list(PARAM_SECTION_HINTS.get(code,[]))
+    if direct:
+        return direct
+    text=normalize_text(requirement.get('requirement_text') or '')
+    result=[]
+    for hints,sections in TEXT_SECTION_HINTS:
+        if any(hint in text for hint in hints):
+            for section in sections:
+                if section not in result:result.append(section)
+    return result
+
 def infer_scope(requirement:dict[str,Any])->str:
     text=normalize_text(requirement.get('requirement_text') or '')
     title=normalize_text(requirement.get('source_row_title') or '')
@@ -51,7 +74,7 @@ def build_contract(requirement:dict[str,Any])->dict[str,Any]:
     rtype=str(requirement.get('requirement_type') or 'SEMANTIC_ENGINEERING')
     code=canonical_parameter_code(requirement.get('parameter_code'))
     scope=infer_scope(requirement)
-    sections=list(PARAM_SECTION_HINTS.get(code,[]))
+    sections=infer_expected_sections(requirement,code)
     if rtype=='SET_COMPARISON':
         method='SET_COMPARISON'; evidence=['Реестр объектов проекта','Приложение/перечень объектов Задания']
     elif rtype=='VALUE_COMPARISON':

@@ -189,6 +189,14 @@ def _is_plausible_name(value: str) -> bool:
         return False
     if name.lower().endswith((".pdf", ".xml", ".sig", ".zip")):
         return False
+    # Communication media, cable types and legend symbols may stand immediately
+    # next to a real building explication on a technology/electrical drawing.
+    # They describe a connection, not a project object.
+    if any(token in low for token in (
+        "ethernet tx", "ethernet fx", "usb ", "vga ", "витая пара",
+        "условное обозначение", "условные обозначения", "медь -", "оптика",
+    )):
+        return False
     # Notes and legend rows near an explication must never become project objects.
     if re.search(r"\bзам\.?\s*\d+[/\-]\d+", low):
         return False
@@ -559,18 +567,11 @@ class GeneralPlanRegisterEngine:
         audit: list[dict[str, Any]] = []
         for uploaded in files:
             declared = document_types.get(uploaded.name, "")
-            # Для файлов с нейтральным именем выполняется безопасная содержательная проверка.
+            # A building explication may legitimately be embedded in TH/IOS/AR
+            # drawings.  It is local drawing context, not a general-plan register.
+            # Therefore file/declared profile is a hard source contract here.
             filename_low = _normalize_text(getattr(uploaded, "name", ""))
-            should_try = declared == "ПЗУ2" or any(tok in filename_low for tok in ("пзу2", "генплан", "генеральный план", "гп"))
-            if not should_try:
-                try:
-                    probe = fitz.open(stream=uploaded.getvalue(), filetype="pdf")
-                    # Explications are frequently located on sheets 4-8, not in the
-                    # first three pages. Probe a wider but still bounded window.
-                    should_try = any(_looks_like_general_plan(page) for page in list(probe)[:12])
-                    probe.close()
-                except Exception:
-                    should_try = False
+            should_try = declared in {"ПЗУ", "ПЗУ1", "ПЗУ2"} or any(tok in filename_low for tok in ("пзу1", "пзу2", "генплан", "генеральный план"))
             if not should_try:
                 continue
             try:

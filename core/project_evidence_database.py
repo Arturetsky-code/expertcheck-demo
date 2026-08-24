@@ -2,13 +2,20 @@ from __future__ import annotations
 from typing import Any
 import hashlib, re
 
+from .page_evidence_store import canonical_section, is_assignment_source, page_evidence_records
+
 
 def _txt(v: Any) -> str: return str(v or '').strip()
 def _id(*parts: Any) -> str:
     raw='|'.join(_txt(x) for x in parts)
     return 'EVD-'+hashlib.sha1(raw.encode('utf-8','ignore')).hexdigest()[:14].upper()
 
-def build_project_evidence_database(documents:list[dict[str,Any]]|None=None, facts:list[dict[str,Any]]|None=None, comparisons:list[dict[str,Any]]|None=None)->dict[str,Any]:
+def build_project_evidence_database(
+    documents:list[dict[str,Any]]|None=None,
+    facts:list[dict[str,Any]]|None=None,
+    comparisons:list[dict[str,Any]]|None=None,
+    page_corpus:list[dict[str,Any]]|None=None,
+)->dict[str,Any]:
     """Create a read-optimised evidence layer. It never invents owners or facts."""
     records=[]
     for d in documents or []:
@@ -19,7 +26,9 @@ def build_project_evidence_database(documents:list[dict[str,Any]]|None=None, fac
             text=_txt(p.get('text') if isinstance(p,dict) else p)
             if not text: continue
             page=(p.get('page') if isinstance(p,dict) else None) or i
-            records.append({'evidence_id':_id(doc,page,text[:180]),'kind':'DOCUMENT_TEXT','document':doc,'page':page,'text':text,'owner':'','metric':'','value':'','unit':'','trust':'SOURCE'})
+            section=canonical_section(d.get('document_type') or d.get('Тип документа') or d.get('Раздел') or doc)
+            records.append({'evidence_id':_id(doc,page,text[:180]),'kind':'DOCUMENT_TEXT','document':doc,'document_type':section,'section':section,'page':page,'text':text,'owner':'','metric':'','value':'','unit':'','trust':'SOURCE'})
+    records.extend(page_evidence_records(page_corpus or []))
     for f in facts or []:
         admission=_txt(f.get('fact_admission_decision')).upper()
         quality=_txt(f.get('evidence_quality_decision')).upper()
@@ -37,6 +46,8 @@ def build_project_evidence_database(documents:list[dict[str,Any]]|None=None, fac
         )
         value=f.get('value'); unit=_txt(f.get('unit') or f.get('units'))
         doc=_txt(f.get('document') or f.get('source_document') or f.get('source'))
+        if is_assignment_source({'document':doc,'document_type':f.get('document_type') or f.get('section')}):
+            continue
         page=f.get('page') or f.get('source_page') or ''
         binding=_txt(f.get('binding_status') or f.get('property_binding_status')).upper()
         strong=bool(
@@ -45,16 +56,19 @@ def build_project_evidence_database(documents:list[dict[str,Any]]|None=None, fac
             or f.get('directed_evidence')
         )
         kind='STRUCTURED_FACT' if strong else 'CANDIDATE_FACT'
-        records.append({'evidence_id':_id(doc,page,owner,metric,value,unit),'kind':kind,'document':doc,'page':page,'text':_txt(f.get('evidence') or f.get('source_text') or f.get('raw_text') or f.get('context') or f.get('table_evidence')),'owner':owner,'metric':metric,'value':value,'unit':unit,'trust':_txt(f.get('trust_state') or quality or admission or 'CANDIDATE'),'source_fact_id':_txt(f.get('fact_id') or f.get('evidence_id'))})
+        section=canonical_section(f.get('document_type') or f.get('section_family') or f.get('section') or doc)
+        records.append({'evidence_id':_id(doc,page,owner,metric,value,unit),'kind':kind,'document':doc,'document_type':section,'section':section,'page':page,'text':_txt(f.get('evidence') or f.get('source_text') or f.get('raw_text') or f.get('context') or f.get('table_evidence')),'owner':owner,'metric':metric,'value':value,'unit':unit,'trust':_txt(f.get('trust_state') or quality or admission or 'CANDIDATE'),'source_fact_id':_txt(f.get('fact_id') or f.get('evidence_id')),'requirement_id':_txt(f.get('requirement_id'))})
     for c in comparisons or []:
         status=_txt(c.get('status') or c.get('result')).upper()
         conflict=bool(c.get('is_conflict') or c.get('conflict') or str(c.get('kind','')).lower() in {'mismatch','conflict'} or any(x in status for x in ('РАСХОЖД','КОНФЛИКТ','НЕ СООТВЕТ')))
         if not conflict: continue
         owner=_txt(c.get('object_name') or c.get('object') or c.get('owner'))
         metric=_txt(c.get('metric') or c.get('indicator') or c.get('parameter_code') or c.get('parameter_name') or c.get('parameter'))
-        records.append({'evidence_id':_id('CMP',owner,metric,c.get('values')),'kind':'STRUCTURED_CONFLICT','document':_txt(c.get('documents') or c.get('sources')),'page':'','text':_txt(c.get('explanation') or c.get('evidence')),'owner':owner,'metric':metric,'value':c.get('values') or c.get('value') or c.get('values_by_section'),'unit':_txt(c.get('unit')),'trust':'VERIFIED_CONFLICT'})
+        document=_txt(c.get('documents') or c.get('sources'))
+        section=canonical_section(c.get('document_type') or c.get('section_family') or c.get('section') or document)
+        records.append({'evidence_id':_id('CMP',owner,metric,c.get('values')),'kind':'STRUCTURED_CONFLICT','document':document,'document_type':section,'section':section,'page':'','text':_txt(c.get('explanation') or c.get('evidence')),'owner':owner,'metric':metric,'value':c.get('values') or c.get('value') or c.get('values_by_section'),'unit':_txt(c.get('unit')),'trust':'VERIFIED_CONFLICT'})
     by_owner={}; by_metric={}
     for r in records:
         if r['owner']: by_owner.setdefault(r['owner'].lower(),[]).append(r['evidence_id'])
         if r['metric']: by_metric.setdefault(r['metric'].lower(),[]).append(r['evidence_id'])
-    return {'version':'2.0','records':records,'record_count':len(records),'by_owner':by_owner,'by_metric':by_metric}
+    return {'version':'3.0-source-locked','records':records,'record_count':len(records),'by_owner':by_owner,'by_metric':by_metric}

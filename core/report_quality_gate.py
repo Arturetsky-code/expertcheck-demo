@@ -3,9 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from .general_plan_engine import is_service_role_label
+from .page_evidence_store import section_matches, source_section
 
 
-def validate_review_plan(plan: dict[str, Any], *, object_registry: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def validate_review_plan(
+    plan: dict[str, Any],
+    *,
+    object_registry: list[dict[str, Any]] | None = None,
+    checklist_rows: list[dict[str, Any]] | None = None,
+    comparisons: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Validate report metrics before they become management conclusions."""
     issues: list[str] = []
     domains = plan.get("domains") or {}
@@ -47,6 +54,36 @@ def validate_review_plan(plan: dict[str, Any], *, object_registry: list[dict[str
         name = str(row.get("Наименование объекта") or row.get("Наименование") or row.get("name") or "").strip()
         if name and is_service_role_label(name):
             issues.append(f"В реестр объектов попала служебная роль основной надписи: {name[:100]}.")
+        low=name.lower()
+        if any(token in low for token in ('ethernet tx','ethernet fx','usb кабель','vga кабель','условные обозначения')):
+            issues.append(f"В реестр объектов попала строка легенды/соединения: {name[:100]}.")
+
+    wrong_section=0
+    for row in checklist_rows or []:
+        expected=[row.get('automatic_section')] if row.get('automatic_section') else []
+        if not expected:
+            continue
+        for evidence in row.get('deep_evidence_candidates') or []:
+            if not section_matches(source_section(evidence),expected):
+                wrong_section+=1
+                if wrong_section<=5:
+                    issues.append(
+                        f"Чек-лист {row.get('item_no') or row.get('position') or ''}: доказательство из раздела "
+                        f"{source_section(evidence) or 'не определён'} не соответствует {expected[0]}."
+                    )
+    if wrong_section>5:
+        issues.append(f"Дополнительно обнаружено нерелевантных источников чек-листов: {wrong_section-5}.")
+
+    for row in comparisons or []:
+        status=str(row.get('status') or row.get('result') or '').upper()
+        if not any(token in status for token in ('СОВПАД','РАСХОЖД','КОНФЛИКТ')):
+            continue
+        parameter=str(row.get('parameter_name') or row.get('parameter') or row.get('rule_name') or '').strip()
+        values=row.get('document_values') or row.get('values_by_section') or row.get('values')
+        if not parameter:
+            issues.append('Завершённая межраздельная сверка не содержит наименование показателя.')
+        if not values and str(row.get('parameter_code') or '').upper() not in {'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}:
+            issues.append(f"Межраздельная сверка «{parameter or 'без показателя'}» не содержит сопоставленные значения.")
 
     return {
         "status": "PASSED" if not issues and checked_domains == 3 else "FAILED",
@@ -54,4 +91,5 @@ def validate_review_plan(plan: dict[str, Any], *, object_registry: list[dict[str
         "checked_domains": checked_domains,
         "checks": len(plan.get("items") or []),
         "checked_objects": len(object_registry or []),
+        "wrong_section_evidence": wrong_section,
     }

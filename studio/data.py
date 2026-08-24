@@ -187,6 +187,8 @@ def _compact_technical_frames(docs, findings, comparisons, report):
         'fact_admission_decision','fact_admission_score','fact_admission_reasons',
         'evidence_quality_decision','evidence_trust_grade','physical_trace_level',
         'source_locator','project_understanding_binding','comparison_excluded',
+        'engineering_plausibility_status','engineering_plausibility_reason',
+        'engineering_derived_height','possible_decimal_separator_candidate',
         'match_method','structural_zone',
     ]
     object_columns = [
@@ -207,6 +209,15 @@ def _compact_technical_frames(docs, findings, comparisons, report):
             'genplan_position':row.get('genplan_position') or row.get('Позиция по ГП') or '',
             'strong_evidence_count':row.get('strong_evidence_count') or 0,
         })
+    first_doc=_first_document_record(docs)
+    plausibility_rows=[{
+        'Документ':row.get('document'),'Страница':row.get('page'),'Позиция':row.get('position'),
+        'Объект':row.get('object'),'Заявленная высота, м':row.get('declared_height'),
+        'Расчётная средняя высота, м':row.get('derived_height'),
+        'Возможный десятичный кандидат, м':row.get('possible_decimal_candidate'),
+        'Решение':'Требует проверки' if row.get('decision')=='HOLD' else row.get('decision'),
+        'Обоснование':row.get('reason'),
+    } for row in (first_doc.get('engineering_plausibility_audit') or {}).get('items') or []]
     return {
         'Тех_реестр': _excel_safe_frame(registry(docs), columns=registry_columns, max_rows=5000),
         'Тех_сверки': _excel_safe_frame(pd.DataFrame(comparison_rows), columns=comparison_columns, max_rows=10000),
@@ -214,6 +225,7 @@ def _compact_technical_frames(docs, findings, comparisons, report):
         'Тех_извлечение': _excel_safe_frame(engineer_findings(findings), columns=finding_columns, max_rows=10000),
         'Тех_исключённые': _excel_safe_frame(pd.DataFrame(report.get('excluded_objects') or []), columns=object_columns, max_rows=5000),
         'Тех_спорные': _excel_safe_frame(pd.DataFrame(report.get('unresolved_objects') or []), columns=object_columns, max_rows=5000),
+        'Тех_правдоподобность': _excel_safe_frame(pd.DataFrame(plausibility_rows), max_rows=5000),
     }
 
 
@@ -575,6 +587,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Рекомендация':x.get('recommendation') or '',
         'Critic':x.get('critic_state'),
         'Regression gate':x.get('regression_state'),
+        'Контракт доказательства':ru_label(x.get('evidence_contract_state')),
+        'Смысловой gate':ru_label(x.get('semantic_gate_state')),
+        'Требуемая модальность':ru_label((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('required_modality')),
+        'Критические квалификаторы':', '.join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers') or []),
+        'Причины смыслового удержания':' | '.join(x.get('semantic_gate_reasons') or []),
         'Deep Evidence':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
         'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons') or []),
     } for x in assignment_atomic_rows])
@@ -633,7 +650,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Результат':x.get('status'),
         'Покрытие':ru_label(x.get('coverage_state')),
         'Основание вывода':x.get('decision_basis'),
-        'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
+        'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('text') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
     } for x in normative_compliance_rows])
     normative_df = _excel_safe_frame(normative_df)
     assignment_df = _excel_safe_frame(assignment_df)

@@ -1,0 +1,251 @@
+{
+  "version": "11.0.0-alpha1-atomic-engineering-verification-core",
+  "input": {
+    "documents": 12,
+    "document_types": {
+      "АР1": 1,
+      "АР2": 1,
+      "ИОС1": 1,
+      "ИОС2": 1,
+      "КР1": 1,
+      "КР2": 1,
+      "НЕОПРЕДЕЛЕН": 1,
+      "ПЗ": 1,
+      "ПЗУ1": 1,
+      "ПЗУ2": 1,
+      "ТХ1": 1,
+      "ТХ2": 1
+    }
+  },
+  "output": {
+    "findings": 1164,
+    "comparisons": 166,
+    "pipeline_errors": []
+  },
+  "assignment": {
+    "source_rows": 56,
+    "atomic_conditions": 143,
+    "additional_conditions": 87,
+    "parent_statuses": {
+      "Выявлено отклонение": 3,
+      "Не проверено системой": 28,
+      "Соответствует заданию": 4,
+      "Требует проверки": 12,
+      "Частично подтверждено": 9
+    },
+    "atomic_statuses": {
+      "Выявлено отклонение": 4,
+      "Не проверено системой": 69,
+      "Соответствует заданию": 32,
+      "Требует проверки": 38
+    },
+    "atomic_verdicts": {
+      "PROJECT_FINDING": 4,
+      "REVIEW_QUESTION": 38,
+      "SYSTEM_LIMITATION": 69,
+      "VERIFIED_OK": 32
+    },
+    "atomic_kinds": {
+      "DESIGN_DETERMINED": 6,
+      "DOCUMENT_DELIVERABLE": 3,
+      "EQUIPMENT_IDENTITY": 2,
+      "FEATURE_PRESENCE": 20,
+      "NORMATIVE_CLAUSE": 13,
+      "PRESENCE_REQUIREMENT": 64,
+      "PROHIBITION": 12,
+      "SET_COMPARISON": 1,
+      "TRACEABILITY": 7,
+      "VALUE_COMPARISON": 15
+    },
+    "summary": {
+      "total": 143,
+      "verified_ok": 32,
+      "project_findings": 4,
+      "review_questions": 38,
+      "system_limitations": 69,
+      "informational": 0,
+      "completed": 36,
+      "automatic_coverage_pct": 25.2,
+      "compliant": 32,
+      "deviation": 4,
+      "unconfirmed": 38,
+      "semantic": 0,
+      "not_checked": 69,
+      "source_requirements": 56,
+      "atomic_requirements": 143,
+      "additional_conditions": 87,
+      "scope_coverage_pct": 100.0,
+      "by_kind": {
+        "DESIGN_DETERMINED": 6,
+        "DOCUMENT_DELIVERABLE": 3,
+        "EQUIPMENT_IDENTITY": 2,
+        "FEATURE_PRESENCE": 20,
+        "NORMATIVE_CLAUSE": 13,
+        "PRESENCE_REQUIREMENT": 64,
+        "PROHIBITION": 12,
+        "SET_COMPARISON": 1,
+        "TRACEABILITY": 7,
+        "VALUE_COMPARISON": 15
+      },
+      "principle": "Метрики рассчитаны по атомарным условиям; NOT_FOUND является ограничением, а не нарушением.",
+      "ai_evidence_review": {
+        "reviewed": 0,
+        "confirmed": 0,
+        "contradicted": 0
+      },
+      "directed_evidence": {
+        "requirements": 56,
+        "with_candidates": 4,
+        "verified_candidates": 10,
+        "admitted_for_deep_review": 109
+      }
+    },
+    "categorical_without_complete_gate": [],
+    "findings": [
+      {
+        "atom_id": "ASSIGN-26EFECBC3717BE-A001-A2D05FBCE0",
+        "parent_id": "ASSIGN-26EFECBC3717BE",
+        "condition": "установку дробильно-сортировочного комплекса (ДСК) суммарной производительностью 500 т/ч по документации, предоставляемой заказчиком.",
+        "difference": "165.14",
+        "evidence": [
+          "Раздел ПД №6_ТХ1.pdf, стр. 34 [ТХ]"
+        ],
+        "critic": "PASSED",
+        "regression": "PASSED",
+        "deep_evidence": "PASSED"
+      },
+      {
+        "atom_id": "ASSIGN-B8BED4CB4DDD6F-A001-A6519FB2BD",
+        "parent_id": "ASSIGN-B8BED4CB4DDD6F",
+        "condition": "Подвоз руды осуществляется автосамосвалами SinoTrack г/п 42тонны и объемом кузова 32 м3.",
+        "difference": "обозначение изготовителя/марки: в Задании SINOTRACK, в ПД SINOTRUK",
+        "evidence": [
+          "Раздел ПД №6_ТХ1.pdf, стр. 37 [ТХ]"
+        ],
+        "critic": "PASSED",
+        "regression": "PASSED",
+        "deep_evidence": "PASSED"
+      },
+      {
+        "atom_id": "ASSIGN-4B436E631243A4-A001-7EBCD0CC45",
+        "parent_id": "ASSIGN-4B436E631243A4",
+        "condition": "Подача руды в приёмный бункер осуществляется двумя погрузчиками SHANTUI L76-С5 с объёмом ковша 4,5 м3",
+        "difference": "обозначение изготовителя/марки: в Задании SHANTUI, в ПД ARKTOS",
+        "evidence": [
+          "Раздел ПД №6_ТХ1.pdf, стр. 37 [ТХ]"
+        ],
+        "critic": "PASSED",
+        "regression": "PASSED",
+        "deep_evidence": "PASSED"
+      },
+      {
+        "atom_id": "ASSIGN-4B436E631243A4-A002-E8BCBAB4B5",
+        "parent_id": "ASSIGN-4B436E631243A4",
+        "condition": "Количество оборудования: 2. Подача руды в приёмный бункер осуществляется двумя погрузчиками SHANTUI L76-С5 с объёмом ковша 4,5 м3",
+        "difference": "количество: в Задании 2, в ПД 4",
+        "evidence": [
+          "Раздел ПД №6_ТХ1.pdf, стр. 37 [ТХ]"
+        ],
+        "critic": "PASSED",
+        "regression": "PASSED",
+        "deep_evidence": "PASSED"
+      }
+    ]
+  },
+  "checklists": {
+    "rows": 443,
+    "statuses": {
+      "Да": 6,
+      "Не проверено системой": 213,
+      "Требует проверки": 224
+    },
+    "verdicts": {
+      "REVIEW_QUESTION": 224,
+      "SYSTEM_LIMITATION": 213,
+      "VERIFIED_OK": 6
+    },
+    "atomic": {
+      "checklist_rows": 443,
+      "atomic_conditions": 464,
+      "promoted_verified": 8,
+      "project_findings": 0,
+      "review_questions": 216
+    }
+  },
+  "cross_section": {
+    "total": 166,
+    "statuses": {
+      "НЕДОСТАТОЧНО ДАННЫХ": 49,
+      "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ": 1,
+      "СОВПАДАЕТ": 52,
+      "ТРЕБУЕТ ПРОВЕРКИ": 64
+    }
+  },
+  "quality_gate": {
+    "status": "PASSED",
+    "issues": [],
+    "checked_domains": 3,
+    "checks": 600,
+    "checked_objects": 39,
+    "wrong_section_evidence": 0
+  },
+  "deep_evidence": {
+    "checks": 600,
+    "with_candidates": 585,
+    "adversarial_blocked": 4
+  },
+  "reports": {
+    "files": {
+      "ExpertCheck_Отчёт_ГИПа_11.0A1.xlsx": {
+        "sheets": [
+          "Резюме",
+          "Несоответствия и вопросы",
+          "Проверка требований",
+          "Задание — атомарные условия",
+          "Задание на проектирование",
+          "НТД — требования",
+          "Чек-листы",
+          "План действий"
+        ],
+        "atomic_sheet": true,
+        "missing_findings_in_issues": [],
+        "missing_findings_in_actions": []
+      },
+      "ExpertCheck_Резюме_руководителя_11.0A1.xlsx": {
+        "sheets": [
+          "Резюме",
+          "Несоответствия и вопросы",
+          "Готовность проверки",
+          "Приоритетные действия"
+        ],
+        "atomic_sheet": false,
+        "missing_findings_in_issues": [],
+        "missing_findings_in_actions": []
+      },
+      "ExpertCheck_Техническое_приложение_11.0A1.xlsx": {
+        "sheets": [
+          "Резюме",
+          "Несоответствия и вопросы",
+          "Состав проекта",
+          "Чек-листы — диагностика",
+          "Актуальность НТД",
+          "Проверка требований НТД",
+          "Контекст ссылок НТД",
+          "Модель проекта",
+          "Задание — диагностика",
+          "Задание — атомарные условия",
+          "План действий",
+          "НТД — все упоминания",
+          "Тех_реестр",
+          "Тех_сверки",
+          "Тех_извлечение"
+        ],
+        "atomic_sheet": true,
+        "missing_findings_in_issues": [],
+        "missing_findings_in_actions": []
+      }
+    },
+    "all_findings_in_issues": true,
+    "all_findings_in_actions": true
+  }
+}

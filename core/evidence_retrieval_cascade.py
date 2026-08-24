@@ -17,7 +17,9 @@ def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=12)->list
     qt=_tokens(qtext); entity=str(query.get('entity') or '').lower(); metric=str(query.get('metric') or '').lower()
     required_value=_num(query.get('required_value')); required_unit=str(query.get('unit') or '').lower().replace(' ','')
     expected_sections=list(query.get('expected_sections') or [])
-    query_id=str(query.get('source_id') or query.get('plan_id') or '')
+    # plan_id is the stable execution contract.  Human source numbers may be
+    # repeated across checklists and must not shadow it.
+    query_id=str(query.get('plan_id') or query.get('source_id') or '')
     out=[]
     for r in db.get('records') or []:
         actual_section=source_section(r)

@@ -69,6 +69,12 @@ from .requirements_ai_reasoner import review_assignment_rows
 from .directed_evidence import build_page_corpus, attach_directed_evidence, directed_evidence_facts
 from .table_semantic_scope import annotate_table_semantic_scope
 from .page_evidence_store import is_assignment_source
+from .atomic_requirement_graph import build_atomic_requirement_graph
+from .universal_project_fact_graph import build_universal_project_fact_graph
+from .atomic_verification_engine import (
+    aggregate_atomic_results, atomic_evidence_facts, atomic_summary,
+    verify_atomic_requirements, verify_checklist_rows,
+)
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -326,7 +332,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "10.4.0-alpha1-verification-kernel"
+        item["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -489,22 +495,38 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
     assignment_page_corpus = []
     project_page_corpus = []
+    atomic_requirement_graph = {"version":"1.0","atoms":[],"summary":{"source_requirements":0,"atomic_requirements":0}}
+    universal_project_fact_graph = {"version":"1.0","facts":[],"passages":[],"summary":{"facts":0}}
+    assignment_atomic_rows = []
+    assignment_parent_baseline = []
     try:
         assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
         assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
         project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
         assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
-        assignment_compliance = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
+        assignment_parent_baseline = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
+        atomic_requirement_graph = build_atomic_requirement_graph(assignment_requirements, domain="assignment")
+        universal_project_fact_graph = build_universal_project_fact_graph(
+            object_registry, findings, project_page_corpus
+        )
+        assignment_atomic_rows = verify_atomic_requirements(
+            atomic_requirement_graph.get("atoms") or [],
+            knowledge_root=str(root / "knowledge"),
+            fact_graph=universal_project_fact_graph,
+            page_corpus=project_page_corpus,
+        )
+        assignment_compliance = aggregate_atomic_results(assignment_parent_baseline, assignment_atomic_rows)
         assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
         if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
-            assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_compliance, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
-        assignment_compliance_summary = assignment_summary(assignment_compliance)
+            assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_atomic_rows, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
+        assignment_compliance_summary = atomic_summary(assignment_atomic_rows, atomic_requirement_graph.get("summary") or {})
         assignment_compliance_summary["ai_evidence_review"]=assignment_ai_summary
         assignment_compliance_summary["directed_evidence"]=assignment_directed_evidence_summary
-        assignment_directed_facts = directed_evidence_facts(assignment_compliance)
+        assignment_directed_facts = directed_evidence_facts(assignment_atomic_rows) + atomic_evidence_facts(assignment_atomic_rows)
         assignment_compliance_summary["directed_evidence"]["admitted_for_deep_review"] = len(assignment_directed_facts)
     except Exception as exc:
         assignment_requirements, assignment_compliance, assignment_directed_facts = [], [], []
+        assignment_atomic_rows, assignment_parent_baseline = [], []
         assignment_compliance_summary = {"total":0,"compliant":0,"deviation":0,"unconfirmed":0,"semantic":0,"not_checked":0,"ai_evidence_review":{"reviewed":0,"confirmed":0,"contradicted":0},"error":str(exc)}
         pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
 
@@ -550,7 +572,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "10.4.0-alpha1-verification-kernel"
+        item["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -561,16 +583,24 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         "name": " ".join(str(x.get("Файл") or "") for x in documents[:5]),
         "description": " ".join(str(x.get("Раздел") or x.get("Тип документа") or "") for x in documents),
     }
+    checklist_atomic_review = {"version":"1.0","atoms":[],"summary":{"atomic_conditions":0}}
     try:
         automatic_review = AutomaticProjectReview(root / "knowledge").execute(
             documents, comparisons, findings, project_context=project_context
         )
+        checklist_atomic_review = verify_checklist_rows(
+            list(automatic_review.get("results") or []),
+            knowledge_root=str(root / "knowledge"),
+            fact_graph=universal_project_fact_graph,
+            page_corpus=project_page_corpus,
+        )
+        automatic_review["atomic_verification"] = checklist_atomic_review
     except Exception as exc:
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     review_plan = build_review_plan(
-        assignment_rows=assignment_compliance,
+        assignment_rows=assignment_atomic_rows,
         normative_rows=normative_compliance_audit,
         checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
         comparisons=cross_section_checks,
@@ -580,12 +610,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     try:
         from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
         deep_evidence_review = run_deep_evidence_review(
-            review_plan.get("items") or [], documents=documents, facts=findings + assignment_directed_facts, comparisons=cross_section_checks,
+            review_plan.get("items") or [], documents=documents,
+            facts=findings + assignment_directed_facts + atomic_evidence_facts(checklist_atomic_review.get("atoms") or []),
+            comparisons=cross_section_checks,
             page_corpus=project_page_corpus,
         )
         merge_summary=apply_deep_evidence_decisions(
             deep_evidence_review,
-            assignment_rows=assignment_compliance,
+            assignment_rows=assignment_atomic_rows,
             normative_rows=normative_compliance_audit,
             checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
         )
@@ -598,8 +630,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             for key in ('ai_evidence_review','directed_evidence')
             if key in assignment_compliance_summary
         }
-        assignment_compliance_summary=assignment_summary(assignment_compliance)
+        assignment_compliance_summary=atomic_summary(assignment_atomic_rows, atomic_requirement_graph.get("summary") or {})
         assignment_compliance_summary.update(assignment_meta)
+        assignment_compliance=aggregate_atomic_results(assignment_parent_baseline,assignment_atomic_rows)
         if isinstance(automatic_review,dict):
             checklist_rows=list(automatic_review.get('results') or [])
             checklist_domain=domain_summary(checklist_rows,'checklist')
@@ -617,7 +650,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             })
             automatic_review['summary']=checklist_summary
         review_plan=build_review_plan(
-            assignment_rows=assignment_compliance,
+            assignment_rows=assignment_atomic_rows,
             normative_rows=normative_compliance_audit,
             checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
             comparisons=cross_section_checks,
@@ -645,7 +678,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'issues':report_quality_gate.get('issues') or [],
         })
     for doc in documents:
-        doc["core_version"] = "10.4.0-alpha1-verification-kernel"
+        doc["core_version"] = "11.0.0-alpha1-atomic-engineering-verification-core"
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary
@@ -757,6 +790,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["project_understanding_quality"] = project_understanding_quality
         doc["assignment_requirements"] = assignment_requirements
         doc["assignment_compliance"] = assignment_compliance
+        doc["assignment_atomic_compliance"] = assignment_atomic_rows
+        doc["atomic_requirement_graph"] = atomic_requirement_graph
+        doc["universal_project_fact_graph"] = {
+            **universal_project_fact_graph,
+            "passages": [],
+        }
         doc["assignment_compliance_summary"] = assignment_compliance_summary
         doc["engineering_review_summary"] = {**engineering_review.summary(), "enriched_comparisons": engineering_review_count}
         doc["entity_property_binding_summary"] = entity_property_binding_audit

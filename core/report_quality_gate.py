@@ -46,6 +46,13 @@ def validate_review_plan(
             issues.append(f"Предварительный результат ошибочно подтверждён: {title}.")
         if item.get("verification_kind") == "VERIFIED_OK" and item.get("adversarial_state") == "BLOCKED":
             issues.append(f"Заблокированный adversarial gate результат остался подтверждённым: {title}.")
+        if item.get("verification_kind") == "PROJECT_FINDING" and item.get("adversarial_state") == "BLOCKED":
+            issues.append(f"Заблокированный adversarial gate результат остался несоответствием: {title}.")
+        if item.get("verification_kind") in {"VERIFIED_OK", "PROJECT_FINDING"}:
+            if item.get("adversarial_state") != "PASSED":
+                issues.append(f"Категоричный вывод не имеет пройденной проверки достаточности: {title}.")
+            if int(item.get("evidence_candidate_count") or 0) <= 0:
+                issues.append(f"Категоричный вывод не имеет адресного доказательства: {title}.")
         recommendation = str(item.get("recommendation") or "").lower()
         if item.get("verification_kind") == "REVIEW_QUESTION" and "дополнительное действие не требуется" in recommendation:
             issues.append(f"Вопрос специалисту ошибочно помечен как не требующий действия: {title}.")

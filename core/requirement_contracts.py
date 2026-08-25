@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Iterable
 from .normalization import normalize_text
 from .object_semantics import canonical_parameter_code
 
@@ -17,6 +17,9 @@ PARAM_SECTION_HINTS={
  'AREA_BUILD':['ПЗУ','АР','ПЗ'],
  'AREA_TOTAL':['АР','ПЗ'],
  'POWER_INSTALLED':['ИОС1','ТХ','ПЗ'],
+ 'POWER_CALCULATED':['ИОС1','ТХ','ПЗ'],
+ 'MOISTURE':['ТХ','ПЗ'],
+ 'BULK_DENSITY':['ТХ','ПЗ'],
  'FLOW_RATE':['ИОС2','ТХ','ПЗ'],
  'VOLUME':['ИОС2','ТХ','ПЗ'],
  'BODY_VOLUME':['ТХ'],
@@ -157,4 +160,80 @@ def evidence_packet(requirement:dict[str,Any], candidates:list[dict[str,Any]])->
       'required_evidence':contract.get('required_evidence') or [],
       'candidates':candidates or [],
       'policy':'Отсутствие найденного доказательства не является доказательством невыполнения требования.',
+    }
+
+
+def coverage_archetype(requirement:dict[str,Any], recipe:dict[str,Any]|None=None)->str:
+    """Return a stable coverage family for benchmark and report aggregation."""
+    recipe=recipe or {}
+    contract=requirement.get('evidence_contract_v2') or requirement.get('evidence_contract') or build_contract(requirement)
+    method=str(recipe.get('check_method') or contract.get('check_method') or '').upper()
+    modality=str(contract.get('required_modality') or recipe.get('required_modality') or 'TEXT_OR_TABLE').upper()
+    kind=str(requirement.get('atomic_kind') or requirement.get('requirement_type') or '').upper()
+    if modality=='DRAWING' or 'DRAWING' in method:return 'DRAWING_EVIDENCE'
+    if modality=='CALCULATION' or 'CALCULATION' in method:return 'CALCULATION_EVIDENCE'
+    if modality=='DOCUMENT' or kind in {'DOCUMENT_DELIVERABLE','TRACEABILITY'}:return 'DOCUMENT_TRACEABILITY'
+    if 'VALUE' in method or kind=='VALUE_COMPARISON':return 'NUMERIC_VALUE'
+    if 'SET' in method or kind=='SET_COMPARISON':return 'SET_COMPLETENESS'
+    if kind=='EQUIPMENT_IDENTITY' or 'IDENTITY' in method:return 'IDENTITY_CLASSIFICATION'
+    if kind=='NORMATIVE_CLAUSE' or 'NORMATIVE' in method or 'CLAUSE' in method:return 'NORMATIVE_REQUIREMENT'
+    if kind=='PROHIBITION' or 'PROHIBITION' in method:return 'PROHIBITION'
+    return 'SEMANTIC_PROJECT_DECISION'
+
+
+def coverage_diagnostics(
+    requirement:dict[str,Any], recipe:dict[str,Any], *,
+    evidence:Iterable[dict[str,Any]]=(), candidates:Iterable[dict[str,Any]]=(),
+    gate_reasons:Iterable[str]=(), final_kind:str='',
+)->dict[str,Any]:
+    """Explain why one evidence contract completed, stopped or needs a specialist.
+
+    The result is deliberately operational: report users see the exact missing
+    slot instead of an undifferentiated ``not checked`` status.  Diagnostics do
+    not promote a verdict and therefore cannot weaken the Finding Admission Gate.
+    """
+    contract=requirement.get('evidence_contract_v2') or requirement.get('evidence_contract') or build_contract(requirement)
+    evidence_rows=list(evidence or []); candidate_rows=list(candidates or [])
+    reasons=[str(x) for x in gate_reasons or [] if str(x).strip()]
+    kind=str(final_kind or '').upper()
+    missing=[]; code='NEEDS_SPECIALIST_JUDGEMENT'; explanation='Требуется предметная проверка специалистом.'
+
+    if kind=='VERIFIED_OK':
+        return {
+          'coverage_archetype':coverage_archetype(requirement,recipe),'coverage_state':'AUTOMATED_COMPLETE',
+          'coverage_reason_code':'EVIDENCE_CONTRACT_SATISFIED','coverage_reason':'Все обязательные слоты доказательства подтверждены.',
+          'missing_evidence_slots':[],'expected_evidence_route':list(contract.get('expected_sections') or []),
+        }
+    if kind=='PROJECT_FINDING':
+        return {
+          'coverage_archetype':coverage_archetype(requirement,recipe),'coverage_state':'PROJECT_FINDING_CONFIRMED',
+          'coverage_reason_code':'EXPLICIT_CONTRADICTION_CONFIRMED','coverage_reason':'Зафиксировано адресное сравнение или явное противоречие.',
+          'missing_evidence_slots':[],'expected_evidence_route':list(contract.get('expected_sections') or []),
+        }
+    if not recipe.get('executable'):
+        code='RECIPE_NOT_EXECUTABLE'; explanation='Проверочный рецепт не прошёл critic/regression gate.'; missing.append('EXECUTABLE_RECIPE')
+    elif not evidence_rows and not candidate_rows:
+        code='NO_ADDRESSABLE_EVIDENCE'; explanation='В ожидаемых разделах не найден адресный кандидат с документом и страницей.'; missing.extend(['SOURCE_DOCUMENT','PAGE'])
+    else:
+        all_rows=candidate_rows or evidence_rows
+        if any(str(x.get('modality_gate_state') or '').upper()=='BLOCKED' for x in all_rows):
+            code='WRONG_EVIDENCE_MODALITY'; explanation='Найден связанный текст, но его модальность не соответствует контракту.'; missing.append(str(contract.get('required_modality') or 'REQUIRED_MODALITY'))
+        elif any(x.get('missing_critical_qualifiers') for x in all_rows):
+            code='CRITICAL_QUALIFIER_MISSING'; explanation='В адресном фрагменте отсутствует обязательный инженерный квалификатор.'; missing.extend(str(v) for x in all_rows for v in (x.get('missing_critical_qualifiers') or []))
+        elif any(str(x.get('same_clause_gate_state') or '').upper()=='BLOCKED' for x in all_rows):
+            code='SAME_CLAUSE_NOT_PROVED'; explanation='Слоты доказательства найдены в разных фрагментах и не образуют одного проектного решения.'; missing.append('SAME_CLAUSE_EVIDENCE')
+        elif any(x.get('owner_match') is False or str(x.get('binding_status') or '').upper() in {'HOLD','UNRESOLVED'} for x in all_rows):
+            code='ENTITY_BINDING_UNRESOLVED'; explanation='Не подтверждено, к какому объекту относится найденное значение или решение.'; missing.append('ENTITY_BINDING')
+        elif any(x.get('unit_compatible') is False for x in all_rows if x.get('unit_compatible') is not None):
+            code='UNIT_INCOMPATIBLE'; explanation='Единицы найденного значения нельзя безопасно сопоставить с требованием.'; missing.append('COMPATIBLE_UNIT')
+        elif any(str(x.get('contract_state') or '').upper()=='UNSATISFIED' for x in all_rows):
+            code='EVIDENCE_CONTRACT_UNSATISFIED'; explanation='Кандидаты найдены, но не заполнены все обязательные слоты доказательства.'; missing.extend(str(x) for x in recipe.get('required_evidence_slots') or [])
+        elif reasons:
+            code='ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED'; explanation='Категоричный вывод удержан независимой проверкой достаточности.'; missing.append('INDEPENDENT_SEMANTIC_CONFIRMATION')
+    state='TARGETED_REVIEW' if kind=='REVIEW_QUESTION' and bool(candidate_rows or evidence_rows) else 'AUTOMATION_GAP'
+    return {
+      'coverage_archetype':coverage_archetype(requirement,recipe),'coverage_state':state,
+      'coverage_reason_code':code,'coverage_reason':explanation,
+      'missing_evidence_slots':list(dict.fromkeys(x for x in missing if x)),
+      'expected_evidence_route':list(contract.get('expected_sections') or recipe.get('expected_sections') or []),
     }

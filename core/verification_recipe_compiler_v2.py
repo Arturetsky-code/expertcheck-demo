@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -9,7 +11,64 @@ from .verification_recipe_critic import critique_recipe
 from .verification_regression_gate import regression_gate
 
 
-COMPILER_VERSION = "2.0-atomic-recipes"
+COMPILER_VERSION = "3.0-adaptive-evidence-contracts"
+
+_ADAPTIVE_STOPWORDS={
+    'наличие','имеется','должен','должна','должны','проект','проектн','документац','раздел',
+    'часть','состав','содержание','содержать','представлен','приведен','приведён','указан',
+    'выполнен','предусмотрен','сведения','решение','основные','общие','проверить','проверено',
+    'соответствие','требование','требования','заказчик','действующий','нормативный','документ',
+    'пункт','положения','необходимый','принятый','отсутствие','наличия','результаты',
+}
+_QUALITATIVE_MARKERS=(
+    'корректност','достаточност','обоснованност','рациональност','целесообразност',
+    'отсутствие разночтен','исключены расхожден','соответствие требованиям','увязк',
+)
+_ARTIFACT_MARKERS=(
+    'план','схем','чертеж','чертёж','разрез','фасад','экспликац','ведомост','спецификац',
+    'расчет','расчёт','баланс','таблиц','перечень','акт','паспорт','том ',
+)
+
+
+def _stem_tokens(text:str)->list[str]:
+    tokens=[]
+    for raw in re.findall(r'[a-zа-я0-9-]{4,}',_norm(text),re.I):
+        if raw in _ADAPTIVE_STOPWORDS or raw.isdigit():continue
+        stem=raw[:10] if len(raw)>10 else raw
+        if stem not in tokens:tokens.append(stem)
+    return tokens
+
+
+def _adaptive_pattern(atom:dict[str,Any])->dict[str,Any]|None:
+    """Compile conservative lexical slots for clear artifact/action checks.
+
+    This is not semantic guessing.  The generated rule still needs one local
+    clause, the correct section and modality, an addressable source, and the
+    ordinary critic/regression/semantic gates before it can close a verdict.
+    """
+    text=str(atom.get('atom_text') or atom.get('requirement_text') or '').strip()
+    low=_norm(text)
+    contract=atom.get('evidence_contract_v2') or {}
+    modality=str(contract.get('required_modality') or 'TEXT_OR_TABLE').upper()
+    artifact=modality in {'DRAWING','CALCULATION','DOCUMENT'} or any(marker in low for marker in _ARTIFACT_MARKERS)
+    if any(marker in low for marker in _QUALITATIVE_MARKERS) and not artifact:
+        return None
+    tokens=_stem_tokens(text)
+    # A single broad word such as "Схема" or "Расчёты" is not a safe contract.
+    if len(tokens)<2:return None
+    # Prefer the most discriminative tail terms while retaining an artifact noun.
+    selected=tokens[-5:]
+    artifact_token=next((token for token in tokens if any(marker.startswith(token[:5]) or token.startswith(marker[:5]) for marker in _ARTIFACT_MARKERS)),None)
+    if artifact_token and artifact_token not in selected:selected.insert(0,artifact_token)
+    selected=selected[:6]
+    digest=hashlib.sha1('|'.join(selected).encode('utf-8','ignore')).hexdigest()[:10].upper()
+    return {
+      'pattern_id':f'ADAPTIVE-{modality}-{digest}','title':text,
+      'expected_sections':list(contract.get('expected_sections') or atom.get('expected_sections') or []),
+      'evidence_groups':[selected],'minimum_groups':1,
+      'requires_design_marker':False if artifact else True,
+      'pattern_origin':'ADAPTIVE_CONTRACT_COMPILER',
+    }
 
 
 def _norm(value: Any) -> str:
@@ -62,6 +121,8 @@ class VerificationRecipeCompilerV2:
             "required_evidence_slots": ["SOURCE_DOCUMENT", "PAGE", "SECTION", "PROJECT_SCOPE"],
             "abstain_policy": "NOT_FOUND, weak semantic similarity, wrong section, missing source locator or ambiguous entity binding never prove fulfilment or violation.",
             "confidence": 0.82,
+            "required_modality": str(contract.get("required_modality") or "TEXT_OR_TABLE"),
+            "pattern_origin": str((pattern or {}).get("pattern_origin") or ("CURATED" if pattern else "")),
         }
         if kind == "VALUE_COMPARISON":
             recipe.update({
@@ -127,7 +188,7 @@ class VerificationRecipeCompilerV2:
         return recipe
 
     def compile(self, atom: dict[str, Any]) -> dict[str, Any]:
-        pattern = self._pattern(str(atom.get("atom_text") or atom.get("requirement_text") or ""))
+        pattern = self._pattern(str(atom.get("atom_text") or atom.get("requirement_text") or "")) or _adaptive_pattern(atom)
         recipe = self._base(atom, pattern)
         recipe.update(critique_recipe(recipe))
         recipe.update(regression_gate(recipe))

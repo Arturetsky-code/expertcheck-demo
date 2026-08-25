@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproducible end-to-end validation for ExpertCheck 11.1 Alpha 1."""
+"""Reproducible end-to-end validation for ExpertCheck 11.1 Alpha 1.1."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from analyzer import analyze_uploaded  # noqa: E402
 from studio.data import structured_excel_report  # noqa: E402
 
 
-VERSION = "11.1.0-alpha1-evidence-contract-engine"
+VERSION = "11.1.1-alpha1.1-resource-stable-confirmation"
 
 
 class Upload:

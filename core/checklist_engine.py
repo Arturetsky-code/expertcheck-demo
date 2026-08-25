@@ -36,6 +36,8 @@ PARAMETER_HINTS = {
     'количеств': {'QUANTITY'},
     'напряжен': {'VOLTAGE'},
     'глубин': {'DEPTH'},
+    'влажност': {'MOISTURE'},
+    'насыпн плотност': {'BULK_DENSITY'},
 }
 
 PRESENCE_PATTERNS = (

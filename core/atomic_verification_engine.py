@@ -14,9 +14,10 @@ from .verification_core import KIND_STATES, domain_summary
 from .verification_recipe_compiler_v2 import VerificationRecipeCompilerV2
 from .typed_evidence_resolver import resolve_typed_evidence
 from .semantic_verdict_gate import evaluate_semantic_verdict_gate
+from .requirement_contracts import coverage_diagnostics
 
 
-ENGINE_VERSION = "2.0-evidence-contract-verification"
+ENGINE_VERSION = "3.0-coverage-verification-core"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -93,6 +94,7 @@ def _result(
 ) -> dict[str, Any]:
     evidence_rows = _normalise_evidence(evidence)
     candidate_rows = _normalise_evidence(candidates) or evidence_rows
+    requested_kind=kind
     categorical = kind in {"VERIFIED_OK", "PROJECT_FINDING"}
     gate_reasons: list[str] = []
     if categorical and not recipe.get("executable"):
@@ -116,6 +118,10 @@ def _result(
         "REVIEW_QUESTION": "Требует проверки",
         "SYSTEM_LIMITATION": "Не проверено системой",
     }.get(kind, KIND_STATES.get(kind, "Информация"))
+    diagnostics=coverage_diagnostics(
+        atom,recipe,evidence=evidence_rows,candidates=candidate_rows,
+        gate_reasons=gate_reasons,final_kind=kind,
+    )
     return {
         **atom,
         "status": status,
@@ -149,6 +155,8 @@ def _result(
         "evidence_contract": dict(atom.get("evidence_contract_v2") or {}),
         "atomic_status": kind,
         "engine_version": ENGINE_VERSION,
+        "requested_verification_kind": requested_kind,
+        **diagnostics,
     }
 
 
@@ -161,6 +169,7 @@ def _convert(value: float, source_unit: str, target_unit: str) -> float | None:
         ("км", "м"): 1000.0, ("м", "км"): 0.001,
         ("м", "мм"): 1000.0, ("мм", "м"): 0.001,
         ("мвт", "квт"): 1000.0, ("квт", "мвт"): 0.001,
+        ("кг/м3", "т/м3"): 0.001, ("т/м3", "кг/м3"): 1000.0,
     }
     factor = factors.get((source, target))
     return value * factor if factor is not None else None
@@ -518,9 +527,26 @@ def verify_checklist_rows(
         row = row_by_parent[parent_id]
         counts = Counter(str(item.get("verification_kind") or "SYSTEM_LIMITATION") for item in conditions)
         evidence = [value for item in conditions for value in (item.get("evidence") or [])]
+        diagnostic=next((item for item in conditions if item.get("verification_kind")=="REVIEW_QUESTION"),None) or next((item for item in conditions if item.get("verification_kind")=="SYSTEM_LIMITATION"),None) or conditions[0]
         row["atomic_conditions"] = conditions
         row["atomic_condition_count"] = len(conditions)
         row["atomic_completed"] = counts["VERIFIED_OK"] + counts["PROJECT_FINDING"]
+        row.update({
+            "coverage_archetype": diagnostic.get("coverage_archetype"),
+            "coverage_state": (
+                "PROJECT_FINDING_CONFIRMED" if counts["PROJECT_FINDING"] else
+                "AUTOMATED_COMPLETE" if counts["VERIFIED_OK"] == len(conditions) else
+                diagnostic.get("coverage_state") or "AUTOMATION_GAP"
+            ),
+            "coverage_reason_code": diagnostic.get("coverage_reason_code"),
+            "coverage_reason": diagnostic.get("coverage_reason"),
+            "missing_evidence_slots": list(dict.fromkeys(
+                str(slot) for item in conditions for slot in (item.get("missing_evidence_slots") or []) if slot
+            )),
+            "expected_evidence_route": list(dict.fromkeys(
+                str(section) for item in conditions for section in (item.get("expected_evidence_route") or []) if section
+            )),
+        })
         if counts["PROJECT_FINDING"]:
             row.update({
                 "status": "Нет", "proof_kind": "STRUCTURED_COMPARISON",

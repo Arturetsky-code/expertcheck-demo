@@ -24,6 +24,8 @@ _SECTION_ROLES: dict[str, tuple[str, ...]] = {
     "QUANTITY": ("ПЗ", "ПЗУ", "ТХ"),
     "VOLUME": ("ТХ", "ИОС2", "ПЗ"),
     "RES_VOLUME": ("ТХ", "ИОС2", "ПЗ"),
+    "MOISTURE": ("ТХ", "ПЗ"),
+    "BULK_DENSITY": ("ТХ", "ПЗ"),
 }
 
 

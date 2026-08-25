@@ -24,6 +24,7 @@ ENGINEERING_PARAMETERS = {
     "CAPACITY", "RES_VOLUME", "POWER_KTP", "POWER_INSTALLED",
     "PRESSURE", "TEMPERATURE", "DIAMETER", "FLOW_RATE", "VOLTAGE", "DEPTH",
     "POWER_CALCULATED", "PERSONNEL", "LENGTH", "QUANTITY",
+    "MOISTURE", "BULK_DENSITY",
     "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT", "TEMPERATURE",
     "VOLUME", "DEPTH", "WIDTH", "AREA_ROOM", "AREA_ROOM_SUM",
 }
@@ -65,6 +66,7 @@ _PARAMETER_ENTITY_PATTERNS = (
     r"^давление\b", r"^напор\b", r"^диаметр\b", r"^протяж[её]нность\b", r"^длина\b",
     r"^ширина\b", r"^глубина\b", r"^напряжение\b", r"^освещ[её]нность\b",
     r"^уровень\s+ответственности\b", r"^степень\s+огнестойкости\b",
+    r"^влажность\b", r"^насыпная\s+плотность\b", r"^об[ъь]?[её]мная\s+масса\b",
     r"^класс\s+функциональной\s+пожарной\s+опасности\b", r"^категория\s+над[её]жности\b",
     r"^отметка\b", r"^уклон\b", r"^количество\b", r"^число\b",
 )
@@ -299,12 +301,13 @@ _APPLICABILITY: dict[str, dict[str, str]] = {
     "TECHNOLOGICAL_COMPLEX": {
         "CAPACITY": "required", "POWER_INSTALLED": "expected", "POWER_CALCULATED": "conditional",
         "PERSONNEL": "expected", "QUANTITY": "conditional", "AREA_BUILD": "conditional",
+        "MOISTURE": "expected", "BULK_DENSITY": "expected",
     },
     "PIPELINE": {
         "LENGTH": "required", "DIAMETER": "expected", "PRESSURE": "expected", "CAPACITY": "conditional", "FLOW_RATE": "expected", "TEMPERATURE": "conditional", "LINE_COUNT": "conditional",
     },
     "COMPRESSOR_STATION": {"CAPACITY": "required", "POWER_INSTALLED": "required", "POWER_CALCULATED": "expected", "PRESSURE": "required", "FLOW_RATE": "expected", "TEMPERATURE": "conditional", "QUANTITY": "expected", "AREA_BUILD": "conditional", "HEIGHT_BUILD": "conditional"},
-    "PROCESSING_PLANT": {"CAPACITY": "required", "POWER_INSTALLED": "expected", "PRESSURE": "expected", "FLOW_RATE": "expected", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "QUANTITY": "conditional", "AREA_BUILD": "conditional"},
+    "PROCESSING_PLANT": {"CAPACITY": "required", "POWER_INSTALLED": "expected", "PRESSURE": "expected", "FLOW_RATE": "expected", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "QUANTITY": "conditional", "AREA_BUILD": "conditional", "MOISTURE":"expected", "BULK_DENSITY":"expected"},
     "OIL_TREATMENT_UNIT": {"CAPACITY": "required", "POWER_INSTALLED": "expected", "PRESSURE": "expected", "FLOW_RATE": "expected", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "QUANTITY": "conditional", "AREA_BUILD": "conditional"},
     "WELL": {"DEPTH": "required", "CAPACITY": "expected", "PRESSURE": "expected", "DIAMETER": "conditional", "QUANTITY": "conditional"},
     "SEPARATOR": {"CAPACITY": "expected", "PRESSURE": "required", "TEMPERATURE": "expected", "RES_VOLUME": "conditional", "DIAMETER": "conditional", "HEIGHT_BUILD": "conditional", "QUANTITY": "expected"},

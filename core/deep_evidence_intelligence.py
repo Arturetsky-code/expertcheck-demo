@@ -3,6 +3,7 @@ from typing import Any
 from .project_evidence_database import build_project_evidence_database
 from .evidence_retrieval_cascade import retrieve_evidence, rerank_with_judgements
 from .adversarial_review import adversarial_gate
+from .evidence_retrieval_cascade import retrieval_diagnostics
 
 FINAL_STATES={
     'VERIFIED_OK':'Соответствует',
@@ -19,6 +20,7 @@ def run_deep_evidence_review(checks:list[dict[str,Any]], documents:list[dict[str
         candidates=retrieve_evidence(check,db)
         candidates=rerank_with_judgements(check,candidates,(judgements or {}).get(cid))
         base=dict(check); base['evidence_candidates']=candidates; base['evidence_candidate_count']=len(candidates)
+        base.update(retrieval_diagnostics(check,db,candidates))
         base=adversarial_gate(base,candidates,(critics or {}).get(cid)); results.append(base)
     return {'version':'1.0','passes':['PROJECT_RECONSTRUCTION','TARGETED_VERIFICATION','ADVERSARIAL_REVIEW'],'evidence_db':db,'results':results,'metrics':{'checks':len(results),'with_candidates':sum(bool(x['evidence_candidates']) for x in results),'adversarial_blocked':sum(x.get('adversarial_state')=='BLOCKED' for x in results)}}
 
@@ -48,13 +50,28 @@ def _apply_final_verdict(row:dict[str,Any], verdict:dict[str,Any])->None:
         reason='; '.join(row['deep_evidence_reasons']) or 'Положительный вывод не прошёл проверку достаточности доказательств.'
         row['decision_basis']=reason
         row['recommendation']='Проверить указанные доказательства; автоматическое соответствие не установлено.'
+        # Coverage is a final-verdict property.  A candidate that was initially
+        # verified but failed the adversarial pass must not remain counted as
+        # automatically completed in the coverage matrix.
+        row['coverage_state']='TARGETED_REVIEW'
+        row['coverage_reason_code']='ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED'
+        row['coverage_reason']=reason
+        missing=list(row.get('missing_evidence_slots') or [])
+        if 'INDEPENDENT_SEMANTIC_CONFIRMATION' not in missing:
+            missing.append('INDEPENDENT_SEMANTIC_CONFIRMATION')
+        row['missing_evidence_slots']=missing
     elif kind=='SYSTEM_LIMITATION':
         row['status']='Не проверено системой'
+        row['coverage_state']='AUTOMATION_GAP'
+        row['coverage_reason_code']=row.get('coverage_reason_code') or 'EVIDENCE_CONTRACT_UNSATISFIED'
+        row['coverage_reason']=row.get('decision_basis') or 'Автоматическая проверка не располагает достаточным доказательством.'
     elif kind=='VERIFIED_OK' and str(row.get('status') or '').strip() in {'','Требует проверки','Не проверено системой'}:
         # Deep Evidence is currently allowed to preserve a verified result, not
         # to promote an unresolved check.  This branch only normalises legacy
         # rows whose final verified verdict was supplied by a deterministic pass.
         row['status']='Соответствует'
+        row['coverage_state']='AUTOMATED_COMPLETE'
+        row['coverage_reason_code']='EVIDENCE_CONTRACT_SATISFIED'
 
 
 def apply_deep_evidence_decisions(

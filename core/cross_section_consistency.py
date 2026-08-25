@@ -39,6 +39,8 @@ TOLERANCES: dict[str, tuple[float, float, str]] = {
     "WIDTH": (0.05, 0.002, "Средний"),
     "VOLUME": (0.1, 0.001, "Высокий"),
     "LINE_COUNT": (0.0, 0.0, "Высокий"),
+    "MOISTURE": (0.05, 0.005, "Высокий"),
+    "BULK_DENSITY": (0.01, 0.005, "Высокий"),
 }
 
 SECTION_FAMILIES = (
@@ -81,6 +83,8 @@ EXPECTED_SECTION_HINTS: dict[str, tuple[str, ...]] = {
     "WIDTH": ("ПЗ", "ПЗУ", "ТХ"),
     "VOLUME": ("ПЗ", "ТХ", "ИОС"),
     "LINE_COUNT": ("ПЗ", "ТХ", "ИОС"),
+    "MOISTURE": ("ПЗ", "ТХ"),
+    "BULK_DENSITY": ("ПЗ", "ТХ"),
 }
 
 

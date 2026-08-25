@@ -18,6 +18,7 @@ PARAMETER_OWNER_HINTS={
  "POWER_INSTALLED":{"ИОС1","ТХ","ПЗ"},"POWER_CALCULATED":{"ИОС1"},
  "VOLTAGE":{"ИОС1"},"FLOW_RATE":{"ИОС2","ТХ"},"PRESSURE":{"ИОС2","ТХ"},
  "DIAMETER":{"ИОС2","ТХ"},"LENGTH":{"ПЗУ","ИОС2","ПЗ"},"QUANTITY":{"ПЗ","ПЗУ"},
+ "MOISTURE":{"ТХ","ПЗ"},"BULK_DENSITY":{"ТХ","ПЗ"},
 }
 
 def _name(row:dict[str,Any])->str:

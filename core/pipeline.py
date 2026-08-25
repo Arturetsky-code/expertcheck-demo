@@ -76,6 +76,8 @@ from .atomic_verification_engine import (
     aggregate_atomic_results, atomic_evidence_facts, atomic_summary,
     verify_atomic_requirements, verify_checklist_rows,
 )
+from .categorical_consistency import build_categorical_consistency_checks
+from .coverage_matrix import build_coverage_matrix
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -333,7 +335,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
+        item["core_version"] = "12.0-alpha1-coverage-verification-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -376,6 +378,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     cross_section_checks = build_cross_section_checks(findings)
     comparisons.extend(cross_section_checks)
     comparisons.extend(general_plan_field_checks)
+    # The engineering pass above is deliberately rebuilt after all extraction
+    # guards.  Preserve the independent categorical checks in the final review
+    # collection without appending them to ``comparisons`` a second time.
+    cross_section_checks.extend(categorical_checks)
     comparisons.extend(general_plan_document_checks)
     _enrich_rules(comparisons, registry)
     knowledge_base = KnowledgeBase(root / "knowledge")
@@ -497,16 +503,22 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
-    assignment_page_corpus = []
-    project_page_corpus = []
+    assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
+    project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
+    categorical_checks=[]
+    try:
+        categorical_checks=build_categorical_consistency_checks(project_page_corpus,object_registry)
+        comparisons.extend(categorical_checks)
+        cross_section_checks.extend(categorical_checks)
+        _enrich_rules(categorical_checks,registry)
+    except Exception as exc:
+        pipeline_errors.append({'stage':'categorical_consistency','error':str(exc)})
     atomic_requirement_graph = {"version":"1.0","atoms":[],"summary":{"source_requirements":0,"atomic_requirements":0}}
     universal_project_fact_graph = {"version":"1.0","facts":[],"passages":[],"summary":{"facts":0}}
     assignment_atomic_rows = []
     assignment_parent_baseline = []
     try:
         assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
-        assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
-        project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
         assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
         assignment_parent_baseline = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
         atomic_requirement_graph = build_atomic_requirement_graph(assignment_requirements, domain="assignment")
@@ -580,7 +592,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
+        item["core_version"] = "12.0-alpha1-coverage-verification-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -673,6 +685,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     except Exception as exc:
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
+    coverage_matrix=build_coverage_matrix(review_plan.get('items') or [])
     report_quality_gate=validate_review_plan(
         review_plan,
         object_registry=object_registry,
@@ -693,12 +706,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
+        doc["core_version"] = "12.0-alpha1-coverage-verification-core"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
+        doc["coverage_matrix"] = coverage_matrix
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

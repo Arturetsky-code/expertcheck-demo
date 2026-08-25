@@ -11,7 +11,7 @@ def _num(value:Any)->float|None:
     try:return float(str(value).replace('\u00a0','').replace(' ','').replace(',','.'))
     except (TypeError,ValueError):return None
 
-def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=12)->list[dict[str,Any]]:
+def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=6)->list[dict[str,Any]]:
     """Multi-strategy deterministic retrieval. AI reranking may be layered on top."""
     qtext=' '.join(str(query.get(k) or '') for k in ('title','requirement','metric','entity','expected_evidence'))
     qt=_tokens(qtext); entity=str(query.get('entity') or '').lower(); metric=str(query.get('metric') or '').lower()
@@ -46,7 +46,38 @@ def retrieve_evidence(query:dict[str,Any], db:dict[str,Any], limit:int=12)->list
         if score:
             x=dict(r); x['retrieval_score']=min(100,score); x['retrieval_reasons']=reasons; out.append(x)
     out.sort(key=lambda x:(x['retrieval_score'], x.get('kind')=='STRUCTURED_CONFLICT', x.get('kind')=='STRUCTURED_FACT'),reverse=True)
-    return out[:limit]
+    # Evidence packets contain addresses, not a cloud of repeated page hits.
+    deduped=[];seen=set()
+    for item in out:
+        key=(str(item.get('document') or ''),str(item.get('page') or ''),str(item.get('kind') or ''),str(item.get('owner') or ''),str(item.get('metric') or ''))
+        if key in seen:continue
+        seen.add(key);deduped.append(item)
+        if len(deduped)>=limit:break
+    for index,item in enumerate(deduped,1):
+        item['evidence_rank']=index
+        item['evidence_role']='PRIMARY' if index<=3 else 'SECONDARY'
+    return deduped
+
+
+def retrieval_diagnostics(query:dict[str,Any], db:dict[str,Any], candidates:list[dict[str,Any]])->dict[str,Any]:
+    if candidates:
+        return {
+          'evidence_search_state':'CANDIDATES_FOUND',
+          'evidence_search_reason_codes':[],
+          'primary_evidence_count':sum(str(x.get('evidence_role') or '')=='PRIMARY' for x in candidates),
+        }
+    expected=list(query.get('expected_sections') or [])
+    records=list(db.get('records') or [])
+    reasons=[]
+    if expected and not any(section_matches(source_section(r),expected) for r in records):
+        reasons.append('EXPECTED_SECTION_NOT_AVAILABLE')
+    if query.get('entity') and not any(str(query.get('entity')).lower() in str(r.get('owner') or '').lower() for r in records):
+        reasons.append('ENTITY_NOT_RESOLVED')
+    if query.get('metric') and not any(str(query.get('metric')).lower() in str(r.get('metric') or '').lower() for r in records):
+        reasons.append('METRIC_NOT_EXTRACTED')
+    if not records:reasons.append('EVIDENCE_DATABASE_EMPTY')
+    if not reasons:reasons.append('NO_ADDRESSABLE_MATCH')
+    return {'evidence_search_state':'NO_CANDIDATES','evidence_search_reason_codes':reasons,'primary_evidence_count':0}
 
 def rerank_with_judgements(query:dict[str,Any], candidates:list[dict[str,Any]], judgements:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
     """Apply external/AI judgements conservatively; disagreement can only lower trust."""

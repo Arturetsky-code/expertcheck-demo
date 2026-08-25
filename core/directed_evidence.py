@@ -18,6 +18,9 @@ METRIC_PATTERNS: dict[str, tuple[str, ...]] = {
     'BODY_VOLUME': (r'об[ъь]?[её]м(?:ом)?\s+кузова',),
     'BUCKET_VOLUME': (r'об[ъь]?[её]м(?:ом)?\s+ковша',),
     'POWER_INSTALLED': (r'установленн(?:ая|ой)\s+мощност[ьи]',),
+    'POWER_CALCULATED': (r'(?:расч[её]тн|максимальн)(?:ая|ой)\s+(?:мощност[ьи]|нагрузк[аи])',),
+    'MOISTURE': (r'влажност[ьи]',),
+    'BULK_DENSITY': (r'насыпн(?:ая|ой)\s+плотност[ьи]', r'об[ъь]?[её]мн(?:ая|ой)\s+масс[аы]'),
     'FLOW_RATE': (r'расход',),
     'VOLUME': (r'об[ъь]?[её]м', r'вместимост[ьи]'),
     'LENGTH': (r'длин[аы]', r'протяж[её]нност[ьи]'),
@@ -30,7 +33,9 @@ UNIT_RE = {
     'CAPACITY': r'(?:тыс\.?\s*(?:т|тонн)\s*/\s*год|т\s*/\s*(?:ч|час|год)|м[³3]\s*/\s*ч)',
     'AREA_BUILD': r'(?:м[²2])', 'AREA_TOTAL': r'(?:м[²2])',
     'BODY_VOLUME': r'(?:м[³3])', 'BUCKET_VOLUME': r'(?:м[³3])', 'VOLUME': r'(?:м[³3])',
-    'POWER_INSTALLED': r'(?:квт|мвт|ква)', 'FLOW_RATE': r'(?:м[³3]\s*/\s*ч|л\s*/\s*с)',
+    'POWER_INSTALLED': r'(?:квт|мвт|ква)', 'POWER_CALCULATED': r'(?:квт|мвт|ква)',
+    'MOISTURE':r'(?:%)','BULK_DENSITY':r'(?:т\s*/\s*м[³3]|кг\s*/\s*м[³3])',
+    'FLOW_RATE': r'(?:м[³3]\s*/\s*ч|л\s*/\s*с)',
     'LENGTH': r'(?:мм|см|м|км)', 'HEIGHT_BUILD': r'(?:мм|см|м)', 'QUANTITY': r'(?:шт\.?)',
 }
 
@@ -59,7 +64,8 @@ def normalize_engineering_unit(unit: Any) -> str:
         'м2':'м2','м3':'м3','шт.':'шт','шт':'шт',
         'т/ч':'т/ч','т/год':'т/год','тыс.т/год':'тыс.т/год',
         'тыс.тгод':'тыс.т/год','тыс.т/год.':'тыс.т/год',
-        'м3/ч':'м3/ч','л/с':'л/с','квт':'квт','мвт':'мвт','ква':'ква',
+        'м3/ч':'м3/ч','л/с':'л/с','квт':'квт','мвт':'мвт','ква':'ква','%':'%',
+        'т/м3':'т/м3','кг/м3':'кг/м3',
         'ч':'ч','м':'м','км':'км','мм':'мм','см':'см',
     }
     return aliases.get(compact,compact)
@@ -69,7 +75,7 @@ def units_compatible(required_unit: Any, candidate_unit: Any, code: str='') -> b
     if not ru or not cu: return False
     if ru==cu: return True
     # Safe scale conversions only. Flow/capacity time-basis conversions are NOT inferred.
-    families=[{'м','км','мм','см'},{'квт','мвт'}]
+    families=[{'м','км','мм','см'},{'квт','мвт'},{'т/м3','кг/м3'}]
     return any(ru in fam and cu in fam for fam in families)
 
 def _file_name(f: Any) -> str:

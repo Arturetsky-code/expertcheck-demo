@@ -58,6 +58,13 @@ def build_review_plan(
             'expected_sections':contract.get('expected_sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id') or row.get('source_row')),
             'recommendation':_txt(row.get('recommendation')),
+            'coverage_archetype':_txt(row.get('coverage_archetype')),
+            'coverage_state':_txt(row.get('coverage_state')),
+            'coverage_reason_code':_txt(row.get('coverage_reason_code')),
+            'coverage_reason':_txt(row.get('coverage_reason')),
+            'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
+            'expected_evidence_route':list(row.get('expected_evidence_route') or []),
+            'recipe_status':_txt(row.get('recipe_status')),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')
@@ -80,6 +87,13 @@ def build_review_plan(
             'expected_sections':(row.get('evidence_contract') or {}).get('sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id')),
             'recommendation':_txt(row.get('recommendation')),
+            'coverage_archetype':_txt(row.get('coverage_archetype') or 'NORMATIVE_REQUIREMENT'),
+            'coverage_state':_txt(row.get('coverage_state')),
+            'coverage_reason_code':_txt(row.get('coverage_reason_code')),
+            'coverage_reason':_txt(row.get('coverage_reason')),
+            'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
+            'expected_evidence_route':list(row.get('expected_evidence_route') or []),
+            'recipe_status':_txt(row.get('recipe_status')),
         })
     for i,row in enumerate(checklist,1):
         if row.get('is_heading'):continue
@@ -99,6 +113,13 @@ def build_review_plan(
             'expected_sections':[row.get('automatic_section')] if row.get('automatic_section') else [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('item_no') or row.get('position')),
             'recommendation':_txt(row.get('recommendation')),
+            'coverage_archetype':_txt(row.get('coverage_archetype')),
+            'coverage_state':_txt(row.get('coverage_state')),
+            'coverage_reason_code':_txt(row.get('coverage_reason_code')),
+            'coverage_reason':_txt(row.get('coverage_reason')),
+            'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
+            'expected_evidence_route':list(row.get('expected_evidence_route') or []),
+            'recipe_status':_txt(row.get('recipe_status')),
         })
 
     raw_summaries={
@@ -117,7 +138,7 @@ def build_review_plan(
         domains[DOMAIN_LABELS[code]]=legacy
         domains[code]=legacy
     return {
-        'version':'1.0','principle':'Сначала план проверки → затем целевое доказательство → затем квалифицированный вывод',
+        'version':'2.0-coverage-reason-plan','principle':'Сначала контракт покрытия → затем целевое доказательство → затем квалифицированный вывод',
         'items':items,'checks':items,'domains':domains,'total':len(items),'checks_total':len(items),
         'completed':sum(x['completed'] for x in raw_summaries.values()),
         'project_findings':sum(x['project_findings'] for x in raw_summaries.values()),
@@ -127,4 +148,4 @@ def build_review_plan(
 
 
 def user_visible_plan_items(plan:dict[str,Any])->list[dict[str,Any]]:
-    return [x for x in plan.get('items') or [] if x.get('verification_kind') in {'VERIFIED_OK','PROJECT_FINDING','REVIEW_QUESTION'}]
+    return list(plan.get('items') or [])

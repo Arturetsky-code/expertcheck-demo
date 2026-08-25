@@ -36,6 +36,7 @@ def build_coverage_matrix(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
             "system_limitations": kinds["SYSTEM_LIMITATION"],
             "trusted_recipes": recipes["TRUSTED"],
             "experimental_recipes": recipes["EXPERIMENTAL"],
+            "retrieval_only_recipes": recipes["RETRIEVAL_ONLY"],
             "top_gap_reasons": [{"code": code, "count": count} for code, count in top_reasons],
         })
 
@@ -50,4 +51,3 @@ def build_coverage_matrix(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "reason_counts": dict(reason_counts.most_common()),
         "principle": "Покрытие считается только по завершённым доказательным контрактам; системные ограничения не являются замечаниями проекта.",
     }
-

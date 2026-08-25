@@ -17,7 +17,7 @@ from .semantic_verdict_gate import evaluate_semantic_verdict_gate
 from .requirement_contracts import coverage_diagnostics
 
 
-ENGINE_VERSION = "3.0-coverage-verification-core"
+ENGINE_VERSION = "4.0-evidence-reconstruction-core"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -97,6 +97,11 @@ def _result(
     requested_kind=kind
     categorical = kind in {"VERIFIED_OK", "PROJECT_FINDING"}
     gate_reasons: list[str] = []
+    if categorical and not recipe.get("categorical_verdict_allowed"):
+        gate_reasons.append(
+            "Рецепт используется только для поиска кандидатов: категоричный вывод разрешён "
+            "только специализированному детерминированному checker-у."
+        )
     if categorical and not recipe.get("executable"):
         gate_reasons.append("Проверочный рецепт не прошёл critic/regression gate.")
     if categorical and proof not in STRONG_PROOFS:
@@ -141,6 +146,10 @@ def _result(
         "recipe_id": recipe.get("recipe_id"),
         "recipe_status": recipe.get("recipe_status"),
         "recipe_quality": recipe.get("regression_score"),
+        "automatic_verdict_eligible": bool(recipe.get("categorical_verdict_allowed")),
+        "automatic_verdict_policy": recipe.get("automatic_verdict_policy") or "CANDIDATE_EVIDENCE_ONLY",
+        "candidate_evidence_only": not bool(recipe.get("categorical_verdict_allowed")),
+        "specialized_checker_id": recipe.get("specialized_checker_id") or "",
         "critic_state": "PASSED" if recipe.get("critic_pass") else "BLOCKED",
         "regression_state": "PASSED" if recipe.get("regression_pass") else "BLOCKED",
         "adversarial_state": "PASSED" if categorical and not gate_reasons else ("BLOCKED" if gate_reasons else "NOT_REQUIRED"),
@@ -422,6 +431,15 @@ def aggregate_atomic_results(
             "atomic_review": counts["REVIEW_QUESTION"],
             "atomic_limitations": counts["SYSTEM_LIMITATION"],
             "atomic_result_ids": [atom.get("atom_id") for atom in atoms],
+            "recommendation": (
+                "Устранить подтверждённое отклонение либо согласовать изменение Задания."
+                if kind == "PROJECT_FINDING" else
+                "Дополнительное действие не требуется."
+                if kind == "VERIFIED_OK" else
+                "Проверить незакрытые атомарные условия и зафиксировать решение специалиста."
+                if kind == "REVIEW_QUESTION" else
+                "Выполнить проверку специалистом по указанным ожидаемым разделам."
+            ),
             "decision_basis": (
                 f"Атомарная агрегация: подтверждено {counts['VERIFIED_OK']}, отклонений {counts['PROJECT_FINDING']}, "
                 f"вопросов {counts['REVIEW_QUESTION']}, ограничений {counts['SYSTEM_LIMITATION']} из {len(atoms)} условий."
@@ -446,6 +464,33 @@ def atomic_summary(rows: list[dict[str, Any]], graph_summary: dict[str, Any] | N
         "principle": "Метрики рассчитаны по атомарным условиям; NOT_FOUND является ограничением, а не нарушением.",
     })
     return summary
+
+
+def parent_assignment_summary(
+    parent_rows: list[dict[str, Any]], atomic_rows: list[dict[str, Any]],
+    graph_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build public assignment metrics from source requirements, not atoms."""
+    public = domain_summary(parent_rows, "assignment")
+    atomic = domain_summary(atomic_rows, "assignment")
+    public.update({
+        "compliant": public["verified_ok"],
+        "deviation": public["project_findings"],
+        "unconfirmed": public["review_questions"],
+        "semantic": 0,
+        "not_checked": public["system_limitations"],
+        "source_requirements": len(parent_rows),
+        "atomic_requirements": len(atomic_rows),
+        "additional_conditions": int((graph_summary or {}).get("additional_conditions") or 0),
+        "scope_coverage_pct": float((graph_summary or {}).get("scope_coverage_pct") or 0),
+        "by_kind": dict((graph_summary or {}).get("by_kind") or {}),
+        "atomic_diagnostics": atomic,
+        "principle": (
+            "Публичное покрытие рассчитано по исходным требованиям Задания; "
+            "атомы используются только для поиска и диагностики доказательств."
+        ),
+    })
+    return public
 
 
 def atomic_evidence_facts(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -531,6 +576,19 @@ def verify_checklist_rows(
         row["atomic_conditions"] = conditions
         row["atomic_condition_count"] = len(conditions)
         row["atomic_completed"] = counts["VERIFIED_OK"] + counts["PROJECT_FINDING"]
+        categorical_eligible=all(bool(item.get("automatic_verdict_eligible")) for item in conditions)
+        recipe_statuses={str(item.get("recipe_status") or "") for item in conditions}
+        if "RETRIEVAL_ONLY" in recipe_statuses:
+            row["recipe_status"]="RETRIEVAL_ONLY"
+        elif "EXPERIMENTAL" in recipe_statuses:
+            row["recipe_status"]="EXPERIMENTAL"
+        elif recipe_statuses:
+            row["recipe_status"]=sorted(recipe_statuses)[0]
+        row["automatic_verdict_eligible"]=categorical_eligible
+        row["automatic_verdict_policy"]=(
+            "SPECIALIZED_DETERMINISTIC_CHECKER" if categorical_eligible else "CANDIDATE_EVIDENCE_ONLY"
+        )
+        row["candidate_evidence_only"]=not categorical_eligible
         row.update({
             "coverage_archetype": diagnostic.get("coverage_archetype"),
             "coverage_state": (
@@ -574,6 +632,21 @@ def verify_checklist_rows(
                 "recommendation": "Проверить незакрытые атомарные условия специалистом.",
             })
             questions += 1
+        else:
+            # Atomic adjudication is authoritative.  A lexical first-pass
+            # positive must not survive when no condition has deterministic
+            # categorical proof.
+            row.update({
+                "status": "Не проверено системой", "proof_kind": "NO_EVIDENCE",
+                "verification_kind": "SYSTEM_LIMITATION", "verification_state": KIND_STATES["SYSTEM_LIMITATION"],
+                "final_verification_kind": "SYSTEM_LIMITATION", "final_verification_state": KIND_STATES["SYSTEM_LIMITATION"],
+                "evidence": evidence,
+                "decision_basis": "Специализированный детерминированный checker не подтвердил пункт.",
+                "recommendation": "Проверить пункт специалистом либо подключить специализированный checker.",
+                "automatic_verdict_eligible": False,
+                "automatic_verdict_policy": "CANDIDATE_EVIDENCE_ONLY",
+                "candidate_evidence_only": True,
+            })
     return {
         "version": ENGINE_VERSION,
         "atoms": verified,

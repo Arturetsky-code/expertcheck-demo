@@ -73,11 +73,12 @@ from .page_evidence_store import is_assignment_source
 from .atomic_requirement_graph import build_atomic_requirement_graph
 from .universal_project_fact_graph import build_universal_project_fact_graph
 from .atomic_verification_engine import (
-    aggregate_atomic_results, atomic_evidence_facts, atomic_summary,
+    aggregate_atomic_results, atomic_evidence_facts, atomic_summary, parent_assignment_summary,
     verify_atomic_requirements, verify_checklist_rows,
 )
 from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
+from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -335,7 +336,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
+        item["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -484,6 +485,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         if not finding.get('fact_admission_decision'):
             finding.update(assess_fact_admission(finding))
 
+    high_value_sanitization_audit = sanitize_high_value_facts(findings)
+
     # Final high-trust cross-section pass. Earlier extraction comparisons remain
     # useful diagnostics, but the final engineering comparisons are rebuilt only
     # from properties attached to confirmed objects.
@@ -501,6 +504,16 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
     assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
     project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
+    try:
+        evidence_reconstruction = reconstruct_high_value_evidence(project_page_corpus)
+        findings.extend(evidence_reconstruction.get("facts") or [])
+        reconstructed_comparisons = list(evidence_reconstruction.get("comparisons") or [])
+        comparisons.extend(reconstructed_comparisons)
+        cross_section_checks.extend(reconstructed_comparisons)
+        _enrich_rules(reconstructed_comparisons, registry)
+    except Exception as exc:
+        evidence_reconstruction = {"version":"1.0","facts":[],"comparisons":[],"summary":{"error":str(exc)}}
+        pipeline_errors.append({"stage":"evidence_reconstruction","error":str(exc)})
     categorical_checks=[]
     try:
         categorical_checks=build_categorical_consistency_checks(project_page_corpus,object_registry)
@@ -531,7 +544,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
         if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
             assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_atomic_rows, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
-        assignment_compliance_summary = atomic_summary(assignment_atomic_rows, atomic_requirement_graph.get("summary") or {})
+        assignment_compliance_summary = parent_assignment_summary(
+            assignment_compliance, assignment_atomic_rows, atomic_requirement_graph.get("summary") or {}
+        )
         assignment_compliance_summary["ai_evidence_review"]=assignment_ai_summary
         assignment_compliance_summary["directed_evidence"]=assignment_directed_evidence_summary
         assignment_directed_facts = directed_evidence_facts(assignment_atomic_rows) + atomic_evidence_facts(assignment_atomic_rows)
@@ -588,7 +603,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
+        item["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -615,8 +630,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
         pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
-    review_plan = build_review_plan(
+    evidence_review_plan = build_review_plan(
         assignment_rows=assignment_atomic_rows,
+        normative_rows=normative_compliance_audit,
+        checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+        comparisons=cross_section_checks,
+    )
+    review_plan = build_review_plan(
+        assignment_rows=assignment_compliance,
         normative_rows=normative_compliance_audit,
         checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
         comparisons=cross_section_checks,
@@ -626,7 +647,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     try:
         from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
         deep_evidence_review = run_deep_evidence_review(
-            review_plan.get("items") or [], documents=documents,
+            evidence_review_plan.get("items") or [], documents=documents,
             facts=findings + assignment_directed_facts + atomic_evidence_facts(checklist_atomic_review.get("atoms") or []),
             comparisons=cross_section_checks,
             page_corpus=project_page_corpus,
@@ -646,9 +667,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             for key in ('ai_evidence_review','directed_evidence')
             if key in assignment_compliance_summary
         }
-        assignment_compliance_summary=atomic_summary(assignment_atomic_rows, atomic_requirement_graph.get("summary") or {})
-        assignment_compliance_summary.update(assignment_meta)
         assignment_compliance=aggregate_atomic_results(assignment_parent_baseline,assignment_atomic_rows)
+        assignment_compliance_summary=parent_assignment_summary(
+            assignment_compliance, assignment_atomic_rows, atomic_requirement_graph.get("summary") or {}
+        )
+        assignment_compliance_summary.update(assignment_meta)
         if isinstance(automatic_review,dict):
             checklist_rows=list(automatic_review.get('results') or [])
             checklist_domain=domain_summary(checklist_rows,'checklist')
@@ -666,7 +689,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             })
             automatic_review['summary']=checklist_summary
         review_plan=build_review_plan(
-            assignment_rows=assignment_atomic_rows,
+            assignment_rows=assignment_compliance,
             normative_rows=normative_compliance_audit,
             checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
             comparisons=cross_section_checks,
@@ -702,11 +725,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
+        doc["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
         doc["deep_evidence_review"] = deep_evidence_review
+        doc["evidence_reconstruction"] = evidence_reconstruction
+        doc["high_value_sanitization_audit"] = high_value_sanitization_audit
         doc["report_quality_gate"] = report_quality_gate
         doc["coverage_matrix"] = coverage_matrix
         doc["knowledge_summary"] = summary

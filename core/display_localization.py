@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any
 
+from .ru_labels import ru_label
+
 PARAMETER_LABELS = {
     'AREA_BUILD': 'Площадь застройки',
     'AREA_TOTAL': 'Общая площадь',
@@ -48,6 +50,20 @@ STATUS_LABELS = {
     'MISMATCH': 'Расхождение',
     'POTENTIAL_MISMATCH': 'Потенциальное расхождение',
     'NOT_APPLICABLE': 'Не применимо',
+    'ADMIT': 'Допущено в модель',
+    'TRUSTED': 'Доверенный рецепт',
+    'EXPERIMENTAL': 'Экспериментальный рецепт',
+    'RETRIEVAL_ONLY': 'Только поиск кандидатов',
+    'PASSED': 'Пройдено',
+    'FAILED': 'Не пройдено',
+    'BLOCKED': 'Заблокировано',
+    'NOT_REQUIRED': 'Не требуется',
+    'SATISFIED': 'Выполнен',
+    'UNSATISFIED': 'Не выполнен',
+    'VERIFIED_OK': 'Соответствует',
+    'PROJECT_FINDING': 'Выявлено несоответствие',
+    'REVIEW_QUESTION': 'Требует проверки специалистом',
+    'SYSTEM_LIMITATION': 'Не проверено автоматически',
 }
 
 SCOPE_LABELS = {
@@ -120,4 +136,5 @@ def header_label(value: Any) -> str:
 def localize_service_value(value: Any) -> Any:
     if not isinstance(value,str): return value
     text=value.strip()
-    return EVIDENCE_LABELS.get(text.upper(), STATUS_LABELS.get(text.upper(), SCOPE_LABELS.get(text,text)))
+    localized=EVIDENCE_LABELS.get(text.upper(), STATUS_LABELS.get(text.upper(), SCOPE_LABELS.get(text,text)))
+    return ru_label(localized)

@@ -45,21 +45,27 @@ def _apply_final_verdict(row:dict[str,Any], verdict:dict[str,Any])->None:
     row['deep_evidence_reasons']=list(verdict.get('adversarial_reasons') or [])
     row['deep_evidence_candidates']=list(verdict.get('evidence_candidates') or [])[:10]
 
-    if kind=='REVIEW_QUESTION' and verdict.get('adversarial_state')=='BLOCKED':
+    if kind=='REVIEW_QUESTION':
         row['status']='Требует проверки'
-        reason='; '.join(row['deep_evidence_reasons']) or 'Положительный вывод не прошёл проверку достаточности доказательств.'
+        reason='; '.join(row['deep_evidence_reasons']) or row.get('decision_basis') or 'Найден адресный кандидат, требующий решения специалиста.'
         row['decision_basis']=reason
-        row['recommendation']='Проверить указанные доказательства; автоматическое соответствие не установлено.'
+        if 'дополнительное действие не требуется' in str(row.get('recommendation') or '').lower() or not row.get('recommendation'):
+            row['recommendation']='Проверить указанные доказательства и зафиксировать решение специалиста.'
         # Coverage is a final-verdict property.  A candidate that was initially
         # verified but failed the adversarial pass must not remain counted as
         # automatically completed in the coverage matrix.
         row['coverage_state']='TARGETED_REVIEW'
-        row['coverage_reason_code']='ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED'
+        row['coverage_reason_code']=(
+            'ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED'
+            if verdict.get('adversarial_state')=='BLOCKED'
+            else row.get('coverage_reason_code') or 'EVIDENCE_CONTRACT_UNSATISFIED'
+        )
         row['coverage_reason']=reason
-        missing=list(row.get('missing_evidence_slots') or [])
-        if 'INDEPENDENT_SEMANTIC_CONFIRMATION' not in missing:
-            missing.append('INDEPENDENT_SEMANTIC_CONFIRMATION')
-        row['missing_evidence_slots']=missing
+        if verdict.get('adversarial_state')=='BLOCKED':
+            missing=list(row.get('missing_evidence_slots') or [])
+            if 'INDEPENDENT_SEMANTIC_CONFIRMATION' not in missing:
+                missing.append('INDEPENDENT_SEMANTIC_CONFIRMATION')
+            row['missing_evidence_slots']=missing
     elif kind=='SYSTEM_LIMITATION':
         row['status']='Не проверено системой'
         row['coverage_state']='AUTOMATION_GAP'

@@ -228,6 +228,17 @@ class ChecklistEngine:
                 status='Не проверено системой'
                 evidence=(evidence+' ' if evidence else '')+'Автоматический рецепт пока не прошёл critic/regression gate; положительный вывод удержан.'
                 proof_kind='UNSUPPORTED'
+            deterministic_checkers={
+                'ENGINEERING_VALUE_CROSSCHECK', 'ENGINEERING_PARAMETER_PRESENCE',
+            }
+            automatic_verdict_eligible=compiled.typed_check in deterministic_checkers
+            if status=='Да' and not automatic_verdict_eligible:
+                status='Требует проверки'
+                evidence=(evidence+' ' if evidence else '')+(
+                    'Найденный фрагмент сохранён как кандидат; данный тип пункта не имеет '
+                    'специализированного детерминированного checker-а для автоматического закрытия.'
+                )
+                proof_kind='CANDIDATE_EVIDENCE'
             normative_context=self.review_engine.checklist_context(q, compiled_dict)
             if include_practice:
                 practice_context=self.expert_practice.risk_from_evidence(
@@ -239,7 +250,7 @@ class ChecklistEngine:
                 )
             else:
                 practice_context={}
-            results.append({**item,'compiled_rule':compiled_dict,'verification_recipe':recipe or {},'recipe_id':(recipe or {}).get('recipe_id'),'recipe_status':(recipe or {}).get('recipe_status','EXPERIMENTAL'),'recipe_quality':(recipe or {}).get('critic_score',0),'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            results.append({**item,'compiled_rule':compiled_dict,'verification_recipe':recipe or {},'recipe_id':(recipe or {}).get('recipe_id'),'recipe_status':(recipe or {}).get('recipe_status','EXPERIMENTAL'),'recipe_quality':(recipe or {}).get('critic_score',0),'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'automatic_verdict_eligible':automatic_verdict_eligible,'automatic_verdict_policy':'SPECIALIZED_DETERMINISTIC_CHECKER' if automatic_verdict_eligible else 'CANDIDATE_EVIDENCE_ONLY','candidate_evidence_only':not automatic_verdict_eligible,'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:

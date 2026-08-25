@@ -67,6 +67,16 @@ def validate_review_plan(
 
     wrong_section=0
     for row in checklist_rows or []:
+        if str(row.get('final_verification_kind') or row.get('verification_kind') or '').upper()=='VERIFIED_OK':
+            typed=str(row.get('typed_check') or (row.get('compiled_rule') or {}).get('typed_check') or '').upper()
+            if typed in {'SPECIALIST_REVIEW','ENGINEERING_SEMANTIC_REVIEW','NORMATIVE_CONTENT_REVIEW'}:
+                issues.append(
+                    f"Чек-лист {row.get('item_no') or row.get('position') or ''}: экспертный тип {typed} ошибочно закрыт автоматически."
+                )
+            if row.get('automatic_verdict_eligible') is False or row.get('candidate_evidence_only'):
+                issues.append(
+                    f"Чек-лист {row.get('item_no') or row.get('position') or ''}: поисковый кандидат ошибочно стал категоричным выводом."
+                )
         expected=[row.get('automatic_section')] if row.get('automatic_section') else []
         if not expected:
             continue

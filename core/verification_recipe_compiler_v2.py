@@ -11,7 +11,7 @@ from .verification_recipe_critic import critique_recipe
 from .verification_regression_gate import regression_gate
 
 
-COMPILER_VERSION = "3.0-adaptive-evidence-contracts"
+COMPILER_VERSION = "4.0-evidence-reconstruction-policy"
 
 _ADAPTIVE_STOPWORDS={
     'наличие','имеется','должен','должна','должны','проект','проектн','документац','раздел',
@@ -81,7 +81,7 @@ def _groups_present(text: str, groups: Iterable[Iterable[str]]) -> list[list[str
 
 
 class VerificationRecipeCompilerV2:
-    """Compile one executable and fail-closed recipe per atomic condition.
+    """Compile one fail-closed evidence recipe per atomic condition.
 
     The compiler is universal: project profiles may add patterns, but they do
     not change the evidence gate.  A recipe that fails critic or regression
@@ -188,11 +188,33 @@ class VerificationRecipeCompilerV2:
         return recipe
 
     def compile(self, atom: dict[str, Any]) -> dict[str, Any]:
-        pattern = self._pattern(str(atom.get("atom_text") or atom.get("requirement_text") or "")) or _adaptive_pattern(atom)
+        curated_pattern = self._pattern(str(atom.get("atom_text") or atom.get("requirement_text") or ""))
+        pattern = curated_pattern or _adaptive_pattern(atom)
         recipe = self._base(atom, pattern)
         recipe.update(critique_recipe(recipe))
         recipe.update(regression_gate(recipe))
-        recipe["executable"] = bool(recipe.get("critic_pass") and recipe.get("regression_pass"))
+        method = str(recipe.get("check_method") or "").upper()
+        deterministic_methods = {
+            "VALUE_COMPARISON", "EQUIPMENT_IDENTITY_COMPARISON",
+            "STRUCTURED_COMPARISON", "SET_COMPARISON",
+            "PROHIBITION_EXPLICIT_CONTRADICTION",
+        }
+        adaptive = str(recipe.get("pattern_origin") or "").upper() == "ADAPTIVE_CONTRACT_COMPILER"
+        lexical_pattern = method == "ATOMIC_PATTERN_PRESENCE"
+        recipe["retrieval_only"] = bool(adaptive or lexical_pattern)
+        recipe["categorical_verdict_allowed"] = method in deterministic_methods
+        recipe["automatic_verdict_policy"] = (
+            "SPECIALIZED_DETERMINISTIC_CHECKER"
+            if recipe["categorical_verdict_allowed"]
+            else "CANDIDATE_EVIDENCE_ONLY"
+        )
+        recipe["specialized_checker_id"] = method if recipe["categorical_verdict_allowed"] else ""
+        recipe["executable"] = bool(
+            recipe.get("critic_pass") and recipe.get("regression_pass")
+            and recipe["categorical_verdict_allowed"]
+        )
+        if recipe["retrieval_only"]:
+            recipe["recipe_status"] = "RETRIEVAL_ONLY"
         recipe["pattern_version"] = self.pattern_version
         return recipe
 

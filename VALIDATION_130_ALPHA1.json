@@ -1,0 +1,84 @@
+{
+  "version": "13.0-alpha1-evidence-reconstruction-core",
+  "input": {
+    "documents": 12,
+    "files": [
+      "Задание на проектирование (ДСК).pdf",
+      "Раздел ПД №1_ПЗ.pdf",
+      "Раздел ПД №2_ПЗУ1.pdf",
+      "Раздел ПД №2_ПЗУ2.pdf",
+      "Раздел ПД №3_АР1.pdf",
+      "Раздел ПД №3_АР2.pdf",
+      "Раздел ПД №4_КР1.pdf",
+      "Раздел ПД №4_КР2.pdf",
+      "Раздел ПД №5_подраздел ПД № 1_ИОС1.1.pdf",
+      "Раздел ПД №5_подраздел ПД № 2_ИОС2.1.pdf.pdf",
+      "Раздел ПД №6_ТХ1.pdf",
+      "Раздел ПД №6_ТХ2.pdf"
+    ]
+  },
+  "output": {
+    "findings": 1333,
+    "comparisons": 168,
+    "pipeline_errors": []
+  },
+  "assignment": {
+    "parent_requirements": 56,
+    "atomic_conditions": 143,
+    "public_total": 56,
+    "public_coverage_pct": 0.0,
+    "parent_verdicts": {
+      "REVIEW_QUESTION": 28,
+      "SYSTEM_LIMITATION": 28
+    },
+    "atomic_verdicts": {
+      "REVIEW_QUESTION": 73,
+      "SYSTEM_LIMITATION": 69,
+      "VERIFIED_OK": 1
+    }
+  },
+  "checklist": {
+    "rows": 443,
+    "statuses": {
+      "Не проверено системой": 207,
+      "Требует проверки": 236
+    },
+    "unsafe_automatic_closures": []
+  },
+  "evidence_reconstruction": {
+    "exact_facts": 161,
+    "density_facts": 124,
+    "moisture_facts": 4,
+    "targeted_questions": 3,
+    "by_parameter": {
+      "BULK_DENSITY": 124,
+      "MOISTURE": 4,
+      "POWER_INSTALLED": 2,
+      "PRESSURE": 11,
+      "RES_VOLUME": 7,
+      "VOLTAGE": 13
+    }
+  },
+  "high_value_sanitization": {
+    "flow_false_positives_blocked": 3,
+    "material_scope_rebound": 8
+  },
+  "known_regression_cases": {
+    "compressor_area_mismatch_detected": true,
+    "pump_height_25_quarantined": true
+  },
+  "quality_gate": {
+    "status": "PASSED",
+    "issues": [],
+    "checked_domains": 3,
+    "checks": 513,
+    "checked_objects": 39,
+    "wrong_section_evidence": 0
+  },
+  "report_localization_leaks": [],
+  "reports": [
+    "ExpertCheck_Резюме_руководителя_13.0A1.xlsx",
+    "ExpertCheck_Отчёт_ГИПа_13.0A1.xlsx",
+    "ExpertCheck_Техническое_приложение_13.0A1.xlsx"
+  ]
+}

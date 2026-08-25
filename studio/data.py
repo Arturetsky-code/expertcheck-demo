@@ -358,6 +358,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if not review_plan:
         review_plan=build_review_plan(doc_records,checklist_results or [])
     review_domains=review_plan.get('domains') or {}
+    coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -381,10 +382,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if total_system_limitations:
         conclusion_parts.append(f"Проверок вне текущего автоматического покрытия: {total_system_limitations}.")
     final_conclusion=' '.join(conclusion_parts) or report['conclusion']
+    report_status='Итоговый' if summary.get('completeness')=='Подтверждена' else 'Предварительный — состав/комплектность проекта не подтверждены пользователем'
+    if report_status.startswith('Предварительный'):
+        final_conclusion='Предварительный результат: окончательный вывод удержан до подтверждения состава и комплектности проекта. '+final_conclusion
     summary_rows = [
         ['Наименование проекта', project],
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
         ['Версия ExpertCheck', version],
+        ['Статус отчёта', report_status],
         ['Комплектность', summary['completeness']],
         ['Загружено документов', summary['documents']],
         ['Подтверждено объектов', summary.get('objects_confirmed',summary['objects'])],
@@ -410,7 +415,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     ]
     if report_kind=='manager':
         manager_metrics={
-            'Наименование проекта','Дата и время проверки','Версия ExpertCheck','Комплектность',
+            'Наименование проекта','Дата и время проверки','Версия ExpertCheck','Статус отчёта','Комплектность',
             'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
@@ -475,6 +480,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Комментарий специалиста': r.get('specialist_comment') or '',
         'Обоснование ExpertCheck': r.get('evidence') or r.get('Обоснование') or '',
         'Итоговый класс проверки': verification_label(r.get('final_verification_kind') or r.get('verification_kind')),
+        'Архетип покрытия':ru_label(r.get('coverage_archetype')),
+        'Код причины незавершения':r.get('coverage_reason_code') or '',
+        'Причина незавершения':r.get('coverage_reason') or '',
+        'Недостающие слоты':', '.join(r.get('missing_evidence_slots') or []),
         'Deep Evidence': ru_label(r.get('deep_evidence_state')),
         'Причины ограничения': ' | '.join(r.get('deep_evidence_reasons') or []),
         'Источники': _evidence_sources(r),
@@ -494,16 +503,16 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     for label,domain in (
         ('Задание на проектирование',assignment_plan),('Требования НТД',normative_plan),('Чек-листы',checklist_plan)
     ):
-        pending=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
+        pending=int(domain.get('review',0) or 0)
         if pending:
-            add_action(f"{label}: завершить проверку {pending} пунктов, требующих решения специалиста или дополнительных доказательств.")
+            add_action(f"{label}: рассмотреть {pending} адресных вопросов специалиста и зафиксировать решение.")
     for atom in assignment_atomic_rows:
         if str(atom.get('verification_kind') or '')=='PROJECT_FINDING':
             add_action(
                 f"Задание, {atom.get('atom_id') or atom.get('requirement_id')}: "
                 f"{atom.get('recommendation') or 'устранить подтверждённое отклонение либо согласовать изменение Задания.'}"
             )
-    comparison_pending=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
+    comparison_pending=int(summary.get('review_questions',0) or 0)
     if comparison_pending:
         add_action(f"Межраздельная сверка: получить недостающие доказательства по {comparison_pending} проверкам.")
     if normative_attention:
@@ -515,11 +524,31 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Результат':verification_label(x.get('status')),
         'Область':ru_label(x.get('scope')) if x.get('scope') else '—',
         'Тип проверки':ru_label(x.get('check_type')) if x.get('check_type') else '—',
+        'Архетип покрытия':ru_label(x.get('coverage_archetype')) or '—',
+        'Состояние покрытия':ru_label(x.get('coverage_state')) or '—',
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
+        'Маршрут доказательства':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
         'Итоговый класс':verification_label(x.get('verification_kind')),
         'Проверка достаточности':ru_label(x.get('adversarial_state') or x.get('deep_evidence_state')),
-        'Причина ограничения':' | '.join(x.get('adversarial_reasons') or x.get('deep_evidence_reasons') or []),
-    } for x in review_plan.get('items') or [] if x.get('status') in {'CONFIRMED','ISSUE','REVIEW'}])
+        'Код причины незавершения':x.get('coverage_reason_code') or '',
+        'Причина незавершения':x.get('coverage_reason') or ' | '.join(x.get('adversarial_reasons') or x.get('deep_evidence_reasons') or []),
+        'Недостающие слоты':', '.join(x.get('missing_evidence_slots') or []),
+    } for x in review_plan.get('items') or []])
+    limitations_df=pd.DataFrame([{
+        'Контур':x.get('domain'),'Проверка':x.get('title'),'Архетип':ru_label(x.get('coverage_archetype')),
+        'Код ограничения':x.get('coverage_reason_code') or 'UNSPECIFIED',
+        'Что не получено':x.get('coverage_reason') or 'Доказательный контракт не завершён.',
+        'Недостающие слоты':', '.join(x.get('missing_evidence_slots') or []),
+        'Ожидаемые разделы':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
+        'Статус':'Ограничение ExpertCheck — не замечание проекта',
+    } for x in review_plan.get('items') or [] if str(x.get('verification_kind') or '').upper()=='SYSTEM_LIMITATION'])
+    coverage_matrix_df=pd.DataFrame([{
+        'Архетип':ru_label(x.get('archetype')),'Всего':x.get('total',0),'Завершено автоматически':x.get('completed',0),
+        'Покрытие, %':x.get('coverage_pct',0),'Подтверждено':x.get('verified_ok',0),
+        'Несоответствия':x.get('project_findings',0),'Вопросы специалисту':x.get('review_questions',0),
+        'Ограничения системы':x.get('system_limitations',0),'Доверенные рецепты':x.get('trusted_recipes',0),
+        'Основные причины пробелов':' | '.join(f"{r.get('code')}: {r.get('count')}" for r in (x.get('top_gap_reasons') or [])),
+    } for x in coverage_matrix_payload.get('matrix') or []])
     understanding_rows=[]
     for obj in project_understanding.get('objects') or []:
         for prop in obj.get('property_summary') or []:
@@ -558,13 +587,18 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation'),
         'Итоговый класс проверки':verification_label(x.get('final_verification_kind') or x.get('verification_kind')),
+        'Архетип покрытия':ru_label(x.get('coverage_archetype')),
+        'Код причины незавершения':x.get('coverage_reason_code') or '',
+        'Причина незавершения':x.get('coverage_reason') or '',
+        'Недостающие слоты':', '.join(x.get('missing_evidence_slots') or []),
         'Deep Evidence':ru_label(x.get('deep_evidence_state')),
         'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or []),
     } for x in assignment_rows])
     assignment_gip_df=_excel_safe_frame(assignment_df,columns=[
         'ID требования','Раздел / вопрос Задания','Требование Задания','Объект','Показатель',
         'Требуемое значение','Ед. изм.','Результат','Документ','Страница','Доказательства',
-        'Основание вывода','Рекомендация','Итоговый класс проверки','Deep Evidence','Причины ограничения',
+        'Основание вывода','Рекомендация','Итоговый класс проверки','Архетип покрытия',
+        'Код причины незавершения','Причина незавершения','Недостающие слоты','Deep Evidence','Причины ограничения',
     ])
     assignment_atomic_df=pd.DataFrame([{
         'ID атомарного условия':x.get('atom_id') or x.get('requirement_id'),
@@ -588,6 +622,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Critic':x.get('critic_state'),
         'Regression gate':x.get('regression_state'),
         'Контракт доказательства':ru_label(x.get('evidence_contract_state')),
+        'Архетип покрытия':ru_label(x.get('coverage_archetype')),
+        'Состояние покрытия':ru_label(x.get('coverage_state')),
+        'Код причины незавершения':x.get('coverage_reason_code') or '',
+        'Причина незавершения':x.get('coverage_reason') or '',
+        'Недостающие слоты':', '.join(x.get('missing_evidence_slots') or []),
         'Смысловой gate':ru_label(x.get('semantic_gate_state')),
         'Требуемая модальность':ru_label((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('required_modality')),
         'Критические квалификаторы':', '.join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers') or []),
@@ -636,6 +675,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     checklist_all_df = _excel_safe_frame(checklist_all_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
     review_plan_df = _excel_safe_frame(review_plan_df)
+    limitations_df = _excel_safe_frame(limitations_df)
+    coverage_matrix_df = _excel_safe_frame(coverage_matrix_df)
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
@@ -682,15 +723,21 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             {'Контур':'Сверка инженерных параметров','Всего':len(engineering_comparisons),'Завершено автоматически':_cross_completed(engineering_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in engineering_comparisons),'Требует внимания':max(0,len(engineering_comparisons)-_cross_completed(engineering_comparisons)),'Покрытие, %':round(100*_cross_completed(engineering_comparisons)/max(1,len(engineering_comparisons)),1)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
+        if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
+        if not limitations_df.empty: sheets.append(('Границы автоматизации',limitations_df.head(40)))
         if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))
     elif report_kind == 'gip':
         if not review_plan_df.empty: sheets.append(('Проверка требований', review_plan_df))
+        if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
+        if not limitations_df.empty: sheets.append(('Границы автоматизации',limitations_df))
         if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
+        if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
+        if not limitations_df.empty: sheets.append(('Границы автоматизации',limitations_df))
         if not object_df.empty: sheets.append(('Состав проекта', object_df))
         if not checklist_problem_df.empty: sheets.append(('Чек-листы — диагностика', checklist_problem_df))
         if not normative_df.empty: sheets.append(('Актуальность НТД', normative_df))

@@ -333,7 +333,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
+        item["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -580,7 +580,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
+        item["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -685,8 +685,18 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'error':'Нарушены инварианты итоговых метрик.',
             'issues':report_quality_gate.get('issues') or [],
         })
-    for doc in documents:
-        doc["core_version"] = "11.1.0-alpha1-evidence-contract-engine"
+    # The structures below describe the analysis run as a whole, not an
+    # individual source document.  Storing them on every document multiplied a
+    # real 12-volume project result roughly twelvefold and caused Streamlit
+    # Community Cloud to terminate the process while the workspace snapshot was
+    # saved after object confirmation.  Keep lightweight per-document metadata
+    # on every row and attach the run-level evidence graph only to the first row;
+    # all UI/report consumers already read these structures from documents[0].
+    for doc_index, doc in enumerate(documents):
+        doc["core_version"] = "11.1.1-alpha1.1-resource-stable-confirmation"
+        doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
+        if doc_index:
+            continue
         doc["deep_evidence_review"] = deep_evidence_review
         doc["report_quality_gate"] = report_quality_gate
         doc["knowledge_summary"] = summary
@@ -813,7 +823,6 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph
-        doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
 
     progress(100, "Готово", "Проверка проекта завершена")
     return documents, findings, comparisons

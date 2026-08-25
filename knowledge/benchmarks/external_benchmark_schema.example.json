@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "example-synthetic-only",
+  "description": "Схема внешнего корпуса. Реальные документы и замечания не включаются в релиз.",
+  "cases": [
+    {
+      "case_id": "SYN-POWER-001",
+      "category": "CROSS_DOCUMENT_NUMERIC",
+      "expected_before": "PROJECT_FINDING",
+      "expected_after": "NO_PROJECT_FINDING",
+      "match": {
+        "parameter_codes": ["POWER_CALCULATED"],
+        "all_terms": ["мощность"],
+        "any_terms": ["электроснабжение", "нагрузка"]
+      }
+    },
+    {
+      "case_id": "SYN-CLASS-001",
+      "category": "IDENTITY_CLASSIFICATION",
+      "expected_before": "PROJECT_FINDING",
+      "expected_after": "NO_PROJECT_FINDING",
+      "match": {
+        "parameter_codes": ["DANGER_CLASS"],
+        "all_terms": ["класс опасности"]
+      }
+    }
+  ]
+}

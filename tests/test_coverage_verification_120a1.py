@@ -114,6 +114,22 @@ def test_adversarial_downgrade_is_removed_from_completed_coverage():
     assert "INDEPENDENT_SEMANTIC_CONFIRMATION" in row["missing_evidence_slots"]
 
 
+def test_categorical_checks_are_initialized_before_pipeline_extension():
+    source = (ROOT / "core" / "pipeline.py").read_text(encoding="utf-8")
+    initialization = source.index("categorical_checks=[]")
+    extensions = []
+    start = 0
+    marker = "cross_section_checks.extend(categorical_checks)"
+    while True:
+        position = source.find(marker, start)
+        if position < 0:
+            break
+        extensions.append(position)
+        start = position + len(marker)
+    assert len(extensions) == 1
+    assert extensions[0] > initialization
+
+
 def test_gip_report_shows_limitations_but_does_not_put_them_in_action_plan():
     plan_item = {
         "plan_id": "CHECK-0001", "domain": "Чек-листы", "title": "Проверка расчёта",

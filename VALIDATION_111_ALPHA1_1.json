@@ -1,0 +1,147 @@
+{
+  "version": "11.1.1-alpha1.1-resource-stable-confirmation",
+  "input": {
+    "documents": 12,
+    "document_types": {
+      "АР1": 1,
+      "АР2": 1,
+      "ИОС1": 1,
+      "ИОС2": 1,
+      "КР1": 1,
+      "КР2": 1,
+      "НЕОПРЕДЕЛЕН": 1,
+      "ПЗ": 1,
+      "ПЗУ1": 1,
+      "ПЗУ2": 1,
+      "ТХ1": 1,
+      "ТХ2": 1
+    }
+  },
+  "output": {
+    "findings": 1164,
+    "comparisons": 165,
+    "pipeline_errors": []
+  },
+  "assignment": {
+    "source_rows": 56,
+    "atomic_conditions": 143,
+    "additional_conditions": 87,
+    "parent_statuses": {
+      "Не проверено системой": 28,
+      "Соответствует заданию": 1,
+      "Требует проверки": 20,
+      "Частично подтверждено": 7
+    },
+    "atomic_statuses": {
+      "Не проверено системой": 69,
+      "Соответствует заданию": 11,
+      "Требует проверки": 63
+    },
+    "atomic_verdicts": {
+      "REVIEW_QUESTION": 63,
+      "SYSTEM_LIMITATION": 69,
+      "VERIFIED_OK": 11
+    },
+    "atomic_kinds": {
+      "APPLICABILITY_DECLARATION": 11,
+      "DESIGN_DETERMINED": 6,
+      "DOCUMENT_DELIVERABLE": 3,
+      "EQUIPMENT_IDENTITY": 2,
+      "FEATURE_PRESENCE": 20,
+      "NORMATIVE_CLAUSE": 13,
+      "PRESENCE_REQUIREMENT": 64,
+      "PROHIBITION": 1,
+      "SET_COMPARISON": 1,
+      "TRACEABILITY": 7,
+      "VALUE_COMPARISON": 15
+    },
+    "summary": {
+      "total": 143,
+      "verified_ok": 11,
+      "project_findings": 0,
+      "review_questions": 63,
+      "system_limitations": 69,
+      "informational": 0,
+      "completed": 11,
+      "automatic_coverage_pct": 7.7,
+      "compliant": 11,
+      "deviation": 0,
+      "unconfirmed": 63,
+      "semantic": 0,
+      "not_checked": 69,
+      "source_requirements": 56,
+      "atomic_requirements": 143,
+      "additional_conditions": 87,
+      "scope_coverage_pct": 100.0,
+      "by_kind": {
+        "APPLICABILITY_DECLARATION": 11,
+        "DESIGN_DETERMINED": 6,
+        "DOCUMENT_DELIVERABLE": 3,
+        "EQUIPMENT_IDENTITY": 2,
+        "FEATURE_PRESENCE": 20,
+        "NORMATIVE_CLAUSE": 13,
+        "PRESENCE_REQUIREMENT": 64,
+        "PROHIBITION": 1,
+        "SET_COMPARISON": 1,
+        "TRACEABILITY": 7,
+        "VALUE_COMPARISON": 15
+      },
+      "principle": "Метрики рассчитаны по атомарным условиям; NOT_FOUND является ограничением, а не нарушением.",
+      "ai_evidence_review": {
+        "reviewed": 0,
+        "confirmed": 0,
+        "contradicted": 0
+      },
+      "directed_evidence": {
+        "requirements": 56,
+        "with_candidates": 4,
+        "verified_candidates": 10,
+        "admitted_for_deep_review": 22
+      }
+    },
+    "categorical_without_complete_gate": [],
+    "findings": []
+  },
+  "checklists": {
+    "rows": 443,
+    "statuses": {
+      "Да": 1,
+      "Не проверено системой": 213,
+      "Требует проверки": 229
+    },
+    "verdicts": {
+      "REVIEW_QUESTION": 229,
+      "SYSTEM_LIMITATION": 213,
+      "VERIFIED_OK": 1
+    },
+    "atomic": {
+      "checklist_rows": 443,
+      "atomic_conditions": 464,
+      "promoted_verified": 1,
+      "project_findings": 0,
+      "review_questions": 223
+    }
+  },
+  "cross_section": {
+    "total": 165,
+    "statuses": {
+      "НЕДОСТАТОЧНО ДАННЫХ": 48,
+      "ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ": 1,
+      "СОВПАДАЕТ": 52,
+      "ТРЕБУЕТ ПРОВЕРКИ": 64
+    }
+  },
+  "quality_gate": {
+    "status": "PASSED",
+    "issues": [],
+    "checked_domains": 3,
+    "checks": 600,
+    "checked_objects": 39,
+    "wrong_section_evidence": 0
+  },
+  "deep_evidence": {
+    "checks": 600,
+    "with_candidates": 585,
+    "adversarial_blocked": 2
+  }
+}

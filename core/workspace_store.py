@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-import os, json, gzip, sqlite3, uuid, re
+import os, io, json, gzip, hashlib, sqlite3, uuid, re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,13 +20,25 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 def _json_bytes(value: Any) -> bytes:
-    raw=json.dumps(value, ensure_ascii=False, default=str, separators=(",",":")).encode("utf-8")
-    return gzip.compress(raw, compresslevel=5)
+    """Serialize directly into gzip without materialising a full JSON copy.
+
+    A project result can contain tens of megabytes of evidence.  The previous
+    json.dumps(...).encode(...) + gzip.compress(...) path held several complete
+    copies at once and could push the Streamlit worker over its memory limit.
+    """
+    buffer=io.BytesIO()
+    encoder=json.JSONEncoder(ensure_ascii=False,default=str,separators=(",",":"))
+    with gzip.GzipFile(fileobj=buffer,mode="wb",compresslevel=5) as compressed:
+        for chunk in encoder.iterencode(value):
+            compressed.write(chunk.encode("utf-8"))
+    return buffer.getvalue()
 
 def _from_json_bytes(value: Any) -> Any:
     if value in (None,b"",""): return None
     data=bytes(value) if not isinstance(value,bytes) else value
-    return json.loads(gzip.decompress(data).decode("utf-8"))
+    with gzip.GzipFile(fileobj=io.BytesIO(data),mode="rb") as compressed:
+        with io.TextIOWrapper(compressed,encoding="utf-8") as text:
+            return json.load(text)
 
 def _session_payload(session_state) -> dict[str,Any]:
     keys=(
@@ -36,14 +48,54 @@ def _session_payload(session_state) -> dict[str,Any]:
     )
     out={}
     for k in keys:
-        value=session_state.get(k)
-        # Keep only JSON-compatible values.
-        try:
-            json.dumps(value, ensure_ascii=False, default=str)
-            out[k]=value
-        except Exception:
-            pass
+        out[k]=session_state.get(k)
     return out
+
+
+def snapshot_signature(payload: dict[str,Any]) -> str:
+    """Return a cheap rerun signature without serialising the analysis result.
+
+    The signature only decides whether the current Streamlit rerun must be
+    persisted.  Evidence itself is still stored by ``save_project``.  Mutable
+    user decisions are represented explicitly, while the immutable analysis is
+    identified by object identity and small structural markers.
+    """
+    result=payload.get("result")
+    result_parts=list(result) if isinstance(result,(list,tuple)) else []
+    counts=[len(part) if isinstance(part,(list,tuple)) else 0 for part in result_parts[:3]]
+    first_document={}
+    if result_parts and isinstance(result_parts[0],list) and result_parts[0]:
+        candidate=result_parts[0][0]
+        if isinstance(candidate,dict):
+            first_document=candidate
+    object_decisions=[]
+    for row in payload.get("object_assembly_rows") or []:
+        if not isinstance(row,dict):
+            continue
+        object_decisions.append({
+            "key":row.get("Ключ"),
+            "include":bool(row.get("Включить")),
+            "decision":row.get("Решение пользователя"),
+            "comment":row.get("Комментарий пользователя"),
+        })
+    marker={
+        "project_name":payload.get("project_name"),
+        "analysis_time":payload.get("analysis_time"),
+        "result_identity":id(result),
+        "result_counts":counts,
+        "core_version":first_document.get("core_version"),
+        "quality_gate":(first_document.get("report_quality_gate") or {}).get("status") if isinstance(first_document.get("report_quality_gate"),dict) else None,
+        "object_registry_confirmed":bool(payload.get("object_registry_confirmed")),
+        "object_decisions":object_decisions,
+        "completeness_user_confirmed":bool(payload.get("completeness_user_confirmed")),
+        "completeness_decisions":payload.get("completeness_decisions") or {},
+        "checklist_run_identity":id(payload.get("checklist_run")),
+        "checklist_user_results":payload.get("checklist_user_results") or {},
+        "risk_user_decisions":payload.get("risk_user_decisions") or {},
+        "object_learning_examples":payload.get("object_learning_examples") or [],
+    }
+    raw=json.dumps(marker,ensure_ascii=False,default=str,sort_keys=True,separators=(",",":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 @dataclass
 class User:

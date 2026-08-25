@@ -335,7 +335,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "12.0-alpha1-coverage-verification-core"
+        item["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -378,10 +378,6 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     cross_section_checks = build_cross_section_checks(findings)
     comparisons.extend(cross_section_checks)
     comparisons.extend(general_plan_field_checks)
-    # The engineering pass above is deliberately rebuilt after all extraction
-    # guards.  Preserve the independent categorical checks in the final review
-    # collection without appending them to ``comparisons`` a second time.
-    cross_section_checks.extend(categorical_checks)
     comparisons.extend(general_plan_document_checks)
     _enrich_rules(comparisons, registry)
     knowledge_base = KnowledgeBase(root / "knowledge")
@@ -592,7 +588,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "12.0-alpha1-coverage-verification-core"
+        item["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -706,7 +702,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "12.0-alpha1-coverage-verification-core"
+        doc["core_version"] = "12.0-alpha1.1-drawing-stage-hotfix"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue

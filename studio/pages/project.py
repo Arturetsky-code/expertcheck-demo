@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 import pandas as pd
 from core.display_localization import parameter_label, status_label
+from core.ru_labels import ru_label
 import streamlit as st
 from studio.components import hero, card, section, empty, project_status_bar, timeline
 from studio.data import excel_report
@@ -306,7 +307,7 @@ def _dashboard(ctx):
             show=pd.DataFrame([{
                 'Строка':x.get('source_row') or '—',
                 'Раздел / вопрос':x.get('source_row_title') or '—',
-                'Тип проверки':x.get('requirement_type') or '—',
+                'Тип проверки':ru_label(x.get('requirement_type')),
                 'Требование':x.get('requirement_text'),
                 'Объект':x.get('object_name') or '—',
                 'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else '—',
@@ -317,11 +318,32 @@ def _dashboard(ctx):
                 'Основание вывода':x.get('decision_basis') or '',
                 'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
                 'Доказательства':' | '.join(x.get('evidence') or []),
-                'Качество доказательства':x.get('evidence_quality_state') or '—',
+                'Качество доказательства':ru_label(x.get('evidence_quality_state')),
                 'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
             } for x in assignment_rows])
             st.dataframe(show,hide_index=True,width='stretch')
             st.caption('Автоматическая проверка не подменяет инженерную интерпретацию Задания. Смысловые требования без структурированного параметра остаются на проверку специалисту.')
+
+        reconstruction=first_doc.get('evidence_reconstruction') or {}
+        reconstructed_facts=list(reconstruction.get('facts') or [])
+        if reconstructed_facts:
+            rsum=reconstruction.get('summary') or {}
+            with st.expander('Реконструкция адресных доказательств',expanded=False):
+                st.caption('Параметр связан с точным фрагментом, документом и страницей. До подтверждения владельца и стадии процесса запись остаётся кандидатом и не закрывает проверку автоматически.')
+                r1,r2,r3=st.columns(3)
+                r1.metric('Адресных кандидатов',rsum.get('exact_facts',0))
+                r2.metric('Влажность / плотность',int(rsum.get('moisture_facts',0))+int(rsum.get('density_facts',0)))
+                r3.metric('Адресных вопросов',rsum.get('targeted_questions',0))
+                evidence_rows=pd.DataFrame([{
+                    'Показатель':parameter_label(x.get('parameter_code')),
+                    'Область':ru_label(x.get('evidence_scope')),
+                    'Владелец-кандидат':x.get('object_hint') or '—',
+                    'Значение':f"{x.get('value_text') or x.get('value')} {x.get('unit') or ''}".strip(),
+                    'Источник':f"{x.get('document')}, стр. {x.get('page')}",
+                    'Статус':'Кандидат — требуется подтверждение',
+                    'Точный фрагмент':x.get('exact_span') or x.get('source_trace') or '',
+                } for x in reconstructed_facts[:100]])
+                st.dataframe(evidence_rows,hide_index=True,width='stretch')
 
     with tab_ird:
         section('Исходные и подтверждающие документы', 'Автоматический контроль наличия ключевых исходных материалов. Статус «Требует проверки» означает, что применимость и актуальность необходимо подтвердить специалисту.')

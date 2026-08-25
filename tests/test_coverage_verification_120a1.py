@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0,str(ROOT))
 
 from core.atomic_requirement_graph import atomize_requirement
-from core.atomic_verification_engine import verify_atomic_requirements, _convert
+from core.atomic_verification_engine import aggregate_atomic_results, verify_atomic_requirements, verify_checklist_rows, parent_assignment_summary, _convert
 from core.categorical_consistency import build_categorical_consistency_checks
 from core.coverage_matrix import build_coverage_matrix
 from core.deep_evidence_intelligence import _apply_final_verdict
@@ -20,15 +20,16 @@ from core.verification_recipe_compiler_v2 import VerificationRecipeCompilerV2
 from studio.data import structured_excel_report
 
 
-def test_adaptive_drawing_contract_is_executable_but_modality_bound():
+def test_adaptive_drawing_contract_is_retrieval_only_and_modality_bound():
     atom = atomize_requirement({
         "requirement_id": "DRAW-1",
         "requirement_text": "План сетей электроснабжения с указанием электрощитового оборудования",
     }, domain="checklist")[0]
     recipe = VerificationRecipeCompilerV2("knowledge").compile(atom)
-    assert recipe["recipe_status"] == "TRUSTED"
+    assert recipe["recipe_status"] == "RETRIEVAL_ONLY"
     assert recipe["pattern_origin"] == "ADAPTIVE_CONTRACT_COMPILER"
     assert recipe["required_modality"] == "DRAWING"
+    assert recipe["categorical_verdict_allowed"] is False
 
     text_page = [{
         "document": "Раздел ПД №5_ИОС1.1.pdf", "section": "ИОС1", "document_type": "ИОС1", "page": 7,
@@ -36,16 +37,16 @@ def test_adaptive_drawing_contract_is_executable_but_modality_bound():
     }]
     blocked = verify_atomic_requirements([atom], knowledge_root="knowledge", fact_graph={"facts": [], "passages": text_page}, page_corpus=text_page)[0]
     assert blocked["verification_kind"] != "VERIFIED_OK"
-    assert blocked["coverage_reason_code"] == "WRONG_EVIDENCE_MODALITY"
+    assert blocked["candidate_evidence_only"] is True
 
     drawing_page = [{
         "document": "Раздел ПД №5_ИОС1.2.pdf", "section": "ИОС1", "document_type": "ИОС1", "page": 3,
         "source_modality": "DRAWING",
         "text": "План сетей электроснабжения с указанием электрощитового оборудования.",
     }]
-    verified = verify_atomic_requirements([atom], knowledge_root="knowledge", fact_graph={"facts": [], "passages": drawing_page}, page_corpus=drawing_page)[0]
-    assert verified["verification_kind"] == "VERIFIED_OK"
-    assert verified["coverage_state"] == "AUTOMATED_COMPLETE"
+    candidate = verify_atomic_requirements([atom], knowledge_root="knowledge", fact_graph={"facts": [], "passages": drawing_page}, page_corpus=drawing_page)[0]
+    assert candidate["verification_kind"] == "REVIEW_QUESTION"
+    assert candidate["candidate_evidence_only"] is True
 
 
 def test_qualitative_question_does_not_get_a_lexical_shortcut():
@@ -55,6 +56,46 @@ def test_qualitative_question_does_not_get_a_lexical_shortcut():
     recipe = VerificationRecipeCompilerV2("knowledge").compile(atom)
     assert not recipe["pattern_id"]
     assert recipe["recipe_status"] == "EXPERIMENTAL"
+
+
+def test_specialist_checklist_cannot_be_auto_closed_by_matching_words():
+    rows = [{
+        "question": "Проверить достаточность и корректность принятых решений",
+        "typed_check": "SPECIALIST_REVIEW", "compiled_rule": {"typed_check": "SPECIALIST_REVIEW"},
+        "status": "Да", "proof_kind": "VERIFIED_ENGINEERING_EVIDENCE",
+        "automatic_section": "ПЗ",
+    }]
+    pages = [{
+        "document": "ПЗ.pdf", "section": "ПЗ", "document_type": "ПЗ", "page": 4,
+        "text": "В проекте приняты решения, достаточность и корректность которых требует инженерной оценки.",
+    }]
+    verify_checklist_rows(rows, knowledge_root="knowledge", fact_graph={"facts": [], "passages": pages}, page_corpus=pages)
+    assert rows[0]["status"] != "Да"
+    assert rows[0]["verification_kind"] in {"REVIEW_QUESTION", "SYSTEM_LIMITATION"}
+
+
+def test_assignment_public_summary_uses_parent_requirements():
+    parents = [
+        {"requirement_id": "R1", "status": "Частично подтверждено", "final_verification_kind": "REVIEW_QUESTION", "evidence": ["источник"]},
+        {"requirement_id": "R2", "status": "Соответствует заданию", "final_verification_kind": "VERIFIED_OK", "proof_kind": "VERIFIED_EVIDENCE", "evidence": ["источник"]},
+    ]
+    atoms = [
+        {"final_verification_kind": "VERIFIED_OK", "status": "Соответствует заданию", "evidence": ["источник"]},
+        {"final_verification_kind": "REVIEW_QUESTION", "status": "Требует проверки", "evidence": ["источник"]},
+        {"final_verification_kind": "VERIFIED_OK", "status": "Соответствует заданию", "evidence": ["источник"]},
+    ]
+    summary = parent_assignment_summary(parents, atoms, {"additional_conditions": 1})
+    assert summary["total"] == 2
+    assert summary["compliant"] == 1
+    assert summary["atomic_requirements"] == 3
+
+
+def test_parent_review_cannot_keep_no_action_recommendation():
+    parents = [{"requirement_id": "R1", "recommendation": "Дополнительное действие не требуется."}]
+    atoms = [{"parent_requirement_id": "R1", "atom_id": "A1", "verification_kind": "REVIEW_QUESTION"}]
+    row = aggregate_atomic_results(parents, atoms)[0]
+    assert row["verification_kind"] == "REVIEW_QUESTION"
+    assert "проверить" in row["recommendation"].lower()
 
 
 def test_addressable_opo_classification_conflict_is_a_project_finding():

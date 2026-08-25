@@ -158,13 +158,13 @@ def test_bullet_context_is_not_prepended_to_local_prohibition():
     assert prohibition["atom_text"] == "Прокладку кабельных линий в земле не предусматривать."
 
 
-def test_direct_exact_clause_passes_contract_and_semantic_gate():
+def test_direct_exact_clause_is_addressable_but_lexical_recipe_stays_candidate():
     row = _verify(
         "Предусмотреть светодиодные светильники.",
         [{"document": "ИОС1.pdf", "section": "ИОС1", "document_type": "ИОС1", "page": 9,
           "text": "Проектом предусмотрены светодиодные светильники наружного освещения."}],
     )
-    assert row["verification_kind"] == "VERIFIED_OK"
+    assert row["verification_kind"] == "REVIEW_QUESTION"
     assert row["semantic_gate_state"] == "PASSED"
     assert row["verification_evidence"][0]["exact_clause"].startswith("Проектом предусмотрен")
 

@@ -1,0 +1,44 @@
+{
+  "release": "12.0-alpha1-coverage-verification-core",
+  "validated_on": "2026-08-25",
+  "test_kit": {
+    "documents": 12,
+    "format": "PDF",
+    "approx_size_mb": 49,
+    "ai_enabled": false
+  },
+  "pipeline": {
+    "documents_processed": 12,
+    "stage_failures": 0
+  },
+  "coverage": {
+    "assignment": {"total": 143, "completed": 12, "coverage_pct": 8.4},
+    "normative": {"total": 14, "completed": 2, "coverage_pct": 14.3},
+    "checklist": {"total": 443, "completed": 21, "coverage_pct": 4.7},
+    "overall": {"total": 600, "completed": 35, "coverage_pct": 5.8}
+  },
+  "checklist_comparison": {
+    "previous_coverage_pct": 0.2,
+    "current_coverage_pct": 4.7,
+    "multiplier": 23.5
+  },
+  "checklist_routing": {
+    "targeted_review": 217,
+    "automation_gap": 205
+  },
+  "recipe_catalog": {
+    "atomic_conditions": 807,
+    "executable_after_gates": 742,
+    "adaptive_contracts": 729,
+    "curated_contracts": 10,
+    "experimental": 65
+  },
+  "tests": {
+    "coverage_verification_120a1": {"passed": 7, "failed": 0},
+    "atomic_verification_110a1": {"passed": 6, "failed": 0},
+    "evidence_contract_engine_111a1": {"passed": 17, "failed": 0},
+    "deep_evidence_intelligence_102a2": {"passed": 6, "failed": 0},
+    "quality_gate_103": {"passed": 18, "failed": 0}
+  },
+  "principle": "Only completed evidence contracts count as automatic coverage; system limitations are not project findings."
+}

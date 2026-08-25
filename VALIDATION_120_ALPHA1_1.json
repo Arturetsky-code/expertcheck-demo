@@ -1,0 +1,21 @@
+{
+  "release": "12.0-alpha1.1-drawing-stage-hotfix",
+  "validated_on": "2026-08-25",
+  "defect": "UnboundLocalError: categorical_checks referenced before assignment after Drawing Intelligence",
+  "fix": "Removed premature extension; the only extension now occurs after explicit initialization and construction",
+  "tests": {
+    "key_regressions_passed": 55,
+    "key_regressions_failed": 0,
+    "python_compileall": "passed"
+  },
+  "full_12_pdf_run": {
+    "documents": 12,
+    "drawing_intelligence_69_pct": "passed",
+    "completed_to_100_pct": true,
+    "pipeline_errors": 0,
+    "comparisons": 1172,
+    "coverage_total": 600,
+    "coverage_completed": 35,
+    "coverage_pct": 5.8
+  }
+}

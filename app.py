@@ -1,6 +1,5 @@
 from __future__ import annotations
 import sys
-import json
 from dataclasses import dataclass
 from pathlib import Path
 import streamlit as st
@@ -13,14 +12,14 @@ try:
     from studio.data import frames,registry,passports,metrics,engineer_findings,assembly_rows,apply_project_assembly
     from studio.pages import PAGES
     from studio.auth import auth_screen
-    from core.workspace_store import get_store, session_snapshot
+    from core.workspace_store import get_store, session_snapshot, snapshot_signature
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 11.1 Alpha 1 · Evidence Contract Engine'
+VERSION='ExpertCheck 11.1 Alpha 1.1 · Resource-Stable Confirmation Hotfix'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -120,7 +119,7 @@ _user=st.session_state.get('auth_user') or {}
 if _active and _user.get('id') and st.session_state.get('result') is not None:
     try:
         _snapshot=session_snapshot(st.session_state)
-        _signature=str(hash(json.dumps(_snapshot,ensure_ascii=False,default=str,sort_keys=True)))
+        _signature=snapshot_signature(_snapshot)
         if st.session_state.get('_workspace_saved_signature') != _signature:
             WORKSPACE_STORE.save_project(
                 _user['id'],_active,st.session_state.get('project_name') or 'Проект',

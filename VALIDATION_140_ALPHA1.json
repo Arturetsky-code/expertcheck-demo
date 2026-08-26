@@ -1,0 +1,417 @@
+{
+  "version": "14.0-alpha1-semantic-evidence-engine",
+  "input": {
+    "documents": 12,
+    "files": [
+      "Задание на проектирование (ДСК).pdf",
+      "Раздел ПД №1_ПЗ.pdf",
+      "Раздел ПД №2_ПЗУ1.pdf",
+      "Раздел ПД №2_ПЗУ2.pdf",
+      "Раздел ПД №3_АР1.pdf",
+      "Раздел ПД №3_АР2.pdf",
+      "Раздел ПД №4_КР1.pdf",
+      "Раздел ПД №4_КР2.pdf",
+      "Раздел ПД №5_подраздел ПД № 1_ИОС1.1.pdf",
+      "Раздел ПД №5_подраздел ПД № 2_ИОС2.1.pdf.pdf",
+      "Раздел ПД №6_ТХ1.pdf",
+      "Раздел ПД №6_ТХ2.pdf"
+    ]
+  },
+  "output": {
+    "findings": 1333,
+    "comparisons": 168,
+    "pipeline_errors": []
+  },
+  "assignment": {
+    "parent_requirements": 56,
+    "atomic_conditions": 143,
+    "public_total": 56,
+    "public_coverage_pct": 0.0,
+    "parent_verdicts": {
+      "REVIEW_QUESTION": 28,
+      "SYSTEM_LIMITATION": 28
+    },
+    "atomic_verdicts": {
+      "REVIEW_QUESTION": 73,
+      "SYSTEM_LIMITATION": 69,
+      "VERIFIED_OK": 1
+    }
+  },
+  "checklist": {
+    "rows": 443,
+    "statuses": {
+      "Не проверено системой": 207,
+      "Требует проверки": 236
+    },
+    "unsafe_automatic_closures": []
+  },
+  "evidence_reconstruction": {
+    "exact_facts": 161,
+    "density_facts": 124,
+    "moisture_facts": 4,
+    "targeted_questions": 3,
+    "by_parameter": {
+      "BULK_DENSITY": 124,
+      "MOISTURE": 4,
+      "POWER_INSTALLED": 2,
+      "PRESSURE": 11,
+      "RES_VOLUME": 7,
+      "VOLTAGE": 13
+    }
+  },
+  "semantic_evidence_engine": {
+    "version": "1.0",
+    "assignment": {
+      "version": "1.0-semantic-evidence-consensus",
+      "rows": 143,
+      "packets": 142,
+      "judge_candidates": 0,
+      "judge_responses": 0,
+      "critic_responses": 0,
+      "promoted_verified": 0,
+      "project_findings": 0,
+      "blocked_consensus": 0,
+      "evidence_levels": {
+        "L0": 11,
+        "L1": 0,
+        "L2": 27,
+        "L3": 70,
+        "L4": 34,
+        "L5": 1
+      },
+      "evidence_ready": 105,
+      "strictly_completed": 1,
+      "judge_errors": [],
+      "critic_errors": [],
+      "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate."
+    },
+    "checklist": {
+      "version": "1.0-semantic-evidence-consensus",
+      "rows": 464,
+      "packets": 464,
+      "judge_candidates": 0,
+      "judge_responses": 0,
+      "critic_responses": 0,
+      "promoted_verified": 0,
+      "project_findings": 0,
+      "blocked_consensus": 0,
+      "evidence_levels": {
+        "L0": 0,
+        "L1": 0,
+        "L2": 194,
+        "L3": 151,
+        "L4": 119,
+        "L5": 0
+      },
+      "evidence_ready": 270,
+      "strictly_completed": 0,
+      "judge_errors": [],
+      "critic_errors": [],
+      "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate."
+    },
+    "evidence_coverage_pct": 54.8,
+    "strict_coverage_pct": 0.4,
+    "semantic_consensus_completed": 0
+  },
+  "coverage_matrix": {
+    "version": "2.0-strict-and-evidence-coverage-matrix",
+    "total": 513,
+    "completed": 2,
+    "coverage_pct": 0.4,
+    "evidence_ready": 281,
+    "evidence_coverage_pct": 54.8,
+    "semantic_consensus_completed": 0,
+    "evidence_levels": {
+      "L0": 19,
+      "L1": 0,
+      "L2": 213,
+      "L3": 167,
+      "L4": 112,
+      "L5": 2
+    },
+    "matrix": [
+      {
+        "archetype": "CALCULATION_EVIDENCE",
+        "total": 28,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 22,
+        "evidence_coverage_pct": 78.6,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 6,
+          "L3": 17,
+          "L4": 5,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 22,
+        "system_limitations": 6,
+        "trusted_recipes": 0,
+        "experimental_recipes": 1,
+        "retrieval_only_recipes": 27,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 26
+          },
+          {
+            "code": "NO_ADDRESSABLE_EVIDENCE",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "archetype": "DOCUMENT_TRACEABILITY",
+        "total": 56,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 14,
+        "evidence_coverage_pct": 25.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 1,
+          "L1": 0,
+          "L2": 41,
+          "L3": 14,
+          "L4": 0,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 26,
+        "system_limitations": 30,
+        "trusted_recipes": 0,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 56,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 53
+          },
+          {
+            "code": "NO_ADDRESSABLE_EVIDENCE",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "archetype": "DRAWING_EVIDENCE",
+        "total": 105,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 60,
+        "evidence_coverage_pct": 57.1,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 45,
+          "L3": 51,
+          "L4": 9,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 59,
+        "system_limitations": 46,
+        "trusted_recipes": 0,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 105,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 104
+          },
+          {
+            "code": "NEEDS_SPECIALIST_JUDGEMENT",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "archetype": "NORMATIVE_REQUIREMENT",
+        "total": 36,
+        "completed": 2,
+        "coverage_pct": 5.6,
+        "evidence_ready": 18,
+        "evidence_coverage_pct": 50.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 13,
+          "L1": 0,
+          "L2": 5,
+          "L3": 7,
+          "L4": 9,
+          "L5": 2
+        },
+        "verified_ok": 2,
+        "project_findings": 0,
+        "review_questions": 3,
+        "system_limitations": 31,
+        "trusted_recipes": 3,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 19,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 22
+          },
+          {
+            "code": "EVIDENCE_CONTRACT_UNSATISFIED",
+            "count": 12
+          },
+          {
+            "code": "UNSPECIFIED",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "archetype": "NUMERIC_VALUE",
+        "total": 5,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 3,
+        "evidence_coverage_pct": 60.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 1,
+          "L1": 0,
+          "L2": 1,
+          "L3": 2,
+          "L4": 1,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 3,
+        "system_limitations": 2,
+        "trusted_recipes": 0,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 5,
+        "top_gap_reasons": [
+          {
+            "code": "ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED",
+            "count": 3
+          },
+          {
+            "code": "NO_ADDRESSABLE_EVIDENCE",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "archetype": "SEMANTIC_PROJECT_DECISION",
+        "total": 281,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 163,
+        "evidence_coverage_pct": 58.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 4,
+          "L1": 0,
+          "L2": 114,
+          "L3": 76,
+          "L4": 87,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 151,
+        "system_limitations": 130,
+        "trusted_recipes": 0,
+        "experimental_recipes": 16,
+        "retrieval_only_recipes": 265,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 280
+          },
+          {
+            "code": "NEEDS_SPECIALIST_JUDGEMENT",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "archetype": "SET_COMPLETENESS",
+        "total": 2,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 1,
+        "evidence_coverage_pct": 50.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 1,
+          "L3": 0,
+          "L4": 1,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 1,
+        "system_limitations": 1,
+        "trusted_recipes": 0,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 2,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "reason_counts": {
+      "RECIPE_NOT_EXECUTABLE": 487,
+      "EVIDENCE_CONTRACT_UNSATISFIED": 12,
+      "NO_ADDRESSABLE_EVIDENCE": 7,
+      "ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED": 3,
+      "NEEDS_SPECIALIST_JUDGEMENT": 2,
+      "UNSPECIFIED": 2
+    },
+    "principle": "Строгое покрытие считается только по завершённым контрактам L5; доказательное покрытие L3–L5 отдельно показывает, где система уже нашла адресный материал. Ограничения системы не являются замечаниями проекта."
+  },
+  "semantic_project_graph": {
+    "nodes": 212,
+    "edges": 252,
+    "packets": 606,
+    "by_node_type": {
+      "EQUIPMENT": 6,
+      "OBJECT": 32,
+      "SYSTEM": 1,
+      "PROPERTY": 84,
+      "VALUE": 84,
+      "SOURCE": 5
+    }
+  },
+  "high_value_sanitization": {
+    "flow_false_positives_blocked": 3,
+    "material_scope_rebound": 8
+  },
+  "known_regression_cases": {
+    "compressor_area_mismatch_detected": true,
+    "pump_height_25_quarantined": true
+  },
+  "quality_gate": {
+    "status": "PASSED",
+    "issues": [],
+    "checked_domains": 3,
+    "checks": 513,
+    "checked_objects": 39,
+    "wrong_section_evidence": 0
+  },
+  "report_localization_leaks": [],
+  "reports": [
+    "ExpertCheck_Резюме_руководителя_14.0A1.xlsx",
+    "ExpertCheck_Отчёт_ГИПа_14.0A1.xlsx",
+    "ExpertCheck_Техническое_приложение_14.0A1.xlsx"
+  ]
+}

@@ -65,6 +65,12 @@ def build_review_plan(
             'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
             'expected_evidence_route':list(row.get('expected_evidence_route') or []),
             'recipe_status':_txt(row.get('recipe_status')),
+            'evidence_level':_txt(row.get('evidence_level') or 'L0'),
+            'evidence_level_reason':_txt(row.get('evidence_level_reason')),
+            'evidence_coverage_pct':row.get('evidence_coverage_pct'),
+            'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
+            'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
+            'checker_family':_txt(row.get('checker_family')),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')
@@ -94,6 +100,12 @@ def build_review_plan(
             'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
             'expected_evidence_route':list(row.get('expected_evidence_route') or []),
             'recipe_status':_txt(row.get('recipe_status')),
+            'evidence_level':_txt(row.get('evidence_level') or ('L5' if q['verification_kind'] in {'VERIFIED_OK','PROJECT_FINDING'} else 'L0')),
+            'evidence_level_reason':_txt(row.get('evidence_level_reason')),
+            'evidence_coverage_pct':row.get('evidence_coverage_pct'),
+            'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
+            'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
+            'checker_family':_txt(row.get('checker_family')),
         })
     for i,row in enumerate(checklist,1):
         if row.get('is_heading'):continue
@@ -120,6 +132,12 @@ def build_review_plan(
             'missing_evidence_slots':list(row.get('missing_evidence_slots') or []),
             'expected_evidence_route':list(row.get('expected_evidence_route') or []),
             'recipe_status':_txt(row.get('recipe_status')),
+            'evidence_level':_txt(row.get('evidence_level') or 'L0'),
+            'evidence_level_reason':_txt(row.get('evidence_level_reason')),
+            'evidence_coverage_pct':row.get('evidence_coverage_pct'),
+            'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
+            'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
+            'checker_family':_txt(row.get('checker_family')),
         })
 
     raw_summaries={

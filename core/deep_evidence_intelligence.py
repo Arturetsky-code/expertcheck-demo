@@ -46,6 +46,9 @@ def _apply_final_verdict(row:dict[str,Any], verdict:dict[str,Any])->None:
     row['deep_evidence_candidates']=list(verdict.get('evidence_candidates') or [])[:10]
 
     if kind=='REVIEW_QUESTION':
+        if str(row.get('evidence_level') or '')=='L5':
+            row['evidence_level']='L4'
+            row['evidence_level_reason']='Адресный пакет сохранён, но итоговый вывод удержан независимой проверкой достаточности.'
         row['status']='Требует проверки'
         reason='; '.join(row['deep_evidence_reasons']) or row.get('decision_basis') or 'Найден адресный кандидат, требующий решения специалиста.'
         row['decision_basis']=reason
@@ -67,6 +70,9 @@ def _apply_final_verdict(row:dict[str,Any], verdict:dict[str,Any])->None:
                 missing.append('INDEPENDENT_SEMANTIC_CONFIRMATION')
             row['missing_evidence_slots']=missing
     elif kind=='SYSTEM_LIMITATION':
+        if str(row.get('evidence_level') or '')=='L5':
+            row['evidence_level']='L4'
+            row['evidence_level_reason']='Доказательство найдено, но строгий итоговый gate не завершён.'
         row['status']='Не проверено системой'
         row['coverage_state']='AUTOMATION_GAP'
         row['coverage_reason_code']=row.get('coverage_reason_code') or 'EVIDENCE_CONTRACT_UNSATISFIED'

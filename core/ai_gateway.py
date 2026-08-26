@@ -357,6 +357,10 @@ def provider_for_role(role: str, session_state: Any, secrets: Any = None) -> AIP
     role_key = (role or '').strip().lower()
     if role_key in {'extraction', 'извлечение', 'analysis'}:
         selected = session_state.get('ai_extraction_provider') or session_state.get('external_ai_provider', 'Отключён')
+    elif role_key in {'judge', 'evidence_judge', 'судья'}:
+        selected = session_state.get('ai_judge_provider') or session_state.get('ai_extraction_provider') or session_state.get('external_ai_provider', 'Отключён')
+    elif role_key in {'critic', 'evidence_critic', 'критик'}:
+        selected = session_state.get('ai_critic_provider') or session_state.get('ai_reviewer_provider') or session_state.get('external_ai_provider', 'Отключён')
     else:
         selected = session_state.get('ai_reviewer_provider') or session_state.get('external_ai_provider', 'Отключён')
     return provider_from_settings(str(selected), secrets)

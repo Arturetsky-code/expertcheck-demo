@@ -66,7 +66,6 @@ from .evidence_provenance import annotate_evidence_provenance
 from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
-from .requirements_ai_reasoner import review_assignment_rows
 from .directed_evidence import build_page_corpus, attach_directed_evidence, directed_evidence_facts
 from .table_semantic_scope import annotate_table_semantic_scope
 from .page_evidence_store import is_assignment_source
@@ -79,6 +78,7 @@ from .atomic_verification_engine import (
 from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
+from .semantic_evidence_engine import build_semantic_project_graph
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -206,6 +206,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
                 pass
 
     ai_options = ai_options or {}
+    semantic_level = str(ai_options.get("level") or "off").lower()
+    semantic_judge_provider = ai_options.get("judge_provider") or ai_options.get("provider")
+    semantic_critic_provider = ai_options.get("critic_provider") or ai_options.get("reviewer_provider")
+    assignment_semantic_limit = 48 if semantic_level == "maximum" else 24
+    checklist_semantic_limit = 80 if semantic_level == "maximum" else 40
     progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
 
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
@@ -336,7 +341,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
+        item["core_version"] = "14.0-alpha1-semantic-evidence-engine"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -539,11 +544,19 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             knowledge_root=str(root / "knowledge"),
             fact_graph=universal_project_fact_graph,
             page_corpus=project_page_corpus,
+            judge_provider=semantic_judge_provider,
+            critic_provider=semantic_critic_provider,
+            semantic_level=semantic_level,
+            semantic_limit=assignment_semantic_limit,
         )
         assignment_compliance = aggregate_atomic_results(assignment_parent_baseline, assignment_atomic_rows)
-        assignment_ai_summary={"reviewed":0,"confirmed":0,"contradicted":0}
-        if str(ai_options.get("level") or "off").lower() in {"extended","maximum"} and ai_options.get("provider") is not None:
-            assignment_ai_summary=review_assignment_rows(ai_options.get("provider"), assignment_atomic_rows, limit=12 if str(ai_options.get("level")).lower()=="extended" else 24)
+        assignment_semantic_audit = dict((assignment_atomic_rows[0] if assignment_atomic_rows else {}).get("semantic_engine_audit") or {})
+        assignment_ai_summary={
+            "reviewed":assignment_semantic_audit.get("judge_responses",0),
+            "confirmed":assignment_semantic_audit.get("promoted_verified",0),
+            "contradicted":assignment_semantic_audit.get("project_findings",0),
+            "semantic_evidence_engine":assignment_semantic_audit,
+        }
         assignment_compliance_summary = parent_assignment_summary(
             assignment_compliance, assignment_atomic_rows, atomic_requirement_graph.get("summary") or {}
         )
@@ -603,7 +616,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
+        item["core_version"] = "14.0-alpha1-semantic-evidence-engine"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -624,6 +637,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             knowledge_root=str(root / "knowledge"),
             fact_graph=universal_project_fact_graph,
             page_corpus=project_page_corpus,
+            judge_provider=semantic_judge_provider,
+            critic_provider=semantic_critic_provider,
+            semantic_level=semantic_level,
+            semantic_limit=checklist_semantic_limit,
         )
         automatic_review["atomic_verification"] = checklist_atomic_review
     except Exception as exc:
@@ -705,6 +722,20 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
     coverage_matrix=build_coverage_matrix(review_plan.get('items') or [])
+    semantic_packets = [
+        dict(row.get("semantic_evidence_packet") or {})
+        for row in assignment_atomic_rows + list(checklist_atomic_review.get("atoms") or [])
+        if row.get("semantic_evidence_packet")
+    ]
+    semantic_project_graph = build_semantic_project_graph(universal_project_fact_graph, semantic_packets)
+    semantic_engine_summary = {
+        "version":"1.0",
+        "assignment":dict((assignment_atomic_rows[0] if assignment_atomic_rows else {}).get("semantic_engine_audit") or {}),
+        "checklist":dict(checklist_atomic_review.get("semantic_engine_audit") or {}),
+        "evidence_coverage_pct":coverage_matrix.get("evidence_coverage_pct",0),
+        "strict_coverage_pct":coverage_matrix.get("coverage_pct",0),
+        "semantic_consensus_completed":coverage_matrix.get("semantic_consensus_completed",0),
+    }
     report_quality_gate=validate_review_plan(
         review_plan,
         object_registry=object_registry,
@@ -725,7 +756,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "13.0-alpha1-evidence-reconstruction-core"
+        doc["core_version"] = "14.0-alpha1-semantic-evidence-engine"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -734,6 +765,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["high_value_sanitization_audit"] = high_value_sanitization_audit
         doc["report_quality_gate"] = report_quality_gate
         doc["coverage_matrix"] = coverage_matrix
+        doc["semantic_evidence_engine"] = semantic_engine_summary
+        doc["semantic_project_graph"] = semantic_project_graph
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

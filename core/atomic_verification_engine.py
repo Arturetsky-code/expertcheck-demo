@@ -15,9 +15,10 @@ from .verification_recipe_compiler_v2 import VerificationRecipeCompilerV2
 from .typed_evidence_resolver import resolve_typed_evidence
 from .semantic_verdict_gate import evaluate_semantic_verdict_gate
 from .requirement_contracts import coverage_diagnostics
+from .semantic_evidence_engine import run_semantic_evidence_engine
 
 
-ENGINE_VERSION = "4.0-evidence-reconstruction-core"
+ENGINE_VERSION = "5.0-semantic-evidence-engine"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -361,6 +362,8 @@ def _kernel_check(atom: dict[str, Any], recipe: dict[str, Any], page_corpus: lis
 def verify_atomic_requirements(
     atoms: Iterable[dict[str, Any]], *, knowledge_root: str,
     fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
+    judge_provider: Any = None, critic_provider: Any = None,
+    semantic_level: str = "off", semantic_limit: int = 0,
 ) -> list[dict[str, Any]]:
     compiler = VerificationRecipeCompilerV2(knowledge_root)
     rows: list[dict[str, Any]] = []
@@ -387,6 +390,17 @@ def verify_atomic_requirements(
                 ), recommendation="Проверить условие специалистом по указанным ожидаемым разделам.",
             )
         rows.append(result)
+    semantic_audit = run_semantic_evidence_engine(
+        rows,
+        fact_graph=fact_graph,
+        page_corpus=page_corpus,
+        judge_provider=judge_provider,
+        critic_provider=critic_provider,
+        level=semantic_level,
+        limit=semantic_limit,
+    )
+    if rows:
+        rows[0]["semantic_engine_audit"] = semantic_audit
     return rows
 
 
@@ -414,6 +428,12 @@ def aggregate_atomic_results(
             kind, status = "SYSTEM_LIMITATION", "Не проверено системой"
         evidence = [item for atom in atoms for item in (atom.get("evidence") or [])]
         differences = [atom.get("difference") for atom in atoms if atom.get("verification_kind") == "PROJECT_FINDING" and atom.get("difference") not in (None, "")]
+        level_order = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5}
+        evidence_levels = [str(atom.get("evidence_level") or "L0") for atom in atoms]
+        parent_level = min(evidence_levels, key=lambda value: level_order.get(value, 0)) if evidence_levels else "L0"
+        evidence_ready = sum(level_order.get(value, 0) >= 3 for value in evidence_levels)
+        archetypes = Counter(str(atom.get("coverage_archetype") or "UNCLASSIFIED") for atom in atoms)
+        diagnostic = next((atom for atom in atoms if atom.get("verification_kind") == "REVIEW_QUESTION"), None) or next((atom for atom in atoms if atom.get("verification_kind") == "SYSTEM_LIMITATION"), None) or atoms[0]
         output.append({
             **parent,
             "status": status,
@@ -431,6 +451,30 @@ def aggregate_atomic_results(
             "atomic_review": counts["REVIEW_QUESTION"],
             "atomic_limitations": counts["SYSTEM_LIMITATION"],
             "atomic_result_ids": [atom.get("atom_id") for atom in atoms],
+            "evidence_level": "L5" if kind in {"VERIFIED_OK", "PROJECT_FINDING"} else parent_level,
+            "evidence_level_distribution": dict(Counter(evidence_levels)),
+            "evidence_ready_atomic": evidence_ready,
+            "evidence_coverage_pct": round(100 * evidence_ready / max(1, len(atoms)), 1),
+            "semantic_consensus_completed": sum(str(atom.get("semantic_consensus_state") or "") == "PASSED" for atom in atoms),
+            "coverage_archetype": archetypes.most_common(1)[0][0] if archetypes else "UNCLASSIFIED",
+            "coverage_state": (
+                "PROJECT_FINDING_CONFIRMED" if kind == "PROJECT_FINDING" else
+                "AUTOMATED_COMPLETE" if kind == "VERIFIED_OK" else
+                diagnostic.get("coverage_state") or "AUTOMATION_GAP"
+            ),
+            "coverage_reason_code": diagnostic.get("coverage_reason_code"),
+            "coverage_reason": diagnostic.get("coverage_reason"),
+            "missing_evidence_slots": list(dict.fromkeys(
+                str(slot) for atom in atoms for slot in (atom.get("missing_evidence_slots") or []) if slot
+            )),
+            "expected_evidence_route": list(dict.fromkeys(
+                str(section) for atom in atoms for section in (atom.get("expected_evidence_route") or []) if section
+            )),
+            "recipe_status": (
+                "TRUSTED" if all(str(atom.get("recipe_status") or "") == "TRUSTED" for atom in atoms)
+                else "RETRIEVAL_ONLY" if any(str(atom.get("recipe_status") or "") == "RETRIEVAL_ONLY" for atom in atoms)
+                else "EXPERIMENTAL"
+            ),
             "recommendation": (
                 "Устранить подтверждённое отклонение либо согласовать изменение Задания."
                 if kind == "PROJECT_FINDING" else
@@ -522,6 +566,8 @@ def atomic_evidence_facts(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
 def verify_checklist_rows(
     checklist_rows: list[dict[str, Any]], *, knowledge_root: str,
     fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
+    judge_provider: Any = None, critic_provider: Any = None,
+    semantic_level: str = "off", semantic_limit: int = 0,
 ) -> dict[str, Any]:
     """Run the same atomic evidence gate over actionable corporate checklist rows.
 
@@ -561,7 +607,9 @@ def verify_checklist_rows(
         row_by_parent[parent_id] = row
 
     verified = verify_atomic_requirements(
-        atoms, knowledge_root=knowledge_root, fact_graph=fact_graph, page_corpus=page_corpus
+        atoms, knowledge_root=knowledge_root, fact_graph=fact_graph, page_corpus=page_corpus,
+        judge_provider=judge_provider, critic_provider=critic_provider,
+        semantic_level=semantic_level, semantic_limit=semantic_limit,
     )
     by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for atom in verified:
@@ -576,6 +624,14 @@ def verify_checklist_rows(
         row["atomic_conditions"] = conditions
         row["atomic_condition_count"] = len(conditions)
         row["atomic_completed"] = counts["VERIFIED_OK"] + counts["PROJECT_FINDING"]
+        level_order = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5}
+        evidence_levels = [str(item.get("evidence_level") or "L0") for item in conditions]
+        evidence_ready = sum(level_order.get(value, 0) >= 3 for value in evidence_levels)
+        row["evidence_level"] = min(evidence_levels, key=lambda value: level_order.get(value, 0)) if evidence_levels else "L0"
+        row["evidence_level_distribution"] = dict(Counter(evidence_levels))
+        row["evidence_ready_atomic"] = evidence_ready
+        row["evidence_coverage_pct"] = round(100 * evidence_ready / max(1, len(conditions)), 1)
+        row["semantic_consensus_completed"] = sum(str(item.get("semantic_consensus_state") or "") == "PASSED" for item in conditions)
         categorical_eligible=all(bool(item.get("automatic_verdict_eligible")) for item in conditions)
         recipe_statuses={str(item.get("recipe_status") or "") for item in conditions}
         if "RETRIEVAL_ONLY" in recipe_statuses:
@@ -606,6 +662,7 @@ def verify_checklist_rows(
             )),
         })
         if counts["PROJECT_FINDING"]:
+            row["evidence_level"] = "L5"
             row.update({
                 "status": "Нет", "proof_kind": "STRUCTURED_COMPARISON",
                 "verification_kind": "PROJECT_FINDING", "verification_state": KIND_STATES["PROJECT_FINDING"],
@@ -615,6 +672,7 @@ def verify_checklist_rows(
             })
             findings += 1
         elif counts["VERIFIED_OK"] == len(conditions):
+            row["evidence_level"] = "L5"
             row.update({
                 "status": "Да", "proof_kind": "VERIFIED_ENGINEERING_EVIDENCE",
                 "verification_kind": "VERIFIED_OK", "verification_state": KIND_STATES["VERIFIED_OK"],
@@ -650,6 +708,7 @@ def verify_checklist_rows(
     return {
         "version": ENGINE_VERSION,
         "atoms": verified,
+        "semantic_engine_audit": dict((verified[0] if verified else {}).get("semantic_engine_audit") or {}),
         "summary": {
             "checklist_rows": len(row_by_parent), "atomic_conditions": len(verified),
             "promoted_verified": promoted, "project_findings": findings,

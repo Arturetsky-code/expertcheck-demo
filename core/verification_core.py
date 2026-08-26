@@ -111,11 +111,24 @@ def domain_summary(rows:list[dict[str,Any]], domain:str) -> dict[str,Any]:
     total=len([x for x in annotated if not x.get("is_heading")])
     counts={k:sum(1 for x in annotated if x.get("verification_kind")==k and not x.get("is_heading")) for k in ("VERIFIED_OK","PROJECT_FINDING","REVIEW_QUESTION","SYSTEM_LIMITATION","INFORMATIONAL")}
     completed=counts["VERIFIED_OK"]+counts["PROJECT_FINDING"]
+    active=[x for x in annotated if not x.get("is_heading")]
+    evidence_ready=sum(str(x.get("evidence_level") or "") in {"L3","L4","L5"} for x in active)
+    semantic_consensus=sum(
+        str(x.get("semantic_consensus_state") or "").upper()=="PASSED"
+        or int(x.get("semantic_consensus_completed") or 0)>0
+        for x in active
+    )
     return {
         "total":total,"verified_ok":counts["VERIFIED_OK"],"project_findings":counts["PROJECT_FINDING"],
         "review_questions":counts["REVIEW_QUESTION"],"system_limitations":counts["SYSTEM_LIMITATION"],
         "informational":counts["INFORMATIONAL"],
         "completed":completed,"automatic_coverage_pct":round(100*completed/max(1,total),1),
+        "evidence_ready":evidence_ready,"evidence_coverage_pct":round(100*evidence_ready/max(1,total),1),
+        "semantic_consensus_completed":semantic_consensus,
+        "evidence_level_distribution":{
+            level:sum(str(x.get("evidence_level") or "L0")==level for x in active)
+            for level in ("L0","L1","L2","L3","L4","L5")
+        },
     }
 
 

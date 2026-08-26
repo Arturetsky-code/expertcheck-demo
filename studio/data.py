@@ -397,7 +397,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Подтверждённых несоответствий проекта', total_project_findings],
         ['Вопросов специалисту', total_review_questions],
         ['Проверок вне автоматического покрытия', total_system_limitations],
+        ['Строгое покрытие L5, %', coverage_matrix_payload.get('coverage_pct',0)],
+        ['Доказательное покрытие L3–L5, %', coverage_matrix_payload.get('evidence_coverage_pct',0)],
+        ['Проверок с независимым AI-консенсусом', coverage_matrix_payload.get('semantic_consensus_completed',0)],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
+        ['Задание: доказательное покрытие L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
         ['Задание: выявлено несоответствий', assignment_plan.get('issue',0)],
         ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
@@ -406,6 +410,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД: обнаружено уникальных ссылок', len(normative_rows)],
         ['НТД: проверено по реестру актуальности', normative_registry_verified],
         ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
+        ['Чек-листы: доказательное покрытие L3–L5, %', checklist_plan.get('evidence_coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
         ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
         ['Сверка реестров/чертежей: завершено', f"{_cross_completed(register_comparisons)} из {len(register_comparisons)}"],
@@ -419,6 +424,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
+            'Строгое покрытие L5, %','Доказательное покрытие L3–L5, %','Проверок с независимым AI-консенсусом',
+            'Задание: доказательное покрытие L3–L5, %','Чек-листы: доказательное покрытие L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
             'Контроль согласованности отчёта','Итоговый вывод',
@@ -485,6 +492,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Причина незавершения':r.get('coverage_reason') or '',
         'Недостающие слоты':', '.join(r.get('missing_evidence_slots') or []),
         'Deep Evidence': ru_label(r.get('deep_evidence_state')),
+        'Уровень доказательства':ru_label(r.get('evidence_level') or 'L0'),
+        'Доказательное покрытие атомов, %':r.get('evidence_coverage_pct'),
+        'Смысловой консенсус':ru_label(r.get('semantic_consensus_state')),
+        'Смысловых условий завершено':r.get('semantic_consensus_completed',0),
         'Причины ограничения': ' | '.join(r.get('deep_evidence_reasons') or []),
         'Источники': _evidence_sources(r),
     } for r in report['checklist_results'] if not r.get('is_heading')])
@@ -526,6 +537,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Тип проверки':ru_label(x.get('check_type')) if x.get('check_type') else '—',
         'Архетип покрытия':ru_label(x.get('coverage_archetype')) or '—',
         'Состояние покрытия':ru_label(x.get('coverage_state')) or '—',
+        'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
+        'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
+        'Семейство проверяющего механизма':ru_label(x.get('checker_family')) if x.get('checker_family') else '—',
+        'Независимый смысловой консенсус':ru_label(x.get('semantic_consensus_state')) if x.get('semantic_consensus_state') else '—',
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
         'Маршрут доказательства':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
         'Итоговый класс':verification_label(x.get('verification_kind')),
@@ -536,6 +551,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     } for x in review_plan.get('items') or []])
     limitations_df=pd.DataFrame([{
         'Контур':x.get('domain'),'Проверка':x.get('title'),'Архетип':ru_label(x.get('coverage_archetype')),
+        'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Код ограничения':ru_label(x.get('coverage_reason_code') or 'UNSPECIFIED'),
         'Что не получено':x.get('coverage_reason') or 'Доказательный контракт не завершён.',
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
@@ -545,6 +561,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     coverage_matrix_df=pd.DataFrame([{
         'Архетип':ru_label(x.get('archetype')),'Всего':x.get('total',0),'Завершено автоматически':x.get('completed',0),
         'Покрытие, %':x.get('coverage_pct',0),'Подтверждено':x.get('verified_ok',0),
+        'Доказательства готовы L3–L5':x.get('evidence_ready',0),'Доказательное покрытие, %':x.get('evidence_coverage_pct',0),
+        'Независимый AI-консенсус':x.get('semantic_consensus_completed',0),
+        'L0':(x.get('evidence_levels') or {}).get('L0',0),'L1':(x.get('evidence_levels') or {}).get('L1',0),
+        'L2':(x.get('evidence_levels') or {}).get('L2',0),'L3':(x.get('evidence_levels') or {}).get('L3',0),
+        'L4':(x.get('evidence_levels') or {}).get('L4',0),'L5':(x.get('evidence_levels') or {}).get('L5',0),
         'Несоответствия':x.get('project_findings',0),'Вопросы специалисту':x.get('review_questions',0),
         'Ограничения системы':x.get('system_limitations',0),'Доверенные рецепты':x.get('trusted_recipes',0),
         'Только поиск кандидатов':x.get('retrieval_only_recipes',0),
@@ -593,6 +614,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Причина незавершения':x.get('coverage_reason') or '',
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
         'Deep Evidence':ru_label(x.get('deep_evidence_state')),
+        'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
+        'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
+        'Смысловой консенсус':ru_label(x.get('semantic_consensus_state')),
         'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or []),
     } for x in assignment_rows])
     assignment_gip_df=_excel_safe_frame(assignment_df,columns=[
@@ -632,6 +656,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Требуемая модальность':ru_label((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('required_modality')),
         'Критические квалификаторы':', '.join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers') or []),
         'Причины смыслового удержания':' | '.join(x.get('semantic_gate_reasons') or []),
+        'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
+        'Причина уровня доказательства':x.get('evidence_level_reason') or '',
+        'Семейство checker':ru_label(x.get('checker_family')),
+        'Режим checker':ru_label(x.get('checker_mode')),
+        'Смысловой консенсус':ru_label(x.get('semantic_consensus_state')),
+        'Judge':ru_label((x.get('semantic_judge') or {}).get('verdict')),
+        'Достоверность Judge':(x.get('semantic_judge') or {}).get('confidence'),
+        'Провайдер Judge':(x.get('semantic_judge') or {}).get('provider'),
+        'Critic принял':('Да' if (x.get('semantic_critic') or {}).get('accept') is True else 'Нет' if x.get('semantic_critic') else '—'),
+        'Провайдер Critic':(x.get('semantic_critic') or {}).get('provider'),
+        'Причины блокировки консенсуса':' | '.join(x.get('semantic_consensus_reasons') or []),
         'Deep Evidence':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
         'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons') or []),
     } for x in assignment_atomic_rows])
@@ -704,12 +739,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     # Рабочие отчёты снова содержат полезную предметную информацию, но без raw-диагностики.
     if not problems_df.empty:
-        sheets.append(('Несоответствия и вопросы', problems_df))
+        if report_kind == 'manager':
+            sheets.append(('Несоответствия и вопросы', _excel_safe_frame(problems_df, columns=[
+                'ID','Объект','Показатель','Результат','Приоритет','Пояснение','Источники',
+            ])))
+        else:
+            sheets.append(('Несоответствия и вопросы', problems_df))
     if report_kind == 'manager':
         def readiness_row(label,domain):
             total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)
             attention=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
-            return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Покрытие, %':round(100*(ok+issues)/max(1,total),1)}
+            return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Строгое покрытие L5, %':round(100*(ok+issues)/max(1,total),1),'Доказательное покрытие L3–L5, %':domain.get('evidence_coverage_pct',0),'Независимый AI-консенсус':domain.get('semantic_consensus_completed',0)}
         normative_valid_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру' and x.get('status') in {'Действует','Действует с изменениями'})
         cross_total=len(comparison_records)
         cross_ok=sum(1 for x in comparison_records if str(x.get('status') or x.get('result') or '').strip().upper() in {'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО'})
@@ -724,8 +764,15 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             {'Контур':'Сверка инженерных параметров','Всего':len(engineering_comparisons),'Завершено автоматически':_cross_completed(engineering_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in engineering_comparisons),'Требует внимания':max(0,len(engineering_comparisons)-_cross_completed(engineering_comparisons)),'Покрытие, %':round(100*_cross_completed(engineering_comparisons)/max(1,len(engineering_comparisons)),1)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
-        if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
-        if not limitations_df.empty: sheets.append(('Границы автоматизации',limitations_df.head(40)))
+        if not coverage_matrix_df.empty:
+            sheets.append(('Карта покрытия',_excel_safe_frame(coverage_matrix_df,columns=[
+                'Архетип','Всего','Завершено автоматически','Покрытие, %',
+                'Доказательства готовы L3–L5','Доказательное покрытие, %','L4','Основные причины пробелов',
+            ])))
+        if not limitations_df.empty:
+            sheets.append(('Границы автоматизации',_excel_safe_frame(limitations_df.head(40),columns=[
+                'Контур','Проверка','Уровень доказательства','Что не получено','Ожидаемые разделы',
+            ])))
         if not recommendations_df.empty: sheets.append(('Приоритетные действия', recommendations_df.head(10)))
     elif report_kind == 'gip':
         if not review_plan_df.empty: sheets.append(('Проверка требований', review_plan_df))
@@ -846,9 +893,19 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 worksheet.set_column(0, 0, 34, label_fmt)
                 worksheet.set_column(1, 1, 68, value_fmt)
                 worksheet.set_landscape()
+                worksheet.set_paper(9)
                 worksheet.fit_to_pages(1, 0)
+                worksheet.set_margins(0.3, 0.3, 0.45, 0.45)
+                worksheet.set_footer('&LExpertCheck&CСтраница &P из &N&R&D')
             else:
                 worksheet.freeze_panes(1, 0)
+                worksheet.set_landscape()
+                worksheet.set_paper(9)
+                worksheet.fit_to_pages(1, 0)
+                worksheet.repeat_rows(0)
+                worksheet.set_margins(0.25, 0.25, 0.4, 0.4)
+                worksheet.set_header(f'&LExpertCheck&C{name}&R{str(project)[:45].replace("&", "&&")}')
+                worksheet.set_footer('&LАвтоматизированная предпроверка&CСтраница &P из &N&R&D')
                 if len(safe_frame.columns):
                     worksheet.autofilter(0, 0, max(len(safe_frame), 1), len(safe_frame.columns)-1)
                 for col_idx, column in enumerate(safe_frame.columns):

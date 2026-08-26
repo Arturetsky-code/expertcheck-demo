@@ -23,11 +23,13 @@ def render(ctx):
     report=build_structured_report(st.session_state.project_name,docs.to_dict('records'),comparisons.to_dict('records'),risks=risks,checklist_results=checklist,assembly_rows=assembly)
     plan=first.get('project_review_plan') or {}
     domains=plan.get('domains') or {}
-    c1,c2,c3,c4=st.columns(4)
+    coverage=first.get('coverage_matrix') or {}
+    c1,c2,c3,c4,c5=st.columns(5)
     with c1:card('Несоответствия',report['summary'].get('project_findings',0),'Доказанные выводы','bad' if report['summary'].get('project_findings') else 'ok')
-    with c2:card('Задание',f"{(domains.get('assignment') or {}).get('automatic_coverage_pct',0)}%",'Автоматическое покрытие')
-    with c3:card('НТД',f"{(domains.get('normative') or {}).get('automatic_coverage_pct',0)}%",'Доказательное покрытие')
-    with c4:card('Чек-листы',f"{(domains.get('checklist') or {}).get('automatic_coverage_pct',0)}%",'Автоматическое покрытие')
+    with c2:card('Строгое покрытие',f"{coverage.get('coverage_pct',0)}%",'Завершено на L5')
+    with c3:card('Доказательства',f"{coverage.get('evidence_coverage_pct',0)}%",'Адресные уровни L3–L5')
+    with c4:card('Готово для Judge',int((coverage.get('evidence_levels') or {}).get('L4',0)),'Пакеты L4')
+    with c5:card('AI-консенсус',coverage.get('semantic_consensus_completed',0),'Независимые Judge + Critic')
     st.info(report['conclusion'])
 
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')

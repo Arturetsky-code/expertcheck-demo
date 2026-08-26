@@ -4,6 +4,7 @@ import streamlit as st
 from studio.components import hero,card,empty,section
 from core.display_localization import status_label, scope_label
 from core.project_review_planner import build_review_plan
+from core.ru_labels import ru_label
 
 
 def _first(docs):
@@ -13,7 +14,8 @@ def _first(docs):
 def _domain_card(label,summary):
     total=int(summary.get('total') or 0); done=int(summary.get('completed') or 0)
     pct=float(summary.get('automatic_coverage_pct') or 0)
-    card(label,f'{done}/{total}',f'Доказательно завершено · {pct:.1f}%','ok' if total and done==total else 'warn')
+    evidence_pct=float(summary.get('evidence_coverage_pct') or 0)
+    card(label,f'{done}/{total}',f'Строго L5: {pct:.1f}% · доказательства L3–L5: {evidence_pct:.1f}%','ok' if total and done==total else 'warn')
 
 
 def render(ctx):
@@ -35,7 +37,7 @@ def render(ctx):
     with c2:_domain_card('Нормативные требования',domains.get('normative') or {})
     with c3:_domain_card('Корпоративные чек-листы',domains.get('checklist') or {})
 
-    st.caption('Покрытие показывает только проверки, завершённые доказательным результатом. Ненайденные сведения и ограничения алгоритма не считаются несоответствиями проекта.')
+    st.caption('Строгое покрытие L5 показывает завершённые выводы. Доказательное покрытие L3–L5 отдельно показывает адресные материалы, которые уже найдены и готовы к проверке. Ненайденные сведения и ограничения алгоритма не считаются несоответствиями проекта.')
 
     checklist_rows=list((first.get('automatic_checklist_review') or {}).get('results') or [])
     trusted_recipes=sum(1 for x in checklist_rows if x.get('recipe_status')=='TRUSTED')
@@ -50,8 +52,9 @@ def render(ctx):
             if x.get('verification_kind') not in {'PROJECT_FINDING','REVIEW_QUESTION','SYSTEM_LIMITATION'}: continue
             rows.append({
                 'Контур':{'assignment':'Задание','normative':'НТД','checklist':'Чек-лист'}.get(x.get('domain'),x.get('domain')),
-                'Проверка':x.get('check'),'Результат':x.get('verification_state'),
+                'Проверка':x.get('title') or x.get('check'),'Результат':x.get('verification_state'),
                 'Область':scope_label(x.get('scope')) if x.get('scope') else '—',
+                'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
             })
         if rows:
             section('Незавершённые и проблемные проверки','В рабочем режиме показывается только то, что требует решения или отражает текущее покрытие.')

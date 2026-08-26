@@ -111,26 +111,35 @@ def render(ctx) -> None:
             index=provider_options.index(st.session_state.get('external_ai_provider', 'Отключён')) if st.session_state.get('external_ai_provider', 'Отключён') in provider_options else 0,
             key='settings_external_ai_provider',
         )
-        c_extract, c_review = st.columns(2)
+        c_extract, c_judge, c_critic = st.columns(3)
         with c_extract:
             extraction_provider = st.selectbox(
-                'AI Extraction — объекты, ТЭП, чек-листы',
+                'AI Extraction — извлечение фактов',
                 provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'Авто: OpenRouter → Groq')) if st.session_state.get('ai_extraction_provider', 'Авто: OpenRouter → Groq') in provider_options[1:-1] else 0,
+                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'Groq')) if st.session_state.get('ai_extraction_provider', 'Groq') in provider_options[1:-1] else 0,
                 key='settings_ai_extraction_provider',
-                help='Рекомендуется OpenRouter или автоматический резерв: важнее качество понимания сложных фрагментов.',
+                help='Быстро извлекает объекты, показатели и спорные смысловые кандидаты. Рекомендуется Groq.',
             )
-        with c_review:
-            reviewer_provider = st.selectbox(
-                'AI Reviewer — пояснения и ответы инженеру',
+        with c_judge:
+            judge_provider = st.selectbox(
+                'AI Judge — оценка доказательства',
                 provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_reviewer_provider', 'Groq')) if st.session_state.get('ai_reviewer_provider', 'Groq') in provider_options[1:-1] else 1,
-                key='settings_ai_reviewer_provider',
-                help='Рекомендуется Groq: быстрые ответы и интерактивная работа.',
+                index=provider_options[1:-1].index(st.session_state.get('ai_judge_provider', 'Авто: OpenRouter → Groq')) if st.session_state.get('ai_judge_provider', 'Авто: OpenRouter → Groq') in provider_options[1:-1] else 0,
+                key='settings_ai_judge_provider',
+                help='Сопоставляет одно атомарное требование с небольшим адресным evidence packet.',
             )
+        with c_critic:
+            critic_provider = st.selectbox(
+                'AI Critic — независимая проверка',
+                provider_options[1:-1],
+                index=provider_options[1:-1].index(st.session_state.get('ai_critic_provider', 'Groq')) if st.session_state.get('ai_critic_provider', 'Groq') in provider_options[1:-1] else 1,
+                key='settings_ai_critic_provider',
+                help='Ищет подмену объекта, показателя, единицы, модальности и квалификаторов. Должен фактически отличаться от Judge.',
+            )
+        reviewer_provider = critic_provider
         st.radio(
             'Режим передачи данных',
-            ['Только обезличенные структурированные данные'],
+            ['Только ограниченные evidence packets; полные PDF не передаются'],
             disabled=True,
             key='settings_ai_transfer_mode',
         )
@@ -144,17 +153,48 @@ def render(ctx) -> None:
         assisted = st.checkbox(
             'Использовать внешний AI для неоднозначных объектов и пунктов чек-листов',
             value=bool(st.session_state.get('ai_assisted_extraction', True)),
-            help='AI анализирует только обезличенные структурированные фрагменты. В режиме «Расширенный» он автоматически проверяет неоднозначные объекты, привязку ТЭП и смысловые пункты чек-листов. Окончательный реестр подтверждает пользователь.',
+            help='AI анализирует только ограниченные адресные фрагменты: имена файлов заменяются псевдонимами, контакты и служебные шифры маскируются. В режиме «Расширенный» он автоматически проверяет неоднозначные объекты, привязку ТЭП и смысловые пункты чек-листов. Окончательный реестр подтверждает пользователь.',
             key='settings_ai_assisted_extraction',
         )
-        st.caption('Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto. Для DeepSeek: DEEPSEEK_API_KEY и DEEPSEEK_MODEL для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
+        st.caption('Во внешний AI передаются только ограниченные evidence packets; имена документов псевдонимизируются, контакты и служебные шифры маскируются. Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto. Для DeepSeek: DEEPSEEK_API_KEY и DEEPSEEK_MODEL для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
         if st.button('Сохранить AI-настройки', width='content'):
             st.session_state.external_ai_provider = provider
             st.session_state.ai_extraction_provider = extraction_provider
+            st.session_state.ai_judge_provider = judge_provider
+            st.session_state.ai_critic_provider = critic_provider
             st.session_state.ai_reviewer_provider = reviewer_provider
             st.session_state.ai_assisted_extraction = assisted
             st.session_state.ai_pipeline_level = ai_level
             st.success('Настройки AI сохранены для текущей сессии.')
+        if st.button('Проверить агентный контур Extraction → Judge → Critic', width='content'):
+            from core.ai_gateway import diagnostic_message, provider_for_role
+            selected_state = dict(st.session_state)
+            selected_state.update({
+                'ai_extraction_provider': extraction_provider,
+                'ai_judge_provider': judge_provider,
+                'ai_critic_provider': critic_provider,
+            })
+            role_rows=[]
+            actual={}
+            with st.spinner('Проверяем три AI-роли на коротком обезличенном запросе...'):
+                for role,label in (('extraction','Извлечение'),('judge','Оценка доказательства'),('critic','Независимая критика')):
+                    role_provider=provider_for_role(role,selected_state,st.secrets)
+                    result=role_provider.test_connection() if role_provider else None
+                    ok=bool(result and result.ok)
+                    actual[role]=str(getattr(result,'provider','') or '') if result else ''
+                    role_rows.append({
+                        'Роль':label,
+                        'Настройка':selected_state.get(f'ai_{role}_provider',''),
+                        'Фактический провайдер':actual[role] or '—',
+                        'Модель':str(getattr(result,'model','') or '—') if result else '—',
+                        'Результат':'Подключение работает' if ok else 'Ошибка подключения',
+                        'Диагностика':diagnostic_message(result) if result else 'Провайдер не настроен.',
+                    })
+            st.dataframe(role_rows,hide_index=True,width='stretch')
+            if actual.get('judge') and actual.get('critic') and actual['judge'] != actual['critic']:
+                st.success('Judge и Critic фактически обслуживаются разными провайдерами: независимый консенсус L5 доступен.')
+            elif actual.get('judge') and actual.get('critic'):
+                st.warning('Judge и Critic фактически ответили через одного провайдера. Смысловые выводы будут удержаны на L4 до независимой проверки.')
         if provider != 'Отключён':
             from core.ai_gateway import diagnostic_message, provider_from_settings
             ai_provider = provider_from_settings(provider, st.secrets)
@@ -167,7 +207,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемая схема: уровень «Умный автоматический»; AI Extraction — OpenRouter с резервом Groq; AI Reviewer — Groq. DeepSeek можно назначить отдельным провайдером или резервом. Для Groq рекомендуется GROQ_MODEL = "auto": приложение проверит ключ, получит актуальный список моделей и подберёт доступную.')
+        st.info('Рекомендуемая схема без нового платного агента: «Умный автоматический»; Extraction — Groq; Judge — OpenRouter (или DeepSeek, если доступен); Critic — Groq. Категоричный смысловой вывод разрешается только когда Judge и Critic фактически ответили через разных провайдеров. Для Groq рекомендуется GROQ_MODEL = "auto".')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

@@ -135,12 +135,18 @@ def _upload(ctx):
 
             ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
             ai_provider = None
+            judge_provider = None
+            critic_provider = None
             if ai_level != 'Отключён':
                 ai_provider = provider_for_role('extraction', st.session_state, st.secrets)
+                judge_provider = provider_for_role('judge', st.session_state, st.secrets)
+                critic_provider = provider_for_role('critic', st.session_state, st.secrets)
             ai_options = {'level': {
                 'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',
                 'Расширенный': 'extended', 'Максимальный': 'maximum',
-            }.get(ai_level, 'helper'), 'provider': ai_provider, 'learning_examples': st.session_state.get('object_learning_examples', [])}
+            }.get(ai_level, 'helper'), 'provider': ai_provider, 'judge_provider': judge_provider,
+                'critic_provider': critic_provider, 'reviewer_provider': critic_provider,
+                'learning_examples': st.session_state.get('object_learning_examples', [])}
             try:
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
             except TypeError:
@@ -299,11 +305,12 @@ def _dashboard(ctx):
         if not assignment_rows:
             st.info('Задание на проектирование не распознано в комплекте либо машинно-интерпретируемые требования не извлечены. При необходимости укажите тип документа «Задание на проектирование» на этапе загрузки.')
         else:
-            a1,a2,a3,a4=st.columns(4)
+            a1,a2,a3,a4,a5=st.columns(5)
             a1.metric('Требований',assignment_summary.get('total',len(assignment_rows)))
             a2.metric('Соответствуют',assignment_summary.get('compliant',0))
             a3.metric('Отклонения',assignment_summary.get('deviation',0))
             a4.metric('Требуют проверки / не проверены',assignment_summary.get('unconfirmed',0)+assignment_summary.get('semantic',0)+assignment_summary.get('not_checked',0))
+            a5.metric('Доказательное покрытие L3–L5',f"{assignment_summary.get('evidence_coverage_pct',0)}%")
             show=pd.DataFrame([{
                 'Строка':x.get('source_row') or '—',
                 'Раздел / вопрос':x.get('source_row_title') or '—',
@@ -319,6 +326,9 @@ def _dashboard(ctx):
                 'Источник':f"{x.get('source_document')}, стр. {x.get('page')}",
                 'Доказательства':' | '.join(x.get('evidence') or []),
                 'Качество доказательства':ru_label(x.get('evidence_quality_state')),
+                'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
+                'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
+                'AI-консенсусов':x.get('semantic_consensus_completed',0),
                 'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
             } for x in assignment_rows])
             st.dataframe(show,hide_index=True,width='stretch')

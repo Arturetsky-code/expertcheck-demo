@@ -16,10 +16,14 @@ def evaluate_semantic_verdict_gate(
     reasons: list[str] = []
 
     if proof in {"STRUCTURED_VALUE", "STRUCTURED_COMPARISON"}:
+        def trace_level(row: dict[str, Any]) -> str:
+            locator = row.get("source_locator")
+            locator_level = locator.get("physical_trace_level") if isinstance(locator, dict) else ""
+            return str(row.get("physical_trace_level") or locator_level or "").upper()
+
         exact = [
             row for row in rows
-            if str(row.get("physical_trace_level") or (row.get("source_locator") or {}).get("physical_trace_level") or "").upper()
-            in {"ROW_TRACE", "CELL_TRACE"}
+            if trace_level(row) in {"ROW_TRACE", "CELL_TRACE"}
             and row.get("admitted", True) is not False
             and not str(row.get("engineering_plausibility_status") or "").upper().startswith("BLOCKED")
         ]

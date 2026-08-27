@@ -15,7 +15,7 @@ from .typed_evidence_resolver import DESIGN_MARKERS, infer_source_modality
 from .verification_core import KIND_STATES
 
 
-ENGINE_VERSION = "1.0-semantic-evidence-consensus"
+ENGINE_VERSION = "2.0-strict-semantic-evidence-consensus"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -115,9 +115,18 @@ def _owner_match(atom: dict[str, Any], row: dict[str, Any], text: str) -> bool |
     owner = str(atom.get("object_name") or atom.get("scope_entity") or "").strip()
     if not owner:
         return None
-    expected = set(_tokens(owner))
     observed = " ".join(str(row.get(key) or "") for key in ("owner", "entity_name", "object_name")) + " " + text
-    return bool(expected and set(_token_hits(observed, expected)))
+    if _norm(owner) and _norm(owner) in _norm(observed):
+        return True
+    generic = {
+        "объект", "здание", "сооружен", "станция", "площадка", "система",
+        "установк", "корпус", "комплекс", "участок", "отделени",
+    }
+    expected = {token for token in _tokens(owner) if token not in generic}
+    if not expected:
+        expected = set(_tokens(owner))
+    hits = set(_token_hits(observed, expected))
+    return bool(expected and len(hits) / len(expected) >= 0.6)
 
 
 def _qualifiers(atom: dict[str, Any]) -> list[str]:
@@ -285,7 +294,17 @@ def _evidence_level(candidates: list[dict[str, Any]]) -> tuple[str, str]:
         return "L1", "Найден только неадресный смысловой кандидат."
     if not any(int(row.get("retrieval_score") or 0) >= 55 for row in candidates):
         return "L2", "Есть адресный кандидат, но его связь с требованием слаба."
-    if not any(row.get("contract_ready_for_judgement") for row in candidates):
+    contract_ready = [
+        row for row in candidates
+        if row.get("contract_ready_for_judgement")
+        and _addressable(row)
+        and int(row.get("retrieval_score") or 0) >= 72
+        and str(row.get("modality_gate_state") or "").upper() == "PASSED"
+        and not list(row.get("missing_critical_qualifiers") or [])
+        and row.get("owner_match") is not False
+        and row.get("property_match") is not False
+    ]
+    if not contract_ready:
         return "L3", "Сущность/показатель сопоставлены частично; доказательственный контракт ещё не завершён."
     return "L4", "Сформирован адресный доказательственный пакет, готовый к независимой смысловой проверке."
 
@@ -312,6 +331,16 @@ def build_evidence_packet(
         if len(deduped) >= max_evidence:
             break
     level, reason = _evidence_level(deduped)
+    ready_ids = [
+        str(item.get("evidence_id") or "") for item in deduped
+        if item.get("contract_ready_for_judgement")
+        and _addressable(item)
+        and int(item.get("retrieval_score") or 0) >= 72
+        and str(item.get("modality_gate_state") or "").upper() == "PASSED"
+        and not list(item.get("missing_critical_qualifiers") or [])
+        and item.get("owner_match") is not False
+        and item.get("property_match") is not False
+    ]
     contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
     packet_id = str(row.get("atom_id") or row.get("requirement_id") or row.get("checklist_parent_id") or "")
     return {
@@ -331,6 +360,8 @@ def build_evidence_packet(
         "checker": profile,
         "evidence_level": level,
         "evidence_level_reason": reason,
+        "evidence_contract_state": "SATISFIED" if level == "L4" else "UNSATISFIED",
+        "contract_ready_evidence_ids": ready_ids,
         "evidence": deduped,
         "policy": "Отсутствие доказательства не является несоответствием. Использовать только evidence_id из пакета.",
     }
@@ -444,31 +475,68 @@ accept=true допустимо только если вывод полность
 {"reviews":[{"packet_id":"...","accept":true|false,"evidence_ids":["..."],"blocking_concerns":["..."],"confidence":0.0,"reason":"кратко по-русски"}]}"""
 
 
-def _call_batches(provider: Any, packets: list[dict[str, Any]], *, critic: bool = False, batch_size: int = 6) -> tuple[dict[str, dict[str, Any]], list[str]]:
+def _provider_name(provider: Any) -> str:
+    return str(getattr(provider, "name", "") or getattr(provider, "provider", "") or type(provider).__name__ if provider is not None else "")
+
+
+def _call_batches(
+    provider: Any,
+    packets: list[dict[str, Any]],
+    *,
+    critic: bool = False,
+    batch_size: int = 4,
+    retry_limit: int = 12,
+) -> tuple[dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
     if provider is None or not packets:
-        return {}, []
+        return {}, [], []
     collected: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
+    calls: list[dict[str, Any]] = []
     root_key = "reviews" if critic else "decisions"
     system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
-    for offset in range(0, len(packets), batch_size):
-        batch = packets[offset:offset + batch_size]
+
+    def call(batch: list[dict[str, Any]], attempt: int) -> None:
         payload = {"task": "evidence_critic" if critic else "evidence_judge", "packets": batch}
+        packet_ids = [str(packet.get("packet_id") or "") for packet in batch]
+        log = {
+            "role": "CRITIC" if critic else "JUDGE",
+            "attempt": attempt,
+            "configured_provider": _provider_name(provider),
+            "packet_ids": packet_ids,
+            "requested": len(packet_ids),
+            "responses": 0,
+            "actual_provider": "",
+            "model": "",
+            "state": "FAILED",
+            "error": "",
+        }
         try:
             result = provider.generate(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), system)
         except Exception as exc:
-            errors.append(f"{type(exc).__name__}: {exc}")
-            continue
+            message = f"{type(exc).__name__}: {exc}"
+            errors.append(message)
+            log["error"] = message
+            calls.append(log)
+            return
         if not getattr(result, "ok", False):
-            errors.append(str(getattr(result, "error", "AI provider error")))
-            continue
+            message = str(getattr(result, "error", "AI provider error"))
+            errors.append(message)
+            log["error"] = message
+            calls.append(log)
+            return
+        log["actual_provider"] = str(getattr(result, "provider", "") or getattr(provider, "name", ""))
+        log["model"] = str(getattr(result, "model", "") or "")
         parsed = _extract_json(getattr(result, "text", ""))
         if not parsed or not isinstance(parsed.get(root_key), list):
-            errors.append("AI вернул ответ, не соответствующий JSON-контракту.")
-            continue
-        actual_provider = str(getattr(result, "provider", "") or getattr(provider, "name", ""))
-        actual_model = str(getattr(result, "model", "") or "")
+            message = "AI вернул ответ, не соответствующий JSON-контракту."
+            errors.append(message)
+            log["error"] = message
+            calls.append(log)
+            return
+        actual_provider = log["actual_provider"]
+        actual_model = log["model"]
         allowed_ids = {str(packet.get("packet_id") or "") for packet in batch}
+        accepted = 0
         for raw in parsed[root_key]:
             if not isinstance(raw, dict):
                 continue
@@ -476,7 +544,20 @@ def _call_batches(provider: Any, packets: list[dict[str, Any]], *, critic: bool 
             if packet_id not in allowed_ids:
                 continue
             collected[packet_id] = {**raw, "provider": actual_provider, "model": actual_model}
-    return collected, errors
+            accepted += 1
+        log["responses"] = accepted
+        log["state"] = "PASSED" if accepted == len(allowed_ids) else "PARTIAL"
+        if accepted < len(allowed_ids):
+            missing = sorted(allowed_ids - set(collected))
+            log["error"] = f"Нет ответов для packet_id: {', '.join(missing)}"
+        calls.append(log)
+
+    for offset in range(0, len(packets), batch_size):
+        call(packets[offset:offset + batch_size], 1)
+    missing_packets = [packet for packet in packets if str(packet.get("packet_id") or "") not in collected]
+    for packet in missing_packets[:retry_limit]:
+        call([packet], 2)
+    return collected, list(dict.fromkeys(errors)), calls
 
 
 def _confidence(value: Any) -> float:
@@ -489,34 +570,39 @@ def _confidence(value: Any) -> float:
 
 def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[str, Any]:
     raw = dict(raw or {})
+    received = bool(raw)
     verdict = str(raw.get("verdict") or "INSUFFICIENT").upper()
     allowed_ids = {str(row.get("evidence_id") or "") for row in packet.get("evidence") or []}
     cited = [str(value) for value in raw.get("evidence_ids") or [] if str(value) in allowed_ids]
     invalid_refs = [str(value) for value in raw.get("evidence_ids") or [] if str(value) not in allowed_ids]
     confidence = _confidence(raw.get("confidence"))
     reasons: list[str] = []
+    if not received:
+        reasons.append("Judge не вернул решение по пакету.")
     if verdict not in JUDGE_VERDICTS:
         reasons.append("Недопустимый verdict.")
     if verdict in {"SUPPORTS", "CONTRADICTS"} and not cited:
         reasons.append("Категоричный AI-вывод не содержит допустимых evidence_id.")
     if invalid_refs:
         reasons.append("AI сослался на доказательство вне пакета.")
-    if verdict in {"SUPPORTS", "CONTRADICTS"} and confidence < 0.82:
-        reasons.append("Достоверность Judge ниже 0,82.")
-    if raw.get("same_entity") is False:
-        reasons.append("Доказательство относится к другой сущности.")
-    if raw.get("same_property") is False:
-        reasons.append("Доказательство относится к другому свойству.")
-    if raw.get("qualifiers_satisfied") is not True:
-        reasons.append("Judge не подтвердил все критические квалификаторы.")
-    if raw.get("modality_satisfied") is not True:
-        reasons.append("Judge не подтвердил требуемую модальность.")
-    valid = verdict in JUDGE_VERDICTS and not reasons
+    if verdict in {"SUPPORTS", "CONTRADICTS"}:
+        if confidence < 0.82:
+            reasons.append("Достоверность Judge ниже 0,82.")
+        if raw.get("same_entity") is False:
+            reasons.append("Доказательство относится к другой сущности.")
+        if raw.get("same_property") is False:
+            reasons.append("Доказательство относится к другому свойству.")
+        if packet.get("critical_qualifiers") and raw.get("qualifiers_satisfied") is not True:
+            reasons.append("Judge не подтвердил все критические квалификаторы.")
+        if raw.get("modality_satisfied") is not True:
+            reasons.append("Judge не подтвердил требуемую модальность.")
+    valid = received and verdict in JUDGE_VERDICTS and not reasons
     return {
         **raw,
         "verdict": verdict if verdict in JUDGE_VERDICTS else "INSUFFICIENT",
         "evidence_ids": cited,
         "confidence": confidence,
+        "response_received": received,
         "valid": valid,
         "validation_reasons": reasons,
     }
@@ -524,6 +610,7 @@ def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[
 
 def _validate_critic(packet: dict[str, Any], judge: dict[str, Any], raw: dict[str, Any] | None) -> dict[str, Any]:
     raw = dict(raw or {})
+    received = bool(raw)
     allowed_ids = set(judge.get("evidence_ids") or [])
     cited = [str(value) for value in raw.get("evidence_ids") or [] if str(value) in allowed_ids]
     invalid_refs = [str(value) for value in raw.get("evidence_ids") or [] if str(value) not in allowed_ids]
@@ -531,6 +618,8 @@ def _validate_critic(packet: dict[str, Any], judge: dict[str, Any], raw: dict[st
     confidence = _confidence(raw.get("confidence"))
     accept = raw.get("accept") is True
     reasons: list[str] = []
+    if not received:
+        reasons.append("Critic не вернул решение по пакету.")
     if accept and not cited:
         reasons.append("Critic не подтвердил ни одного evidence_id Judge.")
     if invalid_refs:
@@ -539,13 +628,14 @@ def _validate_critic(packet: dict[str, Any], judge: dict[str, Any], raw: dict[st
         reasons.append("Ответ Critic противоречив: accept=true при блокирующих замечаниях.")
     if accept and confidence < 0.78:
         reasons.append("Достоверность Critic ниже 0,78.")
-    valid = accept and not concerns and not reasons
+    valid = received and accept and not concerns and not reasons
     return {
         **raw,
         "accept": accept,
         "evidence_ids": cited,
         "blocking_concerns": concerns,
         "confidence": confidence,
+        "response_received": received,
         "valid": valid,
         "validation_reasons": reasons,
     }
@@ -581,9 +671,17 @@ def _apply_consensus(row: dict[str, Any], packet: dict[str, Any], judge: dict[st
     if not valid:
         row["semantic_consensus_state"] = "BLOCKED"
         row["evidence_level"] = packet.get("evidence_level")
-        reasons = list(judge.get("validation_reasons") or []) + list(critic.get("validation_reasons") or [])
-        if not independent:
+        reasons = list(judge.get("validation_reasons") or [])
+        if judge.get("valid") and verdict in {"SUPPORTS", "CONTRADICTS"}:
+            reasons.extend(critic.get("validation_reasons") or [])
+        if judge.get("response_received") and verdict not in {"SUPPORTS", "CONTRADICTS"}:
+            reasons.append(str(judge.get("reason") or "Judge классифицировал доказательство как недостаточное."))
+        judge_provider = str(judge.get("provider") or "")
+        critic_provider = str(critic.get("provider") or "")
+        if judge_provider and critic_provider and judge_provider == critic_provider:
             reasons.append("Judge и Critic фактически обслужены одним AI-провайдером.")
+        elif judge.get("valid") and verdict in {"SUPPORTS", "CONTRADICTS"} and not critic.get("response_received"):
+            reasons.append("Независимый Critic не вернул решение по подтверждаемому выводу Judge.")
         if verdict == "CONTRADICTS" and not any(
             str(item.get("semantic_verdict") or item.get("judge_verdict") or "").upper() == "CONTRADICTS"
             or item.get("negative_project_decision") is True
@@ -684,6 +782,7 @@ def run_semantic_evidence_engine(
         row["semantic_evidence_packet"] = packet
         row["evidence_level"] = packet["evidence_level"]
         row["evidence_level_reason"] = packet["evidence_level_reason"]
+        row["evidence_contract_state"] = packet["evidence_contract_state"]
         row["checker_family"] = packet["checker"].get("checker_family")
         row["checker_mode"] = packet["checker"].get("checker_mode")
         packets.append(packet)
@@ -691,18 +790,26 @@ def run_semantic_evidence_engine(
 
     normalized_level = str(level or "off").lower()
     enabled = normalized_level in {"extended", "maximum", "расширенный", "максимальный"}
-    candidates = [
+    eligible_candidates = [
         packet for packet in packets
         if packet.get("evidence_level") == "L4" and packet.get("checker", {}).get("consensus_eligible")
     ]
-    candidates.sort(key=lambda packet: max([int(x.get("retrieval_score") or 0) for x in packet.get("evidence") or []] or [0]), reverse=True)
-    if not enabled or judge_provider is None or critic_provider is None:
+    eligible_candidates.sort(key=lambda packet: max([int(x.get("retrieval_score") or 0) for x in packet.get("evidence") or []] or [0]), reverse=True)
+    candidates = list(eligible_candidates)
+    activation_reasons: list[str] = []
+    if not enabled:
+        activation_reasons.append("Режим смысловой проверки отключён.")
+    if judge_provider is None:
+        activation_reasons.append("Провайдер Judge не настроен.")
+    if critic_provider is None:
+        activation_reasons.append("Провайдер Critic не настроен.")
+    if activation_reasons:
         candidates = []
     elif limit > 0:
         candidates = candidates[:limit]
 
     judge_payloads = [_public_packet(packet) for packet in candidates]
-    raw_judges, judge_errors = _call_batches(judge_provider, judge_payloads, critic=False)
+    raw_judges, judge_errors, judge_calls = _call_batches(judge_provider, judge_payloads, critic=False)
     judges = {packet["packet_id"]: _validate_judge(packet, raw_judges.get(packet["packet_id"])) for packet in candidates}
     critic_packets: list[dict[str, Any]] = []
     for packet in candidates:
@@ -725,9 +832,11 @@ def run_semantic_evidence_engine(
             "reason": redact_text(str(judge.get("reason") or "")),
         }
         critic_packets.append(public_critic_packet)
-    raw_critics, critic_errors = _call_batches(critic_provider, critic_packets, critic=True)
+    raw_critics, critic_errors, critic_calls = _call_batches(critic_provider, critic_packets, critic=True)
 
     promoted = findings = blocked = 0
+    execution_log: list[dict[str, Any]] = []
+    selected_ids = {str(packet.get("packet_id") or "") for packet in candidates}
     for packet in candidates:
         packet_id = packet["packet_id"]
         judge = judges[packet_id]
@@ -737,6 +846,48 @@ def run_semantic_evidence_engine(
         promoted += int(passed and row.get("verification_kind") == "VERIFIED_OK")
         findings += int(passed and row.get("verification_kind") == "PROJECT_FINDING")
         blocked += int(not passed and judge.get("verdict") in {"SUPPORTS", "CONTRADICTS"})
+        execution_log.append({
+            "packet_id": packet_id,
+            "domain": packet.get("domain"),
+            "checker_family": (packet.get("checker") or {}).get("checker_family"),
+            "evidence_level": packet.get("evidence_level"),
+            "evidence_contract_state": packet.get("evidence_contract_state"),
+            "selected": True,
+            "selection_reason": "Отобран по качеству доказательственного пакета.",
+            "judge_state": judge.get("verdict"),
+            "judge_response_received": bool(judge.get("response_received")),
+            "judge_valid": bool(judge.get("valid")),
+            "judge_confidence": judge.get("confidence"),
+            "judge_provider": judge.get("provider"),
+            "judge_model": judge.get("model"),
+            "critic_state": "ACCEPTED" if critic.get("valid") else "BLOCKED" if critic.get("response_received") else "NOT_RUN",
+            "critic_response_received": bool(critic.get("response_received")),
+            "critic_provider": critic.get("provider"),
+            "critic_model": critic.get("model"),
+            "consensus_state": row.get("semantic_consensus_state") or "BLOCKED",
+            "blocking_reasons": list(row.get("semantic_consensus_reasons") or []),
+        })
+
+    for packet in eligible_candidates:
+        packet_id = str(packet.get("packet_id") or "")
+        if packet_id in selected_ids:
+            continue
+        execution_log.append({
+            "packet_id": packet_id,
+            "domain": packet.get("domain"),
+            "checker_family": (packet.get("checker") or {}).get("checker_family"),
+            "evidence_level": packet.get("evidence_level"),
+            "evidence_contract_state": packet.get("evidence_contract_state"),
+            "selected": False,
+            "selection_reason": " | ".join(activation_reasons) if activation_reasons else "Не вошёл в лимит текущего запуска.",
+            "judge_state": "NOT_RUN",
+            "judge_response_received": False,
+            "judge_valid": False,
+            "critic_state": "NOT_RUN",
+            "critic_response_received": False,
+            "consensus_state": "NOT_RUN",
+            "blocking_reasons": list(activation_reasons) if activation_reasons else ["Не вошёл в лимит текущего запуска."],
+        })
 
     for packet in packets:
         row = row_by_id.get(str(packet.get("packet_id") or ""))
@@ -748,7 +899,13 @@ def run_semantic_evidence_engine(
         "version": ENGINE_VERSION,
         "rows": len(rows or []),
         "packets": len(packets),
-        "judge_candidates": len(candidates),
+        "enabled": enabled,
+        "configured_judge_provider": _provider_name(judge_provider),
+        "configured_critic_provider": _provider_name(critic_provider),
+        "activation_reasons": activation_reasons,
+        "judge_candidates": len(eligible_candidates),
+        "judge_selected": len(candidates),
+        "not_selected": max(0, len(eligible_candidates) - len(candidates)),
         "judge_responses": len(raw_judges),
         "critic_responses": len(raw_critics),
         "promoted_verified": promoted,
@@ -759,6 +916,9 @@ def run_semantic_evidence_engine(
         "strictly_completed": levels.get("L5", 0),
         "judge_errors": judge_errors,
         "critic_errors": critic_errors,
+        "judge_calls": judge_calls,
+        "critic_calls": critic_calls,
+        "execution_log": execution_log,
         "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate.",
     }
 

@@ -130,6 +130,13 @@ class VerificationRecipeCompilerV2:
                 "required_evidence": ["STRUCTURED_VALUE", "STRUCTURED_COMPARISON"],
                 "required_evidence_slots": recipe["required_evidence_slots"] + ["ENTITY_BINDING", "OBSERVED_VALUE", "UNIT"],
                 "confidence": 0.91,
+                "constraint": {
+                    "operator": str(atom.get("comparison_operator") or "EQ").upper(),
+                    "value": atom.get("required_value"),
+                    "minimum": atom.get("required_min"),
+                    "maximum": atom.get("required_max"),
+                    "unit": atom.get("unit"),
+                },
             })
         elif kind == "EQUIPMENT_IDENTITY":
             recipe.update({

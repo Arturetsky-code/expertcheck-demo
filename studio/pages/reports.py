@@ -6,6 +6,17 @@ from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
 
 
+def _report_documents(docs):
+    """Inject user decisions kept in session state into exported snapshots."""
+    report_docs = docs.copy()
+    if report_docs.empty:
+        return report_docs
+    report_docs['completeness_user_confirmed'] = bool(st.session_state.get('completeness_user_confirmed'))
+    report_docs['object_registry_confirmed'] = bool(st.session_state.get('object_registry_confirmed'))
+    report_docs['completeness_decisions'] = [dict(st.session_state.get('completeness_decisions') or {}) for _ in range(len(report_docs))]
+    return report_docs
+
+
 def _checklist_results(first:dict)->list[dict]:
     run=st.session_state.get('checklist_run') or {}
     rows=run.get('results') if isinstance(run,dict) else None
@@ -17,6 +28,7 @@ def render(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
     hero('Отчёт','Короткий рабочий результат без технического шума.','Резюме → несоответствия → контроль соответствия → действия')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
+    docs=_report_documents(docs)
     first=docs.iloc[0].to_dict(); checklist=_checklist_results(first)
     assembly=st.session_state.get('object_assembly_rows') or []
     risks=build_expert_risks(comparisons.to_dict('records') if not comparisons.empty else [],assembly,checklist,documents=docs.to_dict('records'))

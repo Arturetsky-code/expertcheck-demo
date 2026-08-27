@@ -359,6 +359,70 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         review_plan=build_review_plan(doc_records,checklist_results or [])
     review_domains=review_plan.get('domains') or {}
     coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
+    semantic_engine_summary=dict(first_record.get('semantic_evidence_engine') or {})
+    ai_summary_rows=[]
+    ai_execution_rows=[]
+    ai_call_rows=[]
+    for domain_key, domain_label in (('assignment','Задание на проектирование'),('checklist','Чек-листы')):
+        audit=dict(semantic_engine_summary.get(domain_key) or {})
+        if not audit:
+            continue
+        ai_summary_rows.append({
+            'Контур':domain_label,
+            'Режим включён':'Да' if audit.get('enabled') else 'Нет',
+            'Настроенный Judge':audit.get('configured_judge_provider') or 'Не настроен',
+            'Настроенный Critic':audit.get('configured_critic_provider') or 'Не настроен',
+            'Готово пакетов L4':audit.get('judge_candidates',0),
+            'Отобрано для Judge':audit.get('judge_selected',0),
+            'Ответов Judge':audit.get('judge_responses',0),
+            'Ответов Critic':audit.get('critic_responses',0),
+            'Подтверждено консенсусом':audit.get('promoted_verified',0),
+            'Подтверждено несоответствий':audit.get('project_findings',0),
+            'Заблокировано контролем':audit.get('blocked_consensus',0),
+            'Причина неактивности':' | '.join(audit.get('activation_reasons') or []),
+            'Ошибки Judge':' | '.join(audit.get('judge_errors') or []),
+            'Ошибки Critic':' | '.join(audit.get('critic_errors') or []),
+        })
+        for row in audit.get('execution_log') or []:
+            ai_execution_rows.append({
+                'Контур':domain_label,
+                'ID пакета':row.get('packet_id'),
+                'Семейство проверки':ru_label(row.get('checker_family')),
+                'Уровень доказательства':ru_label(row.get('evidence_level')),
+                'Контракт доказательства':ru_label(row.get('evidence_contract_state')),
+                'Отобран':'Да' if row.get('selected') else 'Нет',
+                'Основание отбора':row.get('selection_reason'),
+                'Решение Judge':ru_label(row.get('judge_state')),
+                'Ответ Judge получен':'Да' if row.get('judge_response_received') else 'Нет',
+                'Judge прошёл контроль':'Да' if row.get('judge_valid') else 'Нет',
+                'Достоверность Judge':row.get('judge_confidence'),
+                'Фактический провайдер Judge':row.get('judge_provider') or '—',
+                'Модель Judge':row.get('judge_model') or '—',
+                'Решение Critic':ru_label(row.get('critic_state')),
+                'Ответ Critic получен':'Да' if row.get('critic_response_received') else 'Нет',
+                'Фактический провайдер Critic':row.get('critic_provider') or '—',
+                'Модель Critic':row.get('critic_model') or '—',
+                'Итог консенсуса':ru_label(row.get('consensus_state')),
+                'Причины блокировки':' | '.join(row.get('blocking_reasons') or []),
+            })
+        for role_key, role_label in (('judge_calls','Judge'),('critic_calls','Critic')):
+            for call in audit.get(role_key) or []:
+                ai_call_rows.append({
+                    'Контур':domain_label,
+                    'Роль':role_label,
+                    'Попытка':call.get('attempt'),
+                    'Настроенный провайдер':call.get('configured_provider') or '—',
+                    'Фактический провайдер':call.get('actual_provider') or '—',
+                    'Модель':call.get('model') or '—',
+                    'Запрошено пакетов':call.get('requested',0),
+                    'Получено ответов':call.get('responses',0),
+                    'Состояние':ru_label(call.get('state')),
+                    'Ошибка':call.get('error') or '',
+                    'ID пакетов':' | '.join(call.get('packet_ids') or []),
+                })
+    ai_summary_df=_excel_safe_frame(pd.DataFrame(ai_summary_rows))
+    ai_execution_df=_excel_safe_frame(pd.DataFrame(ai_execution_rows))
+    ai_calls_df=_excel_safe_frame(pd.DataFrame(ai_call_rows))
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -574,6 +638,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     understanding_rows=[]
     for obj in project_understanding.get('objects') or []:
         for prop in obj.get('property_summary') or []:
+            paired_values='; '.join(
+                f"{item.get('section')}: {' | '.join(str(value) for value in item.get('values') or [])}"
+                for item in prop.get('values_by_section') or []
+            )
             understanding_rows.append({
               'ID объекта':obj.get('object_id'),'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
               'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
@@ -581,7 +649,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
               'Количество доказательств':prop.get('evidence_count',0),
               'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
               'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
-              'Значения':' | '.join(str(x) for x in prop.get('values') or []),
+              'Значения по разделам':paired_values or ' | '.join(str(x) for x in prop.get('values') or []),
             })
     understanding_df=pd.DataFrame(understanding_rows)
 
@@ -782,6 +850,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
+        if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
+        if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
         if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
@@ -794,6 +864,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))
         if not assignment_df.empty: sheets.append(('Задание — диагностика', assignment_df))
         if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
+        if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
+        if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
+        if not ai_calls_df.empty: sheets.append(('AI — вызовы',ai_calls_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
         if normative_reference_details:
             detailed_normative_df=pd.DataFrame(normative_reference_details)
@@ -824,6 +897,21 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
       "evidence_quality_state":"Качество доказательства","requirement_scope":"Область требования",
       "requirement_type":"Тип требования","finding_type":"Тип результата","promotion_method":"Способ подтверждения",
       "semantic_evidence_score":"Смысловая достоверность",
+      "check_id":"ID проверки","values_by_section":"Значения по разделам",
+      "strong_evidence_count":"Количество сильных доказательств",
+      "page_count":"Количество страниц","size_mb":"Размер, МБ",
+      "completeness_status":"Статус комплектности","processing_error":"Ошибка обработки",
+      "document_profile":"Профиль документа","section_title":"Заголовок раздела",
+      "binding_status":"Статус привязки","row_integrity_status":"Целостность строки",
+      "row_integrity_reason":"Причина контроля строки","fact_admission_decision":"Допуск факта",
+      "fact_admission_score":"Оценка допуска факта","fact_admission_reasons":"Причины допуска факта",
+      "evidence_quality_decision":"Решение по качеству доказательства",
+      "evidence_trust_grade":"Класс доверия доказательству","physical_trace_level":"Уровень физической трассировки",
+      "source_locator":"Адрес источника","project_understanding_binding":"Привязка в модели проекта",
+      "comparison_excluded":"Исключено из сравнения","engineering_plausibility_status":"Инженерная правдоподобность",
+      "engineering_plausibility_reason":"Причина контроля правдоподобности",
+      "engineering_derived_height":"Расчётная высота","possible_decimal_separator_candidate":"Возможная десятичная поправка",
+      "match_method":"Метод сопоставления","structural_zone":"Структурная зона",
     }
     normalized_sheets=[]
     for sheet_name,frame in sheets:

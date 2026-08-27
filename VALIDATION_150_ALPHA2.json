@@ -1,0 +1,4270 @@
+{
+  "version": "15.0-alpha2-end-to-end-verification",
+  "input": {
+    "documents": 12,
+    "files": [
+      "Задание на проектирование (ДСК).pdf",
+      "Раздел ПД №1_ПЗ.pdf",
+      "Раздел ПД №2_ПЗУ1.pdf",
+      "Раздел ПД №2_ПЗУ2.pdf",
+      "Раздел ПД №3_АР1.pdf",
+      "Раздел ПД №3_АР2.pdf",
+      "Раздел ПД №4_КР1.pdf",
+      "Раздел ПД №4_КР2.pdf",
+      "Раздел ПД №5_подраздел ПД № 1_ИОС1.1.pdf",
+      "Раздел ПД №5_подраздел ПД № 2_ИОС2.1.pdf.pdf",
+      "Раздел ПД №6_ТХ1.pdf",
+      "Раздел ПД №6_ТХ2.pdf"
+    ]
+  },
+  "output": {
+    "findings": 1333,
+    "comparisons": 168,
+    "pipeline_errors": []
+  },
+  "assignment": {
+    "parent_requirements": 56,
+    "atomic_conditions": 143,
+    "public_total": 56,
+    "public_coverage_pct": 0.0,
+    "parent_verdicts": {
+      "REVIEW_QUESTION": 33,
+      "SYSTEM_LIMITATION": 23
+    },
+    "atomic_verdicts": {
+      "REVIEW_QUESTION": 84,
+      "SYSTEM_LIMITATION": 58,
+      "VERIFIED_OK": 1
+    }
+  },
+  "checklist": {
+    "rows": 545,
+    "statuses": {
+      "Не проверено системой": 215,
+      "Требует проверки": 330
+    },
+    "technology_rows": 95,
+    "unsafe_automatic_closures": []
+  },
+  "evidence_reconstruction": {
+    "exact_facts": 161,
+    "density_facts": 124,
+    "moisture_facts": 4,
+    "targeted_questions": 3,
+    "by_parameter": {
+      "BULK_DENSITY": 124,
+      "MOISTURE": 4,
+      "POWER_INSTALLED": 2,
+      "PRESSURE": 11,
+      "RES_VOLUME": 7,
+      "VOLTAGE": 13
+    }
+  },
+  "semantic_evidence_engine": {
+    "version": "1.0",
+    "assignment": {
+      "version": "2.0-strict-semantic-evidence-consensus",
+      "rows": 143,
+      "packets": 142,
+      "enabled": false,
+      "configured_judge_provider": "",
+      "configured_critic_provider": "",
+      "activation_reasons": [
+        "Режим смысловой проверки отключён.",
+        "Провайдер Judge не настроен.",
+        "Провайдер Critic не настроен."
+      ],
+      "preflight": {
+        "judge": {
+          "role": "JUDGE",
+          "configured_provider": "",
+          "state": "NOT_REQUIRED",
+          "ok": false
+        },
+        "critic": {
+          "role": "CRITIC",
+          "configured_provider": "",
+          "state": "NOT_REQUIRED",
+          "ok": false
+        }
+      },
+      "judge_candidates": 32,
+      "judge_selected": 0,
+      "not_selected": 32,
+      "judge_responses": 0,
+      "critic_responses": 0,
+      "promoted_verified": 0,
+      "project_findings": 0,
+      "blocked_consensus": 0,
+      "evidence_levels": {
+        "L0": 11,
+        "L1": 0,
+        "L2": 25,
+        "L3": 67,
+        "L4": 39,
+        "L5": 1
+      },
+      "evidence_ready": 107,
+      "strictly_completed": 1,
+      "judge_errors": [],
+      "critic_errors": [],
+      "judge_calls": [],
+      "critic_calls": [],
+      "execution_log": [
+        {
+          "packet_id": "ASSIGN-1C2C21F3A4BBF3-A001-5BF1169107",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3359AA34EF46F5-A002-9085C7013B",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-FF27F95B24E66F-A001-7FAF311DBE",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-BE97D6176E9C2A-A001-8FB30A98D1",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-AD181FF51DAC8B-A001-AF1C2C36D0",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-38F3DFB9253C3E-A001-2326EE85D3",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-9E92B18B10384B-A001-E808763EB8",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-A2677C9C335BB3-A001-C31626552B",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-A2677C9C335BB3-A003-02EDDD5EF3",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-4F6D13E1915F21-A001-0189221D35",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-4F6D13E1915F21-A002-35CEFF8622",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-4F6D13E1915F21-A003-9469C66488",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-4F6D13E1915F21-A004-CFD3A6E5CD",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-4F6D13E1915F21-A006-C516DDD620",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-B917D98F58E571-A001-239835F74E",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-B917D98F58E571-A007-0E7F0AE343",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A003-A0A07F3323",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A007-9F23A7D062",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A008-2B40372B75",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A009-27A90AA4FC",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A011-BFEE2619E8",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A012-2FD44BC50C",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-D92AEACAD0919F-A001-F78FC7E7BC",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-B3BC73B6C08407-A001-444F19BB18",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-7ED8C79E03787F-A004-4140DA4A45",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3359AA34EF46F5-A003-7B3AFE0C3F",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-77F94131EC1858-A001-025AE86B1D",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-3841A43FB67400-A004-5376FC6888",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-7ED8C79E03787F-A001-FFFAA6E381",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-7ED8C79E03787F-A002-5950ABA209",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-7ED8C79E03787F-A003-BD530573BB",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "ASSIGN-9BE8D9D1E7192F-A001-9CAA4D5EA1",
+          "domain": "assignment",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        }
+      ],
+      "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate."
+    },
+    "checklist": {
+      "version": "2.0-strict-semantic-evidence-consensus",
+      "rows": 592,
+      "packets": 592,
+      "enabled": false,
+      "configured_judge_provider": "",
+      "configured_critic_provider": "",
+      "activation_reasons": [
+        "Режим смысловой проверки отключён.",
+        "Провайдер Judge не настроен.",
+        "Провайдер Critic не настроен."
+      ],
+      "preflight": {
+        "judge": {
+          "role": "JUDGE",
+          "configured_provider": "",
+          "state": "NOT_REQUIRED",
+          "ok": false
+        },
+        "critic": {
+          "role": "CRITIC",
+          "configured_provider": "",
+          "state": "NOT_REQUIRED",
+          "ok": false
+        }
+      },
+      "judge_candidates": 148,
+      "judge_selected": 0,
+      "not_selected": 148,
+      "judge_responses": 0,
+      "critic_responses": 0,
+      "promoted_verified": 0,
+      "project_findings": 0,
+      "blocked_consensus": 0,
+      "evidence_levels": {
+        "L0": 0,
+        "L1": 0,
+        "L2": 240,
+        "L3": 193,
+        "L4": 159,
+        "L5": 0
+      },
+      "evidence_ready": 352,
+      "strictly_completed": 0,
+      "judge_errors": [],
+      "critic_errors": [],
+      "judge_calls": [],
+      "critic_calls": [],
+      "execution_log": [
+        {
+          "packet_id": "CHECK-0003-A001-1CC7C9B76E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0007-A001-E6875D9B19",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0015-A001-E88F1A96C9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0016-A001-88754AAEC5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0018-A001-EF0F7D87E9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0025-A001-05D6F81147",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0029-A001-2F4AA9C456",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0055-A001-1978AACCA9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0102-A001-3D1320919A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0241-A001-D63B9AAC2C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0252-A001-4A1F5D7212",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0263-A001-EE40F4B1D6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0264-A001-DABBC7E378",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0266-A001-3750D19992",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0274-A001-C9F3F7D1C5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0280-A001-1AECF715FE",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0292-A001-BE3177D27C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0295-A001-8D5B272E85",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0305-A001-8D4EE28B0C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0329-A001-5B223957CA",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0331-A001-0552BBE4B6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0332-A001-A33DF335B2",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0333-A001-3F20625A60",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0337-A001-5DEB67C909",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0339-A001-6705A1A598",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0340-A001-F2ECCC8D9B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0342-A001-23D75F3B93",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0343-A001-001ECF3A7B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0346-A001-8CDF88F726",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0347-A001-64C2A9031D",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0348-A001-7305BCE885",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0360-A001-12B48B0C16",
+          "domain": "checklist",
+          "checker_family": "CALCULATION_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0368-A001-81AA6F299B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0390-A001-1E812FBCB9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0435-A001-01C4CE4BEA",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0469-A001-3E66DC8F40",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0488-A002-52A5C8C820",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0490-A002-D62F5D73BF",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0492-A001-BFA33000E5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0493-A002-4B12AD184C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0496-A002-0D84EB66CF",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0504-A002-52FAEE96B1",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0512-A002-6C1AF7C81C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0513-A001-C872CF9E03",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0515-A002-88B99C9E62",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0516-A001-B935DEDB99",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0517-A002-B1012B01FB",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0520-A001-3782544079",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0522-A002-94DDC8855E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0523-A001-4E8F77ED32",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0540-A001-F5935927E6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0043-A001-0A02BCCF36",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0047-A001-5E5ECB37AB",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0048-A001-0D616203AA",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0125-A001-F4D3850DAE",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0173-A001-D118557166",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0204-A001-7F2FD44D5A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0223-A001-5D4D7CE4A3",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0228-A001-8B8292D92D",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0242-A001-F75EC185B0",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0251-A001-84F59D2645",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0252-A002-ABEB4EE55E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0265-A001-AC0C03161D",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0269-A001-8B21B51B4F",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0270-A001-AA51BDBFE2",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0273-A001-68DA6EAE14",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0281-A001-5A2B2E05A5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0283-A001-C3D6A839F6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0311-A001-B406ABC3BF",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0314-A002-A58904C169",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0315-A002-4F4E62C41A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0317-A001-115F1D191A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0317-A002-3FC4CE6E08",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0318-A001-A3AFA7030C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0325-A001-D2189BEB51",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0328-A001-2245835B29",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0336-A001-AEDDF2F41B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0344-A001-C1DE3D648C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0361-A001-0215C3BF7F",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0363-A001-0D647002FE",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0364-A001-DCADD97320",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0367-A001-F57E87F0BD",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0394-A001-2BFB952ACE",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0395-A001-F308FFA028",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0404-A002-6F538A1BFD",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0412-A001-1033325EC9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0426-A001-9FB36F091D",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0433-A002-CD5CF30F38",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0437-A001-C391286DE5",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0441-A001-6C9685FD36",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0450-A001-277D799EC8",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0485-A002-D8CAC7B3A5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0489-A001-C34898339F",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0491-A001-779E787F8B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0498-A001-3FA8C80C81",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0507-A001-4D0F6663A2",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0508-A002-9D79AF2A98",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0521-A001-E9789736B4",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0537-A001-F6F4B238AE",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0542-A001-2232227D00",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0555-A002-7EB2744869",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0556-A001-2E20C07129",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0560-A001-BBA2DFA347",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0563-A001-1770D73182",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0565-A001-5CF2A0A1DD",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0567-A001-2E521BBC6A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0568-A001-586E7D13DB",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0017-A001-498F1F132B",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0111-A001-AE534CB3BE",
+          "domain": "checklist",
+          "checker_family": "CALCULATION_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0122-A001-C8C4BFEF89",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0243-A001-F57F182B40",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0247-A001-1C4C9B2F4E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0315-A003-889358AE2E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0316-A002-B07EB793E9",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0323-A001-7316245FCA",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0324-A001-592B179D46",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0327-A001-E97198E58E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0334-A001-757C4E6CE2",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0335-A001-ED31517CCF",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0341-A001-54FD196FE6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0345-A001-26B449182E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0358-A001-85B6EC2AD9",
+          "domain": "checklist",
+          "checker_family": "CALCULATION_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0387-A001-4D60B84192",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0391-A001-C14E087702",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0410-A001-75FCB24B02",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0432-A001-3BCB189E1A",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0433-A001-76C250D5D7",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0440-A001-A987EA0EF0",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0440-A002-918A96F38F",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0442-A001-3FC1324515",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0447-A001-3174F6FD3C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0461-A001-70BE26C4B4",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0462-A001-6CDE2363DC",
+          "domain": "checklist",
+          "checker_family": "CALCULATION_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0463-A001-ABB55CA3F7",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0467-A001-C421E98C58",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0486-A001-DA8E493090",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0501-A001-CF412D97C1",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0519-A001-F3BFB9431E",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0539-A002-07C4E191B4",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0547-A002-ED6421CE4F",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0564-A001-E0FD3E83FD",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0286-A001-09174178EB",
+          "domain": "checklist",
+          "checker_family": "CALCULATION_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0101-A001-48CED2F00C",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0116-A001-DFEDB6A8F7",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0316-A001-71234C89E5",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0349-A001-F14E5ED4D6",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0430-A001-88E0BF71C9",
+          "domain": "checklist",
+          "checker_family": "DRAWING_EVIDENCE",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        },
+        {
+          "packet_id": "CHECK-0529-A001-A866D7DB06",
+          "domain": "checklist",
+          "checker_family": "SEMANTIC_PROJECT_DECISION",
+          "evidence_level": "L4",
+          "evidence_contract_state": "SATISFIED",
+          "selected": false,
+          "selection_reason": "Режим смысловой проверки отключён. | Провайдер Judge не настроен. | Провайдер Critic не настроен.",
+          "judge_state": "NOT_RUN",
+          "judge_response_received": false,
+          "judge_valid": false,
+          "critic_state": "NOT_RUN",
+          "critic_response_received": false,
+          "consensus_state": "NOT_RUN",
+          "blocking_reasons": [
+            "Режим смысловой проверки отключён.",
+            "Провайдер Judge не настроен.",
+            "Провайдер Critic не настроен."
+          ]
+        }
+      ],
+      "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate."
+    },
+    "evidence_coverage_pct": 55.8,
+    "strict_coverage_pct": 0.3,
+    "semantic_consensus_completed": 0
+  },
+  "l4_contract_violations": [],
+  "coverage_matrix": {
+    "version": "2.0-strict-and-evidence-coverage-matrix",
+    "total": 615,
+    "completed": 2,
+    "coverage_pct": 0.3,
+    "evidence_ready": 343,
+    "evidence_coverage_pct": 55.8,
+    "semantic_consensus_completed": 0,
+    "evidence_levels": {
+      "L0": 19,
+      "L1": 0,
+      "L2": 253,
+      "L3": 203,
+      "L4": 138,
+      "L5": 2
+    },
+    "matrix": [
+      {
+        "archetype": "CALCULATION_EVIDENCE",
+        "total": 35,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 26,
+        "evidence_coverage_pct": 74.3,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 9,
+          "L3": 21,
+          "L4": 5,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 29,
+        "system_limitations": 6,
+        "trusted_recipes": 2,
+        "experimental_recipes": 1,
+        "retrieval_only_recipes": 32,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 28
+          },
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 5
+          },
+          {
+            "code": "NO_ADDRESSABLE_EVIDENCE",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "archetype": "DOCUMENT_TRACEABILITY",
+        "total": 60,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 16,
+        "evidence_coverage_pct": 26.7,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 44,
+          "L3": 16,
+          "L4": 0,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 30,
+        "system_limitations": 30,
+        "trusted_recipes": 3,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 57,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 57
+          },
+          {
+            "code": "NO_ADDRESSABLE_EVIDENCE",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "archetype": "DRAWING_EVIDENCE",
+        "total": 114,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 66,
+        "evidence_coverage_pct": 57.9,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 48,
+          "L3": 57,
+          "L4": 9,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 64,
+        "system_limitations": 50,
+        "trusted_recipes": 1,
+        "experimental_recipes": 1,
+        "retrieval_only_recipes": 112,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 103
+          },
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 10
+          },
+          {
+            "code": "NEEDS_SPECIALIST_JUDGEMENT",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "archetype": "NORMATIVE_REQUIREMENT",
+        "total": 36,
+        "completed": 2,
+        "coverage_pct": 5.6,
+        "evidence_ready": 18,
+        "evidence_coverage_pct": 50.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 13,
+          "L1": 0,
+          "L2": 5,
+          "L3": 7,
+          "L4": 9,
+          "L5": 2
+        },
+        "verified_ok": 2,
+        "project_findings": 0,
+        "review_questions": 15,
+        "system_limitations": 19,
+        "trusted_recipes": 3,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 19,
+        "top_gap_reasons": [
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 14
+          },
+          {
+            "code": "EVIDENCE_CONTRACT_UNSATISFIED",
+            "count": 12
+          },
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 8
+          },
+          {
+            "code": "UNSPECIFIED",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "archetype": "NUMERIC_VALUE",
+        "total": 4,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 4,
+        "evidence_coverage_pct": 100.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 0,
+          "L3": 3,
+          "L4": 1,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 4,
+        "system_limitations": 0,
+        "trusted_recipes": 3,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 1,
+        "top_gap_reasons": [
+          {
+            "code": "ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED",
+            "count": 3
+          },
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "archetype": "SEMANTIC_PROJECT_DECISION",
+        "total": 364,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 212,
+        "evidence_coverage_pct": 58.2,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 6,
+          "L1": 0,
+          "L2": 146,
+          "L3": 99,
+          "L4": 113,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 221,
+        "system_limitations": 143,
+        "trusted_recipes": 0,
+        "experimental_recipes": 20,
+        "retrieval_only_recipes": 344,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 223
+          },
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 141
+          }
+        ]
+      },
+      {
+        "archetype": "SET_COMPLETENESS",
+        "total": 2,
+        "completed": 0,
+        "coverage_pct": 0.0,
+        "evidence_ready": 1,
+        "evidence_coverage_pct": 50.0,
+        "semantic_consensus_completed": 0,
+        "evidence_levels": {
+          "L0": 0,
+          "L1": 0,
+          "L2": 1,
+          "L3": 0,
+          "L4": 1,
+          "L5": 0
+        },
+        "verified_ok": 0,
+        "project_findings": 0,
+        "review_questions": 1,
+        "system_limitations": 1,
+        "trusted_recipes": 0,
+        "experimental_recipes": 0,
+        "retrieval_only_recipes": 2,
+        "top_gap_reasons": [
+          {
+            "code": "RECIPE_NOT_EXECUTABLE",
+            "count": 1
+          },
+          {
+            "code": "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED",
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "reason_counts": {
+      "RECIPE_NOT_EXECUTABLE": 420,
+      "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED": 172,
+      "EVIDENCE_CONTRACT_UNSATISFIED": 12,
+      "NO_ADDRESSABLE_EVIDENCE": 5,
+      "ADVERSARIAL_OR_SEMANTIC_GATE_BLOCKED": 3,
+      "UNSPECIFIED": 2,
+      "NEEDS_SPECIALIST_JUDGEMENT": 1
+    },
+    "principle": "Строгое покрытие считается только по завершённым контрактам L5; доказательное покрытие L3–L5 отдельно показывает, где система уже нашла адресный материал. Ограничения системы не являются замечаниями проекта."
+  },
+  "semantic_project_graph": {
+    "nodes": 212,
+    "edges": 252,
+    "packets": 734,
+    "by_node_type": {
+      "EQUIPMENT": 6,
+      "OBJECT": 32,
+      "SYSTEM": 1,
+      "PROPERTY": 84,
+      "VALUE": 84,
+      "SOURCE": 5
+    }
+  },
+  "high_value_sanitization": {
+    "flow_false_positives_blocked": 3,
+    "material_scope_rebound": 8
+  },
+  "known_regression_cases": {
+    "compressor_area_mismatch_detected": true,
+    "pump_height_25_quarantined": true
+  },
+  "quality_gate": {
+    "status": "PASSED",
+    "issues": [],
+    "checked_domains": 3,
+    "checks": 615,
+    "checked_objects": 39,
+    "wrong_section_evidence": 0,
+    "comparison_summary": {
+      "PROJECT_FINDING": 1,
+      "REVIEW_QUESTION": 3,
+      "SYSTEM_LIMITATION": 48,
+      "INFORMATIONAL": 0,
+      "PROJECT_STATUS": 13
+    }
+  },
+  "report_localization_leaks": [],
+  "report_sheets": {
+    "ExpertCheck_Резюме_руководителя_15.0A2.xlsx": [
+      "Резюме",
+      "Подтверждённые расхождения",
+      "Вопросы специалисту",
+      "Готовность проверки",
+      "Карта покрытия",
+      "Границы автоматизации",
+      "Приоритетные действия"
+    ],
+    "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx": [
+      "Резюме",
+      "Подтверждённые расхождения",
+      "Вопросы специалисту",
+      "Проверка требований",
+      "Карта покрытия",
+      "Границы автоматизации",
+      "Задание — атомарные условия",
+      "Задание на проектирование",
+      "НТД — требования",
+      "Чек-листы",
+      "AI — сводка",
+      "AI — решения",
+      "План действий"
+    ],
+    "ExpertCheck_Техническое_приложение_15.0A2.xlsx": [
+      "Резюме",
+      "Подтверждённые расхождения",
+      "Вопросы специалисту",
+      "Карта покрытия",
+      "Границы автоматизации",
+      "Состав проекта",
+      "Чек-листы — диагностика",
+      "Актуальность НТД",
+      "Проверка требований НТД",
+      "Контекст ссылок НТД",
+      "Модель проекта",
+      "Задание — диагностика",
+      "Задание — атомарные условия",
+      "AI — сводка",
+      "AI — решения",
+      "AI — вызовы",
+      "План действий",
+      "НТД — все упоминания",
+      "Тех_реестр",
+      "Тех_сверки",
+      "Тех_извлечение",
+      "Тех_правдоподобность"
+    ]
+  },
+  "report_confirmation": {
+    "ExpertCheck_Резюме_руководителя_15.0A2.xlsx": "Подтверждена",
+    "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx": "Подтверждена",
+    "ExpertCheck_Техническое_приложение_15.0A2.xlsx": "Подтверждена"
+  },
+  "report_question_rows": {
+    "ExpertCheck_Резюме_руководителя_15.0A2.xlsx": 40,
+    "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx": 367,
+    "ExpertCheck_Техническое_приложение_15.0A2.xlsx": 367
+  },
+  "report_atomic_headers": {
+    "ExpertCheck_Резюме_руководителя_15.0A2.xlsx": [],
+    "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx": [
+      "ID атомарного условия",
+      "ID исходного требования",
+      "Строка Задания",
+      "Атомарное условие",
+      "Тип атома",
+      "Объект",
+      "Показатель",
+      "Оператор условия",
+      "Требуемое значение",
+      "Нижняя граница",
+      "Верхняя граница",
+      "Ед. изм.",
+      "Нормализованное требуемое значение",
+      "Нормализованная нижняя граница",
+      "Нормализованная верхняя граница",
+      "Значение проекта",
+      "Единица сравнения",
+      "Условие выполнено",
+      "Ожидаемые разделы",
+      "Рецепт",
+      "Статус рецепта",
+      "Результат",
+      "Итоговый класс",
+      "Доказательства",
+      "Явное различие",
+      "Основание вывода",
+      "Рекомендация",
+      "Контроль рецепта",
+      "Регрессионный контроль",
+      "Контракт доказательства",
+      "Архетип покрытия",
+      "Состояние покрытия",
+      "Код причины незавершения",
+      "Причина незавершения",
+      "Недостающие слоты",
+      "Смысловой контроль",
+      "Требуемая модальность",
+      "Критические квалификаторы",
+      "Причины смыслового удержания",
+      "Уровень доказательства",
+      "Причина уровня доказательства",
+      "Семейство проверяющего механизма",
+      "Режим проверяющего механизма",
+      "Смысловой консенсус",
+      "Решение проверяющей модели",
+      "Достоверность проверяющей модели",
+      "Провайдер проверяющей модели",
+      "Контрольная модель приняла",
+      "Провайдер контрольной модели",
+      "Причины блокировки консенсуса",
+      "Углублённый анализ доказательств",
+      "Причины ограничения"
+    ],
+    "ExpertCheck_Техническое_приложение_15.0A2.xlsx": [
+      "ID атомарного условия",
+      "ID исходного требования",
+      "Строка Задания",
+      "Атомарное условие",
+      "Тип атома",
+      "Объект",
+      "Показатель",
+      "Оператор условия",
+      "Требуемое значение",
+      "Нижняя граница",
+      "Верхняя граница",
+      "Ед. изм.",
+      "Нормализованное требуемое значение",
+      "Нормализованная нижняя граница",
+      "Нормализованная верхняя граница",
+      "Значение проекта",
+      "Единица сравнения",
+      "Условие выполнено",
+      "Ожидаемые разделы",
+      "Рецепт",
+      "Статус рецепта",
+      "Результат",
+      "Итоговый класс",
+      "Доказательства",
+      "Явное различие",
+      "Основание вывода",
+      "Рекомендация",
+      "Контроль рецепта",
+      "Регрессионный контроль",
+      "Контракт доказательства",
+      "Архетип покрытия",
+      "Состояние покрытия",
+      "Код причины незавершения",
+      "Причина незавершения",
+      "Недостающие слоты",
+      "Смысловой контроль",
+      "Требуемая модальность",
+      "Критические квалификаторы",
+      "Причины смыслового удержания",
+      "Уровень доказательства",
+      "Причина уровня доказательства",
+      "Семейство проверяющего механизма",
+      "Режим проверяющего механизма",
+      "Смысловой консенсус",
+      "Решение проверяющей модели",
+      "Достоверность проверяющей модели",
+      "Провайдер проверяющей модели",
+      "Контрольная модель приняла",
+      "Провайдер контрольной модели",
+      "Причины блокировки консенсуса",
+      "Углублённый анализ доказательств",
+      "Причины ограничения"
+    ]
+  },
+  "reports": [
+    "ExpertCheck_Резюме_руководителя_15.0A2.xlsx",
+    "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx",
+    "ExpertCheck_Техническое_приложение_15.0A2.xlsx"
+  ]
+}

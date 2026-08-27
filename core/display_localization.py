@@ -31,6 +31,11 @@ PARAMETER_LABELS = {
     'AREA_ROOM': 'Площадь помещения',
     'AREA_ROOM_SUM': 'Сумма площадей помещений по экспликации',
     'SHIFT_DURATION': 'Продолжительность смены',
+    'RETENTION_PERIOD': 'Продолжительность хранения',
+    'BACKUP_DURATION': 'Продолжительность резерва',
+    'FREQUENCY': 'Частота',
+    'DUST_CONCENTRATION': 'Концентрация пыли',
+    'CARRY_CAPACITY': 'Грузоподъёмность',
     'BODY_VOLUME': 'Объём кузова',
     'BUCKET_VOLUME': 'Объём ковша',
 }

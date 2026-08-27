@@ -166,34 +166,56 @@ def _canonical_unit(value: str) -> str:
     return aliases.get(low, low)
 
 
-def _parameter_for_measure(text: str, unit: str) -> str:
+def _parameter_for_measure(
+    text: str,
+    unit: str,
+    span: tuple[int, int] | None = None,
+) -> str:
+    """Bind one measurement using its unit and bounded local context."""
     low = normalize_text(text).lower()
+    if span:
+        start, end = span
+        local = normalize_text(text[max(0, start - 72): min(len(text), end + 48)]).lower()
+    else:
+        local = low
     normalized_unit = normalize_text(unit).lower().replace(" ", "")
+    # Unambiguous units take priority over keywords belonging to a neighbouring
+    # value in the same sentence (for example ``220 V, 50 Hz``).
+    if normalized_unit == "мг/м3":
+        return "DUST_CONCENTRATION"
+    if normalized_unit == "гц":
+        return "FREQUENCY"
+    if normalized_unit in {"в", "кв"}:
+        return "VOLTAGE"
+    if normalized_unit in {"квт", "мвт"}:
+        return "POWER_INSTALLED"
+    if normalized_unit in {"мпа", "кпа", "па", "бар"}:
+        return "PRESSURE"
     if unit == "т" and ("г/п" in low or "грузопод" in low):
         return "CARRY_CAPACITY"
-    if unit == "м3" and "ковш" in low:
+    if unit == "м3" and "ковш" in local:
         return "BUCKET_VOLUME"
-    if unit == "м3" and "кузов" in low:
+    if unit == "м3" and "кузов" in local:
         return "BODY_VOLUME"
-    if "грузопод" in low:
+    if "грузопод" in local:
         return "CARRY_CAPACITY"
-    if "производительност" in low or unit == "т/ч":
+    if "производительност" in local or unit == "т/ч":
         return "CAPACITY"
     if unit in {"т/год", "тыс. т/год", "млн т/год"}:
         return "CAPACITY"
-    if normalized_unit in {"мпа", "кпа", "па", "бар"} or "давлен" in low:
+    if "давлен" in local:
         return "PRESSURE"
-    if "напряжен" in low:
+    if "напряжен" in local:
         return "VOLTAGE"
-    if "частот" in low:
+    if "частот" in local:
         return "FREQUENCY"
-    if "срок" in low or "хранен" in low:
+    if "срок" in local or "хранен" in local:
         return "RETENTION_PERIOD"
-    if "продолжительност" in low and (unit == "ч" or "смен" in low):
+    if "продолжительност" in local and (unit == "ч" or "смен" in local):
         return "SHIFT_DURATION"
-    if "резерв" in low and unit == "мин":
+    if "резерв" in local and unit == "мин":
         return "BACKUP_DURATION"
-    if "объем" in low or "объём" in low or unit == "м3":
+    if "объем" in local or "объём" in local or unit == "м3":
         return "VOLUME"
     if unit == "м2":
         if "площадь застройки" in low:
@@ -205,8 +227,6 @@ def _parameter_for_measure(text: str, unit: str) -> str:
         return "HEIGHT_BUILD"
     if unit in {"м", "км"} and any(token in low for token in ("длин", "протяж")):
         return "LENGTH"
-    if unit == "мг/м3":
-        return "DUST_CONCENTRATION"
     return "NUMERIC_VALUE"
 
 
@@ -239,12 +259,31 @@ def _equipment_identity(text: str) -> tuple[str, list[str]]:
     return brand, list(dict.fromkeys(models))
 
 
+def _equipment_object_name(text: str, brand: str, models: Iterable[str]) -> str:
+    low = normalize_text(text).lower()
+    labels = (
+        ("погрузчик", "Погрузчик"), ("автосамосвал", "Автосамосвал"),
+        ("самосвал", "Самосвал"), ("насос", "Насос"),
+        ("дробил", "Дробилка"), ("грохот", "Грохот"),
+        ("конвейер", "Конвейер"), ("питател", "Питатель"),
+        ("трансформатор", "Трансформатор"), ("резервуар", "Резервуар"),
+        ("ёмкост", "Ёмкость"), ("емкост", "Ёмкость"),
+    )
+    equipment = next((label for marker, label in labels if marker in low), "Оборудование")
+    identity = [equipment]
+    if brand:
+        identity.append(brand)
+    identity.extend(model for model in models if model and model.lower() != brand.lower())
+    return " ".join(dict.fromkeys(identity))
+
+
 def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
     text = clause["text"]
     context = clause.get("context") or ""
     low = normalize_text(text).lower()
     expanded: list[dict[str, Any]] = []
     brand, models = _equipment_identity(text)
+    equipment_object = _equipment_object_name(text, brand, models) if brand or models else ""
     measurements = []
     range_spans: list[tuple[int, int]] = []
     for match in _RANGE_UNIT_RE.finditer(text):
@@ -259,7 +298,7 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             "value": None,
             "unit": unit,
             "span": match.span(),
-            "parameter_code": _parameter_for_measure(text, unit),
+            "parameter_code": _parameter_for_measure(text, unit, match.span()),
             "comparison_operator": "BETWEEN",
             "required_min": minimum,
             "required_max": maximum,
@@ -278,7 +317,7 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             "value": value,
             "unit": unit,
             "span": match.span(),
-            "parameter_code": _parameter_for_measure(text, unit),
+            "parameter_code": _parameter_for_measure(text, unit, match.span()),
             "comparison_operator": infer_comparison_operator(text, match.start()),
         })
 
@@ -289,6 +328,8 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             "text": _clean_text(f"{context + ': ' if context else ''}{text}"),
             "focus": "EQUIPMENT_IDENTITY",
             "atomic_kind": "EQUIPMENT_IDENTITY",
+            "object_name": equipment_object,
+            "scope_entity": equipment_object,
             "required_brand": brand,
             "required_models": models,
         })
@@ -298,6 +339,8 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
                 "text": _clean_text(f"Количество оборудования: {quantity}. {text}"),
                 "focus": "EQUIPMENT_QUANTITY",
                 "atomic_kind": "VALUE_COMPARISON",
+                "object_name": equipment_object,
+                "scope_entity": equipment_object,
                 "parameter_code": "QUANTITY",
                 "required_value": quantity,
                 "unit": "шт",
@@ -316,6 +359,9 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             "unit": measurement["unit"],
             "comparison_operator": measurement.get("comparison_operator") or "EQ",
         }
+        if equipment_object:
+            numeric_atom["object_name"] = equipment_object
+            numeric_atom["scope_entity"] = equipment_object
         if measurement.get("comparison_operator") == "BETWEEN":
             numeric_atom.update({
                 "required_min": measurement.get("required_min"),
@@ -325,15 +371,15 @@ def _expand_clause(clause: dict[str, Any]) -> list[dict[str, Any]]:
             })
         expanded.append(numeric_atom)
 
-    if "производительност" in low and "лини" in low:
+    if "лини" in low and any(token in low for token in ("производительност", "технологическ", "дроблен")):
         line_count = _quantity_word(text)
         if line_count is not None:
             expanded.append({
                 **clause,
                 "text": _clean_text(f"Количество технологических линий: {line_count}. {text}"),
-                "focus": "PROCESS_LINE_COUNT",
+                "focus": "LINE_COUNT",
                 "atomic_kind": "TOPOLOGY_REQUIREMENT",
-                "parameter_code": "PROCESS_LINE_COUNT",
+                "parameter_code": "LINE_COUNT",
                 "required_value": line_count,
                 "unit": "шт",
             })
@@ -381,7 +427,9 @@ def _infer_kind(text: str, inherited: str = "") -> str:
         return "VALUE_COMPARISON"
     if "состав объектов" in low or "согласно приложению" in low and "состав" in low:
         return "SET_COMPARISON"
-    if inherited in {"VALUE_COMPARISON", "SET_COMPARISON"}:
+    # A table row heading may inherit the parent's generic requirement type,
+    # but must not become a numeric constraint without its own number/unit.
+    if inherited == "SET_COMPARISON":
         return inherited
     return "PRESENCE_REQUIREMENT"
 
@@ -457,22 +505,33 @@ def atomize_requirement(requirement: dict[str, Any], *, domain: str = "assignmen
             "requirement_type": _mapped_requirement_type(kind),
             "atomic_status": "UNVERIFIED",
         }
+        numeric_keys = (
+            "parameter_code", "required_value", "unit", "comparison_operator",
+            "required_min", "required_max", "minimum_inclusive", "maximum_inclusive",
+        )
+        # Parent values can describe another sentence. Remove them first and
+        # accept only values explicitly produced for this exact atomic clause.
+        for key in numeric_keys:
+            atom.pop(key, None)
         for key in (
             "parameter_code", "required_value", "unit", "required_brand", "required_models",
             "comparison_operator", "required_min", "required_max",
-            "minimum_inclusive", "maximum_inclusive",
+            "minimum_inclusive", "maximum_inclusive", "object_name", "scope_entity",
         ):
             if key in clause:
                 atom[key] = clause[key]
-        # Parent numeric fields may be reused only for a single atom or for an
-        # atom explicitly focused on that parameter.
-        if len(clauses) == 1:
+        may_inherit_numeric = bool(
+            len(clauses) == 1
+            and kind == "VALUE_COMPARISON"
+            and (_NUMBER_UNIT_RE.search(atom_text) or _RANGE_UNIT_RE.search(atom_text))
+        )
+        if may_inherit_numeric:
             for key in (
-                "parameter_code", "required_value", "unit", "object_name",
+                "parameter_code", "required_value", "unit",
                 "comparison_operator", "required_min", "required_max",
                 "minimum_inclusive", "maximum_inclusive",
             ):
-                if requirement.get(key) not in (None, ""):
+                if key not in atom and requirement.get(key) not in (None, ""):
                     atom[key] = requirement.get(key)
         atom["evidence_contract_v2"] = build_contract(atom)
         atom["expected_sections"] = list((atom["evidence_contract_v2"] or {}).get("expected_sections") or [])

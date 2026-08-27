@@ -71,6 +71,7 @@ def build_review_plan(
             'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
+            'checker_mode':_txt(row.get('checker_mode')),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')
@@ -106,6 +107,7 @@ def build_review_plan(
             'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
+            'checker_mode':_txt(row.get('checker_mode')),
         })
     for i,row in enumerate(checklist,1):
         if row.get('is_heading'):continue
@@ -138,6 +140,7 @@ def build_review_plan(
             'semantic_consensus_state':_txt(row.get('semantic_consensus_state')),
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
+            'checker_mode':_txt(row.get('checker_mode')),
         })
 
     raw_summaries={

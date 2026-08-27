@@ -22,6 +22,7 @@ from .constraint_engine import (
     evaluate_numeric_constraint,
     requirement_text as constraint_requirement_text,
 )
+from .object_semantics import canonical_parameter_code
 
 
 ENGINE_VERSION = "6.0-executable-verification-engine"
@@ -212,14 +213,14 @@ def _convert(value: float, source_unit: str, target_unit: str) -> float | None:
 
 def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: dict[str, Any]) -> dict[str, Any] | None:
     constraint = constraint_from_atom(atom)
-    code = str(atom.get("parameter_code") or "").upper()
+    code = canonical_parameter_code(atom.get("parameter_code"))
     unit = str(atom.get("unit") or "")
     if constraint is None or not code or not unit:
         return None
     constraint = canonicalize_constraint(constraint, code)
     compatible: list[tuple[float, dict[str, Any]]] = []
     for fact in fact_graph.get("facts") or []:
-        if str(fact.get("property_code") or "").upper() != code or not _owner_matches(atom, fact):
+        if canonical_parameter_code(fact.get("property_code")) != code or not _owner_matches(atom, fact):
             continue
         observed = canonicalize_observed(fact.get("value"), fact.get("unit"), code)
         if observed is None:
@@ -245,7 +246,8 @@ def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: 
     required_text = constraint_requirement_text(constraint)
     if evaluation["satisfied"]:
         return _result(atom, recipe, "VERIFIED_OK", proof="STRUCTURED_VALUE", evidence=evidence,
-                       basis=f"Структурированное значение проекта {observed:g} {constraint.unit} выполняет условие «{required_text}».")
+                       basis=f"Структурированное значение проекта {observed:g} {constraint.unit} выполняет условие «{required_text}».",
+                       difference=dict(evaluation))
     difference = dict(evaluation)
     return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=evidence,
                    basis=f"Требование Задания: {required_text}; в проектном источнике: {observed:g} {constraint.unit}.", difference=difference,
@@ -471,6 +473,12 @@ def aggregate_atomic_results(
             "evidence_ready_atomic": evidence_ready,
             "evidence_coverage_pct": round(100 * evidence_ready / max(1, len(atoms)), 1),
             "semantic_consensus_completed": sum(str(atom.get("semantic_consensus_state") or "") == "PASSED" for atom in atoms),
+            "checker_family": ", ".join(dict.fromkeys(
+                str(atom.get("checker_family") or "") for atom in atoms if atom.get("checker_family")
+            )),
+            "checker_mode": ", ".join(dict.fromkeys(
+                str(atom.get("checker_mode") or "") for atom in atoms if atom.get("checker_mode")
+            )),
             "coverage_archetype": archetypes.most_common(1)[0][0] if archetypes else "UNCLASSIFIED",
             "coverage_state": (
                 "PROJECT_FINDING_CONFIRMED" if kind == "PROJECT_FINDING" else
@@ -647,6 +655,12 @@ def verify_checklist_rows(
         row["evidence_ready_atomic"] = evidence_ready
         row["evidence_coverage_pct"] = round(100 * evidence_ready / max(1, len(conditions)), 1)
         row["semantic_consensus_completed"] = sum(str(item.get("semantic_consensus_state") or "") == "PASSED" for item in conditions)
+        row["checker_family"] = ", ".join(dict.fromkeys(
+            str(item.get("checker_family") or "") for item in conditions if item.get("checker_family")
+        ))
+        row["checker_mode"] = ", ".join(dict.fromkeys(
+            str(item.get("checker_mode") or "") for item in conditions if item.get("checker_mode")
+        ))
         categorical_eligible=all(bool(item.get("automatic_verdict_eligible")) for item in conditions)
         recipe_statuses={str(item.get("recipe_status") or "") for item in conditions}
         if "RETRIEVAL_ONLY" in recipe_statuses:

@@ -1,0 +1,72 @@
+{
+  "version": "15.0-alpha1-executable-verification-engine",
+  "tests": 16,
+  "passed": 16,
+  "failed": 0,
+  "results": [
+    {
+      "test": "test_packet_reaches_l4_only_with_addressable_contract_ready_evidence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_independent_judge_and_critic_promote_only_to_l5",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_same_actual_provider_blocks_consensus_even_for_two_configured_roles",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_hallucinated_evidence_id_is_rejected_before_critic",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_critic_concern_blocks_promotion",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_ai_contradiction_requires_explicit_machine_readable_conflict",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_explicit_conflict_survives_independent_consensus",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_normative_clause_remains_specialist_only_without_verified_kb_clause",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_external_agent_payload_is_bounded_and_pseudonymised",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_comparison_operators_and_ranges_are_atomized",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_pressure_and_annual_capacity_are_compared_in_canonical_units",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_executable_numeric_check_emits_a_real_project_finding",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_l4_is_blocked_when_addressed_entity_does_not_match",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_partial_batch_response_is_retried_per_missing_packet",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_ai_execution_audit_records_actual_provider_and_model",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_technology_checklist_pack_is_active",
+      "status": "PASSED"
+    }
+  ]
+}

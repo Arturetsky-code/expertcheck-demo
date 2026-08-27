@@ -25,6 +25,8 @@ RAW_STATUS_CODES = {
     "BLOCKED", "NOT_REQUIRED", "SATISFIED", "UNSATISFIED", "VERIFIED_OK",
     "PROJECT_FINDING", "REVIEW_QUESTION", "SYSTEM_LIMITATION",
     "ACCEPTED", "NOT_RUN", "PARTIAL", "CONSENSUS", "DETERMINISTIC",
+    "SPECIALIST_REVIEW", "ENGINEERING_SEMANTIC_REVIEW", "FEATURE_PRESENCE",
+    "NORMATIVE_CONTENT_REVIEW", "ATOMIC_PATTERN_PRESENCE",
 }
 
 
@@ -77,7 +79,10 @@ def main() -> int:
     parser.add_argument("source_dir", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "VALIDATION_150_ALPHA1.json")
     parser.add_argument("--reports", type=Path, default=ROOT / "validation_reports_150a1")
+    parser.add_argument("--version", default=VERSION)
+    parser.add_argument("--report-tag", default="15.0A1")
     args = parser.parse_args()
+    run_version = str(args.version or VERSION)
 
     source_paths = sorted(path for path in args.source_dir.iterdir() if path.is_file() and path.suffix.lower() in {".pdf", ".xml"})
     documents, findings, comparisons = analyze_uploaded(
@@ -132,7 +137,11 @@ def main() -> int:
         row.get("atom_id") or row.get("requirement_id")
         for row in atoms + list((first.get("automatic_checklist_review") or {}).get("atomic_verification", {}).get("atoms") or [])
         if str(row.get("evidence_level") or "") == "L4"
-        and str(row.get("evidence_contract_state") or "") != "SATISFIED"
+        and (
+            str(row.get("evidence_contract_state") or "") != "SATISFIED"
+            or not list(row.get("verification_evidence") or [])
+            or not list(row.get("evidence") or [])
+        )
     ]
 
     # Exported reports must reflect explicit user decisions made after analysis.
@@ -143,14 +152,14 @@ def main() -> int:
     args.reports.mkdir(parents=True, exist_ok=True)
     report_paths = []
     names = {
-        "manager": "ExpertCheck_Резюме_руководителя_15.0A1.xlsx",
-        "gip": "ExpertCheck_Отчёт_ГИПа_15.0A1.xlsx",
-        "technical": "ExpertCheck_Техническое_приложение_15.0A1.xlsx",
+        "manager": f"ExpertCheck_Резюме_руководителя_{args.report_tag}.xlsx",
+        "gip": f"ExpertCheck_Отчёт_ГИПа_{args.report_tag}.xlsx",
+        "technical": f"ExpertCheck_Техническое_приложение_{args.report_tag}.xlsx",
     }
     for kind, name in names.items():
         path = args.reports / name
         path.write_bytes(structured_excel_report(
-            "Контрольный комплект ДСК", VERSION, documents, findings, comparisons,
+            "Контрольный комплект ДСК", run_version, documents, findings, comparisons,
             report_kind=kind, checklist_results=checklist,
         ))
         report_paths.append(path)
@@ -161,6 +170,8 @@ def main() -> int:
     from openpyxl import load_workbook
     workbook_sheets = {}
     report_confirmation = {}
+    report_question_rows = {}
+    report_atomic_headers = {}
     for path in report_paths:
         book = load_workbook(path, read_only=True, data_only=True)
         workbook_sheets[path.name] = list(book.sheetnames)
@@ -169,11 +180,19 @@ def main() -> int:
             report_confirmation[path.name] = {
                 str(row[0]): str(row[1]) for row in rows[1:] if len(row) >= 2 and row[0]
             }.get("Комплектность")
+        report_question_rows[path.name] = (
+            max(0, book["Вопросы специалисту"].max_row - 1)
+            if "Вопросы специалисту" in book.sheetnames else 0
+        )
+        report_atomic_headers[path.name] = (
+            [str(cell.value or "") for cell in next(book["Задание — атомарные условия"].iter_rows())]
+            if "Задание — атомарные условия" in book.sheetnames else []
+        )
         book.close()
 
     pipeline_errors = list(first.get("pipeline_errors") or [])
     summary = {
-        "version": VERSION,
+        "version": run_version,
         "input": {"documents": len(documents), "files": [path.name for path in source_paths]},
         "output": {"findings": len(findings), "comparisons": len(comparisons), "pipeline_errors": pipeline_errors},
         "assignment": {
@@ -202,6 +221,8 @@ def main() -> int:
         "report_localization_leaks": localization_leaks,
         "report_sheets": workbook_sheets,
         "report_confirmation": report_confirmation,
+        "report_question_rows": report_question_rows,
+        "report_atomic_headers": report_atomic_headers,
         "reports": [path.name for path in report_paths],
     }
     args.output.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -220,6 +241,9 @@ def main() -> int:
         and all(value == "Подтверждена" for value in report_confirmation.values())
         and "AI — сводка" in workbook_sheets.get(names["gip"], [])
         and "AI — сводка" in workbook_sheets.get(names["technical"], [])
+        and all(count > 0 for count in report_question_rows.values())
+        and "Оператор условия" in report_atomic_headers.get(names["gip"], [])
+        and "Значение проекта" in report_atomic_headers.get(names["technical"], [])
         and (first.get("report_quality_gate") or {}).get("status") == "PASSED"
         and (first.get("coverage_matrix") or {}).get("evidence_ready", 0) >= (first.get("coverage_matrix") or {}).get("completed", 0)
     )

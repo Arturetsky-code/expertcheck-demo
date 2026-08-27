@@ -12,6 +12,7 @@ from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
 from core.project_review_planner import build_review_plan
 from core.verification_core import verification_label
+from core.global_finding_gate import classify_finding
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -55,6 +56,34 @@ def _evidence_sources(row) -> str:
         if text and text not in seen:
             seen.add(text); rendered.append(text)
     return ' | '.join(rendered) if rendered else 'Источник не сформирован — требуется целевой поиск'
+
+
+def _ai_error_summary(errors) -> str:
+    """Render compact error categories; raw provider text stays in AI calls."""
+    categories={}
+    for error in errors or []:
+        low=str(error or '').lower()
+        if '403' in low or 'forbidden' in low or 'permission' in low or 'запрещ' in low:
+            label='Доступ к модели'
+        elif '429' in low or 'rate limit' in low or 'лимит' in low:
+            label='Лимит запросов'
+        elif '413' in low or 'too large' in low or 'слишком больш' in low:
+            label='Размер пакета'
+        elif 'json' in low:
+            label='Формат JSON'
+        elif 'timeout' in low or 'timed out' in low or 'время ожидания' in low:
+            label='Тайм-аут'
+        elif '401' in low or 'api-ключ' in low or 'api key' in low:
+            label='API-ключ'
+        else:
+            label='Прочая ошибка провайдера'
+        categories[label]=categories.get(label,0)+1
+    return '; '.join(f'{label}: {count}' for label,count in categories.items()) or 'Нет'
+
+
+def _difference_field(row, key, default=''):
+    value=row.get('difference') or {}
+    return value.get(key,default) if isinstance(value,dict) else default
 
 def metrics(df):
     if df.empty or 'status' not in df:return {'total':0,'ok':0,'warn':0,'bad':0}
@@ -367,22 +396,44 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         audit=dict(semantic_engine_summary.get(domain_key) or {})
         if not audit:
             continue
+        preflight=dict(audit.get('preflight') or {})
+        judge_preflight=dict(preflight.get('judge') or {})
+        critic_preflight=dict(preflight.get('critic') or {})
         ai_summary_rows.append({
             'Контур':domain_label,
             'Режим включён':'Да' if audit.get('enabled') else 'Нет',
-            'Настроенный Judge':audit.get('configured_judge_provider') or 'Не настроен',
-            'Настроенный Critic':audit.get('configured_critic_provider') or 'Не настроен',
-            'Готово пакетов L4':audit.get('judge_candidates',0),
-            'Отобрано для Judge':audit.get('judge_selected',0),
-            'Ответов Judge':audit.get('judge_responses',0),
-            'Ответов Critic':audit.get('critic_responses',0),
+            'Настроенная проверяющая модель':audit.get('configured_judge_provider') or 'Не настроен',
+            'Настроенная контрольная модель':audit.get('configured_critic_provider') or 'Не настроен',
+            'Готово атомарных пакетов L4':audit.get('judge_candidates',0),
+            'Отобрано для проверяющей модели':audit.get('judge_selected',0),
+            'Предварительная проверка основной модели':ru_label(judge_preflight.get('state') or 'NOT_REQUIRED'),
+            'Фактический основной провайдер':judge_preflight.get('actual_provider') or '—',
+            'Основная модель':judge_preflight.get('model') or '—',
+            'Предварительная проверка контрольной модели':ru_label(critic_preflight.get('state') or 'NOT_REQUIRED'),
+            'Фактический контрольный провайдер':critic_preflight.get('actual_provider') or '—',
+            'Контрольная модель':critic_preflight.get('model') or '—',
+            'Ответов проверяющей модели':audit.get('judge_responses',0),
+            'Ответов контрольной модели':audit.get('critic_responses',0),
             'Подтверждено консенсусом':audit.get('promoted_verified',0),
             'Подтверждено несоответствий':audit.get('project_findings',0),
             'Заблокировано контролем':audit.get('blocked_consensus',0),
             'Причина неактивности':' | '.join(audit.get('activation_reasons') or []),
-            'Ошибки Judge':' | '.join(audit.get('judge_errors') or []),
-            'Ошибки Critic':' | '.join(audit.get('critic_errors') or []),
+            'Ошибки проверяющей модели — кратко':_ai_error_summary(audit.get('judge_errors') or []),
+            'Ошибки контрольной модели — кратко':_ai_error_summary(audit.get('critic_errors') or []),
         })
+        for role_key, role_label in (('judge','Предварительная проверка основной модели'),('critic','Предварительная проверка контрольной модели')):
+            check=dict(preflight.get(role_key) or {})
+            if not check:
+                continue
+            ai_call_rows.append({
+                'Контур':domain_label, 'Роль':role_label, 'Попытка':0,
+                'Настроенный провайдер':check.get('configured_provider') or '—',
+                'Фактический провайдер':check.get('actual_provider') or '—',
+                'Модель':check.get('model') or '—', 'Код HTTP':check.get('status_code'),
+                'Запрошено пакетов':0, 'Получено ответов':0,
+                'Состояние':ru_label(check.get('state')), 'Ошибка':str(check.get('error') or '')[:1200],
+                'ID пакетов':'',
+            })
         for row in audit.get('execution_log') or []:
             ai_execution_rows.append({
                 'Контур':domain_label,
@@ -392,20 +443,20 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Контракт доказательства':ru_label(row.get('evidence_contract_state')),
                 'Отобран':'Да' if row.get('selected') else 'Нет',
                 'Основание отбора':row.get('selection_reason'),
-                'Решение Judge':ru_label(row.get('judge_state')),
-                'Ответ Judge получен':'Да' if row.get('judge_response_received') else 'Нет',
-                'Judge прошёл контроль':'Да' if row.get('judge_valid') else 'Нет',
-                'Достоверность Judge':row.get('judge_confidence'),
-                'Фактический провайдер Judge':row.get('judge_provider') or '—',
-                'Модель Judge':row.get('judge_model') or '—',
-                'Решение Critic':ru_label(row.get('critic_state')),
-                'Ответ Critic получен':'Да' if row.get('critic_response_received') else 'Нет',
-                'Фактический провайдер Critic':row.get('critic_provider') or '—',
-                'Модель Critic':row.get('critic_model') or '—',
+                'Решение проверяющей модели':ru_label(row.get('judge_state')),
+                'Ответ проверяющей модели получен':'Да' if row.get('judge_response_received') else 'Нет',
+                'Решение прошло структурный контроль':'Да' if row.get('judge_valid') else 'Нет',
+                'Достоверность проверяющей модели':row.get('judge_confidence'),
+                'Фактический основной провайдер':row.get('judge_provider') or '—',
+                'Основная модель':row.get('judge_model') or '—',
+                'Решение контрольной модели':ru_label(row.get('critic_state')),
+                'Ответ контрольной модели получен':'Да' if row.get('critic_response_received') else 'Нет',
+                'Фактический контрольный провайдер':row.get('critic_provider') or '—',
+                'Контрольная модель':row.get('critic_model') or '—',
                 'Итог консенсуса':ru_label(row.get('consensus_state')),
                 'Причины блокировки':' | '.join(row.get('blocking_reasons') or []),
             })
-        for role_key, role_label in (('judge_calls','Judge'),('critic_calls','Critic')):
+        for role_key, role_label in (('judge_calls','Проверяющая модель'),('critic_calls','Контрольная модель')):
             for call in audit.get(role_key) or []:
                 ai_call_rows.append({
                     'Контур':domain_label,
@@ -414,10 +465,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                     'Настроенный провайдер':call.get('configured_provider') or '—',
                     'Фактический провайдер':call.get('actual_provider') or '—',
                     'Модель':call.get('model') or '—',
+                    'Код HTTP':call.get('status_code'),
                     'Запрошено пакетов':call.get('requested',0),
                     'Получено ответов':call.get('responses',0),
                     'Состояние':ru_label(call.get('state')),
-                    'Ошибка':call.get('error') or '',
+                    'Ошибка':str(call.get('error') or '')[:1200],
                     'ID пакетов':' | '.join(call.get('packet_ids') or []),
                 })
     ai_summary_df=_excel_safe_frame(pd.DataFrame(ai_summary_rows))
@@ -531,13 +583,43 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'values':x.get('difference') or '',
         'explanation':x.get('decision_basis') or '',
         'sources':_evidence_sources(x),
+        'finding_type':'PROJECT_FINDING',
     } for x in assignment_atomic_rows if str(x.get('verification_kind') or '')=='PROJECT_FINDING']
     all_problems=list(report['problems'] or [])+atomic_problems
-    selected_problems = all_problems if report_kind == 'technical' else all_problems[:(12 if report_kind == 'manager' else 35)]
+    confirmed_problems=[x for x in all_problems if str(x.get('finding_type') or '').upper()=='PROJECT_FINDING']
+    selected_problems = confirmed_problems if report_kind == 'technical' else confirmed_problems[:(12 if report_kind == 'manager' else 35)]
     problems_df = pd.DataFrame(selected_problems).rename(columns={
         'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
         'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
     })
+    question_rows=[]
+    for item in all_problems:
+        if str(item.get('finding_type') or '').upper()!='REVIEW_QUESTION':
+            continue
+        question_rows.append({
+            'ID':item.get('id'),'Контур':'Межраздельная сверка','Объект':item.get('object') or '—',
+            'Проверка':item.get('parameter'),'Причина':item.get('explanation') or '',
+            'Недостающие доказательства':'Уточнить доверенные источники и актуальность разделов',
+            'Ожидаемые разделы':item.get('sources') or '—','Уровень доказательства':'—',
+        })
+    for item in review_plan.get('items') or []:
+        if str(item.get('verification_kind') or '').upper()!='REVIEW_QUESTION':
+            continue
+        question_rows.append({
+            'ID':item.get('plan_id'),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
+            'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
+            'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
+            'Ожидаемые разделы':', '.join(item.get('expected_evidence_route') or item.get('expected_sections') or []) or '—',
+            'Уровень доказательства':ru_label(item.get('evidence_level') or 'L0'),
+        })
+    deduped_questions=[]; seen_questions=set()
+    for item in question_rows:
+        key=(str(item.get('Контур') or ''),str(item.get('ID') or ''),str(item.get('Проверка') or ''))
+        if key in seen_questions:
+            continue
+        seen_questions.add(key); deduped_questions.append(item)
+    selected_questions=deduped_questions[:40] if report_kind=='manager' else deduped_questions
+    questions_df=pd.DataFrame(selected_questions)
     object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
     })
@@ -555,7 +637,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Код причины незавершения':r.get('coverage_reason_code') or '',
         'Причина незавершения':r.get('coverage_reason') or '',
         'Недостающие слоты':', '.join(r.get('missing_evidence_slots') or []),
-        'Deep Evidence': ru_label(r.get('deep_evidence_state')),
+        'Углублённый анализ доказательств': ru_label(r.get('deep_evidence_state')),
         'Уровень доказательства':ru_label(r.get('evidence_level') or 'L0'),
         'Доказательное покрытие атомов, %':r.get('evidence_coverage_pct'),
         'Смысловой консенсус':ru_label(r.get('semantic_consensus_state')),
@@ -604,6 +686,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
         'Семейство проверяющего механизма':ru_label(x.get('checker_family')) if x.get('checker_family') else '—',
+        'Режим проверяющего механизма':ru_label(x.get('checker_mode')) if x.get('checker_mode') else '—',
         'Независимый смысловой консенсус':ru_label(x.get('semantic_consensus_state')) if x.get('semantic_consensus_state') else '—',
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
         'Маршрут доказательства':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
@@ -681,7 +764,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Код причины незавершения':ru_label(x.get('coverage_reason_code')) if x.get('coverage_reason_code') else '',
         'Причина незавершения':x.get('coverage_reason') or '',
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
-        'Deep Evidence':ru_label(x.get('deep_evidence_state')),
+        'Углублённый анализ доказательств':ru_label(x.get('deep_evidence_state')),
         'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
         'Смысловой консенсус':ru_label(x.get('semantic_consensus_state')),
@@ -691,7 +774,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'ID требования','Раздел / вопрос Задания','Требование Задания','Объект','Показатель',
         'Требуемое значение','Ед. изм.','Результат','Документ','Страница','Доказательства',
         'Основание вывода','Рекомендация','Итоговый класс проверки','Архетип покрытия',
-        'Код причины незавершения','Причина незавершения','Недостающие слоты','Deep Evidence','Причины ограничения',
+        'Код причины незавершения','Причина незавершения','Недостающие слоты','Углублённый анализ доказательств','Причины ограничения',
     ])
     assignment_atomic_df=pd.DataFrame([{
         'ID атомарного условия':x.get('atom_id') or x.get('requirement_id'),
@@ -701,8 +784,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Тип атома':ru_label(x.get('atomic_kind')),
         'Объект':x.get('object_name') or '—',
         'Показатель':parameter_label(x.get('parameter_code')) if x.get('parameter_code') else x.get('focus') or '—',
+        'Оператор условия':ru_label(x.get('comparison_operator') or _difference_field(x,'operator')),
         'Требуемое значение':x.get('required_value'),
+        'Нижняя граница':x.get('required_min'),
+        'Верхняя граница':x.get('required_max'),
         'Ед. изм.':x.get('unit'),
+        'Нормализованное требуемое значение':_difference_field(x,'required'),
+        'Нормализованная нижняя граница':_difference_field(x,'required_min'),
+        'Нормализованная верхняя граница':_difference_field(x,'required_max'),
+        'Значение проекта':_difference_field(x,'observed'),
+        'Единица сравнения':_difference_field(x,'unit'),
+        'Условие выполнено':('Да' if _difference_field(x,'satisfied',None) is True else 'Нет' if _difference_field(x,'satisfied',None) is False else '—'),
         'Ожидаемые разделы':', '.join((x.get('verification_recipe') or {}).get('expected_sections') or x.get('expected_sections') or []),
         'Рецепт':x.get('recipe_id'),
         'Статус рецепта':ru_label(x.get('recipe_status')),
@@ -712,30 +804,30 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Явное различие':x.get('difference') or '',
         'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation') or '',
-        'Critic':ru_label(x.get('critic_state')),
-        'Regression gate':ru_label(x.get('regression_state')),
+        'Контроль рецепта':ru_label(x.get('critic_state')),
+        'Регрессионный контроль':ru_label(x.get('regression_state')),
         'Контракт доказательства':ru_label(x.get('evidence_contract_state')),
         'Архетип покрытия':ru_label(x.get('coverage_archetype')),
         'Состояние покрытия':ru_label(x.get('coverage_state')),
         'Код причины незавершения':ru_label(x.get('coverage_reason_code')) if x.get('coverage_reason_code') else '',
         'Причина незавершения':x.get('coverage_reason') or '',
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
-        'Смысловой gate':ru_label(x.get('semantic_gate_state')),
+        'Смысловой контроль':ru_label(x.get('semantic_gate_state')),
         'Требуемая модальность':ru_label((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('required_modality')),
         'Критические квалификаторы':', '.join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers') or []),
         'Причины смыслового удержания':' | '.join(x.get('semantic_gate_reasons') or []),
         'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Причина уровня доказательства':x.get('evidence_level_reason') or '',
-        'Семейство checker':ru_label(x.get('checker_family')),
-        'Режим checker':ru_label(x.get('checker_mode')),
+        'Семейство проверяющего механизма':ru_label(x.get('checker_family')),
+        'Режим проверяющего механизма':ru_label(x.get('checker_mode')),
         'Смысловой консенсус':ru_label(x.get('semantic_consensus_state')),
-        'Judge':ru_label((x.get('semantic_judge') or {}).get('verdict')),
-        'Достоверность Judge':(x.get('semantic_judge') or {}).get('confidence'),
-        'Провайдер Judge':(x.get('semantic_judge') or {}).get('provider'),
-        'Critic принял':('Да' if (x.get('semantic_critic') or {}).get('accept') is True else 'Нет' if x.get('semantic_critic') else '—'),
-        'Провайдер Critic':(x.get('semantic_critic') or {}).get('provider'),
+        'Решение проверяющей модели':ru_label((x.get('semantic_judge') or {}).get('verdict')),
+        'Достоверность проверяющей модели':(x.get('semantic_judge') or {}).get('confidence'),
+        'Провайдер проверяющей модели':(x.get('semantic_judge') or {}).get('provider'),
+        'Контрольная модель приняла':('Да' if (x.get('semantic_critic') or {}).get('accept') is True else 'Нет' if x.get('semantic_critic') else '—'),
+        'Провайдер контрольной модели':(x.get('semantic_critic') or {}).get('provider'),
         'Причины блокировки консенсуса':' | '.join(x.get('semantic_consensus_reasons') or []),
-        'Deep Evidence':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
+        'Углублённый анализ доказательств':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
         'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons') or []),
     } for x in assignment_atomic_rows])
 
@@ -774,6 +866,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     summary_df = _excel_safe_frame(pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']))
     risks_df = _excel_safe_frame(risks_df)
     problems_df = _excel_safe_frame(problems_df)
+    questions_df = _excel_safe_frame(questions_df)
     object_df = _excel_safe_frame(object_df)
     checklist_problem_df = _excel_safe_frame(checklist_problem_df)
     checklist_all_df = _excel_safe_frame(checklist_all_df)
@@ -791,7 +884,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Требование':x.get('requirement'),
         'Тип проверки':ru_label(x.get('check_kind')),
         'Пункт верифицирован':'Да' if x.get('verified_clause') else 'Нет',
-        'Готово для AI-review':'Да' if x.get('ai_review_ready') else 'Нет',
+        'Готово к смысловой AI-проверке':'Да' if x.get('ai_review_ready') else 'Нет',
         'Результат':x.get('status'),
         'Покрытие':ru_label(x.get('coverage_state')),
         'Основание вывода':x.get('decision_basis'),
@@ -805,31 +898,39 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
-    # Рабочие отчёты снова содержат полезную предметную информацию, но без raw-диагностики.
+    # Подтверждённые расхождения и адресные вопросы имеют разный доказательный
+    # статус и поэтому всегда выводятся на отдельных листах.
     if not problems_df.empty:
         if report_kind == 'manager':
-            sheets.append(('Несоответствия и вопросы', _excel_safe_frame(problems_df, columns=[
+            sheets.append(('Подтверждённые расхождения', _excel_safe_frame(problems_df, columns=[
                 'ID','Объект','Показатель','Результат','Приоритет','Пояснение','Источники',
             ])))
         else:
-            sheets.append(('Несоответствия и вопросы', problems_df))
+            sheets.append(('Подтверждённые расхождения', problems_df))
+    if not questions_df.empty:
+        sheets.append(('Вопросы специалисту', questions_df))
     if report_kind == 'manager':
         def readiness_row(label,domain):
             total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)
             attention=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
             return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Строгое покрытие L5, %':round(100*(ok+issues)/max(1,total),1),'Доказательное покрытие L3–L5, %':domain.get('evidence_coverage_pct',0),'Независимый AI-консенсус':domain.get('semantic_consensus_completed',0)}
         normative_valid_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру' and x.get('status') in {'Действует','Действует с изменениями'})
+        def comparison_count(rows,finding_type):
+            return sum(
+                str(classify_finding(x,source_kind='comparison').get('finding_type') or '').upper()==finding_type
+                for x in rows or []
+            )
         cross_total=len(comparison_records)
         cross_ok=sum(1 for x in comparison_records if str(x.get('status') or x.get('result') or '').strip().upper() in {'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО'})
-        cross_issues=sum(1 for x in comparison_records if str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' or str(x.get('status') or x.get('result') or '').strip().upper() in {'ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ','РАСХОЖДЕНИЕ','КОНФЛИКТ'})
-        cross_attention=int(summary.get('review_questions',0) or 0)+int(summary.get('system_limitations',0) or 0)
+        cross_issues=comparison_count(comparison_records,'PROJECT_FINDING')
+        cross_attention=comparison_count(comparison_records,'REVIEW_QUESTION')+comparison_count(comparison_records,'SYSTEM_LIMITATION')
         readiness=pd.DataFrame([
             readiness_row('Задание на проектирование',assignment_plan),
             {'Контур':'НТД — ссылки и редакции','Всего':len(normative_rows),'Завершено автоматически':normative_valid_verified,'Подтверждённые несоответствия':0,'Требует внимания':max(0,len(normative_rows)-normative_valid_verified),'Покрытие, %':round(100*normative_valid_verified/max(1,len(normative_rows)),1)},
             readiness_row('НТД — доказательные требования',normative_plan),
             readiness_row('Чек-листы',checklist_plan),
-            {'Контур':'Сверка реестров и чертежей','Всего':len(register_comparisons),'Завершено автоматически':_cross_completed(register_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in register_comparisons),'Требует внимания':max(0,len(register_comparisons)-_cross_completed(register_comparisons)),'Покрытие, %':round(100*_cross_completed(register_comparisons)/max(1,len(register_comparisons)),1)},
-            {'Контур':'Сверка инженерных параметров','Всего':len(engineering_comparisons),'Завершено автоматически':_cross_completed(engineering_comparisons),'Подтверждённые несоответствия':sum(str(x.get('finding_type') or '').upper()=='PROJECT_FINDING' for x in engineering_comparisons),'Требует внимания':max(0,len(engineering_comparisons)-_cross_completed(engineering_comparisons)),'Покрытие, %':round(100*_cross_completed(engineering_comparisons)/max(1,len(engineering_comparisons)),1)},
+            {'Контур':'Сверка реестров и чертежей','Всего':len(register_comparisons),'Завершено автоматически':_cross_completed(register_comparisons),'Подтверждённые несоответствия':comparison_count(register_comparisons,'PROJECT_FINDING'),'Требует внимания':comparison_count(register_comparisons,'REVIEW_QUESTION')+comparison_count(register_comparisons,'SYSTEM_LIMITATION'),'Покрытие, %':round(100*_cross_completed(register_comparisons)/max(1,len(register_comparisons)),1)},
+            {'Контур':'Сверка инженерных параметров','Всего':len(engineering_comparisons),'Завершено автоматически':_cross_completed(engineering_comparisons),'Подтверждённые несоответствия':comparison_count(engineering_comparisons,'PROJECT_FINDING'),'Требует внимания':comparison_count(engineering_comparisons,'REVIEW_QUESTION')+comparison_count(engineering_comparisons,'SYSTEM_LIMITATION'),'Покрытие, %':round(100*_cross_completed(engineering_comparisons)/max(1,len(engineering_comparisons)),1)},
         ])
         sheets.append(('Готовность проверки',_excel_safe_frame(readiness)))
         if not coverage_matrix_df.empty:
@@ -994,6 +1095,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 worksheet.set_margins(0.25, 0.25, 0.4, 0.4)
                 worksheet.set_header(f'&LExpertCheck&C{name}&R{str(project)[:45].replace("&", "&&")}')
                 worksheet.set_footer('&LАвтоматизированная предпроверка&CСтраница &P из &N&R&D')
+                if name in {'AI — сводка','AI — вызовы'}:
+                    for row_index in range(1, len(safe_frame)+1):
+                        worksheet.set_row(row_index, 48)
                 if len(safe_frame.columns):
                     worksheet.autofilter(0, 0, max(len(safe_frame), 1), len(safe_frame.columns)-1)
                 for col_idx, column in enumerate(safe_frame.columns):

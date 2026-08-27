@@ -209,8 +209,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     semantic_level = str(ai_options.get("level") or "off").lower()
     semantic_judge_provider = ai_options.get("judge_provider") or ai_options.get("provider")
     semantic_critic_provider = ai_options.get("critic_provider") or ai_options.get("reviewer_provider")
-    assignment_semantic_limit = 48 if semantic_level == "maximum" else 24
-    checklist_semantic_limit = 80 if semantic_level == "maximum" else 40
+    assignment_semantic_limit = 80 if semantic_level == "maximum" else 40
+    checklist_semantic_limit = 120 if semantic_level == "maximum" else 60
     progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
 
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
@@ -341,7 +341,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "14.0-alpha1-semantic-evidence-engine"
+        item["core_version"] = "15.0-alpha1-executable-verification-engine"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -616,7 +616,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "14.0-alpha1-semantic-evidence-engine"
+        item["core_version"] = "15.0-alpha1-executable-verification-engine"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -756,7 +756,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "14.0-alpha1-semantic-evidence-engine"
+        doc["core_version"] = "15.0-alpha1-executable-verification-engine"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue

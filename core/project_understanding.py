@@ -187,8 +187,15 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
             clean[code]=evidence
             sections=sorted({x["section"] for x in evidence if x["section"]})
             numeric=[]
+            section_values: dict[str, list[str]] = defaultdict(list)
             for x in evidence:
-                try:numeric.append(round(float(x["value"]),8))
+                try:
+                    value = round(float(x["value"]), 8)
+                    numeric.append(value)
+                    rendered = f"{value:g} {str(x.get('unit') or '').strip()}".strip()
+                    section = str(x.get("section") or "Раздел не определён")
+                    if rendered not in section_values[section]:
+                        section_values[section].append(rendered)
                 except Exception:pass
             unique=sorted(set(numeric))
             prop_summary.append({
@@ -196,6 +203,10 @@ def build_project_object_model(registry:list[dict[str,Any]],findings:list[dict[s
               "evidence_count":len(evidence),"sections":sections,
               "owner_evidence":any(x["owner_section"] for x in evidence),
               "value_conflict":len(unique)>1,"values":unique[:12],
+              "values_by_section":[
+                  {"section": section, "values": values}
+                  for section, values in sorted(section_values.items())
+              ],
             })
         obj["properties"]=clean
         obj["property_summary"]=prop_summary

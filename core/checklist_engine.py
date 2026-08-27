@@ -56,6 +56,7 @@ class ChecklistEngine:
     def __init__(self, catalog_path: str | Path):
         self.catalog_path = Path(catalog_path)
         self.items = json.loads(self.catalog_path.read_text(encoding='utf-8')) if self.catalog_path.exists() else []
+        self.items.extend(self._load_pack_checklists())
         self.review_engine = CrossSectionDependencyEngine(self.catalog_path.parent)
         self.expert_practice = ExpertPracticeIntelligence(self.catalog_path.parent)
         try:
@@ -65,6 +66,57 @@ class ChecklistEngine:
             self.verification_factory = {'total':0,'trusted_count':0,'experimental_count':0,'by_domain':{}}
             self.recipe_lookup = {}
         self._mark_hierarchy()
+
+    def _load_pack_checklists(self) -> list[dict[str, Any]]:
+        """Load curated checklist packs that were previously shipped but not executed.
+
+        Pack rows are converted to the same stable contract as the base catalog.
+        IDs are deduplicated so the loader remains safe when a pack is later
+        incorporated into ``checklist_catalog.json``.
+        """
+        known = {str(item.get('id') or '') for item in self.items}
+        result: list[dict[str, Any]] = []
+        pack_paths = (
+            self.catalog_path.parent / 'packs' / 'corporate' / 'checklists' / 'technology.json',
+        )
+        automation_map = {
+            'автоматическая': 'A',
+            'автоматическая/частичная': 'B',
+            'частичная': 'B',
+            'ручная': 'C',
+        }
+        for path in pack_paths:
+            if not path.exists():
+                continue
+            try:
+                rows = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, json.JSONDecodeError):
+                continue
+            for index, row in enumerate(rows if isinstance(rows, list) else [], 1):
+                if not isinstance(row, dict) or row.get('enabled') is False:
+                    continue
+                row_id = str(row.get('id') or f'PACK-{path.stem.upper()}-{index:04d}')
+                if row_id in known:
+                    continue
+                known.add(row_id)
+                scope = [str(value) for value in row.get('scope') or ['ALL'] if str(value).strip()]
+                result.append({
+                    'id': row_id,
+                    'source_file': str(row.get('source') or path.stem),
+                    'sheet': str(row.get('section') or (scope[0] if scope else 'Общее')),
+                    'row': index,
+                    'item_no': str(row.get('source_ref') or index),
+                    'section': str(row.get('section') or (scope[0] if scope else 'Общее')),
+                    'priority': str(row.get('priority') or ''),
+                    'question': str(row.get('title') or ''),
+                    'where_to_check': '',
+                    'risk': '',
+                    'automation_level': automation_map.get(str(row.get('automation') or '').lower(), 'C'),
+                    'document_types': scope or ['ALL'],
+                    'pack_source': str(path.relative_to(self.catalog_path.parent)),
+                    'rule_kind': str(row.get('rule_kind') or 'checklist_requirement'),
+                })
+        return result
 
     def _mark_hierarchy(self) -> None:
         groups: dict[tuple[str,str], list[dict[str,Any]]] = defaultdict(list)

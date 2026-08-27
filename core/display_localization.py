@@ -123,6 +123,15 @@ HEADER_LABELS = {
     'impact_risk':'Оценка влияния','cell_reconstruction':'Способ восстановления','evidence_quality_state':'Качество доказательства',
     'requirement_scope':'Область требования','requirement_type':'Тип требования','finding_type':'Тип результата',
     'promotion_method':'Способ подтверждения','semantic_evidence_score':'Смысловая достоверность',
+    'check_id':'ID проверки','object':'Объект','parameter':'Показатель','status':'Статус','priority':'Приоритет',
+    'values_by_section':'Значения по разделам','strong_evidence_count':'Количество сильных доказательств',
+    'document':'Документ','document_type':'Тип документа','page':'Страница','page_count':'Количество страниц',
+    'size_mb':'Размер, МБ','processing_error':'Ошибка обработки','parameter_code':'Код показателя',
+    'parameter_name':'Показатель','object_hint':'Объект','value_text':'Исходное значение','unit':'Ед. изм.',
+    'binding_status':'Статус привязки','row_integrity_status':'Целостность строки',
+    'row_integrity_reason':'Причина контроля строки','fact_admission_decision':'Допуск факта',
+    'fact_admission_score':'Оценка допуска факта','fact_admission_reasons':'Причины допуска факта',
+    'source_locator':'Адрес источника','match_method':'Метод сопоставления','structural_zone':'Структурная зона',
 }
 
 def evidence_label(value: Any) -> str:

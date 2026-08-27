@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import re
 from collections import Counter, defaultdict
 from typing import Any, Iterable
@@ -16,9 +15,16 @@ from .typed_evidence_resolver import resolve_typed_evidence
 from .semantic_verdict_gate import evaluate_semantic_verdict_gate
 from .requirement_contracts import coverage_diagnostics
 from .semantic_evidence_engine import run_semantic_evidence_engine
+from .constraint_engine import (
+    canonicalize_constraint,
+    canonicalize_observed,
+    constraint_from_atom,
+    evaluate_numeric_constraint,
+    requirement_text as constraint_requirement_text,
+)
 
 
-ENGINE_VERSION = "5.0-semantic-evidence-engine"
+ENGINE_VERSION = "6.0-executable-verification-engine"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -170,21 +176,6 @@ def _result(
     }
 
 
-def _convert(value: float, source_unit: str, target_unit: str) -> float | None:
-    source = normalize_engineering_unit(source_unit)
-    target = normalize_engineering_unit(target_unit)
-    if source == target:
-        return value
-    factors = {
-        ("км", "м"): 1000.0, ("м", "км"): 0.001,
-        ("м", "мм"): 1000.0, ("мм", "м"): 0.001,
-        ("мвт", "квт"): 1000.0, ("квт", "мвт"): 0.001,
-        ("кг/м3", "т/м3"): 0.001, ("т/м3", "кг/м3"): 1000.0,
-    }
-    factor = factors.get((source, target))
-    return value * factor if factor is not None else None
-
-
 def _owner_matches(atom: dict[str, Any], fact: dict[str, Any]) -> bool:
     expected = _norm(atom.get("object_name") or atom.get("scope_entity") or "")
     if not expected:
@@ -197,43 +188,67 @@ def _owner_matches(atom: dict[str, Any], fact: dict[str, Any]) -> bool:
     return bool(expected_terms and expected_terms & observed_terms)
 
 
+def _convert(value: float, source_unit: str, target_unit: str) -> float | None:
+    """Backward-compatible safe engineering unit conversion helper."""
+    source = normalize_engineering_unit(source_unit)
+    target = normalize_engineering_unit(target_unit)
+    if source == target:
+        return value
+    factors = {
+        ("км", "м"): 1000.0, ("м", "км"): 0.001,
+        ("м", "мм"): 1000.0, ("мм", "м"): 0.001,
+        ("мвт", "квт"): 1000.0, ("квт", "мвт"): 0.001,
+        ("кг/м3", "т/м3"): 0.001, ("т/м3", "кг/м3"): 1000.0,
+        ("кпа", "мпа"): 0.001, ("мпа", "кпа"): 1000.0,
+        ("па", "мпа"): 0.000001, ("мпа", "па"): 1_000_000.0,
+        ("бар", "мпа"): 0.1, ("мпа", "бар"): 10.0,
+        ("тыс.т/год", "т/год"): 1000.0, ("т/год", "тыс.т/год"): 0.001,
+        ("млн.т/год", "т/год"): 1_000_000.0, ("т/год", "млн.т/год"): 0.000001,
+        ("мин", "ч"): 1 / 60, ("ч", "мин"): 60.0,
+    }
+    factor = factors.get((source, target))
+    return value * factor if factor is not None else None
+
+
 def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: dict[str, Any]) -> dict[str, Any] | None:
-    required = _float(atom.get("required_value"))
+    constraint = constraint_from_atom(atom)
     code = str(atom.get("parameter_code") or "").upper()
     unit = str(atom.get("unit") or "")
-    if required is None or not code or not unit:
+    if constraint is None or not code or not unit:
         return None
+    constraint = canonicalize_constraint(constraint, code)
     compatible: list[tuple[float, dict[str, Any]]] = []
     for fact in fact_graph.get("facts") or []:
         if str(fact.get("property_code") or "").upper() != code or not _owner_matches(atom, fact):
             continue
-        observed = _float(fact.get("value"))
-        if observed is None or not units_compatible(unit, fact.get("unit"), code):
+        observed = canonicalize_observed(fact.get("value"), fact.get("unit"), code)
+        if observed is None:
             continue
-        converted = _convert(observed, str(fact.get("unit") or ""), unit)
-        if converted is None and normalize_engineering_unit(unit) == normalize_engineering_unit(fact.get("unit")):
-            converted = observed
-        if converted is not None:
-            compatible.append((converted, fact))
+        observed_value, observed_unit = observed
+        if observed_unit != constraint.unit and not units_compatible(constraint.unit, observed_unit, code):
+            continue
+        compatible.append((observed_value, fact))
     if not compatible:
         return None
     values = {round(value, 7) for value, _ in compatible}
     evidence = [{
-        **fact, "kind": "STRUCTURED_VALUE", "text": fact.get("source_trace") or f"{fact.get('property_name') or code}: {value:g} {unit}",
-        "value": value, "retrieval_score": 98,
+        **fact, "kind": "STRUCTURED_VALUE", "text": fact.get("source_trace") or f"{fact.get('property_name') or code}: {value:g} {constraint.unit}",
+        "value": value, "unit": constraint.unit, "retrieval_score": 98,
+        "constraint_operator": constraint.operator,
     } for value, fact in compatible]
     if len(values) > 1:
         return _result(atom, recipe, "REVIEW_QUESTION", proof="STRUCTURED_VALUE", candidates=evidence,
-                       basis=f"В проектных источниках найдены противоречивые значения: {sorted(values)} {unit}.",
+                       basis=f"В проектных источниках найдены противоречивые значения: {sorted(values)} {constraint.unit}.",
                        recommendation="Уточнить владельца показателя и выбрать авторитетный источник.")
     observed = next(iter(values))
-    equal = math.isclose(required, observed, rel_tol=0.002, abs_tol=max(0.0001, abs(required) * 0.0005))
-    if equal:
+    evaluation = evaluate_numeric_constraint(constraint, observed)
+    required_text = constraint_requirement_text(constraint)
+    if evaluation["satisfied"]:
         return _result(atom, recipe, "VERIFIED_OK", proof="STRUCTURED_VALUE", evidence=evidence,
-                       basis=f"Структурированное значение проекта {observed:g} {unit} совпадает с требованием {required:g} {unit}.")
-    difference = {"required": required, "observed": observed, "unit": unit, "delta": observed - required}
+                       basis=f"Структурированное значение проекта {observed:g} {constraint.unit} выполняет условие «{required_text}».")
+    difference = dict(evaluation)
     return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=evidence,
-                   basis=f"В Задании {required:g} {unit}, в проектном источнике {observed:g} {unit}.", difference=difference,
+                   basis=f"Требование Задания: {required_text}; в проектном источнике: {observed:g} {constraint.unit}.", difference=difference,
                    recommendation="Привести проектное решение в соответствие с Заданием либо оформить согласованное изменение.")
 
 

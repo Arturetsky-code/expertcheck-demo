@@ -73,7 +73,8 @@ def build_structured_report(
             project_findings.append(dict(row, global_finding_reason=gate.get("reason")))
         if not gate.get("report_eligible"):
             continue
-        level = _group(row.get("status") or row.get("result"))
+        finding_type = str(gate.get("finding_type") or "INFORMATIONAL")
+        level = "high" if finding_type == "PROJECT_FINDING" else "medium"
         counts[level] += 1
         if level not in {"high", "medium"}:
             level="medium"
@@ -81,7 +82,10 @@ def build_structured_report(
             "id": _text(row, "comparison_id", "check_code", "rule_id") or f"XCHK-{index+1:03d}",
             "object": _text(row, "object", "Объект", "object_name") or "Объект не определён",
             "parameter": _text(row, "parameter_name", "rule_name", "parameter", "Параметр") or "Проверка",
-            "status": _text(row, "status", "result", "Результат") or "Требует проверки",
+            "status": gate.get("user_status") or (
+                "Выявлено несоответствие" if finding_type == "PROJECT_FINDING" else "Требует проверки"
+            ),
+            "finding_type": finding_type,
             "priority": "Высокий" if level == "high" else "Средний",
             "values": row.get("document_values") or row.get("documents") or row.get("values") or "",
             "explanation": _text(row, "explanation", "Пояснение") or "Проверьте исходные значения и актуальность разделов.",
@@ -103,8 +107,9 @@ def build_structured_report(
                 'id':f"PU-CONFLICT-{len(problems)+1:03d}", 'object':obj.get('name') or 'Объект не определён',
                 'parameter':prop.get('parameter_name') or prop.get('parameter_code') or 'Показатель',
                 'status':'РАСХОЖДЕНИЕ', 'priority':'Высокий', 'values':vals,
+                'finding_type':'PROJECT_FINDING',
                 'explanation':'Модель проекта содержит разные структурированные значения одного показателя из нескольких разделов. Требуется проверить и согласовать исходные данные.',
-                'sources':', '.join(sections), 'finding_type':'PROJECT_FINDING', 'continuity_source':'PROJECT_UNDERSTANDING'
+                'sources':', '.join(sections), 'continuity_source':'PROJECT_UNDERSTANDING'
             })
             project_findings.append(problems[-1]); finding_class_counts['PROJECT_FINDING'] += 1; counts['high'] += 1
             existing_keys.add(key)

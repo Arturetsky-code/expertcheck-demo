@@ -208,7 +208,9 @@ class VerificationRecipeCompilerV2:
         }
         adaptive = str(recipe.get("pattern_origin") or "").upper() == "ADAPTIVE_CONTRACT_COMPILER"
         lexical_pattern = method == "ATOMIC_PATTERN_PRESENCE"
-        recipe["retrieval_only"] = bool(adaptive or lexical_pattern)
+        recipe["retrieval_only"] = bool(
+            lexical_pattern or (adaptive and method not in deterministic_methods)
+        )
         recipe["categorical_verdict_allowed"] = method in deterministic_methods
         recipe["automatic_verdict_policy"] = (
             "SPECIALIZED_DETERMINISTIC_CHECKER"

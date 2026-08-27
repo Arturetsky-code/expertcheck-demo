@@ -4,6 +4,7 @@ from typing import Any
 
 from .general_plan_engine import is_service_role_label
 from .page_evidence_store import section_matches, source_section
+from .global_finding_gate import classify_finding
 
 
 def validate_review_plan(
@@ -91,7 +92,14 @@ def validate_review_plan(
     if wrong_section>5:
         issues.append(f"Дополнительно обнаружено нерелевантных источников чек-листов: {wrong_section-5}.")
 
+    comparison_summary={
+        "PROJECT_FINDING":0,"REVIEW_QUESTION":0,"SYSTEM_LIMITATION":0,
+        "INFORMATIONAL":0,"PROJECT_STATUS":0,
+    }
     for row in comparisons or []:
+        classification=classify_finding(row,source_kind="comparison")
+        finding_type=str(classification.get("finding_type") or "INFORMATIONAL").upper()
+        comparison_summary[finding_type]=comparison_summary.get(finding_type,0)+1
         status=str(row.get('status') or row.get('result') or '').upper()
         if not any(token in status for token in ('СОВПАД','РАСХОЖД','КОНФЛИКТ')):
             continue
@@ -109,4 +117,5 @@ def validate_review_plan(
         "checks": len(plan.get("items") or []),
         "checked_objects": len(object_registry or []),
         "wrong_section_evidence": wrong_section,
+        "comparison_summary": comparison_summary,
     }

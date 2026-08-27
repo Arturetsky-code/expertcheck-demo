@@ -13,6 +13,7 @@ from .page_evidence_store import canonical_section, is_assignment_source, sectio
 from .specialist_checker_factory import checker_profile
 from .typed_evidence_resolver import DESIGN_MARKERS, infer_source_modality
 from .verification_core import KIND_STATES
+from .object_semantics import canonical_parameter_code
 
 
 ENGINE_VERSION = "2.0-strict-semantic-evidence-consensus"
@@ -159,8 +160,10 @@ def _normalise_candidate(
     owner_match = raw.get("owner_match")
     if owner_match is None:
         owner_match = _owner_match(atom, raw, text)
-    property_code = str(atom.get("parameter_code") or "").upper()
-    observed_code = str(raw.get("property_code") or raw.get("parameter_code") or raw.get("metric") or "").upper()
+    property_code = canonical_parameter_code(atom.get("parameter_code"))
+    observed_code = canonical_parameter_code(
+        raw.get("property_code") or raw.get("parameter_code") or raw.get("metric")
+    )
     property_match: bool | None = None if not property_code else property_code == observed_code
     design_marker = bool(raw.get("design_marker")) or any(marker in _norm(text) for marker in DESIGN_MARKERS)
     coverage = len(hits) / max(1, min(len(query_tokens), 8))
@@ -206,13 +209,13 @@ def _normalise_candidate(
 
 def _fact_candidates(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: dict[str, Any]) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
-    code = str(atom.get("parameter_code") or "").upper()
+    code = canonical_parameter_code(atom.get("parameter_code"))
     expected = list(recipe.get("expected_sections") or (atom.get("evidence_contract_v2") or {}).get("expected_sections") or [])
     query_tokens = _tokens(atom.get("atom_text") or atom.get("requirement_text"))
     for fact in list(fact_graph.get("facts") or []) + list(fact_graph.get("candidate_facts") or []):
         if expected and not section_matches(fact.get("section") or fact.get("document"), expected):
             continue
-        fact_code = str(fact.get("property_code") or "").upper()
+        fact_code = canonical_parameter_code(fact.get("property_code"))
         owner = _owner_match(atom, fact, str(fact.get("source_trace") or ""))
         if code and fact_code != code:
             continue
@@ -388,6 +391,8 @@ def _extract_json(text: Any) -> dict[str, Any] | None:
 def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
     """Return the bounded, pseudonymised payload allowed to leave the app."""
     evidence = list(packet.get("evidence") or [])
+    ready = [row for row in evidence if row.get("contract_ready_for_judgement")]
+    evidence = (ready or evidence)[:4]
     documents = sorted({
         str(row.get("document") or "").strip()
         for row in evidence
@@ -404,7 +409,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
             "document": alias,
             "page": page,
             "section": redact_text(str(row.get("section") or "")),
-            "text": redact_text(str(row.get("text") or ""))[:1200],
+            "text": redact_text(str(row.get("text") or ""))[:720],
             "source_locator": f"{alias}, стр. {page}",
             "kind": str(row.get("kind") or ""),
             "retrieval_score": int(row.get("retrieval_score") or 0),
@@ -422,7 +427,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
     return {
         "packet_id": str(packet.get("packet_id") or ""),
         "domain": redact_text(str(packet.get("domain") or "")),
-        "requirement": redact_text(str(packet.get("requirement") or "")),
+        "requirement": redact_text(str(packet.get("requirement") or ""))[:900],
         "atomic_kind": str(packet.get("atomic_kind") or ""),
         "object": redact_text(str(packet.get("object") or "")),
         "property_code": str(packet.get("property_code") or ""),
@@ -479,12 +484,46 @@ def _provider_name(provider: Any) -> str:
     return str(getattr(provider, "name", "") or getattr(provider, "provider", "") or type(provider).__name__ if provider is not None else "")
 
 
+def _preflight_provider(provider: Any, role: str) -> dict[str, Any]:
+    """Check key/model availability before sending project evidence packets."""
+    base = {
+        "role": role,
+        "configured_provider": _provider_name(provider),
+        "actual_provider": "",
+        "model": "",
+        "status_code": None,
+        "state": "NOT_CONFIGURED" if provider is None else "SKIPPED",
+        "error": "",
+        "ok": provider is not None,
+    }
+    probe = getattr(provider, "test_connection", None)
+    if provider is None or not callable(probe):
+        return base
+    try:
+        result = probe()
+    except Exception as exc:
+        return {
+            **base, "state": "FAILED", "ok": False,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    ok = bool(getattr(result, "ok", False))
+    return {
+        **base,
+        "actual_provider": str(getattr(result, "provider", "") or ""),
+        "model": str(getattr(result, "model", "") or ""),
+        "status_code": getattr(result, "status_code", None),
+        "state": "PASSED" if ok else "FAILED",
+        "error": "" if ok else str(getattr(result, "error", "AI provider error")),
+        "ok": ok,
+    }
+
+
 def _call_batches(
     provider: Any,
     packets: list[dict[str, Any]],
     *,
     critic: bool = False,
-    batch_size: int = 4,
+    batch_size: int = 2,
     retry_limit: int = 12,
 ) -> tuple[dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
     if provider is None or not packets:
@@ -494,8 +533,11 @@ def _call_batches(
     calls: list[dict[str, Any]] = []
     root_key = "reviews" if critic else "decisions"
     system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
+    halt_lane = False
+    retry_as_single = False
 
     def call(batch: list[dict[str, Any]], attempt: int) -> None:
+        nonlocal halt_lane, retry_as_single
         payload = {"task": "evidence_critic" if critic else "evidence_judge", "packets": batch}
         packet_ids = [str(packet.get("packet_id") or "") for packet in batch]
         log = {
@@ -507,6 +549,7 @@ def _call_batches(
             "responses": 0,
             "actual_provider": "",
             "model": "",
+            "status_code": None,
             "state": "FAILED",
             "error": "",
         }
@@ -520,8 +563,16 @@ def _call_batches(
             return
         if not getattr(result, "ok", False):
             message = str(getattr(result, "error", "AI provider error"))
+            status_code = getattr(result, "status_code", None)
             errors.append(message)
+            log["status_code"] = status_code
             log["error"] = message
+            if status_code == 413 and len(batch) > 1:
+                retry_as_single = True
+                log["state"] = "PAYLOAD_TOO_LARGE"
+            elif status_code in {401, 402, 403, 413, 429}:
+                halt_lane = True
+                log["state"] = "BLOCKED"
             calls.append(log)
             return
         log["actual_provider"] = str(getattr(result, "provider", "") or getattr(provider, "name", ""))
@@ -554,8 +605,12 @@ def _call_batches(
 
     for offset in range(0, len(packets), batch_size):
         call(packets[offset:offset + batch_size], 1)
+        if halt_lane or retry_as_single:
+            break
     missing_packets = [packet for packet in packets if str(packet.get("packet_id") or "") not in collected]
     for packet in missing_packets[:retry_limit]:
+        if halt_lane:
+            break
         call([packet], 2)
     return collected, list(dict.fromkeys(errors)), calls
 
@@ -774,17 +829,52 @@ def run_semantic_evidence_engine(
     indexed_passages = list(working_graph.get("passages") or page_corpus or [])
     working_graph["_semantic_passage_index"] = _prepare_passage_index(indexed_passages)
     for row in rows or []:
+        profile = checker_profile(row, dict(row.get("verification_recipe") or {}))
+        row["checker_family"] = profile.get("checker_family")
+        row["checker_mode"] = profile.get("checker_mode")
         if str(row.get("verification_kind") or "").upper() in {"VERIFIED_OK", "PROJECT_FINDING"}:
             row.setdefault("evidence_level", "L5")
             row.setdefault("evidence_level_reason", "Категоричный результат получен специализированным проверяющим механизмом.")
             continue
         packet = build_evidence_packet(row, working_graph, page_corpus)
+        ready_ids = set(packet.get("contract_ready_evidence_ids") or [])
+        ready_evidence = [
+            item for item in packet.get("evidence") or []
+            if str(item.get("evidence_id") or "") in ready_ids and _addressable(item)
+        ]
+        # L4 is a user-visible contract, not an internal retrieval score.  If
+        # no addressable proof can be rendered in the final queue, retain L3.
+        if packet.get("evidence_level") == "L4" and not ready_evidence:
+            packet["evidence_level"] = "L3"
+            packet["evidence_level_reason"] = (
+                "Адресный кандидат найден, но доказательство нельзя показать в итоговой очереди."
+            )
+            packet["evidence_contract_state"] = "UNSATISFIED"
         row["semantic_evidence_packet"] = packet
         row["evidence_level"] = packet["evidence_level"]
         row["evidence_level_reason"] = packet["evidence_level_reason"]
         row["evidence_contract_state"] = packet["evidence_contract_state"]
         row["checker_family"] = packet["checker"].get("checker_family")
         row["checker_mode"] = packet["checker"].get("checker_mode")
+        row["evidence_candidates"] = list(packet.get("evidence") or [])
+        if packet.get("evidence_level") == "L4":
+            row["verification_evidence"] = ready_evidence
+            row["evidence"] = [
+                f"{item.get('source_locator')}: {str(item.get('text') or '')[:900]}"
+                for item in ready_evidence
+            ]
+            row["coverage_state"] = "TARGETED_REVIEW"
+            row["coverage_reason_code"] = "INDEPENDENT_SEMANTIC_CONFIRMATION_REQUIRED"
+            row["coverage_reason"] = (
+                "Адресный доказательственный контракт выполнен; требуется независимая смысловая проверка."
+            )
+            row["missing_evidence_slots"] = ["INDEPENDENT_SEMANTIC_CONFIRMATION"]
+            if str(row.get("verification_kind") or "").upper() == "SYSTEM_LIMITATION":
+                row["verification_kind"] = "REVIEW_QUESTION"
+                row["verification_state"] = KIND_STATES["REVIEW_QUESTION"]
+                row["final_verification_kind"] = "REVIEW_QUESTION"
+                row["final_verification_state"] = KIND_STATES["REVIEW_QUESTION"]
+                row["status"] = "Требует проверки"
         packets.append(packet)
         row_by_id[packet["packet_id"]] = row
 
@@ -803,6 +893,30 @@ def run_semantic_evidence_engine(
         activation_reasons.append("Провайдер Judge не настроен.")
     if critic_provider is None:
         activation_reasons.append("Провайдер Critic не настроен.")
+    preflight = {
+        "judge": {
+            "role": "JUDGE", "configured_provider": _provider_name(judge_provider),
+            "state": "NOT_REQUIRED", "ok": False,
+        },
+        "critic": {
+            "role": "CRITIC", "configured_provider": _provider_name(critic_provider),
+            "state": "NOT_REQUIRED", "ok": False,
+        },
+    }
+    if not activation_reasons and candidates:
+        preflight["judge"] = _preflight_provider(judge_provider, "JUDGE")
+        preflight["critic"] = _preflight_provider(critic_provider, "CRITIC")
+        for label, result in (("Judge", preflight["judge"]), ("Critic", preflight["critic"])):
+            if not result.get("ok"):
+                activation_reasons.append(
+                    f"Preflight {label} не пройден: {result.get('error') or 'провайдер или модель недоступны'}."
+                )
+        judge_actual = str(preflight["judge"].get("actual_provider") or "")
+        critic_actual = str(preflight["critic"].get("actual_provider") or "")
+        if judge_actual and critic_actual and judge_actual == critic_actual:
+            activation_reasons.append(
+                "Preflight показал одного фактического провайдера для Judge и Critic; независимый консенсус невозможен."
+            )
     if activation_reasons:
         candidates = []
     elif limit > 0:
@@ -903,6 +1017,7 @@ def run_semantic_evidence_engine(
         "configured_judge_provider": _provider_name(judge_provider),
         "configured_critic_provider": _provider_name(critic_provider),
         "activation_reasons": activation_reasons,
+        "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
         "judge_selected": len(candidates),
         "not_selected": max(0, len(eligible_candidates) - len(candidates)),

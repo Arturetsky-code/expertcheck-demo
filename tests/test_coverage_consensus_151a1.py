@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 from core.normative_validity import NormativeValidityChecker
 from core.review_queue import build_review_clusters
 from core.typed_check_engine import execute_typed_check
+from core.assignment_compliance import extract_requirements
 from studio.data import structured_excel_report
 from core.semantic_evidence_engine import run_semantic_evidence_engine
 from tests.test_semantic_evidence_engine_140a1 import FakeProvider, _row
@@ -59,6 +60,78 @@ def test_failed_critic_preflight_falls_back_to_advisory_judge():
     assert audit["critic_responses"] == 0 and critic.last_payload is None
     assert row["semantic_consensus_state"] == "ADVISORY_ONLY"
     assert row["verification_kind"] == "REVIEW_QUESTION" and row["evidence_level"] == "L4"
+
+
+def test_advisory_lane_is_bounded_and_reports_progress():
+    rows = []
+    for index in range(20):
+        row = _row()
+        row["atom_id"] = f"REQ-{index + 1}-A001"
+        rows.append(row)
+    events = []
+    audit = run_semantic_evidence_engine(
+        rows, fact_graph={"facts": [], "passages": []}, level="extended", limit=40,
+        judge_provider=FakeProvider("Groq", "judge"), critic_provider=None,
+        progress_callback=lambda role, completed, total: events.append((role, completed, total)),
+    )
+    assert audit["execution_mode"] == "ADVISORY_JUDGE_ONLY"
+    assert audit["judge_candidates"] == 20
+    assert audit["judge_selected"] == audit["advisory_limit"] == 12
+    assert audit["not_selected"] == 8
+    assert events[-1] == ("JUDGE", 12, 12)
+
+
+def test_transport_failure_opens_semantic_circuit_breaker():
+    class FailedProvider:
+        name = "Groq"
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, prompt, system=""):
+            self.calls += 1
+            return SimpleNamespace(
+                ok=False, provider=self.name, model="test", status_code=0,
+                error="connection reset by peer",
+            )
+
+    rows = []
+    for index in range(20):
+        row = _row()
+        row["atom_id"] = f"REQ-{index + 1}-A001"
+        rows.append(row)
+    provider = FailedProvider()
+    audit = run_semantic_evidence_engine(
+        rows, fact_graph={"facts": [], "passages": []}, level="extended", limit=40,
+        judge_provider=provider, critic_provider=None,
+    )
+    assert audit["judge_selected"] == 12
+    assert provider.calls == 2
+    assert len(audit["judge_calls"]) == 2
+    assert audit["judge_calls"][-1]["state"] == "CIRCUIT_BREAKER"
+
+
+def test_assignment_extractor_reuses_existing_page_corpus():
+    class Upload:
+        def __init__(self, name, document_type):
+            self.name = name
+            self.declared_document_type = document_type
+
+        def getvalue(self):
+            return b"not-a-real-pdf"
+
+    files = [Upload("Пояснительная записка.pdf", "ПЗ"), Upload("Задание.pdf", "Задание")]
+    corpus = [
+        {"document": "Пояснительная записка.pdf", "page": 1, "text": "Текст пояснительной записки проекта."},
+        {"document": "Задание.pdf", "page": 1, "text": "Задание на проектирование. Предусмотреть освещение территории металлическими опорами;"},
+    ]
+
+    def forbidden_reader(data, name):
+        raise AssertionError(f"Повторное чтение PDF запрещено: {name}")
+
+    rows = extract_requirements(files, forbidden_reader, page_corpus=corpus)
+    assert rows
+    assert all(row["source_document"] == "Задание.pdf" for row in rows)
 
 
 def test_normative_registry_distinguishes_verified_unverified_and_missing():

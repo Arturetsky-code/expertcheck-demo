@@ -87,6 +87,7 @@ class NormativeValidityChecker:
         rec=self.lookup(reference)
         if rec:
             status=rec.get("status") or "Требует верификации"
+            verified_status=status in {"Действует","Действует с изменениями","Утратил силу","Заменён"}
             source=self.sources.get(rec.get("official_source_kind")) or {}
             row={
               "reference":reference,"canonical_id":rec.get("canonical_id"),"status":status,
@@ -94,9 +95,13 @@ class NormativeValidityChecker:
               "replacement":rec.get("replacement",""),"effective_until":rec.get("effective_until",""),
               "official_source":source.get("title",""),"official_source_kind":rec.get("official_source_kind",""),
               "document":document,"page":page,"impact_risk":self.impact_risk(context),
-              "coverage_status":"Проверено по реестру" if status in {"Действует","Действует с изменениями","Утратил силу","Заменён"} else "Требует наполнения KB",
-              "project_risk_applicable":status in {"Действует","Действует с изменениями"},
-              "context":str(context or "")[:800],"verification_basis":rec.get("status_basis",""),
+              "coverage_status":"Проверено по реестру" if verified_status else "Есть в реестре — статус не верифицирован",
+              "registry_match_state":"VERIFIED_STATUS" if verified_status else "MATCHED_UNVERIFIED",
+              "project_risk_applicable":verified_status and status in {"Действует","Действует с изменениями"},
+              "context":str(context or "")[:800],"verification_basis":rec.get("status_basis","") or (
+                  "Документ распознан в кураторском реестре, но его статус и редакция ещё не верифицированы; "
+                  "категоричный вывод запрещён."
+              ),
               "expert_occurrences":rec.get("expert_occurrences",0),"expert_project_count":rec.get("expert_project_count",0),
               "verification_priority":rec.get("verification_priority",""),"priority_score":rec.get("priority_score",0),
               "requires_specialist":status not in {"Действует","Действует с изменениями"}
@@ -114,6 +119,7 @@ class NormativeValidityChecker:
           "official_source":"","official_source_candidate":source.get("title",""),"official_source_kind":source_kind,
           "document":document,"page":page,"impact_risk":self.impact_risk(context),
           "coverage_status":"Требует наполнения KB",
+          "registry_match_state":"NOT_IN_REGISTRY",
           "project_risk_applicable":False,
           "context":str(context or "")[:800],
           "verification_basis":"Документ отсутствует в кураторском реестре ExpertCheck; категоричный вывод о статусе запрещён.",
@@ -176,6 +182,8 @@ class NormativeValidityChecker:
                 "verification_priority":row.get("verification_priority") or "",
                 "impact_risk":row.get("impact_risk") or "Низкий",
                 "coverage_status":row.get("coverage_status") or "Требует наполнения KB",
+                "registry_match_state":row.get("registry_match_state") or "NOT_IN_REGISTRY",
+                "project_risk_applicable":bool(row.get("project_risk_applicable")),
                 "edition_assessment":row.get("edition_assessment") or {},
                 "mentions":0,"documents":set(),"pages":[],"contexts":[]
             })
@@ -200,6 +208,8 @@ class NormativeValidityChecker:
           "references":len(rows),"statuses":counts,
           "high_impact_attention":sum(1 for r in rows if r.get("impact_risk")=="Высокий" and r.get("status") in {"Действует","Действует с изменениями"}),
           "kb_gaps":sum(1 for r in rows if r.get("coverage_status")=="Требует наполнения KB"),
+          "registry_unverified":sum(1 for r in rows if r.get("registry_match_state")=="MATCHED_UNVERIFIED"),
+          "not_in_registry":sum(1 for r in rows if r.get("registry_match_state")=="NOT_IN_REGISTRY"),
           "p1_attention":sum(1 for r in rows if r.get("verification_priority")=="P1" and r.get("status") not in {"Действует","Действует с изменениями"}),
           "curated_registry_records":len(self.records),
           "outdated_editions":sum(1 for r in rows if (r.get("edition_assessment") or {}).get("edition_outdated")),

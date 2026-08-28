@@ -16,7 +16,7 @@ from .verification_core import KIND_STATES
 from .object_semantics import canonical_parameter_code
 
 
-ENGINE_VERSION = "2.0-strict-semantic-evidence-consensus"
+ENGINE_VERSION = "2.1-consensus-with-advisory-fallback"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -887,12 +887,11 @@ def run_semantic_evidence_engine(
     eligible_candidates.sort(key=lambda packet: max([int(x.get("retrieval_score") or 0) for x in packet.get("evidence") or []] or [0]), reverse=True)
     candidates = list(eligible_candidates)
     activation_reasons: list[str] = []
+    advisory_reasons: list[str] = []
     if not enabled:
         activation_reasons.append("Режим смысловой проверки отключён.")
     if judge_provider is None:
         activation_reasons.append("Провайдер Judge не настроен.")
-    if critic_provider is None:
-        activation_reasons.append("Провайдер Critic не настроен.")
     preflight = {
         "judge": {
             "role": "JUDGE", "configured_provider": _provider_name(judge_provider),
@@ -903,20 +902,42 @@ def run_semantic_evidence_engine(
             "state": "NOT_REQUIRED", "ok": False,
         },
     }
+    independent_consensus_available = False
     if not activation_reasons and candidates:
         preflight["judge"] = _preflight_provider(judge_provider, "JUDGE")
-        preflight["critic"] = _preflight_provider(critic_provider, "CRITIC")
-        for label, result in (("Judge", preflight["judge"]), ("Critic", preflight["critic"])):
-            if not result.get("ok"):
-                activation_reasons.append(
-                    f"Preflight {label} не пройден: {result.get('error') or 'провайдер или модель недоступны'}."
-                )
-        judge_actual = str(preflight["judge"].get("actual_provider") or "")
-        critic_actual = str(preflight["critic"].get("actual_provider") or "")
-        if judge_actual and critic_actual and judge_actual == critic_actual:
+        if not preflight["judge"].get("ok"):
             activation_reasons.append(
-                "Preflight показал одного фактического провайдера для Judge и Critic; независимый консенсус невозможен."
+                f"Preflight Judge не пройден: {preflight['judge'].get('error') or 'провайдер или модель недоступны'}."
             )
+        elif critic_provider is None:
+            advisory_reasons.append(
+                "Critic не настроен; Judge выполняется только в консультативном режиме без права на L5."
+            )
+        else:
+            preflight["critic"] = _preflight_provider(critic_provider, "CRITIC")
+            if not preflight["critic"].get("ok"):
+                advisory_reasons.append(
+                    f"Preflight Critic не пройден: {preflight['critic'].get('error') or 'провайдер или модель недоступны'}. "
+                    "Judge выполняется только в консультативном режиме без права на L5."
+                )
+            else:
+                judge_identity = str(
+                    preflight["judge"].get("actual_provider")
+                    or preflight["judge"].get("configured_provider")
+                    or _provider_name(judge_provider)
+                )
+                critic_identity = str(
+                    preflight["critic"].get("actual_provider")
+                    or preflight["critic"].get("configured_provider")
+                    or _provider_name(critic_provider)
+                )
+                if judge_identity and critic_identity and judge_identity == critic_identity:
+                    advisory_reasons.append(
+                        "Judge и Critic фактически обслуживаются одним AI-провайдером; "
+                        "Judge выполняется консультативно, независимый консенсус и L5 запрещены."
+                    )
+                else:
+                    independent_consensus_available = True
     if activation_reasons:
         candidates = []
     elif limit > 0:
@@ -926,7 +947,7 @@ def run_semantic_evidence_engine(
     raw_judges, judge_errors, judge_calls = _call_batches(judge_provider, judge_payloads, critic=False)
     judges = {packet["packet_id"]: _validate_judge(packet, raw_judges.get(packet["packet_id"])) for packet in candidates}
     critic_packets: list[dict[str, Any]] = []
-    for packet in candidates:
+    for packet in candidates if independent_consensus_available else []:
         judge = judges[packet["packet_id"]]
         if not judge.get("valid") or judge.get("verdict") not in {"SUPPORTS", "CONTRADICTS"}:
             continue
@@ -948,7 +969,7 @@ def run_semantic_evidence_engine(
         critic_packets.append(public_critic_packet)
     raw_critics, critic_errors, critic_calls = _call_batches(critic_provider, critic_packets, critic=True)
 
-    promoted = findings = blocked = 0
+    promoted = findings = blocked = advisory_completed = 0
     execution_log: list[dict[str, Any]] = []
     selected_ids = {str(packet.get("packet_id") or "") for packet in candidates}
     for packet in candidates:
@@ -957,9 +978,23 @@ def run_semantic_evidence_engine(
         critic = _validate_critic(packet, judge, raw_critics.get(packet_id))
         row = row_by_id[packet_id]
         passed = _apply_consensus(row, packet, judge, critic)
+        if not independent_consensus_available:
+            advisory_completed += int(bool(judge.get("response_received")))
+            row["semantic_advisory_state"] = "COMPLETED" if judge.get("response_received") else "FAILED"
+            row["semantic_advisory_decision"] = str(judge.get("verdict") or "INSUFFICIENT")
+            row["semantic_consensus_state"] = "ADVISORY_ONLY"
+            existing = [
+                reason for reason in (row.get("semantic_consensus_reasons") or [])
+                if not str(reason).startswith("Независимый Critic не вернул")
+            ]
+            row["semantic_consensus_reasons"] = list(dict.fromkeys(existing + advisory_reasons))
         promoted += int(passed and row.get("verification_kind") == "VERIFIED_OK")
         findings += int(passed and row.get("verification_kind") == "PROJECT_FINDING")
-        blocked += int(not passed and judge.get("verdict") in {"SUPPORTS", "CONTRADICTS"})
+        blocked += int(
+            independent_consensus_available
+            and not passed
+            and judge.get("verdict") in {"SUPPORTS", "CONTRADICTS"}
+        )
         execution_log.append({
             "packet_id": packet_id,
             "domain": packet.get("domain"),
@@ -967,7 +1002,12 @@ def run_semantic_evidence_engine(
             "evidence_level": packet.get("evidence_level"),
             "evidence_contract_state": packet.get("evidence_contract_state"),
             "selected": True,
-            "selection_reason": "Отобран по качеству доказательственного пакета.",
+            "selection_reason": (
+                "Отобран для независимого Judge/Critic по качеству доказательственного пакета."
+                if independent_consensus_available
+                else "Отобран для консультативного Judge; категоричный вывод запрещён."
+            ),
+            "execution_mode": "INDEPENDENT_CONSENSUS" if independent_consensus_available else "ADVISORY_JUDGE_ONLY",
             "judge_state": judge.get("verdict"),
             "judge_response_received": bool(judge.get("response_received")),
             "judge_valid": bool(judge.get("valid")),
@@ -1017,6 +1057,14 @@ def run_semantic_evidence_engine(
         "configured_judge_provider": _provider_name(judge_provider),
         "configured_critic_provider": _provider_name(critic_provider),
         "activation_reasons": activation_reasons,
+        "advisory_reasons": advisory_reasons,
+        "execution_mode": (
+            "DISABLED" if activation_reasons
+            else "INDEPENDENT_CONSENSUS" if independent_consensus_available
+            else "ADVISORY_JUDGE_ONLY" if candidates
+            else "NO_ELIGIBLE_PACKETS"
+        ),
+        "independent_consensus_available": independent_consensus_available,
         "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
         "judge_selected": len(candidates),
@@ -1026,6 +1074,7 @@ def run_semantic_evidence_engine(
         "promoted_verified": promoted,
         "project_findings": findings,
         "blocked_consensus": blocked,
+        "advisory_completed": advisory_completed,
         "evidence_levels": {level: levels.get(level, 0) for level in EVIDENCE_LEVELS},
         "evidence_ready": levels.get("L3", 0) + levels.get("L4", 0) + levels.get("L5", 0),
         "strictly_completed": levels.get("L5", 0),
@@ -1034,7 +1083,10 @@ def run_semantic_evidence_engine(
         "judge_calls": judge_calls,
         "critic_calls": critic_calls,
         "execution_log": execution_log,
-        "principle": "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate.",
+        "principle": (
+            "L5 требует адресное доказательство, независимые Judge/Critic и программный fail-closed gate. "
+            "Один доступный провайдер может сформировать только консультативный вопрос специалисту."
+        ),
     }
 
 

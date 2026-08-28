@@ -72,7 +72,7 @@ class BaseAdapter:
             "Наименование проекта": project_name,
             "Организация-разработчик": issue_org,
             "ГИП": signer,
-            "core_version": "15.0-alpha2-end-to-end-verification",
+            "core_version": "15.1-alpha1-coverage-consensus",
         }
         findings: list[dict[str, Any]] = []
 

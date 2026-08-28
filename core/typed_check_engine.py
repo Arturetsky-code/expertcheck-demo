@@ -23,10 +23,26 @@ def _source(finding: dict[str, Any]) -> str:
 
 def _direct_presence(finding: dict[str, Any]) -> bool:
     proof=str(finding.get('proof_kind') or finding.get('evidence_quality_decision') or '').upper()
-    return bool(
+    explicit = bool(
         finding.get('direct_artifact_evidence')
         or finding.get('document_identity_verified')
         or proof in {'STRUCTURED_PRESENCE','DOCUMENT_IDENTITY'}
+    )
+    if explicit:
+        return True
+    # A conservative deterministic fallback for L1 presence checks only.  An
+    # addressable row/page trace may prove that an artefact is present, but it
+    # never proves its completeness, correctness or engineering compliance.
+    document = str(finding.get('document') or finding.get('Файл') or '').strip()
+    page = finding.get('page') if finding.get('page') not in (None, '') else finding.get('Страница')
+    quality = str(finding.get('evidence_quality_decision') or '').upper()
+    binding = str(finding.get('binding_status') or '').upper()
+    trace = str(finding.get('physical_trace_level') or '').upper()
+    return bool(
+        document and page not in (None, '')
+        and quality in {'VERIFIED', 'ADMIT', 'ADMITTED'}
+        and binding in {'ROW_LOCKED', 'POSITION_LOCKED', 'LOGICAL_ROW_LOCKED'}
+        and trace in {'ROW_TRACE', 'PAGE_TRACE', 'TABLE_CELL', 'EXACT_TEXT'}
     )
 
 

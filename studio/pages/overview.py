@@ -71,8 +71,10 @@ def render(ctx):
                     progress_bar.progress(100,text='100%')
                     stage_text.markdown('**Проверка завершена**')
                     detail_text.caption('Результаты подготовлены. Открываем рабочее пространство проекта.')
-                except TypeError:
+                except TypeError as exc:
                     # Совместимость с более ранним Core без callback.
+                    if 'unexpected keyword argument' not in str(exc):
+                        raise
                     update_progress(15,'Подготовка комплекта','Запускаем обработку документов')
                     st.session_state.result=ctx.analyze(files,ctx.config_dir)
                     st.session_state.project_name=name.strip() or 'Новый проект'

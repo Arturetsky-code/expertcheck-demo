@@ -149,7 +149,9 @@ def _upload(ctx):
                 'learning_examples': st.session_state.get('object_learning_examples', [])}
             try:
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
-            except TypeError:
+            except TypeError as exc:
+                if 'unexpected keyword argument' not in str(exc):
+                    raise
                 update_progress(15, 'Подготовка комплекта', 'Запускаем обработку документов')
                 st.session_state.result = ctx.analyze(files, ctx.config_dir)
             st.session_state.project_name = name.strip() or 'Новый проект'

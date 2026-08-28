@@ -327,16 +327,36 @@ def _extract_appendix_objects(data:bytes)->list[dict[str,Any]]:
     return result
 
 
-def extract_requirements(files,reader)->list[dict[str,Any]]:
+def extract_requirements(files,reader,page_corpus:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
+    """Extract Assignment requirements without rereading the whole project twice.
+
+    The pipeline already builds a page corpus for every PDF.  Reusing it here keeps
+    the Assignment stage bounded on large packages; only the actual Assignment PDF
+    is reopened for its table/layout parser.
+    """
     rows=[];seen=set()
+    cached_pages:dict[str,list[tuple[int,str]]]={}
+    for page in page_corpus or []:
+        document=str(page.get("document") or "")
+        text=str(page.get("text") or "")
+        if document and text:
+            cached_pages.setdefault(document,[]).append((page.get("page") or 0,text))
     for f in files or []:
         name=str(getattr(f,"name","")); doc_type=str(getattr(f,"declared_document_type","") or "")
-        try:
-            data=f.getvalue() if hasattr(f,"getvalue") else f.read()
-            pages=reader(data,name)
-        except Exception: continue
+        data=None
+        pages=list(cached_pages.get(name) or [])
+        if not pages:
+            try:
+                data=f.getvalue() if hasattr(f,"getvalue") else f.read()
+                pages=reader(data,name)
+            except Exception: continue
         first=" ".join(t for _,t in pages[:2])
         if not (_assignment_file(name,doc_type) or any(x in normalize_text(first) for x in ASSIGNMENT_TYPES)): continue
+        if data is None:
+            try:
+                data=f.getvalue() if hasattr(f,"getvalue") else f.read()
+            except Exception:
+                data=b""
         structured=_table_cells_from_pdf(data) or _layout_rows_from_pdf(data)
         appendix_objects=_extract_appendix_objects(data)
         atoms=[]

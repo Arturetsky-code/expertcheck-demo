@@ -341,7 +341,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "15.1-alpha1-coverage-consensus"
+        item["core_version"] = "15.1-alpha1.1-assignment-resilience"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -506,8 +506,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
 
     project_profile_summary = ProjectProfileRegistry(root / "knowledge").summary()
 
-    progress(81, "Задание на проектирование", "Извлекаем требования Задания и сопоставляем их с проектными решениями")
-    assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
+    progress(81, "Задание на проектирование", "Готовим адресный корпус страниц без повторной обработки комплекта")
+    try:
+        assignment_page_corpus = build_page_corpus(pdf_files, legacy.read_pdf, document_types)
+    except Exception as exc:
+        assignment_page_corpus = []
+        pipeline_errors.append({"stage":"assignment_page_corpus","error":str(exc)})
     project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
     try:
         evidence_reconstruction = reconstruct_high_value_evidence(project_page_corpus)
@@ -532,13 +536,27 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     assignment_atomic_rows = []
     assignment_parent_baseline = []
     try:
-        assignment_requirements = extract_assignment_requirements(pdf_files, legacy.read_pdf)
+        progress(82, "Задание на проектирование", "Извлекаем строки и атомарные требования Задания")
+        assignment_requirements = extract_assignment_requirements(
+            pdf_files, legacy.read_pdf, page_corpus=assignment_page_corpus,
+        )
         assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
         assignment_parent_baseline = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
         atomic_requirement_graph = build_atomic_requirement_graph(assignment_requirements, domain="assignment")
+        progress(83, "Задание на проектирование", f"Построено атомарных условий: {len(atomic_requirement_graph.get('atoms') or [])}")
         universal_project_fact_graph = build_universal_project_fact_graph(
             object_registry, findings, project_page_corpus
         )
+        progress(84, "Задание на проектирование", "Отбираем лучшие адресные пакеты для ограниченной AI-проверки")
+
+        def assignment_semantic_progress(role, completed, total):
+            role_label = "Judge" if role == "JUDGE" else "Critic"
+            progress(
+                84 if role == "JUDGE" else 85,
+                "Задание на проектирование",
+                f"Консультативная AI-проверка {role_label}: обработано {completed} из {total} пакетов",
+            )
+
         assignment_atomic_rows = verify_atomic_requirements(
             atomic_requirement_graph.get("atoms") or [],
             knowledge_root=str(root / "knowledge"),
@@ -548,7 +566,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             critic_provider=semantic_critic_provider,
             semantic_level=semantic_level,
             semantic_limit=assignment_semantic_limit,
+            semantic_progress_callback=assignment_semantic_progress,
         )
+        progress(86, "Задание на проектирование", "Агрегируем результаты без категоричных выводов по недостаточным данным")
         assignment_compliance = aggregate_atomic_results(assignment_parent_baseline, assignment_atomic_rows)
         assignment_semantic_audit = dict((assignment_atomic_rows[0] if assignment_atomic_rows else {}).get("semantic_engine_audit") or {})
         assignment_ai_summary={
@@ -571,7 +591,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"assignment_compliance","error":str(exc)})
 
     # Цифровая инженерная модель строится только из извлечённых доказательств.
-    progress(82, "Межраздельная сверка", "Сравниваем инженерные характеристики и формируем объяснения")
+    progress(87, "Межраздельная сверка", "Сравниваем инженерные характеристики и формируем объяснения")
     dem = build_dem(findings, project_name="Новый проект")
     validation_issues = ValidationEngine().validate(dem)
     relations = RelationEngine().build(dem)
@@ -616,7 +636,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "15.1-alpha1-coverage-consensus"
+        item["core_version"] = "15.1-alpha1.1-assignment-resilience"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -756,7 +776,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "15.1-alpha1-coverage-consensus"
+        doc["core_version"] = "15.1-alpha1.1-assignment-resilience"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue

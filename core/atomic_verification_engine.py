@@ -381,6 +381,7 @@ def verify_atomic_requirements(
     fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
     judge_provider: Any = None, critic_provider: Any = None,
     semantic_level: str = "off", semantic_limit: int = 0,
+    semantic_progress_callback: Any = None,
 ) -> list[dict[str, Any]]:
     compiler = VerificationRecipeCompilerV2(knowledge_root)
     rows: list[dict[str, Any]] = []
@@ -415,6 +416,7 @@ def verify_atomic_requirements(
         critic_provider=critic_provider,
         level=semantic_level,
         limit=semantic_limit,
+        progress_callback=semantic_progress_callback,
     )
     if rows:
         rows[0]["semantic_engine_audit"] = semantic_audit

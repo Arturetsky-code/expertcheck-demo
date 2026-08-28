@@ -92,14 +92,20 @@ def test_independent_judge_and_critic_promote_only_to_l5():
 
 def test_same_actual_provider_blocks_consensus_even_for_two_configured_roles():
     row = _row()
+    judge = FakeProvider("Groq", "judge")
+    critic = FakeProvider("Groq", "critic")
     audit = run_semantic_evidence_engine(
         [row], fact_graph={"facts": [], "passages": []}, level="extended", limit=10,
-        judge_provider=FakeProvider("Groq", "judge"),
-        critic_provider=FakeProvider("Groq", "critic"),
+        judge_provider=judge,
+        critic_provider=critic,
     )
     assert audit["promoted_verified"] == 0
+    assert audit["execution_mode"] == "ADVISORY_JUDGE_ONLY"
+    assert audit["judge_selected"] == audit["judge_responses"] == audit["advisory_completed"] == 1
+    assert audit["critic_responses"] == 0 and critic.last_payload is None
     assert row["verification_kind"] == "REVIEW_QUESTION"
     assert row["evidence_level"] == "L4"
+    assert row["semantic_consensus_state"] == "ADVISORY_ONLY"
     assert any("одним AI-провайдером" in reason for reason in row["semantic_consensus_reasons"])
 
 

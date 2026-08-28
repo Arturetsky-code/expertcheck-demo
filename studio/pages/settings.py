@@ -194,7 +194,7 @@ def render(ctx) -> None:
             if actual.get('judge') and actual.get('critic') and actual['judge'] != actual['critic']:
                 st.success('Judge и Critic фактически обслуживаются разными провайдерами: независимый консенсус L5 доступен.')
             elif actual.get('judge') and actual.get('critic'):
-                st.warning('Judge и Critic фактически ответили через одного провайдера. Смысловые выводы будут удержаны на L4 до независимой проверки.')
+                st.warning('Judge и Critic фактически ответили через одного провайдера. Judge будет работать консультативно: сформирует адресные вопросы, но смысловые выводы останутся на L4 до независимой проверки.')
         if provider != 'Отключён':
             from core.ai_gateway import diagnostic_message, provider_from_settings
             ai_provider = provider_from_settings(provider, st.secrets)
@@ -207,7 +207,7 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемая схема без нового платного агента: «Умный автоматический»; Extraction — Groq; Judge — OpenRouter (или DeepSeek, если доступен); Critic — Groq. Категоричный смысловой вывод разрешается только когда Judge и Critic фактически ответили через разных провайдеров. Для Groq рекомендуется GROQ_MODEL = "auto".')
+        st.info('Рекомендуемая схема: «Умный автоматический»; Extraction — Groq; Judge — OpenRouter (или DeepSeek, если доступен); Critic — Groq. При одном доступном провайдере Judge работает консультативно и не создаёт L5. Категоричный смысловой вывод разрешается только когда Judge и Critic фактически ответили через разных провайдеров. Для Groq рекомендуется GROQ_MODEL = "auto".')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

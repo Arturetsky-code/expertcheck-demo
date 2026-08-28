@@ -11,6 +11,7 @@ from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
 from core.project_review_planner import build_review_plan
+from core.review_queue import build_review_clusters
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
 from core.project_assembly import (
@@ -402,6 +403,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ai_summary_rows.append({
             'Контур':domain_label,
             'Режим включён':'Да' if audit.get('enabled') else 'Нет',
+            'Режим выполнения':ru_label(audit.get('execution_mode') or 'DISABLED'),
             'Настроенная проверяющая модель':audit.get('configured_judge_provider') or 'Не настроен',
             'Настроенная контрольная модель':audit.get('configured_critic_provider') or 'Не настроен',
             'Готово атомарных пакетов L4':audit.get('judge_candidates',0),
@@ -414,10 +416,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Контрольная модель':critic_preflight.get('model') or '—',
             'Ответов проверяющей модели':audit.get('judge_responses',0),
             'Ответов контрольной модели':audit.get('critic_responses',0),
+            'Консультативных ответов Judge':audit.get('advisory_completed',0),
             'Подтверждено консенсусом':audit.get('promoted_verified',0),
             'Подтверждено несоответствий':audit.get('project_findings',0),
             'Заблокировано контролем':audit.get('blocked_consensus',0),
             'Причина неактивности':' | '.join(audit.get('activation_reasons') or []),
+            'Причина консультативного режима':' | '.join(audit.get('advisory_reasons') or []),
             'Ошибки проверяющей модели — кратко':_ai_error_summary(audit.get('judge_errors') or []),
             'Ошибки контрольной модели — кратко':_ai_error_summary(audit.get('critic_errors') or []),
         })
@@ -442,6 +446,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Уровень доказательства':ru_label(row.get('evidence_level')),
                 'Контракт доказательства':ru_label(row.get('evidence_contract_state')),
                 'Отобран':'Да' if row.get('selected') else 'Нет',
+                'Режим выполнения':ru_label(row.get('execution_mode') or '—'),
                 'Основание отбора':row.get('selection_reason'),
                 'Решение проверяющей модели':ru_label(row.get('judge_state')),
                 'Ответ проверяющей модели получен':'Да' if row.get('judge_response_received') else 'Нет',
@@ -487,6 +492,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     checklist_plan=review_domains.get('Чек-листы',{})
     report_quality_gate=dict(first_record.get('report_quality_gate') or {})
     normative_registry_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру')
+    normative_registry_unverified=sum(1 for x in normative_rows if x.get('registry_match_state')=='MATCHED_UNVERIFIED')
+    normative_registry_missing=sum(1 for x in normative_rows if x.get('registry_match_state')=='NOT_IN_REGISTRY')
+    semantic_advisory_total=sum(
+        int((semantic_engine_summary.get(code) or {}).get('advisory_completed') or 0)
+        for code in ('assignment','checklist')
+    )
     total_project_findings=int(summary.get('project_findings',0) or 0)+int(review_plan.get('project_findings',0) or 0)
     total_review_questions=int(summary.get('review_questions',0) or 0)+int(review_plan.get('review_questions',0) or 0)
     total_system_limitations=int(summary.get('system_limitations',0) or 0)+int(review_plan.get('system_limitations',0) or 0)
@@ -516,6 +527,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Строгое покрытие L5, %', coverage_matrix_payload.get('coverage_pct',0)],
         ['Доказательное покрытие L3–L5, %', coverage_matrix_payload.get('evidence_coverage_pct',0)],
         ['Проверок с независимым AI-консенсусом', coverage_matrix_payload.get('semantic_consensus_completed',0)],
+        ['Консультативных AI-оценок без L5', semantic_advisory_total],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
         ['Задание: доказательное покрытие L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
@@ -525,6 +537,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД: выявлено несоответствий', normative_plan.get('issue',0)],
         ['НТД: обнаружено уникальных ссылок', len(normative_rows)],
         ['НТД: проверено по реестру актуальности', normative_registry_verified],
+        ['НТД: распознано, но статус не верифицирован', normative_registry_unverified],
+        ['НТД: отсутствует в кураторском реестре', normative_registry_missing],
         ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
         ['Чек-листы: доказательное покрытие L3–L5, %', checklist_plan.get('evidence_coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
@@ -541,8 +555,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
             'Строгое покрытие L5, %','Доказательное покрытие L3–L5, %','Проверок с независимым AI-консенсусом',
+            'Консультативных AI-оценок без L5',
             'Задание: доказательное покрытие L3–L5, %','Чек-листы: доказательное покрытие L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
+            'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
             'Контроль согласованности отчёта','Итоговый вывод',
         }
@@ -620,6 +636,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         seen_questions.add(key); deduped_questions.append(item)
     selected_questions=deduped_questions[:40] if report_kind=='manager' else deduped_questions
     questions_df=pd.DataFrame(selected_questions)
+    review_clusters=build_review_clusters(deduped_questions)
+    review_clusters_df=pd.DataFrame(review_clusters[:20] if report_kind=='manager' else review_clusters)
+    summary_rows.extend([
+        ['Рабочих групп вопросов специалисту', len(review_clusters)],
+        ['Групп высокого приоритета', sum(1 for row in review_clusters if row.get('Приоритет')=='Высокий')],
+    ])
     object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
     })
@@ -662,7 +684,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     ):
         pending=int(domain.get('review',0) or 0)
         if pending:
-            add_action(f"{label}: рассмотреть {pending} адресных вопросов специалиста и зафиксировать решение.")
+            cluster_count=sum(1 for row in review_clusters if row.get('Контур')==label)
+            grouped=f" в {cluster_count} рабочих группах" if cluster_count else ''
+            add_action(f"{label}: рассмотреть {pending} адресных вопросов{grouped} и зафиксировать решение.")
     for atom in assignment_atomic_rows:
         if str(atom.get('verification_kind') or '')=='PROJECT_FINDING':
             add_action(
@@ -855,13 +879,38 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Количество упоминаний':x.get('mentions',1),
         'Документов':x.get('documents_count',1 if x.get('document') else 0),
         'Где встречается':'; '.join(x.get('pages') or []) if isinstance(x.get('pages'),list) else f"{x.get('document') or ''}, стр. {x.get('page') or ''}",
-        'Риск влияния':x.get('impact_risk') if x.get('coverage_status')!='Требует наполнения KB' else 'Не оценивается — пробел KB',
+        'Риск влияния':x.get('impact_risk') if x.get('coverage_status')=='Проверено по реестру' else 'Не оценивается — статус НТД не верифицирован',
         'Покрытие ExpertCheck':x.get('coverage_status') or '—',
+        'Состояние записи KB':x.get('registry_match_state') or '—',
         'Приоритет базы':x.get('verification_priority'),
         'Дата проверки':x.get('verified_on') or x.get('last_verified_at') or '',
         'Источник проверки':x.get('official_source'),
         'Рекомендуемый официальный источник':x.get('official_source_candidate') or '',
     } for x in normative_rows])
+
+    def _kb_priority(row):
+        mentions=int(row.get('mentions') or 0)
+        impact=str(row.get('impact_risk') or '')
+        if impact=='Высокий' or mentions>=5:return 'P1'
+        if impact=='Средний' or mentions>=2:return 'P2'
+        return 'P3'
+    normative_queue_df=pd.DataFrame([{
+        'Приоритет наполнения':_kb_priority(x),
+        'НТД':x.get('reference'),
+        'Состояние базы':(
+            'Распознано — проверить статус и редакцию'
+            if x.get('registry_match_state')=='MATCHED_UNVERIFIED'
+            else 'Добавить документ в кураторский реестр'
+        ),
+        'Упоминаний в проекте':x.get('mentions',1),
+        'Документов проекта':x.get('documents_count',1 if x.get('document') else 0),
+        'Контекстный приоритет':x.get('impact_risk') or 'Низкий',
+        'Рекомендуемый официальный источник':x.get('official_source_candidate') or x.get('official_source') or '',
+        'Правило вывода':'До верификации статуса и редакции категоричный вывод о проекте запрещён.',
+    } for x in normative_rows if x.get('coverage_status')!='Проверено по реестру'])
+    if not normative_queue_df.empty:
+        normative_queue_df['_rank']=normative_queue_df['Приоритет наполнения'].map({'P1':0,'P2':1,'P3':2}).fillna(9)
+        normative_queue_df=normative_queue_df.sort_values(['_rank','Упоминаний в проекте'],ascending=[True,False]).drop(columns=['_rank'])
 
     summary_df = _excel_safe_frame(pd.DataFrame(summary_rows, columns=['Показатель', 'Значение']))
     risks_df = _excel_safe_frame(risks_df)
@@ -872,6 +921,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     checklist_all_df = _excel_safe_frame(checklist_all_df)
     recommendations_df = _excel_safe_frame(recommendations_df)
     review_plan_df = _excel_safe_frame(review_plan_df)
+    review_clusters_df = _excel_safe_frame(review_clusters_df)
     limitations_df = _excel_safe_frame(limitations_df)
     coverage_matrix_df = _excel_safe_frame(coverage_matrix_df)
 
@@ -891,6 +941,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Доказательства':' | '.join(f"{e.get('document')}, стр. {e.get('page')}: {e.get('context') or e.get('text') or e.get('value') or ''}" for e in (x.get('evidence') or [])[:5]),
     } for x in normative_compliance_rows])
     normative_df = _excel_safe_frame(normative_df)
+    normative_queue_df = _excel_safe_frame(normative_queue_df)
     assignment_df = _excel_safe_frame(assignment_df)
     assignment_atomic_df = _excel_safe_frame(assignment_atomic_df)
     understanding_df = _excel_safe_frame(understanding_df)
@@ -909,6 +960,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             sheets.append(('Подтверждённые расхождения', problems_df))
     if not questions_df.empty:
         sheets.append(('Вопросы специалисту', questions_df))
+    if not review_clusters_df.empty:
+        sheets.append(('Очередь проверки', review_clusters_df))
     if report_kind == 'manager':
         def readiness_row(label,domain):
             total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)
@@ -950,6 +1003,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
+        if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
         if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
         if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
@@ -960,6 +1014,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not object_df.empty: sheets.append(('Состав проекта', object_df))
         if not checklist_problem_df.empty: sheets.append(('Чек-листы — диагностика', checklist_problem_df))
         if not normative_df.empty: sheets.append(('Актуальность НТД', normative_df))
+        if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not normative_compliance_df.empty: sheets.append(('Проверка требований НТД', normative_compliance_df))
         if not normative_requirement_df.empty: sheets.append(('Контекст ссылок НТД', normative_requirement_df))
         if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))

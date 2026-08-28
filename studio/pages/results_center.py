@@ -5,6 +5,7 @@ from studio.components import hero,card,empty,section
 from core.global_finding_gate import apply_finding_gate
 from core.expert_review_engine import build_expert_risks
 from core.verification_core import annotate_rows
+from core.review_queue import build_review_clusters
 
 
 def _first(docs):return docs.iloc[0].to_dict() if not docs.empty else {}
@@ -33,9 +34,18 @@ def render(ctx):
             elif r.get('verification_kind')=='REVIEW_QUESTION':review.append({'object':domain,'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),'global_finding_reason':r.get('decision_basis') or r.get('evidence') or ''})
     verified=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='VERIFIED_OK')
     limits=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='SYSTEM_LIMITATION')
+    review_clusters=build_review_clusters([{
+        'ID':r.get('id') or r.get('plan_id'),
+        'Контур':r.get('object') or 'Не определён',
+        'Объект':r.get('entity') or '—',
+        'Проверка':r.get('parameter_name') or r.get('parameter') or '—',
+        'Причина':r.get('global_finding_reason') or r.get('explanation') or 'Требуется предметное решение специалиста.',
+        'Ожидаемые разделы':r.get('expected_sections') or r.get('sources') or '—',
+        'Уровень доказательства':r.get('evidence_level') or 'L0',
+    } for r in review])
     c1,c2,c3,c4=st.columns(4)
     with c1:card('Несоответствия',len(project),'Доказанные проблемы','bad' if project else 'ok')
-    with c2:card('Вопросы специалисту',len(review),'Есть конкретное основание','warn' if review else 'ok')
+    with c2:card('Вопросы специалисту',len(review),f'{len(review_clusters)} рабочих групп','warn' if review else 'ok')
     with c3:card('Подтверждено',verified,'Проверки с доказательством','ok')
     with c4:card('Не проверено',limits,'Ограничения покрытия','info')
 
@@ -45,7 +55,11 @@ def render(ctx):
         else:st.dataframe(pd.DataFrame([{'Контур / объект':r.get('object') or '—','Проверка':r.get('parameter_name') or r.get('parameter') or '—','Результат':r.get('status') or r.get('result') or 'Несоответствие','Обоснование':r.get('explanation') or ''} for r in project]).head(80),hide_index=True,width='stretch')
     with tabs[1]:
         if not review:empty('Обоснованные вопросы специалисту не сформированы.')
-        else:st.dataframe(pd.DataFrame([{'Контур / объект':r.get('object') or '—','Вопрос':r.get('parameter_name') or r.get('parameter') or '—','Почему требуется проверка':r.get('global_finding_reason') or r.get('explanation') or ''} for r in review]).head(80),hide_index=True,width='stretch')
+        else:
+            st.caption('Сначала показаны сгруппированные рабочие задачи. Все исходные вопросы сохранены ниже для трассировки.')
+            st.dataframe(pd.DataFrame(review_clusters).head(40),hide_index=True,width='stretch')
+            with st.expander(f'Все адресные вопросы ({len(review)})'):
+                st.dataframe(pd.DataFrame([{'Контур / объект':r.get('object') or '—','Вопрос':r.get('parameter_name') or r.get('parameter') or '—','Почему требуется проверка':r.get('global_finding_reason') or r.get('explanation') or ''} for r in review]).head(500),hide_index=True,width='stretch')
     with tabs[2]:
         rows=[]
         for domain,data in [('Задание',assignment),('НТД',normative),('Чек-листы',checklist)]:

@@ -16,7 +16,7 @@ from .verification_core import KIND_STATES
 from .object_semantics import canonical_parameter_code
 
 
-ENGINE_VERSION = "2.1-consensus-with-advisory-fallback"
+ENGINE_VERSION = "2.2-resource-bounded-consensus"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -523,8 +523,10 @@ def _call_batches(
     packets: list[dict[str, Any]],
     *,
     critic: bool = False,
-    batch_size: int = 2,
-    retry_limit: int = 12,
+    batch_size: int = 4,
+    retry_limit: int = 4,
+    max_consecutive_failures: int = 2,
+    progress_callback: Any = None,
 ) -> tuple[dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
     if provider is None or not packets:
         return {}, [], []
@@ -535,9 +537,21 @@ def _call_batches(
     system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
     halt_lane = False
     retry_as_single = False
+    consecutive_failures = 0
+    notified_processed = 0
+
+    def notify(processed: int) -> None:
+        nonlocal notified_processed
+        if not callable(progress_callback):
+            return
+        notified_processed = max(notified_processed, min(processed, len(packets)))
+        try:
+            progress_callback("CRITIC" if critic else "JUDGE", notified_processed, len(packets))
+        except Exception:
+            pass
 
     def call(batch: list[dict[str, Any]], attempt: int) -> None:
-        nonlocal halt_lane, retry_as_single
+        nonlocal halt_lane, retry_as_single, consecutive_failures
         payload = {"task": "evidence_critic" if critic else "evidence_judge", "packets": batch}
         packet_ids = [str(packet.get("packet_id") or "") for packet in batch]
         log = {
@@ -560,6 +574,9 @@ def _call_batches(
             errors.append(message)
             log["error"] = message
             calls.append(log)
+            consecutive_failures += 1
+            if consecutive_failures >= max_consecutive_failures:
+                halt_lane = True
             return
         if not getattr(result, "ok", False):
             message = str(getattr(result, "error", "AI provider error"))
@@ -573,6 +590,11 @@ def _call_batches(
             elif status_code in {401, 402, 403, 413, 429}:
                 halt_lane = True
                 log["state"] = "BLOCKED"
+            else:
+                consecutive_failures += 1
+                if consecutive_failures >= max_consecutive_failures:
+                    halt_lane = True
+                    log["state"] = "CIRCUIT_BREAKER"
             calls.append(log)
             return
         log["actual_provider"] = str(getattr(result, "provider", "") or getattr(provider, "name", ""))
@@ -583,6 +605,9 @@ def _call_batches(
             errors.append(message)
             log["error"] = message
             calls.append(log)
+            consecutive_failures += 1
+            if consecutive_failures >= max_consecutive_failures:
+                halt_lane = True
             return
         actual_provider = log["actual_provider"]
         actual_model = log["model"]
@@ -598,6 +623,9 @@ def _call_batches(
             accepted += 1
         log["responses"] = accepted
         log["state"] = "PASSED" if accepted == len(allowed_ids) else "PARTIAL"
+        consecutive_failures = 0 if accepted else consecutive_failures + 1
+        if not accepted and consecutive_failures >= max_consecutive_failures:
+            halt_lane = True
         if accepted < len(allowed_ids):
             missing = sorted(allowed_ids - set(collected))
             log["error"] = f"Нет ответов для packet_id: {', '.join(missing)}"
@@ -605,13 +633,15 @@ def _call_batches(
 
     for offset in range(0, len(packets), batch_size):
         call(packets[offset:offset + batch_size], 1)
+        notify(offset + len(packets[offset:offset + batch_size]))
         if halt_lane or retry_as_single:
             break
     missing_packets = [packet for packet in packets if str(packet.get("packet_id") or "") not in collected]
-    for packet in missing_packets[:retry_limit]:
+    for retry_index, packet in enumerate(missing_packets[:retry_limit], 1):
         if halt_lane:
             break
         call([packet], 2)
+        notify(len(packets) - len(missing_packets) + retry_index)
     return collected, list(dict.fromkeys(errors)), calls
 
 
@@ -817,6 +847,7 @@ def _apply_consensus(row: dict[str, Any], packet: dict[str, Any], judge: dict[st
 def run_semantic_evidence_engine(
     rows: list[dict[str, Any]], *, fact_graph: dict[str, Any], page_corpus: Iterable[dict[str, Any]] = (),
     judge_provider: Any = None, critic_provider: Any = None, level: str = "off", limit: int = 0,
+    progress_callback: Any = None,
 ) -> dict[str, Any]:
     """Build evidence packets for every unresolved atom and judge the best ones.
 
@@ -938,13 +969,20 @@ def run_semantic_evidence_engine(
                     )
                 else:
                     independent_consensus_available = True
+    requested_limit = int(limit or 0)
+    advisory_limit = 12
     if activation_reasons:
         candidates = []
-    elif limit > 0:
-        candidates = candidates[:limit]
+    elif independent_consensus_available:
+        if requested_limit > 0:
+            candidates = candidates[:requested_limit]
+    else:
+        candidates = candidates[:min(requested_limit or advisory_limit, advisory_limit)]
 
     judge_payloads = [_public_packet(packet) for packet in candidates]
-    raw_judges, judge_errors, judge_calls = _call_batches(judge_provider, judge_payloads, critic=False)
+    raw_judges, judge_errors, judge_calls = _call_batches(
+        judge_provider, judge_payloads, critic=False, progress_callback=progress_callback,
+    )
     judges = {packet["packet_id"]: _validate_judge(packet, raw_judges.get(packet["packet_id"])) for packet in candidates}
     critic_packets: list[dict[str, Any]] = []
     for packet in candidates if independent_consensus_available else []:
@@ -967,7 +1005,9 @@ def run_semantic_evidence_engine(
             "reason": redact_text(str(judge.get("reason") or "")),
         }
         critic_packets.append(public_critic_packet)
-    raw_critics, critic_errors, critic_calls = _call_batches(critic_provider, critic_packets, critic=True)
+    raw_critics, critic_errors, critic_calls = _call_batches(
+        critic_provider, critic_packets, critic=True, progress_callback=progress_callback,
+    )
 
     promoted = findings = blocked = advisory_completed = 0
     execution_log: list[dict[str, Any]] = []
@@ -1068,6 +1108,8 @@ def run_semantic_evidence_engine(
         "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
         "judge_selected": len(candidates),
+        "requested_limit": requested_limit,
+        "advisory_limit": advisory_limit,
         "not_selected": max(0, len(eligible_candidates) - len(candidates)),
         "judge_responses": len(raw_judges),
         "critic_responses": len(raw_critics),

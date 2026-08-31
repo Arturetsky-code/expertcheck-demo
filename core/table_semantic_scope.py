@@ -24,10 +24,25 @@ def assess_table_semantic_scope(finding:dict[str,Any])->dict[str,Any]:
     if code in {'AREA_BUILD','AREA_TOTAL','CAPACITY','QUANTITY'} and scope in {'SITE','PROJECT'} and otype in {'TECHNOLOGICAL_COMPLEX','BUILDING','PUMP_STATION','TRANSFORMER_STATION','RESERVOIR','LINEAR_STRUCTURE'}:
         if binding not in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'}:
             decision='HOLD'; reasons.append('показатель относится к уровню площадки/проекта, а привязка к дочернему объекту не подтверждена строкой таблицы')
-    if code=='AREA_BUILD' and ('оборудован' in normalize_text(obj) or otype=='TECHNOLOGICAL_COMPLEX') and binding not in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'}:
+    comparison_excluded=bool(finding.get('comparison_excluded'))
+    exclusion_reason=str(finding.get('comparison_exclusion_reason') or '')
+    if code=='AREA_BUILD' and 'оборудован' in normalize_text(obj):
+        # AREA_BUILD is a building/structure footprint.  A row lock proves the
+        # physical source row but cannot turn an equipment aggregate into a
+        # building owner; this is the 43 414 m2 false-binding class.
+        decision='HOLD'
+        comparison_excluded=True
+        exclusion_reason='площадь застройки не может быть приписана сущности оборудования без отдельного объекта здания/сооружения'
+        reasons.append(exclusion_reason)
+    elif code=='AREA_BUILD' and otype=='TECHNOLOGICAL_COMPLEX' and binding not in {'ROW_LOCKED','POSITION_LOCKED','EXACT_OBJECT'}:
         if any(x in blob for x in ('площадь территории','площадь площадки')):
-            decision='HOLD'; reasons.append('площадь площадки не может автоматически наследоваться оборудованием/дочерним комплексом')
-    return {'table_semantic_scope':scope,'table_semantic_scope_decision':decision,'table_semantic_scope_reasons':reasons}
+            decision='HOLD'; reasons.append('площадь площадки не может автоматически наследоваться дочерним комплексом')
+    return {
+        'table_semantic_scope':scope,'table_semantic_scope_decision':decision,
+        'table_semantic_scope_reasons':reasons,
+        'comparison_excluded':comparison_excluded,
+        'comparison_exclusion_reason':exclusion_reason,
+    }
 
 
 def annotate_table_semantic_scope(findings:list[dict[str,Any]])->dict[str,int]:

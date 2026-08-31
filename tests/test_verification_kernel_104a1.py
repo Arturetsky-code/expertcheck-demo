@@ -95,7 +95,7 @@ def test_assignment_equipment_checker_confirms_register_mismatch():
     assert "количество" in row["decision_basis"]
 
 
-def test_assignment_capacity_checker_compares_project_level_hourly_capacity():
+def test_assignment_capacity_checker_does_not_compare_total_with_operating_throughput():
     requirement = _req(
         "Установить ДСК суммарной производительностью 500 т/ч с двумя независимыми технологическими линиями",
         "VALUE_COMPARISON", object_name="ДСК", parameter_code="CAPACITY", required_value=500, unit="т/ч",
@@ -105,9 +105,10 @@ def test_assignment_capacity_checker_compares_project_level_hourly_capacity():
         "text": "Таблица 5.1.1 - Параметры и технологические режимы. Часовая производительность отделения, тонн/час 334,86. Количество линий, шт. 2.",
     }]
     row = compare_requirements([requirement], [], [], corpus)[0]
-    assert row["status"] == "Выявлено отклонение"
+    assert row["status"] == "Требует проверки"
     assert row["verification_kernel"] == "CAPACITY_AND_PROCESS_TOPOLOGY"
-    assert row["difference"] == 165.14
+    assert row["difference"] is None
+    assert "разные по смысловому уровню" in row["decision_basis"]
 
 
 def test_grounding_requirement_is_not_closed_by_site_lighting_evidence():

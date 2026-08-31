@@ -14,9 +14,10 @@ from .specialist_checker_factory import checker_profile
 from .typed_evidence_resolver import DESIGN_MARKERS, infer_source_modality
 from .verification_core import KIND_STATES
 from .object_semantics import canonical_parameter_code
+from .coverage_acceleration import diversified_candidate_order
 
 
-ENGINE_VERSION = "2.2-resource-bounded-consensus"
+ENGINE_VERSION = "2.3-full-corpus-validated-failover"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -567,8 +568,20 @@ def _call_batches(
             "state": "FAILED",
             "error": "",
         }
+        def valid_contract(text: str) -> bool:
+            parsed = _extract_json(text)
+            return bool(parsed and isinstance(parsed.get(root_key), list))
+
         try:
-            result = provider.generate(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), system)
+            generate_validated = getattr(provider, "generate_validated", None)
+            if callable(generate_validated):
+                result = generate_validated(
+                    json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                    system,
+                    valid_contract,
+                )
+            else:
+                result = provider.generate(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), system)
         except Exception as exc:
             message = f"{type(exc).__name__}: {exc}"
             errors.append(message)
@@ -915,8 +928,7 @@ def run_semantic_evidence_engine(
         packet for packet in packets
         if packet.get("evidence_level") == "L4" and packet.get("checker", {}).get("consensus_eligible")
     ]
-    eligible_candidates.sort(key=lambda packet: max([int(x.get("retrieval_score") or 0) for x in packet.get("evidence") or []] or [0]), reverse=True)
-    candidates = list(eligible_candidates)
+    candidates = diversified_candidate_order(eligible_candidates)
     activation_reasons: list[str] = []
     advisory_reasons: list[str] = []
     if not enabled:

@@ -146,7 +146,8 @@ def _upload(ctx):
                 'Расширенный': 'extended', 'Максимальный': 'maximum',
             }.get(ai_level, 'helper'), 'provider': ai_provider, 'judge_provider': judge_provider,
                 'critic_provider': critic_provider, 'reviewer_provider': critic_provider,
-                'learning_examples': st.session_state.get('object_learning_examples', [])}
+                'learning_examples': st.session_state.get('object_learning_examples', []),
+                'review_mode': mode_code}
             try:
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
             except TypeError as exc:

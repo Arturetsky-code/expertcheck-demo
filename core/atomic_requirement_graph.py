@@ -10,7 +10,7 @@ from .requirement_contracts import build_contract
 from .constraint_engine import infer_comparison_operator
 
 
-GRAPH_VERSION = "1.0-atomic-requirements"
+GRAPH_VERSION = "1.1-typed-parent-context"
 
 _BULLET_RE = re.compile(r"\s*[•●▪◦−–]\s+")
 _SENTENCE_RE = re.compile(r"(?<=[.;])\s+(?=[А-ЯA-ZЁ])")
@@ -21,7 +21,8 @@ _NORMATIVE_RE = re.compile(
     re.I,
 )
 _UNIT_PATTERN = (
-    r"тыс\.?\s*тонн(?:\s*в\s*год)?|млн\.?\s*тонн(?:\s*в\s*год)?|"
+    r"тыс\.?\s*(?:т|тонн)(?:\s*(?:/\s*год|в\s*год))?|"
+    r"млн\.?\s*(?:т|тонн)(?:\s*(?:/\s*год|в\s*год))?|"
     r"тонн(?:ы|а)?(?:\s*в\s*год)?|т\s*/\s*(?:ч|год)|тонн\s*/\s*час|"
     r"м[³3]|м²|м2|мм|см|км|м|час(?:а|ов)?|ч|сут(?:ок|ки)?|дн(?:я|ей)|"
     r"мпа|кпа|па|бар|в|кв|квт|мвт|гц|ом|%|т\s*/\s*м[³3]|кг\s*/\s*м[³3]|"
@@ -118,6 +119,12 @@ def _split_requirement(text: str) -> list[dict[str, Any]]:
     )
     bullet_parts = _BULLET_RE.split(clean)
     has_bullets = len(bullet_parts) > 1
+    # A table-style delimiter in ``Продолжительность смены – 12 часов`` is not
+    # a list bullet.  Keeping the label and value in one clause preserves the
+    # engineering parameter and its project scope.
+    if len(bullet_parts) == 2 and _NUMBER_UNIT_RE.fullmatch(bullet_parts[1].strip(" .;")):
+        bullet_parts = [clean]
+        has_bullets = False
     prefix = _clean_text(bullet_parts[0]) if has_bullets else ""
     clauses: list[dict[str, Any]] = []
 
@@ -157,7 +164,11 @@ def _canonical_unit(value: str) -> str:
         "тонн/час": "т/ч", "м3": "м3", "м³": "м3", "м2": "м2", "м²": "м2",
         "тонн": "т", "тонна": "т", "тонны": "т", "т": "т",
         "тыс.тоннвгод": "тыс. т/год", "тыстоннвгод": "тыс. т/год",
+        "тыс.т/год": "тыс. т/год", "тыст/год": "тыс. т/год",
+        "тыс.тонн/год": "тыс. т/год", "тыстонн/год": "тыс. т/год",
         "млн.тоннвгод": "млн т/год", "млнтоннвгод": "млн т/год",
+        "млн.т/год": "млн т/год", "млнт/год": "млн т/год",
+        "млн.тонн/год": "млн т/год", "млнтонн/год": "млн т/год",
         "тоннвгод": "т/год", "т/год": "т/год",
         "кадроввсек": "кадр/с", "кадрвсек": "кадр/с", "минуты": "мин", "минут": "мин",
         "час": "ч", "часа": "ч", "часов": "ч", "ч": "ч", "штуки": "шт", "шт.": "шт",
@@ -532,6 +543,16 @@ def atomize_requirement(requirement: dict[str, Any], *, domain: str = "assignmen
                 "minimum_inclusive", "maximum_inclusive",
             ):
                 if key not in atom and requirement.get(key) not in (None, ""):
+                    atom[key] = requirement.get(key)
+            # A value-only child such as ``12 часов`` has lost the row label
+            # during sentence/table atomisation.  A specific typed parameter on
+            # the source row is stronger than the child's generic NUMERIC_VALUE.
+            parent_code = str(requirement.get("parameter_code") or "").strip()
+            if parent_code and atom.get("parameter_code") in {None, "", "NUMERIC_VALUE"}:
+                atom["parameter_code"] = parent_code
+                atom["focus"] = parent_code
+            for key in ("object_name", "scope_entity", "requirement_scope"):
+                if not atom.get(key) and requirement.get(key) not in (None, ""):
                     atom[key] = requirement.get(key)
         atom["evidence_contract_v2"] = build_contract(atom)
         atom["expected_sections"] = list((atom["evidence_contract_v2"] or {}).get("expected_sections") or [])

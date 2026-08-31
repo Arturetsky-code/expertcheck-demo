@@ -205,6 +205,12 @@ def directed_candidates(requirement: dict[str,Any], corpus: list[dict[str,Any]],
                 'document':page['document'],'page':page['page'],'object':obj,
                 'parameter_code':code,'value':value,'unit':unit,
                 'context':_page_context(text,hit),'match_method':'REQUIREMENT_DIRECTED_TEXT',
+                'source_trace':hit,'exact_clause':hit,
+                'physical_trace_level':'ROW_TRACE',
+                'source_locator':{
+                    'document':page['document'],'page':page['page'],
+                    'physical_trace_level':'ROW_TRACE',
+                },
                 'owner_match':owner_ok,'owner_score':round(owner_score,2),'unit_compatible':unit_ok,'score':score,
             }))
     ranked.sort(key=lambda x:(x[0], -int(x[1]['page'] or 0)), reverse=True)

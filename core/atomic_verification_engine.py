@@ -23,9 +23,14 @@ from .constraint_engine import (
     requirement_text as constraint_requirement_text,
 )
 from .object_semantics import canonical_parameter_code
+from .metric_semantics import (
+    capacity_level_label,
+    capacity_levels_equivalent,
+    capacity_semantic_level,
+)
 
 
-ENGINE_VERSION = "6.0-executable-verification-engine"
+ENGINE_VERSION = "6.1-semantic-capacity-scope"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -219,6 +224,11 @@ def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: 
         return None
     constraint = canonicalize_constraint(constraint, code)
     compatible: list[tuple[float, dict[str, Any]]] = []
+    semantic_mismatches: list[dict[str, Any]] = []
+    required_capacity_level = capacity_semantic_level(
+        atom.get("requirement_text"), atom.get("parent_requirement_text"),
+        atom.get("qualifier"), atom.get("unit"),
+    ) if code == "CAPACITY" else ""
     for fact in fact_graph.get("facts") or []:
         if canonical_parameter_code(fact.get("property_code")) != code or not _owner_matches(atom, fact):
             continue
@@ -228,8 +238,40 @@ def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: 
         observed_value, observed_unit = observed
         if observed_unit != constraint.unit and not units_compatible(constraint.unit, observed_unit, code):
             continue
+        if code == "CAPACITY":
+            observed_capacity_level = capacity_semantic_level(
+                fact.get("qualifier"), fact.get("property_name"),
+                fact.get("source_trace"), fact.get("unit"),
+            )
+            if not capacity_levels_equivalent(required_capacity_level, observed_capacity_level):
+                semantic_mismatches.append({
+                    **fact,
+                    "kind": "STRUCTURED_VALUE",
+                    "text": fact.get("source_trace") or f"{fact.get('property_name') or code}: {observed_value:g} {constraint.unit}",
+                    "value": observed_value,
+                    "unit": constraint.unit,
+                    "retrieval_score": 94,
+                    "capacity_required_level": required_capacity_level,
+                    "capacity_observed_level": observed_capacity_level,
+                    "unit_compatible": True,
+                })
+                continue
         compatible.append((observed_value, fact))
     if not compatible:
+        if semantic_mismatches:
+            observed_labels = sorted({
+                capacity_level_label(row.get("capacity_observed_level"))
+                for row in semantic_mismatches
+            })
+            return _result(
+                atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE",
+                candidates=semantic_mismatches,
+                basis=(
+                    f"Единицы совпадают, но сравниваются разные уровни показателя: требование — "
+                    f"{capacity_level_label(required_capacity_level)}; проект — {', '.join(observed_labels)}."
+                ),
+                recommendation="Подтвердить в одном масштабе номинальную, проектную или эксплуатационную производительность.",
+            )
         return None
     values = {round(value, 7) for value, _ in compatible}
     evidence = [{
@@ -252,6 +294,113 @@ def _fact_value_check(atom: dict[str, Any], recipe: dict[str, Any], fact_graph: 
     return _result(atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=evidence,
                    basis=f"Требование Задания: {required_text}; в проектном источнике: {observed:g} {constraint.unit}.", difference=difference,
                    recommendation="Привести проектное решение в соответствие с Заданием либо оформить согласованное изменение.")
+
+
+def _directed_value_check(atom: dict[str, Any], recipe: dict[str, Any]) -> dict[str, Any] | None:
+    """Adjudicate exact requirement-directed numeric clauses.
+
+    A page-level keyword hit is insufficient.  The candidate must carry the
+    exact metric/value clause, document, page, compatible unit and owner gate
+    produced by ``directed_candidates``.  Capacity additionally requires the
+    same engineering semantic level.
+    """
+    constraint = constraint_from_atom(atom)
+    code = canonical_parameter_code(atom.get("parameter_code"))
+    if constraint is None or not code:
+        return None
+    constraint = canonicalize_constraint(constraint, code)
+    required_level = capacity_semantic_level(
+        atom.get("requirement_text"), atom.get("parent_requirement_text"), atom.get("unit"),
+    ) if code == "CAPACITY" else ""
+    accepted: list[tuple[float, dict[str, Any]]] = []
+    semantic_mismatches: list[dict[str, Any]] = []
+    for raw in atom.get("directed_evidence_candidates") or []:
+        if str(raw.get("evidence_state") or "") != "verified_candidate":
+            continue
+        if canonical_parameter_code(raw.get("parameter_code")) != code:
+            continue
+        if not raw.get("document") or raw.get("page") in (None, ""):
+            continue
+        if not str(raw.get("source_trace") or raw.get("exact_clause") or "").strip():
+            continue
+        scope = str((atom.get("evidence_contract_v2") or {}).get("scope") or "")
+        if scope in {"OBJECT_SPECIFIC", "EQUIPMENT_SPECIFIC"} and raw.get("owner_match") is not True:
+            continue
+        observed = canonicalize_observed(raw.get("value"), raw.get("unit"), code)
+        if observed is None:
+            continue
+        value, observed_unit = observed
+        if observed_unit != constraint.unit and not units_compatible(constraint.unit, observed_unit, code):
+            continue
+        evidence = {
+            **raw,
+            "kind": "STRUCTURED_VALUE",
+            "text": str(raw.get("source_trace") or raw.get("exact_clause")),
+            "value": value,
+            "unit": constraint.unit,
+            "admitted": True,
+            "directed_evidence": True,
+            "evidence_quality_decision": "VERIFIED",
+            "retrieval_score": int(raw.get("score") or 95),
+            "physical_trace_level": "ROW_TRACE",
+            "source_locator": {
+                **dict(raw.get("source_locator") or {}),
+                "document": raw.get("document"), "page": raw.get("page"),
+                "physical_trace_level": "ROW_TRACE",
+            },
+        }
+        if code == "CAPACITY":
+            observed_level = capacity_semantic_level(
+                raw.get("source_trace"), raw.get("exact_clause"), raw.get("context"), raw.get("unit"),
+            )
+            evidence.update({
+                "capacity_required_level": required_level,
+                "capacity_observed_level": observed_level,
+            })
+            if not capacity_levels_equivalent(required_level, observed_level):
+                semantic_mismatches.append(evidence)
+                continue
+        accepted.append((value, evidence))
+    if not accepted:
+        if semantic_mismatches:
+            observed_labels = sorted({
+                capacity_level_label(row.get("capacity_observed_level"))
+                for row in semantic_mismatches
+            })
+            return _result(
+                atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE",
+                candidates=semantic_mismatches,
+                basis=(
+                    f"Найден точный числовой фрагмент, но уровень мощности не совпадает: требование — "
+                    f"{capacity_level_label(required_level)}; проект — {', '.join(observed_labels)}."
+                ),
+                recommendation="Подтвердить сравнение на одном смысловом уровне мощности.",
+            )
+        return None
+    values = {round(value, 7) for value, _ in accepted}
+    evidence_rows = [row for _, row in accepted]
+    if len(values) > 1:
+        return _result(
+            atom, recipe, "REVIEW_QUESTION", proof="STRUCTURED_VALUE",
+            candidates=evidence_rows,
+            basis=f"В направленном поиске найдены противоречивые значения: {sorted(values)} {constraint.unit}.",
+            recommendation="Уточнить авторитетный источник и область каждого значения.",
+        )
+    observed = next(iter(values))
+    evaluation = evaluate_numeric_constraint(constraint, observed)
+    required_text = constraint_requirement_text(constraint)
+    if evaluation["satisfied"]:
+        return _result(
+            atom, recipe, "VERIFIED_OK", proof="STRUCTURED_VALUE", evidence=evidence_rows,
+            basis=f"Точный адресный фрагмент проекта подтверждает условие «{required_text}».",
+            difference=dict(evaluation),
+        )
+    return _result(
+        atom, recipe, "PROJECT_FINDING", proof="STRUCTURED_COMPARISON", evidence=evidence_rows,
+        basis=f"Требование Задания: {required_text}; в точном проектном фрагменте: {observed:g} {constraint.unit}.",
+        difference=dict(evaluation),
+        recommendation="Привести проектное решение в соответствие с Заданием либо оформить согласованное изменение.",
+    )
 
 
 def _pattern_check(atom: dict[str, Any], recipe: dict[str, Any], passages: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
@@ -394,6 +543,8 @@ def verify_atomic_requirements(
             result = _prohibition_check(atom, recipe, passages)
         if str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON":
             result = _fact_value_check(atom, recipe, fact_graph)
+        if result is None and str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON":
+            result = _directed_value_check(atom, recipe)
         if result is None and atom_kind not in {"PROHIBITION", "APPLICABILITY_DECLARATION"}:
             result = _pattern_check(atom, recipe, passages)
         if result is None and atom_kind not in {"PROHIBITION", "APPLICABILITY_DECLARATION", "NORMATIVE_CLAUSE", "TRACEABILITY", "DOCUMENT_DELIVERABLE", "DESIGN_DETERMINED"}:
@@ -713,12 +864,27 @@ def verify_checklist_rows(
             })
             promoted += 1
         elif counts["REVIEW_QUESTION"] or counts["VERIFIED_OK"]:
+            has_confirmed_condition = counts["VERIFIED_OK"] > 0
+            has_candidates = any(item.get("evidence_candidates") for item in conditions)
             row.update({
                 "status": "Требует проверки", "proof_kind": "CANDIDATE_EVIDENCE",
                 "verification_kind": "REVIEW_QUESTION", "verification_state": KIND_STATES["REVIEW_QUESTION"],
                 "final_verification_kind": "REVIEW_QUESTION", "final_verification_state": KIND_STATES["REVIEW_QUESTION"],
-                "evidence": evidence, "decision_basis": "Пункт подтверждён частично; категоричный вывод удержан.",
-                "recommendation": "Проверить незакрытые атомарные условия специалистом.",
+                "evidence": evidence,
+                "decision_basis": (
+                    "Пункт подтверждён частично; категоричный вывод удержан."
+                    if has_confirmed_condition else
+                    "Найдены адресные кандидаты, но ни одно атомарное условие не подтверждено категорично."
+                    if has_candidates else
+                    "Адресное доказательство для пункта не сформировано."
+                ),
+                "recommendation": (
+                    "Проверить незакрытые атомарные условия специалистом."
+                    if has_confirmed_condition else
+                    "Проверить найденные кандидаты и подтвердить владельца, показатель и проектное решение."
+                    if has_candidates else
+                    "Найти доказательство в ожидаемых разделах и выполнить проверку специалистом."
+                ),
             })
             questions += 1
         else:

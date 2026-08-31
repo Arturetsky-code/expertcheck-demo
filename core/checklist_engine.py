@@ -119,6 +119,13 @@ class ChecklistEngine:
         return result
 
     def _mark_hierarchy(self) -> None:
+        section_titles = {
+            'конструктивные решения', 'архитектурные решения',
+            'технологические решения', 'система электроснабжения',
+            'система водоснабжения', 'система водоотведения',
+            'схема планировочной организации земельного участка',
+            'организация строительства', 'пояснительная записка',
+        }
         groups: dict[tuple[str,str], list[dict[str,Any]]] = defaultdict(list)
         for item in self.items:
             groups[(str(item.get('source_file')), str(item.get('sheet')))].append(item)
@@ -126,7 +133,15 @@ class ChecklistEngine:
             numbers = [str(x.get('item_no') or '').strip() for x in rows]
             for item in rows:
                 no = str(item.get('item_no') or '').strip()
-                item['is_heading'] = bool(no and any(x.startswith(no + '.') for x in numbers))
+                question = normalize_text(item.get('question') or '')
+                explicit_section_title = bool(
+                    re.fullmatch(r'\d{1,2}', no)
+                    and question in section_titles
+                )
+                item['is_heading'] = bool(
+                    no and any(x.startswith(no + '.') for x in numbers)
+                    or explicit_section_title
+                )
 
     def sections(self) -> list[str]:
         values = set()

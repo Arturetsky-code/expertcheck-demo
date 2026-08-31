@@ -7,6 +7,11 @@ from typing import Any, Iterable
 
 from .normalization import normalize_text
 from .page_evidence_store import is_assignment_source, section_matches
+from .metric_semantics import (
+    capacity_level_label,
+    capacity_levels_equivalent,
+    capacity_semantic_level,
+)
 
 
 DESIGN_MARKERS = (
@@ -323,6 +328,7 @@ def _capacity_topology_check(requirement: dict[str, Any], page_corpus: list[dict
     if requirement.get('required_value') is None and 'т/ч' not in low:
         return None
     required = requirement.get("required_value")
+    required_level = capacity_semantic_level(text, requirement.get("qualifier"), requirement.get("unit"))
     candidates: list[tuple[int, dict[str, Any], list[float], list[float], int | None]] = []
     for page in _candidate_pages(page_corpus, ("ТХ",)):
         page_low = _norm(page.get("text") or "")
@@ -358,19 +364,24 @@ def _capacity_topology_check(requirement: dict[str, Any], page_corpus: list[dict
         return None
     _, page, values, summary_values, line_count = candidates[0]
     snippet = _context(page.get("text") or "", ("производительност", "т/ч"), radius=600)
+    observed_level = capacity_semantic_level(snippet)
+    comparable_level = capacity_levels_equivalent(required_level, observed_level)
     exact = False
     try:
         comparison_values = summary_values or values
         exact = required is not None and any(math.isclose(float(required), value, rel_tol=.002, abs_tol=.05) for value in comparison_values)
     except (TypeError, ValueError):
         pass
-    verified_difference = bool(required is not None and summary_values and not exact)
+    verified_difference = bool(required is not None and summary_values and not exact and comparable_level)
     evidence = {
         "evidence_kind": "TECHNOLOGY_CAPACITY_TOPOLOGY", "evidence_state": "verified_candidate",
         "document": page.get("document"), "document_type": page.get("document_type"), "page": page.get("page"),
         "context": snippet, "score": 96 if verified_difference else 88,
         "candidate_values": values[:20], "summary_hourly_values": summary_values[:5],
         "line_count": line_count,
+        "capacity_required_level": required_level,
+        "capacity_observed_level": observed_level,
+        "capacity_level_compatible": comparable_level,
     }
     return {
         "status": "Выявлено отклонение" if verified_difference else "Требует проверки",
@@ -384,6 +395,10 @@ def _capacity_topology_check(requirement: dict[str, Any], page_corpus: list[dict
             f"{', '.join(f'{x:g}' for x in summary_values)} т/ч"
             + (f" при количестве линий {line_count}." if line_count is not None else ".")
             if verified_difference else
+            f"Найдены сопоставимые по единицам, но разные по смысловому уровню значения: требование — "
+            f"{capacity_level_label(required_level)}, ТХ — {capacity_level_label(observed_level)}. "
+            "Автоматическое отклонение не формируется."
+            if summary_values and not comparable_level else
             "В ТХ найдено требуемое значение, но необходимо подтвердить, что оно относится к суммарной производительности и двум независимым линиям."
             if exact else
             f"В ТХ найдены связанные значения производительности ({', '.join(f'{x:g}' for x in values[:8])} т/ч), но требуемая суммарная производительность и схема двух независимых линий автоматически не подтверждены."

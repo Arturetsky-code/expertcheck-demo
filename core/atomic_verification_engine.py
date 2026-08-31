@@ -30,7 +30,7 @@ from .metric_semantics import (
 )
 
 
-ENGINE_VERSION = "6.1-semantic-capacity-scope"
+ENGINE_VERSION = "6.2-auditable-semantic-mismatch"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн", "запроектирован",
     "оборудуется", "ограждается", "осуществляется", "применяется",
@@ -140,6 +140,16 @@ def _result(
         atom,recipe,evidence=evidence_rows,candidates=candidate_rows,
         gate_reasons=gate_reasons,final_kind=kind,
     )
+    final_categorical = kind in {"VERIFIED_OK", "PROJECT_FINDING"}
+    contract_satisfied = bool(
+        any(str(row.get("contract_state") or "").upper() == "SATISFIED" for row in evidence_rows)
+        or (
+            final_categorical and not gate_reasons and evidence_rows
+            and proof in STRONG_PROOFS
+            and str(semantic_gate.get("state") or "").upper() != "BLOCKED"
+        )
+    )
+    rendered_evidence = evidence_rows or (candidate_rows if kind == "REVIEW_QUESTION" else [])
     return {
         **atom,
         "status": status,
@@ -149,7 +159,7 @@ def _result(
         "final_verification_state": KIND_STATES.get(kind, status),
         "proof_kind": proof,
         "evidence_quality_state": proof,
-        "evidence": [f"{_evidence_locator(row)}: {str(row.get('text') or '')[:900]}" for row in evidence_rows],
+        "evidence": [f"{_evidence_locator(row)}: {str(row.get('text') or '')[:900]}" for row in rendered_evidence],
         "verification_evidence": evidence_rows,
         "evidence_candidates": candidate_rows,
         "decision_basis": "; ".join(gate_reasons) if gate_reasons else basis,
@@ -170,10 +180,7 @@ def _result(
         "semantic_gate_state": semantic_gate.get("state"),
         "semantic_gate_reasons": list(semantic_gate.get("reasons") or []),
         "semantic_gate_version": semantic_gate.get("version"),
-        "evidence_contract_state": (
-            "SATISFIED" if any(str(row.get("contract_state") or "").upper() == "SATISFIED" for row in evidence_rows)
-            else "UNSATISFIED"
-        ),
+        "evidence_contract_state": "SATISFIED" if contract_satisfied else "UNSATISFIED",
         "evidence_contract": dict(atom.get("evidence_contract_v2") or {}),
         "atomic_status": kind,
         "engine_version": ENGINE_VERSION,
@@ -367,11 +374,34 @@ def _directed_value_check(atom: dict[str, Any], recipe: dict[str, Any]) -> dict[
                 capacity_level_label(row.get("capacity_observed_level"))
                 for row in semantic_mismatches
             })
+            observed_values = sorted({round(float(row.get("value")), 7) for row in semantic_mismatches})
+            observed_value: Any = observed_values[0] if len(observed_values) == 1 else observed_values
             return _result(
                 atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE",
                 candidates=semantic_mismatches,
+                difference={
+                    "operator": "SEMANTIC_LEVEL_MISMATCH",
+                    "required": constraint.value,
+                    "observed": observed_value,
+                    "unit": constraint.unit,
+                    "satisfied": None,
+                    "required_semantic_level": required_level,
+                    "observed_semantic_levels": sorted({
+                        str(row.get("capacity_observed_level") or "") for row in semantic_mismatches
+                    }),
+                    "sources": [
+                        {
+                            "document": row.get("document"), "page": row.get("page"),
+                            "value": row.get("value"), "unit": row.get("unit"),
+                            "semantic_level": row.get("capacity_observed_level"),
+                        }
+                        for row in semantic_mismatches
+                    ],
+                },
                 basis=(
-                    f"Найден точный числовой фрагмент, но уровень мощности не совпадает: требование — "
+                    f"Найден точный числовой фрагмент проекта: "
+                    f"{', '.join(f'{value:g}' for value in observed_values)} {constraint.unit}. "
+                    f"Смысловой уровень не совпадает: требование — "
                     f"{capacity_level_label(required_level)}; проект — {', '.join(observed_labels)}."
                 ),
                 recommendation="Подтвердить сравнение на одном смысловом уровне мощности.",

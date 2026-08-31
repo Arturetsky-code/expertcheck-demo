@@ -6,7 +6,7 @@ import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,30 @@ class AIProvider:
 
     def generate(self, prompt: str, system: str = '') -> AIResult:
         raise NotImplementedError
+
+    def generate_validated(
+        self, prompt: str, system: str = '',
+        validator: Callable[[str], bool] | None = None,
+    ) -> AIResult:
+        """Generate a response and expose schema failure as a provider failure.
+
+        The semantic pipeline can then use the same failover policy for a
+        malformed successful response as it uses for a transport failure.
+        """
+        result = self.generate(prompt, system)
+        valid = True
+        if result.ok and validator is not None:
+            try:
+                valid = bool(validator(result.text))
+            except Exception:
+                valid = False
+        if result.ok and not valid:
+            return AIResult(
+                False, result.provider, text=result.text,
+                error='AI вернул ответ, не соответствующий JSON-контракту.',
+                status_code=422, model=result.model,
+            )
+        return result
 
     @staticmethod
     def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 8, method: str = 'POST') -> tuple[int, dict[str, Any]]:
@@ -259,12 +283,21 @@ class OpenRouterProvider(AIProvider):
             messages.append({'role': 'system', 'content': system})
         messages.append({'role': 'user', 'content': prompt})
         payload = {'model': model, 'messages': messages, 'temperature': 0.1, 'max_tokens': 1600}
+        wants_json = 'JSON' in system.upper()
+        if wants_json:
+            payload['response_format'] = {'type': 'json_object'}
         headers = {
             'Authorization': f'Bearer {self.api_key}',
             'HTTP-Referer': os.getenv('EXPERTCHECK_PUBLIC_URL', 'https://expertcheck.local'),
             'X-Title': 'ExpertCheck',
         }
         status, body = self._post('https://openrouter.ai/api/v1/chat/completions', headers, payload)
+        if status == 400 and wants_json:
+            # Some routed free models do not advertise structured output.  The
+            # response is still validated by the caller and can fail over to a
+            # second provider if the model ignores the JSON-only instruction.
+            payload.pop('response_format', None)
+            status, body = self._post('https://openrouter.ai/api/v1/chat/completions', headers, payload)
         if status != 200:
             message = (((body.get('error') or {}).get('message')) or str(body))
             return AIResult(False, self.name, error=message, status_code=status, model=model)
@@ -314,6 +347,39 @@ class FailoverProvider(AIProvider):
             if not _is_retryable_provider_failure(result):
                 break
         return AIResult(False, self.name, error='; '.join(errors))
+
+    def generate_validated(
+        self, prompt: str, system: str = '',
+        validator: Callable[[str], bool] | None = None,
+    ) -> AIResult:
+        """Fail over on HTTP errors *and* unusable structured responses."""
+        if not self.providers:
+            return AIResult(False, self.name, error='Не задан ни один API-ключ для резервного режима.')
+        errors=[]
+        last_status: int | None = None
+        for provider in self.providers:
+            result=provider.generate(prompt, system)
+            last_status=result.status_code
+            valid = True
+            if result.ok and validator is not None:
+                try:
+                    valid = bool(validator(result.text))
+                except Exception:
+                    valid = False
+            if result.ok and valid:
+                return result
+            if result.ok:
+                errors.append(f'{provider.name}: ответ не соответствует JSON-контракту')
+                # A syntactically successful but unusable response is a valid
+                # reason to try the next independently configured provider.
+                continue
+            errors.append(f'{provider.name}: {diagnostic_message(result)}')
+            if not _is_retryable_provider_failure(result):
+                break
+        return AIResult(
+            False, self.name, error='; '.join(errors),
+            status_code=422 if errors and any('JSON-контракту' in error for error in errors) else last_status,
+        )
 
 
 def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | None:

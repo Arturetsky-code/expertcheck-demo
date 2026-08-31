@@ -111,7 +111,11 @@ def _exact_span(text: str, start: int, end: int) -> tuple[str, int, int]:
 
 def sanitize_high_value_facts(findings: Iterable[dict[str, Any]]) -> dict[str, int]:
     """Apply semantic unit/scope guards before facts reach comparison engines."""
-    summary = {"flow_false_positives_blocked": 0, "material_scope_rebound": 0}
+    summary = {
+        "flow_false_positives_blocked": 0,
+        "material_scope_rebound": 0,
+        "non_admitted_facts_excluded": 0,
+    }
     for row in findings or []:
         code = str(row.get("parameter_code") or "").upper()
         unit = normalize_text(row.get("unit") or row.get("units") or "").lower().replace(" ", "")
@@ -136,6 +140,15 @@ def sanitize_high_value_facts(findings: Iterable[dict[str, Any]]) -> dict[str, i
                 "comparison_excluded": True,
             })
             summary["material_scope_rebound"] += 1
+        admission = str(row.get("fact_admission_decision") or "").upper()
+        if admission in {"HOLD", "REJECT"} and not row.get("comparison_excluded"):
+            reasons = [str(value) for value in row.get("fact_admission_reasons") or [] if str(value).strip()]
+            row["comparison_excluded"] = True
+            row["comparison_exclusion_reason"] = (
+                "; ".join(reasons)
+                or "Факт не допущен Evidence Admission Gate и исключён из межраздельных сравнений."
+            )
+            summary["non_admitted_facts_excluded"] += 1
     return summary
 
 

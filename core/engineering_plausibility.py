@@ -134,3 +134,49 @@ def apply_engineering_plausibility_guard(findings: Iterable[dict[str, Any]]) -> 
         "decimal_separator_candidates": decimal_candidates,
         "items": audit_rows,
     }
+
+
+def plausibility_review_questions(audit: dict[str, Any]) -> list[dict[str, Any]]:
+    """Turn quarantined source values into actionable, non-categorical questions.
+
+    The source value is preserved verbatim.  A decimal candidate is an
+    engineering hypothesis only and never silently replaces project data.
+    """
+    rows: list[dict[str, Any]] = []
+    for index, item in enumerate((audit or {}).get("items") or [], 1):
+        declared = _num(item.get("declared_height"))
+        candidate = _num(item.get("possible_decimal_candidate"))
+        if declared is None:
+            continue
+        value_text = f"Исходный документ: {declared:g} м"
+        if candidate is not None:
+            value_text += f" | Возможная десятичная поправка: {candidate:g} м"
+        rows.append({
+            "comparison_id": f"PLAUSIBILITY-HEIGHT-{index:03d}",
+            "category": "Инженерная правдоподобность",
+            "check_type": "Контроль возможной ошибки исходного документа",
+            "object": item.get("object") or "Объект не определён",
+            "object_name": item.get("object") or "Объект не определён",
+            "parameter_code": "HEIGHT_BUILD",
+            "parameter_name": "Высота здания (сооружения)",
+            "status": "Требует проверки специалистом",
+            "finding_type": "REVIEW_QUESTION",
+            "user_status": "Вопрос специалисту",
+            "required_confirmation": True,
+            "risk_eligible": True,
+            "document_values": value_text,
+            "values_by_section": value_text,
+            "explanation": str(item.get("reason") or "Значение удержано контролем инженерной правдоподобности."),
+            "recommendation": (
+                f"Проверить первичный документ: подтвердить {declared:g} м либо оформить исправление"
+                + (f" на {candidate:g} м" if candidate is not None else "")
+                + ". Автоматическая подмена исходного значения запрещена."
+            ),
+            "sources": [f"{item.get('document')}, стр. {item.get('page')}"],
+            "source_document": item.get("document"),
+            "source_page": item.get("page"),
+            "declared_value": declared,
+            "possible_decimal_separator_candidate": candidate,
+            "explicit_contradiction": False,
+        })
+    return rows

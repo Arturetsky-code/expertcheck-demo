@@ -51,10 +51,13 @@ def build_review_plan(
             'required_value':row.get('required_value'),'unit':_txt(row.get('unit')),
             'proof_kind':_txt(row.get('proof_kind') or row.get('evidence_quality_state')),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
-            'adversarial_state':_txt(row.get('deep_evidence_state')),
+            'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
             'deep_evidence_reasons':list(row.get('deep_evidence_reasons') or []),
-            'adversarial_reasons':list(row.get('deep_evidence_reasons') or []),
-            'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
+            'adversarial_reasons':list(row.get('adversarial_reasons') or row.get('deep_evidence_reasons') or []),
+            'evidence_candidate_count':int(
+                row.get('deep_evidence_candidate_count')
+                or len(row.get('verification_evidence') or row.get('evidence_candidates') or [])
+            ),
             'expected_sections':contract.get('expected_sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id') or row.get('source_row')),
             'recommendation':_txt(row.get('recommendation')),
@@ -87,10 +90,13 @@ def build_review_plan(
                 and (row.get('structural_check') or {}).get('complete')
             ),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
-            'adversarial_state':_txt(row.get('deep_evidence_state')),
+            'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
             'deep_evidence_reasons':list(row.get('deep_evidence_reasons') or []),
-            'adversarial_reasons':list(row.get('deep_evidence_reasons') or []),
-            'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
+            'adversarial_reasons':list(row.get('adversarial_reasons') or row.get('deep_evidence_reasons') or []),
+            'evidence_candidate_count':int(
+                row.get('deep_evidence_candidate_count')
+                or len(row.get('verification_evidence') or row.get('evidence_candidates') or [])
+            ),
             'expected_sections':(row.get('evidence_contract') or {}).get('sections') or [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('requirement_id')),
             'recommendation':_txt(row.get('recommendation')),
@@ -120,10 +126,13 @@ def build_review_plan(
             'metric':_txt(row.get('parameter_code') or row.get('parameter_name')),
             'proof_kind':_txt(row.get('proof_kind')),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
-            'adversarial_state':_txt(row.get('deep_evidence_state')),
+            'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
             'deep_evidence_reasons':list(row.get('deep_evidence_reasons') or []),
-            'adversarial_reasons':list(row.get('deep_evidence_reasons') or []),
-            'evidence_candidate_count':int(row.get('deep_evidence_candidate_count') or 0),
+            'adversarial_reasons':list(row.get('adversarial_reasons') or row.get('deep_evidence_reasons') or []),
+            'evidence_candidate_count':int(
+                row.get('deep_evidence_candidate_count')
+                or len(row.get('verification_evidence') or row.get('evidence_candidates') or [])
+            ),
             'expected_sections':[row.get('automatic_section')] if row.get('automatic_section') else [],'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('item_no') or row.get('position')),
             'recommendation':_txt(row.get('recommendation')),

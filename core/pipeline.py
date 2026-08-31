@@ -61,7 +61,7 @@ from .entity_property_binding import annotate_findings as annotate_entity_proper
 from .assignment_compliance import extract_requirements as extract_assignment_requirements, compare_requirements as compare_assignment_requirements, summary as assignment_summary
 from .project_understanding import build_project_object_model, understanding_quality
 from .table_row_integrity import apply_table_row_integrity_guard
-from .engineering_plausibility import apply_engineering_plausibility_guard
+from .engineering_plausibility import apply_engineering_plausibility_guard, plausibility_review_questions
 from .evidence_provenance import annotate_evidence_provenance
 from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
@@ -77,6 +77,7 @@ from .atomic_verification_engine import (
 )
 from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
+from .coverage_acceleration import coverage_budget
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
 from .semantic_evidence_engine import build_semantic_project_graph
 try:
@@ -209,8 +210,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     semantic_level = str(ai_options.get("level") or "off").lower()
     semantic_judge_provider = ai_options.get("judge_provider") or ai_options.get("provider")
     semantic_critic_provider = ai_options.get("critic_provider") or ai_options.get("reviewer_provider")
-    assignment_semantic_limit = 80 if semantic_level == "maximum" else 40
-    checklist_semantic_limit = 120 if semantic_level == "maximum" else 60
+    review_mode = str(ai_options.get("review_mode") or "extended").lower()
+    acceleration_budget = coverage_budget(review_mode, semantic_level)
+    assignment_semantic_limit = acceleration_budget.assignment_semantic_limit
+    checklist_semantic_limit = acceleration_budget.checklist_semantic_limit
     progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
 
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
@@ -341,7 +344,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "15.2-alpha1-verification-quality-rebuild"
+        item["core_version"] = "15.2.1-coverage-acceleration-reliability"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -353,6 +356,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
 
     progress(69, "Инженерная правдоподобность", "Удерживаем размерно противоречивые значения до проверки исходного документа")
     engineering_plausibility_audit = apply_engineering_plausibility_guard(findings)
+    plausibility_questions = plausibility_review_questions(engineering_plausibility_audit)
+    comparisons.extend(plausibility_questions)
 
     progress(69, "Контроль строк таблиц", "Проверяем, что показатель не был сдвинут на соседний объект при чтении PDF")
     table_row_integrity_audit = apply_table_row_integrity_guard(findings)
@@ -636,7 +641,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "15.2-alpha1-verification-quality-rebuild"
+        item["core_version"] = "15.2.1-coverage-acceleration-reliability"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -776,7 +781,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "15.2-alpha1-verification-quality-rebuild"
+        doc["core_version"] = "15.2.1-coverage-acceleration-reliability"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -787,6 +792,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["coverage_matrix"] = coverage_matrix
         doc["semantic_evidence_engine"] = semantic_engine_summary
         doc["semantic_project_graph"] = semantic_project_graph
+        doc["coverage_acceleration_budget"] = acceleration_budget.as_dict()
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

@@ -53,6 +53,18 @@ def test_snapshot_signature_does_not_walk_evidence_payload():
     assert second != third
 
 
+def test_snapshot_signature_changes_when_semantic_checkpoint_advances():
+    state = _state()
+    state["semantic_execution_checkpoint"] = {
+        "_project_fingerprint": "corpus-1", "assignment": {"judge": {}}
+    }
+    first = workspace_store.snapshot_signature(state)
+    state["semantic_execution_checkpoint"]["assignment"]["judge"]["A-1"] = {
+        "packet_id": "A-1", "verdict": "INSUFFICIENT"
+    }
+    assert workspace_store.snapshot_signature(state) != first
+
+
 def test_session_snapshot_does_not_pre_serialize_result():
     def forbidden(*args, **kwargs):
         raise AssertionError("session_snapshot must not serialize the full result")

@@ -18,6 +18,6 @@ def _app_version() -> str:
     raise AssertionError("VERSION is not defined in app.py")
 
 
-def test_ui_and_core_identify_release_1521():
-    assert _app_version() == "ExpertCheck 15.2.1 · Coverage Acceleration & Reliability"
-    assert core_version == "15.2.1-coverage-acceleration-reliability"
+def test_ui_and_core_identify_release_1522():
+    assert _app_version() == "ExpertCheck 15.2.2 · Resumable Verification & Project Snapshot"
+    assert core_version == "15.2.2-resumable-verification-snapshot"

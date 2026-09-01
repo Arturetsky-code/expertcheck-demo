@@ -19,5 +19,5 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_1522():
-    assert _app_version() == "ExpertCheck 15.2.2 · Resumable Verification & Project Snapshot"
-    assert core_version == "15.2.2-resumable-verification-snapshot"
+    assert _app_version() == "ExpertCheck 15.2.3 · Reliability Hotfix & AI Continuation"
+    assert core_version == "15.2.3-reliability-hotfix-ai-continuation"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 import io
 import json
 import math
@@ -50,6 +51,19 @@ def reconcile_question_headline(
             row[1]=exact_question_count
         elif row[0]=='Итоговый вывод':
             row[1]=conclusion
+
+
+def _stable_report_id(prefix: str, row: dict) -> str:
+    raw_id=row.get('id') or row.get('check_id') or row.get('plan_id') or row.get('risk_id')
+    candidate=str(raw_id or '').strip()
+    if candidate.lower() not in {'', 'nan', 'none', '—'}:
+        return candidate
+    identity='|'.join(str(row.get(key) or '').strip() for key in (
+        'object','parameter','status','sources','explanation','finding_type',
+        'domain','title','Контур','Проверка','Объект','Причина',
+    ))
+    digest=hashlib.sha1(identity.encode('utf-8')).hexdigest()[:12].upper()
+    return f'{prefix}-{digest}'
 
 
 def _evidence_sources(row) -> str:
@@ -431,6 +445,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Фактически отправлено проверяющей модели':audit.get('judge_attempted',0),
             'Возобновлено из снимка':audit.get('judge_checkpoint_reused',0),
             'Осталось в очереди':audit.get('judge_pending',0),
+            'Фактически отправлено контрольной модели':audit.get('critic_attempted',0),
+            'Ответов Critic возобновлено из снимка':audit.get('critic_checkpoint_reused',0),
+            'Осталось у Critic':audit.get('critic_pending',0),
             'Предварительная проверка основной модели':ru_label(judge_preflight.get('state') or 'NOT_REQUIRED'),
             'Фактический основной провайдер':judge_preflight.get('actual_provider') or '—',
             'Основная модель':judge_preflight.get('model') or '—',
@@ -471,6 +488,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Отобран':'Да' if row.get('selected') else 'Нет',
                 'Фактически отправлен':'Да' if row.get('judge_attempted') else 'Нет',
                 'Восстановлен из снимка':'Да' if row.get('judge_checkpoint_reused') else 'Нет',
+                'Отправлен Critic':'Да' if row.get('critic_attempted') else 'Нет',
+                'Ответ Critic восстановлен':'Да' if row.get('critic_checkpoint_reused') else 'Нет',
                 'Режим выполнения':ru_label(row.get('execution_mode') or '—'),
                 'Основание отбора':row.get('selection_reason'),
                 'Решение проверяющей модели':ru_label(row.get('judge_state')),
@@ -534,9 +553,19 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if total_system_limitations:
         conclusion_parts.append(f"Проверок вне текущего автоматического покрытия: {total_system_limitations}.")
     final_conclusion=' '.join(conclusion_parts) or report['conclusion']
-    report_status='Итоговый' if summary.get('completeness')=='Подтверждена' else 'Предварительный — состав/комплектность проекта не подтверждены пользователем'
+    if summary.get('completeness')!='Подтверждена':
+        report_status='Предварительный — состав/комплектность проекта не подтверждены пользователем'
+    elif report_quality_gate.get('status')!='PASSED':
+        report_status='Предварительный — Quality Gate отчёта не пройден'
+    else:
+        report_status='Итоговый'
     if report_status.startswith('Предварительный'):
-        final_conclusion='Предварительный результат: окончательный вывод удержан до подтверждения состава и комплектности проекта. '+final_conclusion
+        reason=(
+            'окончательный вывод удержан до подтверждения состава и комплектности проекта'
+            if summary.get('completeness')!='Подтверждена'
+            else 'окончательный вывод удержан, потому что Quality Gate отчёта не пройден'
+        )
+        final_conclusion=f'Предварительный результат: {reason}. '+final_conclusion
     summary_rows = [
         ['Наименование проекта', project],
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
@@ -626,7 +655,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'sources':_evidence_sources(x),
         'finding_type':'PROJECT_FINDING',
     } for x in assignment_atomic_rows if str(x.get('verification_kind') or '')=='PROJECT_FINDING']
-    all_problems=list(report['problems'] or [])+atomic_problems
+    all_problems=[
+        {**dict(item), 'id':_stable_report_id('CMP',dict(item))}
+        for item in list(report['problems'] or [])+atomic_problems
+    ]
     confirmed_problems=[x for x in all_problems if str(x.get('finding_type') or '').upper()=='PROJECT_FINDING']
     selected_problems = confirmed_problems if report_kind == 'technical' else confirmed_problems[:(12 if report_kind == 'manager' else 35)]
     problems_df = pd.DataFrame(selected_problems).rename(columns={
@@ -647,7 +679,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if str(item.get('verification_kind') or '').upper()!='REVIEW_QUESTION':
             continue
         question_rows.append({
-            'ID':item.get('plan_id'),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
+            'ID':_stable_report_id('Q',item),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
             'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
             'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
             'Ожидаемые разделы':', '.join(item.get('expected_evidence_route') or item.get('expected_sections') or []) or '—',

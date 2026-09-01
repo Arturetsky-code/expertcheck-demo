@@ -629,6 +629,12 @@ def aggregate_atomic_results(
         else:
             kind, status = "SYSTEM_LIMITATION", "Не проверено системой"
         evidence = [item for atom in atoms for item in (atom.get("evidence") or [])]
+        verification_evidence = [
+            item for atom in atoms for item in (atom.get("verification_evidence") or [])
+        ]
+        evidence_candidates = [
+            item for atom in atoms for item in (atom.get("evidence_candidates") or [])
+        ]
         differences = [atom.get("difference") for atom in atoms if atom.get("verification_kind") == "PROJECT_FINDING" and atom.get("difference") not in (None, "")]
         level_order = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5}
         evidence_levels = [str(atom.get("evidence_level") or "L0") for atom in atoms]
@@ -636,6 +642,18 @@ def aggregate_atomic_results(
         evidence_ready = sum(level_order.get(value, 0) >= 3 for value in evidence_levels)
         archetypes = Counter(str(atom.get("coverage_archetype") or "UNCLASSIFIED") for atom in atoms)
         diagnostic = next((atom for atom in atoms if atom.get("verification_kind") == "REVIEW_QUESTION"), None) or next((atom for atom in atoms if atom.get("verification_kind") == "SYSTEM_LIMITATION"), None) or atoms[0]
+        categorical = kind in {"VERIFIED_OK", "PROJECT_FINDING"}
+        adversarial_states = {str(atom.get("adversarial_state") or "") for atom in atoms}
+        adversarial_state = (
+            "PASSED" if categorical and adversarial_states == {"PASSED"}
+            else "BLOCKED" if categorical
+            else str(diagnostic.get("adversarial_state") or "NOT_REQUIRED")
+        )
+        adversarial_reasons = list(dict.fromkeys(
+            str(reason) for atom in atoms for reason in (atom.get("adversarial_reasons") or []) if reason
+        ))
+        if categorical and adversarial_state != "PASSED" and not adversarial_reasons:
+            adversarial_reasons = ["Не все атомарные условия передали пройденный adversarial gate."]
         output.append({
             **parent,
             "status": status,
@@ -645,6 +663,13 @@ def aggregate_atomic_results(
             "final_verification_state": KIND_STATES.get(kind, status),
             "proof_kind": "ATOMIC_AGGREGATION",
             "evidence": evidence[:20],
+            "verification_evidence": verification_evidence[:20],
+            "evidence_candidates": evidence_candidates[:20],
+            "deep_evidence_candidate_count": len(verification_evidence or evidence_candidates),
+            "adversarial_state": adversarial_state,
+            "adversarial_reasons": adversarial_reasons,
+            "deep_evidence_state": adversarial_state,
+            "deep_evidence_reasons": adversarial_reasons,
             "difference": differences,
             "atomic_condition_count": len(atoms),
             "atomic_completed": counts["VERIFIED_OK"] + counts["PROJECT_FINDING"],
@@ -777,6 +802,7 @@ def verify_checklist_rows(
     judge_provider: Any = None, critic_provider: Any = None,
     semantic_level: str = "off", semantic_limit: int = 0,
     semantic_checkpoint: dict[str, Any] | None = None,
+    semantic_progress_callback: Any = None,
 ) -> dict[str, Any]:
     """Run the same atomic evidence gate over actionable corporate checklist rows.
 
@@ -820,6 +846,7 @@ def verify_checklist_rows(
         judge_provider=judge_provider, critic_provider=critic_provider,
         semantic_level=semantic_level, semantic_limit=semantic_limit,
         semantic_checkpoint=semantic_checkpoint,
+        semantic_progress_callback=semantic_progress_callback,
     )
     by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for atom in verified:
@@ -830,6 +857,12 @@ def verify_checklist_rows(
         row = row_by_parent[parent_id]
         counts = Counter(str(item.get("verification_kind") or "SYSTEM_LIMITATION") for item in conditions)
         evidence = [value for item in conditions for value in (item.get("evidence") or [])]
+        verification_evidence = [
+            value for item in conditions for value in (item.get("verification_evidence") or [])
+        ]
+        evidence_candidates = [
+            value for item in conditions for value in (item.get("evidence_candidates") or [])
+        ]
         diagnostic=next((item for item in conditions if item.get("verification_kind")=="REVIEW_QUESTION"),None) or next((item for item in conditions if item.get("verification_kind")=="SYSTEM_LIMITATION"),None) or conditions[0]
         row["atomic_conditions"] = conditions
         row["atomic_condition_count"] = len(conditions)
@@ -861,6 +894,23 @@ def verify_checklist_rows(
             "SPECIALIZED_DETERMINISTIC_CHECKER" if categorical_eligible else "CANDIDATE_EVIDENCE_ONLY"
         )
         row["candidate_evidence_only"]=not categorical_eligible
+        categorical_result = bool(
+            counts["PROJECT_FINDING"] or counts["VERIFIED_OK"] == len(conditions)
+        )
+        adversarial_states = {str(item.get("adversarial_state") or "") for item in conditions}
+        row["adversarial_state"] = (
+            "PASSED" if categorical_result and adversarial_states == {"PASSED"}
+            else "BLOCKED" if categorical_result
+            else str(diagnostic.get("adversarial_state") or "NOT_REQUIRED")
+        )
+        row["adversarial_reasons"] = list(dict.fromkeys(
+            str(reason) for item in conditions for reason in (item.get("adversarial_reasons") or []) if reason
+        ))
+        row["deep_evidence_state"] = row["adversarial_state"]
+        row["deep_evidence_reasons"] = list(row["adversarial_reasons"])
+        row["verification_evidence"] = verification_evidence[:20]
+        row["evidence_candidates"] = evidence_candidates[:20]
+        row["deep_evidence_candidate_count"] = len(verification_evidence or evidence_candidates)
         row.update({
             "coverage_archetype": diagnostic.get("coverage_archetype"),
             "coverage_state": (

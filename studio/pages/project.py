@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
+from pathlib import Path
 import pandas as pd
 from core.display_localization import parameter_label, status_label
 from core.ru_labels import ru_label
@@ -10,6 +11,7 @@ from core.project_upload import DOCUMENT_TYPE_OPTIONS, apply_document_type_overr
 from core.review_profiles import filter_prepared_files, PROFILES
 from core.report_engine import build_decision_report
 from core.ai_gateway import provider_for_role
+from core.semantic_continuation import continue_semantic_analysis, continuation_pending
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
 
@@ -175,6 +177,7 @@ def _upload(ctx):
 
 def _dashboard(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
+    first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
@@ -185,6 +188,60 @@ def _dashboard(ctx):
         f"Объекты: {summary['objects']}",
         f"ТЭП: {summary['checks']}",
     )
+    pending = continuation_pending(first_doc)
+    semantic_summary = dict(first_doc.get('semantic_evidence_engine') or {})
+    has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
+    if has_semantic_snapshot and (pending['eligible'] or semantic_summary):
+        with st.container(border=True):
+            st.markdown('**Возобновляемая AI-проверка**')
+            st.caption(
+                f"Доступно адресных пакетов: {pending['eligible']} · "
+                f"ответов Judge/Critic: {pending['responses']} · "
+                f"в очереди или вне лимита: {pending['total']}. "
+                'Исходные PDF повторно не обрабатываются.'
+            )
+            if st.button(
+                'Продолжить AI-проверку' if pending['total'] else 'Пересчитать результаты из снимка',
+                type='primary',
+                key='continue_semantic_analysis',
+                help='Успешные ответы берутся из checkpoint; отправляются только незавершённые пакеты.',
+            ):
+                ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
+                semantic_level = {
+                    'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',
+                    'Расширенный': 'extended', 'Максимальный': 'maximum',
+                }.get(ai_level, 'extended')
+                judge_provider = provider_for_role('judge', st.session_state, st.secrets)
+                critic_provider = provider_for_role('critic', st.session_state, st.secrets)
+                if pending['total'] and (semantic_level not in {'extended', 'maximum'} or judge_provider is None):
+                    st.error('Для продолжения включите «Расширенный»/«Максимальный» AI-режим и настройте провайдер Judge.')
+                    st.stop()
+                if not pending['total']:
+                    semantic_level = 'off'
+                progress_bar = st.progress(0, text='Продолжение AI-проверки: 0%')
+                progress_detail = st.empty()
+
+                def update_progress(value, stage, detail=''):
+                    progress_bar.progress(value, text=f'Продолжение AI-проверки: {value}%')
+                    progress_detail.caption(f'{stage}: {detail}')
+
+                knowledge_root = Path(ctx.config_dir).parent / 'knowledge'
+                try:
+                    st.session_state.result = continue_semantic_analysis(
+                        st.session_state.result,
+                        knowledge_root=str(knowledge_root),
+                        judge_provider=judge_provider,
+                        critic_provider=critic_provider,
+                        semantic_level=semantic_level,
+                        checkpoint=st.session_state.setdefault('semantic_execution_checkpoint', {}),
+                        progress_callback=update_progress,
+                    )
+                except Exception as exc:
+                    st.error(f'Не удалось продолжить AI-проверку: {type(exc).__name__}: {exc}')
+                    st.stop()
+                st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
+                st.success('AI-очередь продолжена. Метрики и Quality Gate пересчитаны.')
+                st.rerun()
     object_gate=bool(st.session_state.get('object_registry_confirmed'))
     cols = st.columns(4)
     with cols[0]:
@@ -203,7 +260,6 @@ def _dashboard(ctx):
 
     tab_summary, tab_model, tab_documents, tab_completeness, tab_assignment, tab_ird = st.tabs(['Сводка', 'Модель проекта', 'Документы', 'Комплектность', 'Задание на проектирование', 'Исходные документы'])
     with tab_summary:
-        first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
         pp87_profile = first_doc.get('pp87_project_profile') or {}
         if pp87_profile:
             with st.container(border=True):

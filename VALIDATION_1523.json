@@ -1,0 +1,307 @@
+{
+  "version": "15.2.3-reliability-hotfix-ai-continuation",
+  "tests": 73,
+  "passed": 73,
+  "failed": 0,
+  "quality_policy": {
+    "l5_gate_metadata_survives_parent_aggregation": true,
+    "failed_quality_gate_forces_preliminary_report": true,
+    "report_ids_are_stable": true,
+    "ai_queue_continues_without_source_pdf": true,
+    "judge_and_critic_counters_are_separate": true
+  },
+  "results": [
+    {
+      "test": "test_packet_reaches_l4_only_with_addressable_contract_ready_evidence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_independent_judge_and_critic_promote_only_to_l5",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_same_actual_provider_blocks_consensus_even_for_two_configured_roles",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_hallucinated_evidence_id_is_rejected_before_critic",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_critic_concern_blocks_promotion",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_ai_contradiction_requires_explicit_machine_readable_conflict",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_explicit_conflict_survives_independent_consensus",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_normative_clause_remains_specialist_only_without_verified_kb_clause",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_external_agent_payload_is_bounded_and_pseudonymised",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_comparison_operators_and_ranges_are_atomized",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_pressure_and_annual_capacity_are_compared_in_canonical_units",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_executable_numeric_check_emits_a_real_project_finding",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_l4_is_blocked_when_addressed_entity_does_not_match",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_partial_batch_response_is_retried_per_missing_packet",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_ai_execution_audit_records_actual_provider_and_model",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_technology_checklist_pack_is_active",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_units_bind_to_their_own_numeric_occurrence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_stale_parent_measurement_is_not_inherited_by_line_count_atom",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_nonnumeric_row_heading_does_not_inherit_numeric_kind",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_equipment_atoms_keep_precise_equipment_owner",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_adaptive_search_pattern_does_not_demote_numeric_recipe",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_numeric_checker_accepts_canonical_property_alias",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_l4_always_has_visible_addressable_evidence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_critic_provider_is_called_once_for_one_judge_decision",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_failed_preflight_blocks_bulk_evidence_calls",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_external_packet_is_limited_to_four_short_evidence_fragments",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_report_uses_the_admitted_finding_class_instead_of_raw_status",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_report_keeps_weak_mismatch_as_a_specialist_question",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_new_service_codes_are_localized",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_review_questions_are_grouped_without_losing_detail",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_failed_critic_preflight_falls_back_to_advisory_judge",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_normative_registry_distinguishes_verified_unverified_and_missing",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_addressable_structured_trace_closes_only_l1_presence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_reports_expose_grouped_review_queue",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_advisory_lane_is_bounded_and_reports_progress",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_transport_failure_opens_semantic_circuit_breaker",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_assignment_extractor_reuses_existing_page_corpus",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_shift_duration_atom_inherits_typed_parent_parameter_and_route",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_shift_duration_closes_on_exact_directed_project_clause",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_annual_capacity_unit_is_atomic_and_project_scoped",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_administrative_customer_word_is_not_an_engineering_qualifier",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_capacity_semantics_distinguish_total_from_operating_throughput",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_operating_throughput_cannot_be_a_total_capacity_finding",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_assignment_capacity_checker_does_not_compare_total_with_operating_throughput",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_project_annual_capacity_can_close_on_exact_addressable_fact",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_equipment_cannot_own_building_footprint_even_when_row_locked",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_scope_annotation_preserves_prior_plausibility_exclusion",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_pz_capacity_unit_recovers_year_split_after_slash",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_standalone_known_section_title_is_not_an_actionable_check",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_pzu_tep_row_has_physical_trace_and_is_admitted",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_two_trusted_tep_rows_reveal_area_discrepancy",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_failover_treats_invalid_json_as_provider_failure",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_semantic_batch_uses_validated_failover_response",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_capacity_level_question_keeps_observed_value_and_source",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_categorical_numeric_result_has_satisfied_contract_and_report_gate_state",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_non_admitted_duplicates_are_explicitly_excluded_from_comparison",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_pump_height_25_is_preserved_and_routed_as_decimal_review_question",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_extended_budget_covers_project_sized_l4_queue_and_order_is_diversified",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_ui_and_core_identify_release_1522",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_semantic_checkpoint_reuses_completed_packet_without_provider_call",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_invalid_semantic_decision_is_not_persisted_in_checkpoint",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_snapshot_signature_changes_when_semantic_checkpoint_advances",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_report_headline_reconciles_to_exported_specialist_queue",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_xlsx_question_total_and_quality_gate_sheet_are_auditable",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_quality_gate_accepts_addressable_values_rendered_in_sources",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_project_snapshot_roundtrip_contains_rerunnable_page_corpus",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_project_snapshot_rechecks_quality_gate_without_source_pdf",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_corpus_fingerprint_changes_for_same_length_content",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_parent_aggregation_preserves_l5_gate_and_addressable_evidence",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_parent_aggregation_keeps_failed_l5_gate_visible_to_quality_gate",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_report_ids_are_stable_and_never_export_nan",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_failed_quality_gate_forces_preliminary_xlsx_status_and_stable_question_id",
+      "status": "PASSED"
+    },
+    {
+      "test": "test_semantic_continuation_rechecks_snapshot_without_source_pdf",
+      "status": "PASSED"
+    }
+  ]
+}

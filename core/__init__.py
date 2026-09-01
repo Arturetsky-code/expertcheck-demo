@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "15.2.2-resumable-verification-snapshot"
+__version__ = "15.2.3-reliability-hotfix-ai-continuation"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine

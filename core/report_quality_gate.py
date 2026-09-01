@@ -104,7 +104,10 @@ def validate_review_plan(
         if not any(token in status for token in ('СОВПАД','РАСХОЖД','КОНФЛИКТ')):
             continue
         parameter=str(row.get('parameter_name') or row.get('parameter') or row.get('rule_name') or '').strip()
-        values=row.get('document_values') or row.get('values_by_section') or row.get('values')
+        values=(
+            row.get('document_values') or row.get('values_by_section') or row.get('values')
+            or row.get('sources')
+        )
         if not parameter:
             issues.append('Завершённая межраздельная сверка не содержит наименование показателя.')
         if not values and str(row.get('parameter_code') or '').upper() not in {'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}:

@@ -44,7 +44,7 @@ def _session_payload(session_state) -> dict[str,Any]:
     keys=(
         "project_name","analysis_time","result","object_registry_confirmed","object_assembly_rows",
         "completeness_user_confirmed","completeness_decisions","checklist_run","checklist_user_results",
-        "risk_user_decisions","object_learning_examples"
+        "risk_user_decisions","object_learning_examples","semantic_execution_checkpoint",
     )
     out={}
     for k in keys:
@@ -78,6 +78,16 @@ def snapshot_signature(payload: dict[str,Any]) -> str:
             "decision":row.get("Решение пользователя"),
             "comment":row.get("Комментарий пользователя"),
         })
+    semantic_checkpoint=payload.get("semantic_execution_checkpoint") or {}
+    checkpoint_packets={}
+    if isinstance(semantic_checkpoint,dict):
+        for contour,lanes in semantic_checkpoint.items():
+            if not isinstance(lanes,dict):
+                continue
+            checkpoint_packets[str(contour)]={
+                str(lane):sorted(str(packet_id) for packet_id in responses)
+                for lane,responses in lanes.items() if isinstance(responses,dict)
+            }
     marker={
         "project_name":payload.get("project_name"),
         "analysis_time":payload.get("analysis_time"),
@@ -93,6 +103,7 @@ def snapshot_signature(payload: dict[str,Any]) -> str:
         "checklist_user_results":payload.get("checklist_user_results") or {},
         "risk_user_decisions":payload.get("risk_user_decisions") or {},
         "object_learning_examples":payload.get("object_learning_examples") or [],
+        "semantic_checkpoint_packets":checkpoint_packets,
     }
     raw=json.dumps(marker,ensure_ascii=False,default=str,sort_keys=True,separators=(",",":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()

@@ -17,7 +17,7 @@ from .object_semantics import canonical_parameter_code
 from .coverage_acceleration import diversified_candidate_order
 
 
-ENGINE_VERSION = "2.3-full-corpus-validated-failover"
+ENGINE_VERSION = "2.4-resumable-truthful-execution"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -528,10 +528,17 @@ def _call_batches(
     retry_limit: int = 4,
     max_consecutive_failures: int = 2,
     progress_callback: Any = None,
+    checkpoint: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
     if provider is None or not packets:
         return {}, [], []
-    collected: dict[str, dict[str, Any]] = {}
+    checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
+    requested_ids = {str(packet.get("packet_id") or "") for packet in packets}
+    collected: dict[str, dict[str, Any]] = {
+        packet_id: dict(value)
+        for packet_id, value in checkpoint.items()
+        if packet_id in requested_ids and isinstance(value, dict)
+    }
     errors: list[str] = []
     calls: list[dict[str, Any]] = []
     root_key = "reviews" if critic else "decisions"
@@ -540,6 +547,21 @@ def _call_batches(
     retry_as_single = False
     consecutive_failures = 0
     notified_processed = 0
+
+    if collected:
+        calls.append({
+            "role": "CRITIC" if critic else "JUDGE",
+            "attempt": 0,
+            "configured_provider": "PROJECT_CHECKPOINT",
+            "packet_ids": sorted(collected),
+            "requested": 0,
+            "responses": len(collected),
+            "actual_provider": "PROJECT_CHECKPOINT",
+            "model": "",
+            "status_code": None,
+            "state": "CHECKPOINT_REUSED",
+            "error": "",
+        })
 
     def notify(processed: int) -> None:
         nonlocal notified_processed
@@ -632,7 +654,14 @@ def _call_batches(
             packet_id = str(raw.get("packet_id") or "")
             if packet_id not in allowed_ids:
                 continue
+            if critic:
+                structurally_valid = isinstance(raw.get("accept"), bool)
+            else:
+                structurally_valid = str(raw.get("verdict") or "").upper() in JUDGE_VERDICTS
+            if not structurally_valid:
+                continue
             collected[packet_id] = {**raw, "provider": actual_provider, "model": actual_model}
+            checkpoint[packet_id] = dict(collected[packet_id])
             accepted += 1
         log["responses"] = accepted
         log["state"] = "PASSED" if accepted == len(allowed_ids) else "PARTIAL"
@@ -644,9 +673,15 @@ def _call_batches(
             log["error"] = f"Нет ответов для packet_id: {', '.join(missing)}"
         calls.append(log)
 
-    for offset in range(0, len(packets), batch_size):
-        call(packets[offset:offset + batch_size], 1)
-        notify(offset + len(packets[offset:offset + batch_size]))
+    pending_packets = [
+        packet for packet in packets
+        if str(packet.get("packet_id") or "") not in collected
+    ]
+    notify(len(collected))
+    for offset in range(0, len(pending_packets), batch_size):
+        batch = pending_packets[offset:offset + batch_size]
+        call(batch, 1)
+        notify(len(collected))
         if halt_lane or retry_as_single:
             break
     missing_packets = [packet for packet in packets if str(packet.get("packet_id") or "") not in collected]
@@ -860,7 +895,7 @@ def _apply_consensus(row: dict[str, Any], packet: dict[str, Any], judge: dict[st
 def run_semantic_evidence_engine(
     rows: list[dict[str, Any]], *, fact_graph: dict[str, Any], page_corpus: Iterable[dict[str, Any]] = (),
     judge_provider: Any = None, critic_provider: Any = None, level: str = "off", limit: int = 0,
-    progress_callback: Any = None,
+    progress_callback: Any = None, checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build evidence packets for every unresolved atom and judge the best ones.
 
@@ -992,8 +1027,12 @@ def run_semantic_evidence_engine(
         candidates = candidates[:min(requested_limit or advisory_limit, advisory_limit)]
 
     judge_payloads = [_public_packet(packet) for packet in candidates]
+    checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
+    judge_checkpoint = checkpoint.setdefault("judge", {})
+    critic_checkpoint = checkpoint.setdefault("critic", {})
     raw_judges, judge_errors, judge_calls = _call_batches(
         judge_provider, judge_payloads, critic=False, progress_callback=progress_callback,
+        checkpoint=judge_checkpoint,
     )
     judges = {packet["packet_id"]: _validate_judge(packet, raw_judges.get(packet["packet_id"])) for packet in candidates}
     critic_packets: list[dict[str, Any]] = []
@@ -1019,11 +1058,24 @@ def run_semantic_evidence_engine(
         critic_packets.append(public_critic_packet)
     raw_critics, critic_errors, critic_calls = _call_batches(
         critic_provider, critic_packets, critic=True, progress_callback=progress_callback,
+        checkpoint=critic_checkpoint,
     )
 
     promoted = findings = blocked = advisory_completed = 0
     execution_log: list[dict[str, Any]] = []
     selected_ids = {str(packet.get("packet_id") or "") for packet in candidates}
+    judge_attempted_ids = {
+        str(packet_id)
+        for call in judge_calls if call.get("state") != "CHECKPOINT_REUSED"
+        for packet_id in call.get("packet_ids") or []
+    }
+    judge_reused_ids = set(judge_checkpoint).intersection(selected_ids) - judge_attempted_ids
+    critic_attempted_ids = {
+        str(packet_id)
+        for call in critic_calls if call.get("state") != "CHECKPOINT_REUSED"
+        for packet_id in call.get("packet_ids") or []
+    }
+    critic_reused_ids = set(critic_checkpoint).intersection(selected_ids) - critic_attempted_ids
     for packet in candidates:
         packet_id = packet["packet_id"]
         judge = judges[packet_id]
@@ -1054,6 +1106,10 @@ def run_semantic_evidence_engine(
             "evidence_level": packet.get("evidence_level"),
             "evidence_contract_state": packet.get("evidence_contract_state"),
             "selected": True,
+            "judge_attempted": packet_id in judge_attempted_ids,
+            "judge_checkpoint_reused": packet_id in judge_reused_ids,
+            "critic_attempted": packet_id in critic_attempted_ids,
+            "critic_checkpoint_reused": packet_id in critic_reused_ids,
             "selection_reason": (
                 "Отобран для независимого Judge/Critic по качеству доказательственного пакета."
                 if independent_consensus_available
@@ -1085,6 +1141,10 @@ def run_semantic_evidence_engine(
             "evidence_level": packet.get("evidence_level"),
             "evidence_contract_state": packet.get("evidence_contract_state"),
             "selected": False,
+            "judge_attempted": False,
+            "judge_checkpoint_reused": False,
+            "critic_attempted": False,
+            "critic_checkpoint_reused": False,
             "selection_reason": " | ".join(activation_reasons) if activation_reasons else "Не вошёл в лимит текущего запуска.",
             "judge_state": "NOT_RUN",
             "judge_response_received": False,
@@ -1120,11 +1180,17 @@ def run_semantic_evidence_engine(
         "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
         "judge_selected": len(candidates),
+        "judge_attempted": len(judge_attempted_ids),
+        "judge_checkpoint_reused": len(judge_reused_ids),
+        "judge_pending": max(0, len(candidates) - len(raw_judges)),
         "requested_limit": requested_limit,
         "advisory_limit": advisory_limit,
         "not_selected": max(0, len(eligible_candidates) - len(candidates)),
         "judge_responses": len(raw_judges),
         "critic_responses": len(raw_critics),
+        "critic_attempted": len(critic_attempted_ids),
+        "critic_checkpoint_reused": len(critic_reused_ids),
+        "critic_pending": max(0, len(critic_packets) - len(raw_critics)),
         "promoted_verified": promoted,
         "project_findings": findings,
         "blocked_consensus": blocked,

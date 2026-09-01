@@ -15,6 +15,7 @@ from core.evidence_reconstruction import sanitize_high_value_facts
 from core.project_review_planner import build_review_plan
 from core.report_quality_gate import validate_review_plan
 from core.semantic_evidence_engine import _call_batches
+from core.verified_verdict_gate import enforce_verified_verdicts
 
 
 class _Provider:
@@ -113,6 +114,8 @@ def test_categorical_numeric_result_has_satisfied_contract_and_report_gate_state
     assert result["verification_kind"] == "VERIFIED_OK"
     assert result["adversarial_state"] == "PASSED"
     assert result["evidence_contract_state"] == "SATISFIED"
+    gate_summary = enforce_verified_verdicts([result], domain="assignment")
+    assert gate_summary["passed"] == 1
     plan = build_review_plan(
         assignment_rows=[result],
         normative_rows=[], checklist_review={"results": []},
@@ -161,8 +164,8 @@ def test_pump_height_25_is_preserved_and_routed_as_decimal_review_question():
 
 def test_extended_budget_covers_project_sized_l4_queue_and_order_is_diversified():
     extended = coverage_budget("extended", "extended")
-    assert extended.assignment_semantic_limit >= 143
-    assert extended.checklist_semantic_limit >= 544
+    assert extended.assignment_semantic_limit == 100
+    assert extended.checklist_semantic_limit == 50
     packets = [
         {"packet_id": "A1", "domain": "checklist", "checker": {"checker_family": "A"}, "expected_sections": ["КР"], "evidence": [{"score": 99}]},
         {"packet_id": "A2", "domain": "checklist", "checker": {"checker_family": "A"}, "expected_sections": ["КР"], "evidence": [{"score": 98}]},

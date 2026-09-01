@@ -4,6 +4,7 @@ import io
 import json
 import math
 import re
+from copy import deepcopy
 from datetime import datetime, date
 import pandas as pd
 from core.ru_labels import ru_label, ru_join
@@ -383,7 +384,8 @@ def _report_context(project, docs, comparisons, risks=None, checklist_results=No
 
 
 def structured_excel_report(project, version, docs, findings, comparisons, *, report_kind='gip', risks=None, checklist_results=None, assembly_rows_data=None):
-    doc_records=docs.to_dict('records') if hasattr(docs,'to_dict') else (docs or [])
+    doc_records=deepcopy(docs.to_dict('records') if hasattr(docs,'to_dict') else list(docs or []))
+    docs=doc_records
     comparison_records=comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or [])
     first_record=(doc_records[0] or {}) if doc_records else {}
     register_comparison_codes={'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}
@@ -394,6 +396,27 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         return sum(str(x.get('status') or x.get('result') or '').strip().upper() in completed_tokens for x in rows)
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
+    checklist_results=deepcopy(list(checklist_results or []))
+    # Reports are a final trust boundary.  Re-run the same fail-closed gate on
+    # private copies so a stale cached plan or direct report call cannot export
+    # an unsupported L5 conclusion.
+    from core.verified_verdict_gate import enforce_project_verdicts
+    assignment_for_report=list(first_record.get('assignment_compliance') or [])
+    normative_for_report=list(first_record.get('normative_compliance_audit') or [])
+    checklist_for_report={'results': checklist_results}
+    report_verified_gate=enforce_project_verdicts(
+        assignment_rows=assignment_for_report,
+        normative_rows=normative_for_report,
+        checklist_review=checklist_for_report,
+    )
+    if first_record:
+        first_record['assignment_compliance']=assignment_for_report
+        first_record['normative_compliance_audit']=normative_for_report
+        first_record['automatic_checklist_review']={
+            **dict(first_record.get('automatic_checklist_review') or {}),
+            'results': checklist_results,
+        }
+        first_record['verified_core_report_gate']=report_verified_gate
     report = _report_context(project, docs, comparisons, risks, checklist_results, assembly_rows_data)
     summary = report['summary']
     out = io.BytesIO()

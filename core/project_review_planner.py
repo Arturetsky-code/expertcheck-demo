@@ -75,6 +75,8 @@ def build_review_plan(
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
             'checker_mode':_txt(row.get('checker_mode')),
+            'verified_core_gate_state':_txt(row.get('verified_core_gate_state')),
+            'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or []),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')
@@ -114,6 +116,8 @@ def build_review_plan(
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
             'checker_mode':_txt(row.get('checker_mode')),
+            'verified_core_gate_state':_txt(row.get('verified_core_gate_state')),
+            'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or []),
         })
     for i,row in enumerate(checklist,1):
         if row.get('is_heading'):continue
@@ -150,6 +154,8 @@ def build_review_plan(
             'semantic_consensus_completed':int(row.get('semantic_consensus_completed') or 0),
             'checker_family':_txt(row.get('checker_family')),
             'checker_mode':_txt(row.get('checker_mode')),
+            'verified_core_gate_state':_txt(row.get('verified_core_gate_state')),
+            'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or []),
         })
 
     raw_summaries={

@@ -348,7 +348,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "16.0-quality-leap"
+        item["core_version"] = "17.0-verified-core"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -652,7 +652,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "16.0-quality-leap"
+        item["core_version"] = "17.0-verified-core"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -695,6 +695,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             semantic_level=initial_checklist_level,
             semantic_limit=initial_checklist_semantic_limit,
             semantic_checkpoint=checklist_semantic_checkpoint,
+            semantic_candidate_cap=acceleration_budget.checklist_semantic_limit,
         )
         if initial_checklist_level == "off" and semantic_level in {"extended", "maximum"}:
             deferred_audit = dict(checklist_atomic_review.get("semantic_engine_audit") or {})
@@ -732,6 +733,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         comparisons=cross_section_checks,
     )
     progress(97, "Контроль доказательств", "Проверяем адресность и согласованность сформированных выводов")
+    verified_core_gate_summary={"version":"17.0-final-verdict-gate-v1","checked":0,"passed":0,"blocked":0}
     # Deep Evidence Intelligence: reconstruct evidence once, then target every planned check.
     # This layer is conservative: it may downgrade weak positives, never invent evidence.
     try:
@@ -753,6 +755,17 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         deep_evidence_review['merge_summary']=merge_summary
 
+        # One final gate runs after every retrieval/adversarial merge and before
+        # public metrics are rebuilt.  No earlier status or cached L5 can bypass
+        # the same contract consumed by the XLSX reports.
+        from .verified_verdict_gate import enforce_project_verdicts, enforce_verified_verdicts
+        verified_core_gate_summary=enforce_project_verdicts(
+            assignment_rows=assignment_atomic_rows,
+            normative_rows=normative_compliance_audit,
+            checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+        )
+        deep_evidence_review['verified_core_gate']=verified_core_gate_summary
+
         # Recalculate every public metric from the adjudicated rows.  This is the
         # critical feedback loop missing in 10.2 Alpha 2.
         assignment_meta={
@@ -761,6 +774,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             if key in assignment_compliance_summary
         }
         assignment_compliance=aggregate_atomic_results(assignment_parent_baseline,assignment_atomic_rows)
+        assignment_parent_gate=enforce_verified_verdicts(
+            assignment_compliance, domain="assignment",
+        )
+        verified_core_gate_summary['domains']['assignment_parent']=assignment_parent_gate
+        for metric in ('checked','passed','blocked'):
+            verified_core_gate_summary[metric]+=assignment_parent_gate[metric]
+        deep_evidence_review['verified_core_gate']=verified_core_gate_summary
         assignment_compliance_summary=parent_assignment_summary(
             assignment_compliance, assignment_atomic_rows, atomic_requirement_graph.get("summary") or {}
         )
@@ -840,7 +860,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "16.0-quality-leap"
+        doc["core_version"] = "17.0-verified-core"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -848,6 +868,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["evidence_reconstruction"] = evidence_reconstruction
         doc["high_value_sanitization_audit"] = high_value_sanitization_audit
         doc["report_quality_gate"] = report_quality_gate
+        doc["verified_core_gate"] = verified_core_gate_summary
         doc["coverage_matrix"] = coverage_matrix
         doc["semantic_evidence_engine"] = semantic_engine_summary
         doc["semantic_project_graph"] = semantic_project_graph

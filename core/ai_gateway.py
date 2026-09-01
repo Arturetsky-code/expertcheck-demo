@@ -6,6 +6,7 @@ import re
 import ast
 import urllib.error
 import urllib.request
+import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -18,6 +19,8 @@ class AIResult:
     error: str = ''
     status_code: int | None = None
     model: str = ''
+    latency_ms: int | None = None
+    schema_mode: str = ''
 
 
 class AIProvider:
@@ -36,13 +39,14 @@ class AIProvider:
     def generate_validated(
         self, prompt: str, system: str = '',
         validator: Callable[[str], bool] | None = None,
+        json_schema: dict[str, Any] | None = None,
     ) -> AIResult:
         """Generate a response and expose schema failure as a provider failure.
 
         The semantic pipeline can then use the same failover policy for a
         malformed successful response as it uses for a transport failure.
         """
-        result = self.generate(prompt, system)
+        result = self.generate_structured(prompt, system, json_schema=json_schema)
         valid = True
         if result.ok and validator is not None:
             try:
@@ -58,7 +62,7 @@ class AIProvider:
                 prompt + "\n\nПРЕДЫДУЩИЙ ОТВЕТ ДЛЯ ИСПРАВЛЕНИЯ:\n"
                 + str(result.text or "")[:5000]
             )
-            repaired = self.generate(repair_prompt, repair_system)
+            repaired = self.generate_structured(repair_prompt, repair_system, json_schema=json_schema)
             repaired_valid = False
             if repaired.ok and validator is not None:
                 try:
@@ -72,11 +76,25 @@ class AIProvider:
                 text=repaired.text or result.text,
                 error='AI вернул ответ, не соответствующий JSON-контракту, включая попытку автоматического исправления.',
                 status_code=422, model=repaired.model or result.model,
+                latency_ms=repaired.latency_ms or result.latency_ms,
+                schema_mode=repaired.schema_mode or result.schema_mode,
             )
         return result
 
+    def generate_structured(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        """Generate machine-readable output.
+
+        Providers with constrained decoding override this method.  The base
+        implementation remains compatible with test doubles and legacy lanes;
+        the caller still validates the returned payload fail-closed.
+        """
+        return self.generate(prompt, system)
+
     @staticmethod
-    def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 8, method: str = 'POST') -> tuple[int, dict[str, Any]]:
+    def _request(url: str, headers: dict[str, str], payload: dict[str, Any] | None = None, timeout: int = 45, method: str = 'POST') -> tuple[int, dict[str, Any]]:
         data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode('utf-8')
         request = urllib.request.Request(
             url,
@@ -103,7 +121,7 @@ class AIProvider:
             return 0, {'error': {'message': str(exc)}}
 
     @classmethod
-    def _post(cls, url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 8) -> tuple[int, dict[str, Any]]:
+    def _post(cls, url: str, headers: dict[str, str], payload: dict[str, Any], timeout: int = 45) -> tuple[int, dict[str, Any]]:
         return cls._request(url, headers, payload, timeout, 'POST')
 
     @classmethod
@@ -140,11 +158,12 @@ class GroqProvider(AIProvider):
     name = 'Groq'
 
     FALLBACK_MODELS = (
-        'openai/gpt-oss-20b',
         'openai/gpt-oss-120b',
-        'qwen/qwen3.6-27b',
-        'llama-3.3-70b-versatile',
+        'openai/gpt-oss-20b',
+        'qwen/qwen3.8-27b',
     )
+
+    STRICT_SCHEMA_MODELS = frozenset(FALLBACK_MODELS)
 
     @staticmethod
     def _clean_key(value: str) -> str:
@@ -197,6 +216,19 @@ class GroqProvider(AIProvider):
         return self.generate('Ответьте одним словом: OK', _known_models=available)
 
     def generate(self, prompt: str, system: str = '', _known_models: list[str] | None = None) -> AIResult:
+        return self._generate(prompt, system, _known_models=_known_models)
+
+    def generate_structured(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self._generate(prompt, system, json_schema=json_schema)
+
+    def _generate(
+        self, prompt: str, system: str = '',
+        _known_models: list[str] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
         if not self.api_key:
             return AIResult(False, self.name, error='API-ключ Groq не задан.', model=self.model)
 
@@ -220,25 +252,42 @@ class GroqProvider(AIProvider):
                 'temperature': 0.1,
                 'max_tokens': 1600,
             }
-            wants_json = 'JSON' in system.upper()
-            if wants_json:
+            wants_json = bool(json_schema) or 'JSON' in system.upper()
+            strict_schema = bool(json_schema) and model in self.STRICT_SCHEMA_MODELS
+            if strict_schema:
+                payload['response_format'] = {
+                    'type': 'json_schema',
+                    'json_schema': {
+                        'name': 'expertcheck_response',
+                        'strict': True,
+                        'schema': json_schema,
+                    },
+                }
+            elif wants_json:
                 payload['response_format'] = {'type': 'json_object'}
 
+            started = time.perf_counter()
             status, body = self._post('https://api.groq.com/openai/v1/chat/completions', self.headers, payload)
-            if status == 400 and wants_json:
-                payload.pop('response_format', None)
-                status, body = self._post('https://api.groq.com/openai/v1/chat/completions', self.headers, payload)
+            latency_ms = round((time.perf_counter() - started) * 1000)
 
             if status == 200:
                 try:
                     text = body['choices'][0]['message']['content']
                 except (KeyError, IndexError, TypeError):
-                    return AIResult(False, self.name, error='Groq вернул ответ без текста.', status_code=status, model=model)
-                return AIResult(True, self.name, text=text, status_code=status, model=model)
+                    return AIResult(False, self.name, error='Groq вернул ответ без текста.', status_code=status, model=model, latency_ms=latency_ms)
+                return AIResult(
+                    True, self.name, text=text, status_code=status, model=model,
+                    latency_ms=latency_ms,
+                    schema_mode='STRICT_JSON_SCHEMA' if strict_schema else 'JSON_OBJECT' if wants_json else 'TEXT',
+                )
 
             message = (((body.get('error') or {}).get('message')) or str(body))
             attempts.append(f'{model}: HTTP {status} — {message}')
-            last_result = AIResult(False, self.name, error=message, status_code=status, model=model)
+            last_result = AIResult(
+                False, self.name, error=message, status_code=status, model=model,
+                latency_ms=latency_ms,
+                schema_mode='STRICT_JSON_SCHEMA' if strict_schema else 'JSON_OBJECT' if wants_json else 'TEXT',
+            )
 
             if status in {401, 429, 500, 502, 503, 504}:
                 break
@@ -294,37 +343,64 @@ class OpenRouterProvider(AIProvider):
     name = 'OpenRouter'
 
     def generate(self, prompt: str, system: str = '') -> AIResult:
+        return self._generate(prompt, system)
+
+    def generate_structured(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self._generate(prompt, system, json_schema=json_schema)
+
+    def _generate(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
         if not self.api_key:
             return AIResult(False, self.name, error='API-ключ OpenRouter не задан.', model=self.model)
-        model = self.model or 'openrouter/free'
+        model = self.model or 'openai/gpt-oss-120b'
+        if model.strip().lower() == 'openrouter/free':
+            return AIResult(
+                False, self.name,
+                error='Маршрутизатор openrouter/free не допускается в проверочный контур: фактическая модель выбирается случайно.',
+                status_code=412, model=model,
+            )
         messages=[]
         if system:
             messages.append({'role': 'system', 'content': system})
         messages.append({'role': 'user', 'content': prompt})
         payload = {'model': model, 'messages': messages, 'temperature': 0.1, 'max_tokens': 1600}
-        wants_json = 'JSON' in system.upper()
-        if wants_json:
+        wants_json = bool(json_schema) or 'JSON' in system.upper()
+        if json_schema:
+            payload['response_format'] = {
+                'type': 'json_schema',
+                'json_schema': {
+                    'name': 'expertcheck_response',
+                    'strict': True,
+                    'schema': json_schema,
+                },
+            }
+        elif wants_json:
             payload['response_format'] = {'type': 'json_object'}
         headers = {
             'Authorization': f'Bearer {self.api_key}',
             'HTTP-Referer': os.getenv('EXPERTCHECK_PUBLIC_URL', 'https://expertcheck.local'),
             'X-Title': 'ExpertCheck',
         }
+        started = time.perf_counter()
         status, body = self._post('https://openrouter.ai/api/v1/chat/completions', headers, payload)
-        if status == 400 and wants_json:
-            # Some routed free models do not advertise structured output.  The
-            # response is still validated by the caller and can fail over to a
-            # second provider if the model ignores the JSON-only instruction.
-            payload.pop('response_format', None)
-            status, body = self._post('https://openrouter.ai/api/v1/chat/completions', headers, payload)
+        latency_ms = round((time.perf_counter() - started) * 1000)
         if status != 200:
             message = (((body.get('error') or {}).get('message')) or str(body))
-            return AIResult(False, self.name, error=message, status_code=status, model=model)
+            return AIResult(False, self.name, error=message, status_code=status, model=model, latency_ms=latency_ms)
         try:
             text = body['choices'][0]['message']['content']
         except (KeyError, IndexError, TypeError):
-            return AIResult(False, self.name, error='OpenRouter вернул ответ без текста.', status_code=status, model=model)
-        return AIResult(True, self.name, text=text, status_code=status, model=model)
+            return AIResult(False, self.name, error='OpenRouter вернул ответ без текста.', status_code=status, model=model, latency_ms=latency_ms)
+        return AIResult(
+            True, self.name, text=text, status_code=status, model=str(body.get('model') or model),
+            latency_ms=latency_ms,
+            schema_mode='STRICT_JSON_SCHEMA' if json_schema else 'JSON_OBJECT' if wants_json else 'TEXT',
+        )
 
 
 
@@ -371,6 +447,7 @@ class FailoverProvider(AIProvider):
     def generate_validated(
         self, prompt: str, system: str = '',
         validator: Callable[[str], bool] | None = None,
+        json_schema: dict[str, Any] | None = None,
     ) -> AIResult:
         """Fail over on HTTP errors *and* unusable structured responses."""
         if not self.providers:
@@ -379,7 +456,11 @@ class FailoverProvider(AIProvider):
         invalid_results: list[tuple[AIProvider, AIResult]] = []
         last_status: int | None = None
         for provider in self.providers:
-            result=provider.generate(prompt, system)
+            generate_structured = getattr(provider, 'generate_structured', None)
+            result=(
+                generate_structured(prompt, system, json_schema=json_schema)
+                if callable(generate_structured) else provider.generate(prompt, system)
+            )
             last_status=result.status_code
             valid = True
             if result.ok and validator is not None:
@@ -406,7 +487,11 @@ class FailoverProvider(AIProvider):
                 "строго требуемой схемы, без Markdown и пояснений."
             )
             repair_prompt = prompt + "\n\nПРЕДЫДУЩИЙ ОТВЕТ:\n" + str(previous.text or "")[:5000]
-            repaired = provider.generate(repair_prompt, repair_system)
+            generate_structured = getattr(provider, 'generate_structured', None)
+            repaired=(
+                generate_structured(repair_prompt, repair_system, json_schema=json_schema)
+                if callable(generate_structured) else provider.generate(repair_prompt, repair_system)
+            )
             last_status = repaired.status_code
             last_invalid = repaired
             valid = False
@@ -444,8 +529,8 @@ def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | N
         return str(value or os.getenv(name, default) or '')
 
     providers = {
-        'openrouter': OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openrouter/free')),
-        'groq': GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'auto')),
+        'openrouter': OpenRouterProvider(get('OPENROUTER_API_KEY'), get('OPENROUTER_MODEL', 'openai/gpt-oss-120b')),
+        'groq': GroqProvider(get('GROQ_API_KEY'), get('GROQ_MODEL', 'openai/gpt-oss-120b')),
         'deepseek': DeepSeekProvider(get('DEEPSEEK_API_KEY'), get('DEEPSEEK_MODEL', 'deepseek-v4-flash')),
         'gemini': GeminiProvider(get('GEMINI_API_KEY'), get('GEMINI_MODEL', 'gemini-2.5-flash')),
     }

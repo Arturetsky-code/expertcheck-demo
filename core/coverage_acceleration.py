@@ -10,7 +10,7 @@ class CoverageBudget:
     ai_level: str
     assignment_semantic_limit: int
     checklist_semantic_limit: int
-    policy: str = "ALL_ADDRESSABLE_L4_WITH_FAIL_CLOSED_CONSENSUS"
+    policy: str = "VERIFIED_VERTICAL_CORE_MAX_50"
     # External Judge/Critic calls must not hold one Streamlit run for the whole
     # project-sized queue.  The full limits above describe target coverage;
     # these limits describe safe new work per resumable continuation run.
@@ -34,17 +34,21 @@ def coverage_budget(review_mode: str = "extended", ai_level: str = "extended") -
         )
     if mode == "quick":
         return CoverageBudget(
-            mode, level, 40, 80, "BOUNDED_HIGH_PRIORITY_L4",
+            mode, level, 30, 30, "VERIFIED_VERTICAL_CORE_MAX_30",
             continuation_assignment_batch_limit=6,
             continuation_checklist_batch_limit=8,
         )
     if mode == "full" or level in {"maximum", "максимальный"}:
         return CoverageBudget(
-            mode, level, 1000, 5000,
-            continuation_assignment_batch_limit=12,
-            continuation_checklist_batch_limit=20,
+            mode, level, 100, 50, "VERIFIED_VERTICAL_CORE_MAX_50",
+            continuation_assignment_batch_limit=10,
+            continuation_checklist_batch_limit=10,
         )
-    return CoverageBudget(mode, level, 200, 800)
+    return CoverageBudget(
+        mode, level, 100, 50, "VERIFIED_VERTICAL_CORE_MAX_50",
+        continuation_assignment_batch_limit=8,
+        continuation_checklist_batch_limit=10,
+    )
 
 
 def diversified_candidate_order(packets: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:

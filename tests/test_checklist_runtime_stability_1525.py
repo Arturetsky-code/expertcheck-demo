@@ -23,7 +23,7 @@ def _semantic_rows(count: int):
 
 def test_initial_checklist_ai_is_deferred_but_full_target_is_preserved():
     budget = coverage_budget("extended", "extended")
-    assert budget.checklist_semantic_limit >= 544
+    assert budget.checklist_semantic_limit == 50
     assert budget.initial_checklist_semantic_limit == 0
     assert 0 < budget.continuation_checklist_batch_limit <= 20
 

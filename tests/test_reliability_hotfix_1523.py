@@ -10,6 +10,7 @@ from core.project_review_planner import build_review_plan
 from core.project_snapshot import build_analysis_snapshot
 from core.report_quality_gate import validate_review_plan
 from core.semantic_continuation import continue_semantic_analysis
+from core.verified_verdict_gate import enforce_verified_verdicts
 from studio.data import _stable_report_id, structured_excel_report
 
 
@@ -33,6 +34,7 @@ def _categorical_atom(state: str = "PASSED") -> dict:
         }],
         "evidence": ["ТХ.pdf, стр. 33: Продолжительность смены 12 часов."],
         "recipe_status": "TRUSTED",
+        "proof_kind": "STRUCTURED_VALUE",
     }
 
 
@@ -41,7 +43,10 @@ def test_parent_aggregation_preserves_l5_gate_and_addressable_evidence():
         "requirement_id": "SHIFT-1523",
         "requirement_text": "Продолжительность смены — 12 часов",
     }
-    rows = aggregate_atomic_results([parent], [_categorical_atom()])
+    atoms = [_categorical_atom()]
+    assert enforce_verified_verdicts(atoms, domain="assignment")["passed"] == 1
+    rows = aggregate_atomic_results([parent], atoms)
+    assert enforce_verified_verdicts(rows, domain="assignment")["passed"] == 1
     assert rows[0]["adversarial_state"] == "PASSED"
     assert rows[0]["deep_evidence_state"] == "PASSED"
     assert rows[0]["deep_evidence_candidate_count"] == 1
@@ -56,14 +61,18 @@ def test_parent_aggregation_keeps_failed_l5_gate_visible_to_quality_gate():
         "requirement_id": "SHIFT-1523",
         "requirement_text": "Продолжительность смены — 12 часов",
     }
-    rows = aggregate_atomic_results([parent], [_categorical_atom("BLOCKED")])
-    assert rows[0]["adversarial_state"] == "BLOCKED"
+    atoms = [_categorical_atom("BLOCKED")]
+    enforce_verified_verdicts(atoms, domain="assignment")
+    rows = aggregate_atomic_results([parent], atoms)
+    enforce_verified_verdicts(rows, domain="assignment")
+    assert rows[0]["verification_kind"] == "REVIEW_QUESTION"
+    assert rows[0]["evidence_level"] != "L5"
     plan = build_review_plan(
         assignment_rows=rows, normative_rows=[], checklist_review={"results": []},
     )
     gate = validate_review_plan(plan)
-    assert gate["status"] == "FAILED"
-    assert any("adversarial gate" in issue for issue in gate["issues"])
+    assert gate["status"] == "PASSED"
+    assert not any(item["verification_kind"] in {"VERIFIED_OK", "PROJECT_FINDING"} for item in plan["items"])
 
 
 def test_report_ids_are_stable_and_never_export_nan():

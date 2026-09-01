@@ -1,0 +1,417 @@
+{
+  "version": "17.0-verified-core",
+  "tests": 100,
+  "passed": 100,
+  "failed": 0,
+  "quality_policy": {
+    "strict_provider_schema": true,
+    "random_free_router_forbidden": true,
+    "provider_benchmark_required": true,
+    "independent_judge_critic_required_for_semantic_l5": true,
+    "final_verdict_gate_is_fail_closed": true,
+    "exported_reports_cannot_bypass_final_gate": true,
+    "verified_vertical_core_is_bounded": true
+  },
+  "results": [
+    {
+      "test": "VC-001",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-002",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-003",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-004",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-005",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-006",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-007",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-008",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-009",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-010",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-011",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-012",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-013",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-014",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-015",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-016",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-017",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-018",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-019",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-020",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-021",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-022",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-023",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-024",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-025",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-026",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-027",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-028",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-029",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-030",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-031",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-032",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-033",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-034",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-035",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-036",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-037",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-038",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-039",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-040",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-041",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-042",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-043",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-044",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-045",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-046",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-047",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-048",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-049",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-050",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-051",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-052",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-053",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-054",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-055",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-056",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-057",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-058",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-059",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-060",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-061",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-062",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-063",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-064",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-065",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-066",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-067",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-068",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-069",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-070",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-071",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-072",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-073",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-074",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-075",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-076",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-077",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-078",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-079",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-080",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-081",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-082",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-083",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-084",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-085",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-086",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-087",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-088",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-089",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-090",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-091",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-092",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-093",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-094",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-095",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-096",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-097",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-098",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-099",
+      "status": "PASSED"
+    },
+    {
+      "test": "VC-100",
+      "status": "PASSED"
+    }
+  ]
+}

@@ -20,9 +20,10 @@ from .project_snapshot import corpus_fingerprint
 from .report_quality_gate import validate_review_plan
 from .semantic_evidence_engine import build_semantic_project_graph
 from .verification_core import domain_summary
+from .verified_verdict_gate import enforce_project_verdicts
 
 
-CONTINUATION_VERSION = "16.0-quality-leap"
+CONTINUATION_VERSION = "17.0-verified-core"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -112,7 +113,7 @@ def continue_semantic_analysis(
 
     budget = dict(first.get("coverage_acceleration_budget") or {})
     assignment_target = int(budget.get("assignment_semantic_limit") or 200)
-    checklist_target = int(budget.get("checklist_semantic_limit") or 800)
+    checklist_target = min(50, int(budget.get("checklist_semantic_limit") or 50))
     assignment_limit = min(
         assignment_target,
         int(budget.get("continuation_assignment_batch_limit") or 8),
@@ -168,6 +169,7 @@ def continue_semantic_analysis(
         semantic_limit=checklist_limit,
         semantic_checkpoint=checklist_checkpoint,
         semantic_progress_callback=semantic_progress("Чек-листы"),
+        semantic_candidate_cap=checklist_target,
     )
     automatic_review["atomic_verification"] = checklist_atomic
 
@@ -194,9 +196,19 @@ def continue_semantic_analysis(
         normative_rows=normative_rows,
         checklist_review=automatic_review,
     )
-    deep_review = compact_deep_evidence_review(deep_review)
-
+    verified_core_gate = enforce_project_verdicts(
+        assignment_rows=assignment_atomic,
+        normative_rows=normative_rows,
+        checklist_review=automatic_review,
+    )
     assignment_rows = aggregate_atomic_results(parent_rows, assignment_atomic)
+    from .verified_verdict_gate import enforce_verified_verdicts
+    assignment_parent_gate = enforce_verified_verdicts(assignment_rows, domain="assignment")
+    verified_core_gate["domains"]["assignment_parent"] = assignment_parent_gate
+    for metric in ("checked", "passed", "blocked"):
+        verified_core_gate[metric] += assignment_parent_gate[metric]
+    deep_review["verified_core_gate"] = verified_core_gate
+    deep_review = compact_deep_evidence_review(deep_review)
     assignment_summary = parent_assignment_summary(
         assignment_rows, assignment_atomic, graph.get("summary") or {},
     )
@@ -249,6 +261,7 @@ def continue_semantic_analysis(
         "semantic_evidence_engine": semantic_summary,
         "semantic_project_graph": build_semantic_project_graph(fact_graph, packets),
         "report_quality_gate": quality_gate,
+        "verified_core_gate": verified_core_gate,
         "semantic_continuation": {
             "version": CONTINUATION_VERSION,
             "snapshot_id": snapshot_id,

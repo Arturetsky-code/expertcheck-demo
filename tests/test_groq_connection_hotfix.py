@@ -19,7 +19,9 @@ def test_groq_auto_selects_available_model(monkeypatch):
 
 
 def test_groq_falls_back_after_model_permission_403(monkeypatch):
-    provider = GroqProvider('gsk_test', 'auto')
+    # A deliberately configured smaller model may be unavailable for the
+    # project; Verified Core must then continue to the qualified 120b lane.
+    provider = GroqProvider('gsk_test', 'openai/gpt-oss-20b')
 
     def fake_get(url, headers, timeout=30):
         return 200, {'data': [

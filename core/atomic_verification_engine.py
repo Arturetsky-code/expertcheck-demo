@@ -625,6 +625,7 @@ def verify_atomic_requirements(
     semantic_level: str = "off", semantic_limit: int = 0,
     semantic_progress_callback: Any = None,
     semantic_checkpoint: dict[str, Any] | None = None,
+    semantic_candidate_cap: int = 0,
 ) -> list[dict[str, Any]]:
     compiler = VerificationRecipeCompilerV2(knowledge_root)
     rows: list[dict[str, Any]] = []
@@ -665,6 +666,7 @@ def verify_atomic_requirements(
         limit=semantic_limit,
         progress_callback=semantic_progress_callback,
         checkpoint=semantic_checkpoint,
+        candidate_cap=semantic_candidate_cap,
     )
     if rows:
         rows[0]["semantic_engine_audit"] = semantic_audit
@@ -719,6 +721,16 @@ def aggregate_atomic_results(
         ))
         if categorical and adversarial_state != "PASSED" and not adversarial_reasons:
             adversarial_reasons = ["Не все атомарные условия передали пройденный adversarial gate."]
+        categorical_atoms = [
+            atom for atom in atoms
+            if str(atom.get("verification_kind") or "") in {"VERIFIED_OK", "PROJECT_FINDING"}
+        ]
+        atomic_verified_core_state = (
+            "PASSED" if categorical_atoms and all(
+                str(atom.get("verified_core_gate_state") or "") == "PASSED"
+                for atom in categorical_atoms
+            ) else "BLOCKED" if categorical else "NOT_REQUIRED"
+        )
         output.append({
             **parent,
             "status": status,
@@ -748,6 +760,7 @@ def aggregate_atomic_results(
             "evidence_ready_atomic": evidence_ready,
             "evidence_coverage_pct": round(100 * evidence_ready / max(1, len(atoms)), 1),
             "semantic_consensus_completed": sum(str(atom.get("semantic_consensus_state") or "") == "PASSED" for atom in atoms),
+            "atomic_verified_core_gate_state": atomic_verified_core_state,
             "checker_family": ", ".join(dict.fromkeys(
                 str(atom.get("checker_family") or "") for atom in atoms if atom.get("checker_family")
             )),
@@ -868,6 +881,7 @@ def verify_checklist_rows(
     semantic_level: str = "off", semantic_limit: int = 0,
     semantic_checkpoint: dict[str, Any] | None = None,
     semantic_progress_callback: Any = None,
+    semantic_candidate_cap: int = 50,
 ) -> dict[str, Any]:
     """Run the same atomic evidence gate over actionable corporate checklist rows.
 
@@ -912,6 +926,7 @@ def verify_checklist_rows(
         semantic_level=semantic_level, semantic_limit=semantic_limit,
         semantic_checkpoint=semantic_checkpoint,
         semantic_progress_callback=semantic_progress_callback,
+        semantic_candidate_cap=semantic_candidate_cap,
     )
     by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for atom in verified:

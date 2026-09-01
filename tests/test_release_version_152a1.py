@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 16.0 · Quality Leap"
-    assert core_version == "16.0-quality-leap"
+    assert _app_version() == "ExpertCheck 17.0 · Verified Core"
+    assert core_version == "17.0-verified-core"
 
 
 # Backward-compatible names imported by cumulative release gates.

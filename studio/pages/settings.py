@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import streamlit as st
 
 from studio.components import hero, section, status_badge
@@ -12,6 +13,26 @@ def _reset_project() -> None:
     st.session_state.completeness_user_confirmed = False
     st.session_state.completeness_decisions = {}
     st.session_state['_navigate_to'] = 'Проект'
+
+
+def _apply_qualified_scheme(winner: str, reserve: str) -> None:
+    """Apply benchmark routing before Streamlit instantiates role widgets."""
+    for key in ('ai_extraction_provider', 'settings_ai_extraction_provider',
+                'ai_judge_provider', 'settings_ai_judge_provider'):
+        st.session_state[key] = winner
+    if reserve:
+        for key in ('ai_critic_provider', 'settings_ai_critic_provider', 'ai_reviewer_provider'):
+            st.session_state[key] = reserve
+        st.session_state._provider_scheme_notice = (
+            'success', f'Применено: Judge — {winner}; независимый Critic — {reserve}.'
+        )
+    else:
+        st.session_state._provider_scheme_notice = (
+            'warning',
+            f'Judge переключён на {winner}. Второй независимый провайдер ещё не квалифицирован; '
+            'смысловые результаты останутся L4 до его успешной проверки.',
+        )
+    st.session_state._verified_core_ai_migrated = True
 
 
 def render(ctx) -> None:
@@ -124,7 +145,7 @@ def render(ctx) -> None:
             judge_provider = st.selectbox(
                 'AI Judge — оценка доказательства',
                 provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_judge_provider', 'Авто: OpenRouter → Groq')) if st.session_state.get('ai_judge_provider', 'Авто: OpenRouter → Groq') in provider_options[1:-1] else 0,
+                index=provider_options[1:-1].index(st.session_state.get('ai_judge_provider', 'Groq')) if st.session_state.get('ai_judge_provider', 'Groq') in provider_options[1:-1] else 0,
                 key='settings_ai_judge_provider',
                 help='Сопоставляет одно атомарное требование с небольшим адресным evidence packet.',
             )
@@ -132,7 +153,7 @@ def render(ctx) -> None:
             critic_provider = st.selectbox(
                 'AI Critic — независимая проверка',
                 provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_critic_provider', 'Groq')) if st.session_state.get('ai_critic_provider', 'Groq') in provider_options[1:-1] else 1,
+                index=provider_options[1:-1].index(st.session_state.get('ai_critic_provider', 'OpenRouter')) if st.session_state.get('ai_critic_provider', 'OpenRouter') in provider_options[1:-1] else 0,
                 key='settings_ai_critic_provider',
                 help='Ищет подмену объекта, показателя, единицы, модальности и квалификаторов. Должен фактически отличаться от Judge.',
             )
@@ -207,7 +228,60 @@ def render(ctx) -> None:
                     st.error(diagnostic_message(result))
                     if st.session_state.expert_mode:
                         st.code(result.error)
-        st.info('Рекомендуемая схема: «Умный автоматический»; Extraction — Groq; Judge — OpenRouter (или DeepSeek, если доступен); Critic — Groq. При одном доступном провайдере Judge работает консультативно и не создаёт L5. Категоричный смысловой вывод разрешается только когда Judge и Critic фактически ответили через разных провайдеров. Для Groq рекомендуется GROQ_MODEL = "auto".')
+        st.divider()
+        section(
+            'Квалификация AI-провайдера',
+            '30 синтетических инженерных пакетов × 3 повтора. Проектные документы не передаются.',
+        )
+        benchmark_candidate = st.selectbox(
+            'Кандидат для проверки', ['Groq', 'OpenRouter'], key='provider_benchmark_candidate',
+            help='Проверяйте кандидатов по очереди. Один прогон выполняет 18 пакетных вызовов.',
+        )
+        if st.button('Запустить квалификационный стенд', width='content'):
+            from core.ai_gateway import provider_from_settings
+            from core.provider_benchmark import run_provider_benchmark
+            candidate_provider = provider_from_settings(benchmark_candidate, st.secrets)
+            if not candidate_provider:
+                st.error('Провайдер не настроен.')
+            else:
+                with st.spinner('Проверяем API, строгую JSON Schema, смысловую точность и повторяемость...'):
+                    benchmark = run_provider_benchmark(candidate_provider, repeats=3, batch_size=5)
+                stored = dict(st.session_state.get('provider_benchmark_results') or {})
+                stored[benchmark_candidate] = benchmark
+                st.session_state.provider_benchmark_results = stored
+                if benchmark.get('qualified'):
+                    st.success(f'{benchmark_candidate} прошёл квалификационный барьер.')
+                else:
+                    st.error(f'{benchmark_candidate} не прошёл квалификационный барьер.')
+        benchmark_results = dict(st.session_state.get('provider_benchmark_results') or {})
+        if benchmark_results:
+            from core.provider_benchmark import comparison_rows, qualified_ranking
+            st.dataframe(comparison_rows(benchmark_results), hide_index=True, width='stretch')
+            for label, result in benchmark_results.items():
+                failures = result.get('gate_failures') or []
+                if failures:
+                    st.caption(f"{label}: " + '; '.join(failures))
+            st.download_button(
+                'Скачать протокол квалификации JSON',
+                data=json.dumps(benchmark_results, ensure_ascii=False, indent=2),
+                file_name='ExpertCheck_AI_Provider_Qualification.json',
+                mime='application/json',
+                width='content',
+            )
+            ranking = qualified_ranking(benchmark_results)
+            if ranking:
+                winner = ranking[0]
+                reserve = ranking[1] if len(ranking) > 1 else ''
+                st.button(
+                    'Применить квалифицированную схему', type='primary', width='content',
+                    on_click=_apply_qualified_scheme, args=(winner, reserve),
+                )
+                notice = st.session_state.pop('_provider_scheme_notice', None)
+                if notice:
+                    getattr(st, notice[0])(notice[1])
+                if len(ranking) == 1:
+                    st.caption('Для автоматического L5 квалифицируйте второй независимый провайдер.')
+        st.info('Рекомендуемая базовая схема Verified Core: Extraction/Judge — Groq `openai/gpt-oss-120b` со строгой JSON Schema; Critic — фиксированная модель OpenRouter. `openrouter/free` не допускается в проверочный контур. Настройка считается рабочей только после прохождения квалификационного стенда.')
         st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
 
     with tabs[6]:

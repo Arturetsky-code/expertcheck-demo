@@ -18,7 +18,7 @@ from .coverage_acceleration import diversified_candidate_order
 from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "16.0-resilient-structured-consensus"
+ENGINE_VERSION = "17.0-verified-core-consensus"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -494,7 +494,7 @@ JUDGE_SYSTEM = """Вы — независимый Evidence Judge системы 
 SUPPORTS допустим только когда цитируемый фрагмент прямо подтверждает всё атомарное требование для той же сущности, того же свойства, нужной модальности и всех квалификаторов.
 CONTRADICTS допустим только при прямом содержательном противоречии, а не при отсутствии находки.
 evidence_ids могут содержать только ID из соответствующего пакета. Верните только JSON:
-{"decisions":[{"packet_id":"...","verdict":"SUPPORTS|CONTRADICTS|INSUFFICIENT|OTHER_ENTITY|OTHER_METRIC","evidence_ids":["..."],"same_entity":true|false|null,"same_property":true|false|null,"qualifiers_satisfied":true|false,"modality_satisfied":true|false,"confidence":0.0,"reason":"кратко по-русски"}]}"""
+{"decisions":[{"packet_id":"...","verdict":"SUPPORTS|CONTRADICTS|INSUFFICIENT|OTHER_ENTITY|OTHER_METRIC","evidence_ids":["..."],"same_entity":true|false,"same_property":true|false,"qualifiers_satisfied":true|false,"modality_satisfied":true|false,"confidence":0.0,"reason":"кратко по-русски"}]}"""
 
 
 CRITIC_SYSTEM = """Вы — независимый Evidence Critic. Проверяйте решение Judge только по переданному требованию, доказательствам и цитируемым evidence_id.
@@ -502,6 +502,67 @@ CRITIC_SYSTEM = """Вы — независимый Evidence Critic. Провер
 Ищите подмену объекта, свойства, единицы, модальности, квалификатора, ревизии, а также вывод по отсутствию данных. Не соглашайтесь автоматически.
 accept=true допустимо только если вывод полностью следует из цитируемых фрагментов. Верните только JSON:
 {"reviews":[{"packet_id":"...","accept":true|false,"evidence_ids":["..."],"blocking_concerns":["..."],"confidence":0.0,"reason":"кратко по-русски"}]}"""
+
+
+JUDGE_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "decisions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "packet_id": {"type": "string"},
+                    "verdict": {
+                        "type": "string",
+                        "enum": ["SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"],
+                    },
+                    "evidence_ids": {"type": "array", "items": {"type": "string"}},
+                    "same_entity": {"type": "boolean"},
+                    "same_property": {"type": "boolean"},
+                    "qualifiers_satisfied": {"type": "boolean"},
+                    "modality_satisfied": {"type": "boolean"},
+                    "confidence": {"type": "number"},
+                    "reason": {"type": "string"},
+                },
+                "required": [
+                    "packet_id", "verdict", "evidence_ids", "same_entity", "same_property",
+                    "qualifiers_satisfied", "modality_satisfied", "confidence", "reason",
+                ],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["decisions"],
+    "additionalProperties": False,
+}
+
+
+CRITIC_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reviews": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "packet_id": {"type": "string"},
+                    "accept": {"type": "boolean"},
+                    "evidence_ids": {"type": "array", "items": {"type": "string"}},
+                    "blocking_concerns": {"type": "array", "items": {"type": "string"}},
+                    "confidence": {"type": "number"},
+                    "reason": {"type": "string"},
+                },
+                "required": [
+                    "packet_id", "accept", "evidence_ids", "blocking_concerns", "confidence", "reason",
+                ],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["reviews"],
+    "additionalProperties": False,
+}
 
 
 def _provider_name(provider: Any) -> str:
@@ -598,6 +659,7 @@ def _preflight_provider(
                 json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                 system,
                 valid_contract,
+                json_schema=CRITIC_JSON_SCHEMA if critic else JUDGE_JSON_SCHEMA,
             )
         else:
             generate = getattr(provider, "generate", None)
@@ -723,6 +785,7 @@ def _call_batches(
                     json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                     system,
                     valid_contract,
+                    json_schema=CRITIC_JSON_SCHEMA if critic else JUDGE_JSON_SCHEMA,
                 )
             else:
                 result = provider.generate(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), system)
@@ -1053,6 +1116,7 @@ def run_semantic_evidence_engine(
     rows: list[dict[str, Any]], *, fact_graph: dict[str, Any], page_corpus: Iterable[dict[str, Any]] = (),
     judge_provider: Any = None, critic_provider: Any = None, level: str = "off", limit: int = 0,
     progress_callback: Any = None, checkpoint: dict[str, Any] | None = None,
+    candidate_cap: int = 0,
 ) -> dict[str, Any]:
     """Build evidence packets for every unresolved atom and judge the best ones.
 
@@ -1121,6 +1185,9 @@ def run_semantic_evidence_engine(
         if packet.get("evidence_level") == "L4" and packet.get("checker", {}).get("consensus_eligible")
     ]
     candidates = diversified_candidate_order(eligible_candidates)
+    if int(candidate_cap or 0) > 0:
+        candidates = candidates[:int(candidate_cap)]
+        eligible_candidates = list(candidates)
     checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
     judge_checkpoint = checkpoint.setdefault("judge", {})
     critic_checkpoint = checkpoint.setdefault("critic", {})
@@ -1397,6 +1464,7 @@ def run_semantic_evidence_engine(
         "independent_consensus_available": independent_consensus_available,
         "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
+        "verified_vertical_candidate_cap": int(candidate_cap or 0),
         "judge_selected": len(candidates),
         "judge_attempted": len(judge_attempted_ids),
         "judge_checkpoint_reused": len(judge_reused_ids),

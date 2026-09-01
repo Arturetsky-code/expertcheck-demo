@@ -15,9 +15,10 @@ from .typed_evidence_resolver import DESIGN_MARKERS, infer_source_modality
 from .verification_core import KIND_STATES
 from .object_semantics import canonical_parameter_code
 from .coverage_acceleration import diversified_candidate_order
+from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "2.4-resumable-truthful-execution"
+ENGINE_VERSION = "16.0-resilient-structured-consensus"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -372,20 +373,42 @@ def build_evidence_packet(
 
 
 def _extract_json(text: Any) -> dict[str, Any] | None:
-    raw = str(text or "").strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I | re.S).strip()
-    try:
-        value = json.loads(raw)
-        return value if isinstance(value, dict) else None
-    except Exception:
-        start, end = raw.find("{"), raw.rfind("}")
-        if 0 <= start < end:
-            try:
-                value = json.loads(raw[start:end + 1])
-                return value if isinstance(value, dict) else None
-            except Exception:
-                return None
+    """Recover and normalise common structured-response envelopes.
+
+    Providers may return a root array, a single decision, or wrap the useful
+    object in ``result``/``data``.  These are representation differences, not
+    semantic licence: packet IDs and verdict enums are still validated later.
+    """
+    value: Any = _recover_json(str(text or ""))
+    for _ in range(3):
+        if isinstance(value, str):
+            value = _recover_json(value)
+            continue
+        if isinstance(value, dict):
+            if isinstance(value.get("decisions"), list) or isinstance(value.get("reviews"), list):
+                return value
+            for key in ("result", "data", "output", "response"):
+                nested = value.get(key)
+                if isinstance(nested, (dict, list, str)):
+                    value = nested
+                    break
+            else:
+                if "packet_id" in value and "verdict" in value:
+                    return {"decisions": [value]}
+                if "packet_id" in value and "accept" in value:
+                    return {"reviews": [value]}
+                for source, target in (("decision", "decisions"), ("review", "reviews")):
+                    if isinstance(value.get(source), dict):
+                        return {target: [value[source]]}
+                return value
+            continue
+        if isinstance(value, list):
+            rows = [row for row in value if isinstance(row, dict)]
+            if any("verdict" in row for row in rows):
+                return {"decisions": rows}
+            if any("accept" in row for row in rows):
+                return {"reviews": rows}
+        break
     return None
 
 
@@ -501,6 +524,8 @@ def _preflight_provider(
         "ok": provider is not None,
         "contract_probe_requested": 0,
         "contract_probe_responses": 0,
+        "connection_ok": False,
+        "response_excerpt": "",
     }
     if provider is None:
         return base
@@ -529,6 +554,7 @@ def _preflight_provider(
             "state": "PASSED" if getattr(connection_result, "ok", False) else "FAILED",
             "error": "" if getattr(connection_result, "ok", False) else str(getattr(connection_result, "error", "AI provider error")),
             "ok": bool(getattr(connection_result, "ok", False)),
+            "connection_ok": bool(getattr(connection_result, "ok", False)),
         }
     if not connection.get("ok") or not structured:
         return dict(connection)
@@ -553,7 +579,17 @@ def _preflight_provider(
 
     def valid_contract(text: str) -> bool:
         parsed = _extract_json(text)
-        return bool(isinstance(parsed, dict) and isinstance(parsed.get(root_key), list))
+        rows = parsed.get(root_key) if isinstance(parsed, dict) else None
+        if not isinstance(rows, list) or not rows:
+            return False
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get("packet_id") or ""):
+                return False
+            if critic and not isinstance(row.get("accept"), bool):
+                return False
+            if not critic and str(row.get("verdict") or "").upper() not in JUDGE_VERDICTS:
+                return False
+        return True
 
     try:
         generate_validated = getattr(provider, "generate_validated", None)
@@ -590,8 +626,10 @@ def _preflight_provider(
         "state": "PASSED" if ok else "FAILED",
         "error": "" if ok else str(getattr(result, "error", "AI provider error")),
         "ok": ok,
+        "connection_ok": bool(connection.get("ok")),
         "contract_probe_requested": 1,
         "contract_probe_responses": 1 if ok else 0,
+        "response_excerpt": "" if ok else redact_text(str(getattr(result, "text", "") or ""))[:600],
     }
 
 
@@ -665,7 +703,18 @@ def _call_batches(
         }
         def valid_contract(text: str) -> bool:
             parsed = _extract_json(text)
-            return bool(parsed and isinstance(parsed.get(root_key), list))
+            rows = parsed.get(root_key) if isinstance(parsed, dict) else None
+            if not isinstance(rows, list) or not rows:
+                return False
+            return all(
+                isinstance(row, dict)
+                and str(row.get("packet_id") or "")
+                and (
+                    isinstance(row.get("accept"), bool)
+                    if critic else str(row.get("verdict") or "").upper() in JUDGE_VERDICTS
+                )
+                for row in rows
+            )
 
         try:
             generate_validated = getattr(provider, "generate_validated", None)
@@ -829,10 +878,10 @@ def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[
     if verdict in {"SUPPORTS", "CONTRADICTS"}:
         if confidence < 0.82:
             reasons.append("Достоверность Judge ниже 0,82.")
-        if raw.get("same_entity") is False:
-            reasons.append("Доказательство относится к другой сущности.")
-        if raw.get("same_property") is False:
-            reasons.append("Доказательство относится к другому свойству.")
+        if raw.get("same_entity") is not True:
+            reasons.append("Judge не подтвердил тождество сущности.")
+        if raw.get("same_property") is not True:
+            reasons.append("Judge не подтвердил тождество проверяемого свойства.")
         if packet.get("critical_qualifiers") and raw.get("qualifiers_satisfied") is not True:
             reasons.append("Judge не подтвердил все критические квалификаторы.")
         if raw.get("modality_satisfied") is not True:
@@ -1092,12 +1141,18 @@ def run_semantic_evidence_engine(
         },
     }
     independent_consensus_available = False
+    degraded_contract_recovery = False
     if not activation_reasons and candidates:
         preflight["judge"] = _preflight_provider(judge_provider, "JUDGE")
         if not preflight["judge"].get("ok"):
-            activation_reasons.append(
-                f"Preflight Judge не пройден: {preflight['judge'].get('error') or 'провайдер или модель недоступны'}."
-            )
+            reason = f"Preflight Judge не пройден: {preflight['judge'].get('error') or 'провайдер или модель недоступны'}."
+            if preflight["judge"].get("connection_ok"):
+                degraded_contract_recovery = True
+                advisory_reasons.append(
+                    reason + " Включён изолированный режим восстановления по одному пакету без права на L5."
+                )
+            else:
+                activation_reasons.append(reason)
         elif critic_provider is None:
             advisory_reasons.append(
                 "Critic не настроен; Judge выполняется только в консультативном режиме без права на L5."
@@ -1169,7 +1224,8 @@ def run_semantic_evidence_engine(
                 if str(packet.get("packet_id") or "") in selected_ids
             ]
     else:
-        new_limit = min(requested_limit or advisory_limit, advisory_limit)
+        safe_advisory_limit = 2 if degraded_contract_recovery else advisory_limit
+        new_limit = min(requested_limit or safe_advisory_limit, safe_advisory_limit)
         completed_ids = set(judge_checkpoint)
         pending_ids = [
             str(packet.get("packet_id") or "") for packet in candidates
@@ -1185,6 +1241,8 @@ def run_semantic_evidence_engine(
     raw_judges, judge_errors, judge_calls = _call_batches(
         judge_provider, judge_payloads, critic=False, progress_callback=progress_callback,
         checkpoint=judge_checkpoint,
+        batch_size=1 if degraded_contract_recovery else 4,
+        max_consecutive_failures=2,
     )
     judges = {packet["packet_id"]: _validate_judge(packet, raw_judges.get(packet["packet_id"])) for packet in candidates}
     critic_packets: list[dict[str, Any]] = []
@@ -1265,9 +1323,15 @@ def run_semantic_evidence_engine(
             "selection_reason": (
                 "Отобран для независимого Judge/Critic по качеству доказательственного пакета."
                 if independent_consensus_available
+                else "Отобран для изолированного восстановления JSON-контракта без права на L5."
+                if degraded_contract_recovery
                 else "Отобран для консультативного Judge; категоричный вывод запрещён."
             ),
-            "execution_mode": "INDEPENDENT_CONSENSUS" if independent_consensus_available else "ADVISORY_JUDGE_ONLY",
+            "execution_mode": (
+                "INDEPENDENT_CONSENSUS" if independent_consensus_available
+                else "DEGRADED_CONTRACT_RECOVERY" if degraded_contract_recovery
+                else "ADVISORY_JUDGE_ONLY"
+            ),
             "judge_state": judge.get("verdict"),
             "judge_response_received": bool(judge.get("response_received")),
             "judge_valid": bool(judge.get("valid")),
@@ -1325,9 +1389,11 @@ def run_semantic_evidence_engine(
         "execution_mode": (
             "DISABLED" if activation_reasons
             else "INDEPENDENT_CONSENSUS" if independent_consensus_available
+            else "DEGRADED_CONTRACT_RECOVERY" if degraded_contract_recovery and candidates
             else "ADVISORY_JUDGE_ONLY" if candidates
             else "NO_ELIGIBLE_PACKETS"
         ),
+        "degraded_contract_recovery": degraded_contract_recovery,
         "independent_consensus_available": independent_consensus_available,
         "preflight": preflight,
         "judge_candidates": len(eligible_candidates),
@@ -1338,6 +1404,10 @@ def run_semantic_evidence_engine(
         "requested_limit": requested_limit,
         "advisory_limit": advisory_limit,
         "not_selected": max(0, len(eligible_candidates) - len(candidates)),
+        "queue_remaining": max(
+            0,
+            len(eligible_candidates) - len(set(judge_checkpoint).intersection({str(packet.get('packet_id') or '') for packet in eligible_candidates})),
+        ),
         "judge_responses": len(raw_judges),
         "critic_responses": len(raw_critics),
         "critic_attempted": len(critic_attempted_ids),

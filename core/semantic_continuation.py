@@ -22,7 +22,7 @@ from .semantic_evidence_engine import build_semantic_project_graph
 from .verification_core import domain_summary
 
 
-CONTINUATION_VERSION = "15.2.5-checklist-stability-resumable-queue"
+CONTINUATION_VERSION = "16.0-quality-leap"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:

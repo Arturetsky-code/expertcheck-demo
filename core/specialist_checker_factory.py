@@ -5,7 +5,7 @@ from typing import Any
 from .requirement_contracts import coverage_archetype
 
 
-FACTORY_VERSION = "1.0-specialist-checker-factory"
+FACTORY_VERSION = "16.0-specialist-checker-factory"
 
 
 def checker_profile(atom: dict[str, Any], recipe: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -24,7 +24,7 @@ def checker_profile(atom: dict[str, Any], recipe: dict[str, Any] | None = None) 
     ).upper()
     archetype = coverage_archetype(atom, recipe)
 
-    if kind == "VALUE_COMPARISON" or method == "VALUE_COMPARISON":
+    if kind == "VALUE_COMPARISON" or method in {"VALUE_COMPARISON", "ENGINEERING_VALUE_CROSSCHECK", "STRUCTURED_COMPARISON"}:
         family, mode = "NUMERIC_VALUE_COMPARISON", "DETERMINISTIC"
     elif kind == "EQUIPMENT_IDENTITY" or "IDENTITY" in method:
         family, mode = "EQUIPMENT_IDENTITY", "DETERMINISTIC"
@@ -36,9 +36,11 @@ def checker_profile(atom: dict[str, Any], recipe: dict[str, Any] | None = None) 
         family, mode = "NORMATIVE_CLAUSE", "SPECIALIST"
     elif kind == "APPLICABILITY_DECLARATION":
         family, mode = "APPLICABILITY", "SPECIALIST"
-    elif modality == "DRAWING":
+    elif method in {"ENGINEERING_PARAMETER_PRESENCE", "DOCUMENT_CONTENT_PRESENCE"}:
+        family, mode = "FEATURE_PRESENCE", "DETERMINISTIC"
+    elif method == "DRAWING_PRESENCE_CHECK" or modality == "DRAWING":
         family, mode = "DRAWING_EVIDENCE", "CONSENSUS"
-    elif modality == "CALCULATION":
+    elif method == "CALCULATION_PRESENCE" or modality == "CALCULATION":
         family, mode = "CALCULATION_EVIDENCE", "CONSENSUS"
     else:
         family, mode = "SEMANTIC_PROJECT_DECISION", "CONSENSUS"
@@ -51,6 +53,10 @@ def checker_profile(atom: dict[str, Any], recipe: dict[str, Any] | None = None) 
         "coverage_archetype": archetype,
         "required_modality": modality,
         "consensus_eligible": consensus_eligible,
+        "mandatory_gates": [
+            "ENTITY_BINDING", "PROPERTY_BINDING", "MODALITY", "CRITICAL_QUALIFIERS",
+            "SEMANTIC_SLOTS", "ADVERSARIAL_REVIEW",
+        ],
         "categorical_policy": (
             "SPECIALIZED_DETERMINISTIC_CHECKER"
             if mode == "DETERMINISTIC"
@@ -59,4 +65,3 @@ def checker_profile(atom: dict[str, Any], recipe: dict[str, Any] | None = None) 
             else "SPECIALIST_DECISION_REQUIRED"
         ),
     }
-

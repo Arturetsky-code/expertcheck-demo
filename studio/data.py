@@ -74,7 +74,7 @@ def _evidence_sources(row) -> str:
     refs=[]
     if isinstance(direct,list):
         refs.extend(direct)
-    for key in ('deep_evidence_candidates','evidence_candidates','evidence_records','supporting_evidence','matched_findings'):
+    for key in ('verification_evidence','deep_evidence_candidates','evidence_candidates','evidence_records','supporting_evidence','matched_findings'):
         value=row.get(key) or []
         if isinstance(value,list): refs.extend(value)
     document=row.get('source_document') or row.get('document')
@@ -91,6 +91,23 @@ def _evidence_sources(row) -> str:
         if text and text not in seen:
             seen.add(text); rendered.append(text)
     return ' | '.join(rendered) if rendered else 'Источник не сформирован — требуется целевой поиск'
+
+
+def _primary_project_source(row) -> tuple[str, object]:
+    """Return the project evidence source, never the Assignment source row."""
+    for ref in row.get('verification_evidence') or []:
+        if not isinstance(ref,dict):
+            continue
+        document=str(ref.get('document') or ref.get('source_document') or '').strip()
+        page=ref.get('page') if ref.get('page') not in (None,'') else ref.get('source_page')
+        if document:
+            return document,page or '—'
+    for rendered in row.get('evidence') or []:
+        text=str(rendered or '')
+        match=re.match(r'(.+?),\s*стр\.\s*([^:]+)',text)
+        if match:
+            return match.group(1).strip(),match.group(2).strip()
+    return 'Проектное доказательство не завершено','—'
 
 
 def _ai_error_summary(errors) -> str:
@@ -444,7 +461,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Отобрано для проверяющей модели':audit.get('judge_selected',0),
             'Фактически отправлено проверяющей модели':audit.get('judge_attempted',0),
             'Возобновлено из снимка':audit.get('judge_checkpoint_reused',0),
-            'Осталось в очереди':audit.get('judge_pending',0),
+            'Осталось в очереди':audit.get(
+                'queue_remaining',
+                int(audit.get('judge_pending',0) or 0) + int(audit.get('not_selected',0) or 0),
+            ),
             'Фактически отправлено контрольной модели':audit.get('critic_attempted',0),
             'Ответов Critic возобновлено из снимка':audit.get('critic_checkpoint_reused',0),
             'Осталось у Critic':audit.get('critic_pending',0),
@@ -477,6 +497,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Запрошено пакетов':check.get('contract_probe_requested',0),
                 'Получено ответов':check.get('contract_probe_responses',0),
                 'Состояние':ru_label(check.get('state')), 'Ошибка':str(check.get('error') or '')[:1200],
+                'Фрагмент ответа для диагностики':str(check.get('response_excerpt') or '')[:600],
                 'ID пакетов':'',
             })
         for row in audit.get('execution_log') or []:
@@ -552,6 +573,15 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         + int((semantic_engine_summary.get(code) or {}).get('critic_pending') or 0)
         for code in ('assignment','checklist')
     )
+    semantic_candidates=sum(
+        int((semantic_engine_summary.get(code) or {}).get('judge_candidates') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_responses=sum(
+        int((semantic_engine_summary.get(code) or {}).get('judge_responses') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_completion_pct=round(100*semantic_responses/max(1,semantic_candidates),1)
     readiness_reasons=[]
     if total_review_questions:
         readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
@@ -599,11 +629,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Вопросов специалисту', total_review_questions],
         ['Проверок вне автоматического покрытия', total_system_limitations],
         ['Строгое покрытие L5, %', coverage_matrix_payload.get('coverage_pct',0)],
-        ['Доказательное покрытие L3–L5, %', coverage_matrix_payload.get('evidence_coverage_pct',0)],
+        ['Покрытие найденными кандидатами L3–L5, %', coverage_matrix_payload.get('evidence_coverage_pct',0)],
         ['Проверок с независимым AI-консенсусом', coverage_matrix_payload.get('semantic_consensus_completed',0)],
         ['Консультативных AI-оценок без L5', semantic_advisory_total],
+        ['AI-пакетов подготовлено', semantic_candidates],
+        ['AI-пакетов обработано', semantic_responses],
+        ['Выполнение AI-очереди, %', semantic_completion_pct],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
-        ['Задание: доказательное покрытие L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
+        ['Задание: покрытие найденными кандидатами L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
         ['Задание: выявлено несоответствий', assignment_plan.get('issue',0)],
         ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
@@ -614,7 +647,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД: распознано, но статус не верифицирован', normative_registry_unverified],
         ['НТД: отсутствует в кураторском реестре', normative_registry_missing],
         ['Чек-листы: покрытие автоматической проверки, %', checklist_plan.get('coverage_pct',0)],
-        ['Чек-листы: доказательное покрытие L3–L5, %', checklist_plan.get('evidence_coverage_pct',0)],
+        ['Чек-листы: покрытие найденными кандидатами L3–L5, %', checklist_plan.get('evidence_coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
         ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
         ['Сверка реестров/чертежей: завершено', f"{_cross_completed(register_comparisons)} из {len(register_comparisons)}"],
@@ -628,9 +661,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
-            'Строгое покрытие L5, %','Доказательное покрытие L3–L5, %','Проверок с независимым AI-консенсусом',
+            'Строгое покрытие L5, %','Покрытие найденными кандидатами L3–L5, %','Проверок с независимым AI-консенсусом',
             'Консультативных AI-оценок без L5',
-            'Задание: доказательное покрытие L3–L5, %','Чек-листы: доказательное покрытие L3–L5, %',
+            'AI-пакетов подготовлено','AI-пакетов обработано','Выполнение AI-очереди, %',
+            'Задание: покрытие найденными кандидатами L3–L5, %','Чек-листы: покрытие найденными кандидатами L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
             'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
@@ -840,7 +874,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     coverage_matrix_df=pd.DataFrame([{
         'Архетип':ru_label(x.get('archetype')),'Всего':x.get('total',0),'Завершено автоматически':x.get('completed',0),
         'Покрытие, %':x.get('coverage_pct',0),'Подтверждено':x.get('verified_ok',0),
-        'Доказательства готовы L3–L5':x.get('evidence_ready',0),'Доказательное покрытие, %':x.get('evidence_coverage_pct',0),
+        'Кандидаты доказательств L3–L5':x.get('evidence_ready',0),'Покрытие кандидатами, %':x.get('evidence_coverage_pct',0),
         'Независимый AI-консенсус':x.get('semantic_consensus_completed',0),
         'L0':(x.get('evidence_levels') or {}).get('L0',0),'L1':(x.get('evidence_levels') or {}).get('L1',0),
         'L2':(x.get('evidence_levels') or {}).get('L2',0),'L3':(x.get('evidence_levels') or {}).get('L3',0),
@@ -883,8 +917,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Требуемое значение':x.get('required_value'),
         'Ед. изм.':x.get('unit'),
         'Результат':x.get('status'),
-        'Документ':x.get('source_document'),
-        'Страница':x.get('page'),
+        'Документ':_primary_project_source(x)[0],
+        'Страница':_primary_project_source(x)[1],
         'Доказательства':' | '.join(x.get('evidence') or []),
         'Качество доказательства':ru_label(x.get('evidence_quality_state')),
         'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
@@ -1091,7 +1125,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         def readiness_row(label,domain):
             total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)
             attention=int(domain.get('review',0) or 0)+int(domain.get('system_limitation',0) or 0)
-            return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Строгое покрытие L5, %':round(100*(ok+issues)/max(1,total),1),'Доказательное покрытие L3–L5, %':domain.get('evidence_coverage_pct',0),'Независимый AI-консенсус':domain.get('semantic_consensus_completed',0)}
+            return {'Контур':label,'Всего':total,'Завершено автоматически':ok+issues,'Подтверждённые несоответствия':issues,'Требует внимания':attention,'Строгое покрытие L5, %':round(100*(ok+issues)/max(1,total),1),'Покрытие кандидатами L3–L5, %':domain.get('evidence_coverage_pct',0),'Независимый AI-консенсус':domain.get('semantic_consensus_completed',0)}
         normative_valid_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру' and x.get('status') in {'Действует','Действует с изменениями'})
         def comparison_count(rows,finding_type):
             return sum(
@@ -1114,7 +1148,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not coverage_matrix_df.empty:
             sheets.append(('Карта покрытия',_excel_safe_frame(coverage_matrix_df,columns=[
                 'Архетип','Всего','Завершено автоматически','Покрытие, %',
-                'Доказательства готовы L3–L5','Доказательное покрытие, %','L4','Основные причины пробелов',
+                'Кандидаты доказательств L3–L5','Покрытие кандидатами, %','L4','Основные причины пробелов',
             ])))
         if not limitations_df.empty:
             sheets.append(('Границы автоматизации',_excel_safe_frame(limitations_df.head(40),columns=[

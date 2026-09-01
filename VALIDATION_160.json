@@ -1,0 +1,395 @@
+{
+  "version": "16.0-quality-leap",
+  "tests": 93,
+  "passed": 93,
+  "failed": 0,
+  "release_gates": {
+    "categorical_precision_min": 0.95,
+    "critical_regressions_allowed": 0,
+    "ai_packet_completion_min": 0.95,
+    "assignment_coverage_target": 0.4,
+    "checklist_coverage_target": 0.2
+  },
+  "quality_policy": {
+    "critical_regressions_fail_release": true,
+    "semantic_slot_contract_is_fail_closed": true,
+    "judge_entity_and_property_are_mandatory": true,
+    "malformed_json_has_bounded_repair": true,
+    "ai_queue_is_resumable_and_reported_truthfully": true,
+    "candidate_coverage_is_separate_from_l5": true
+  },
+  "results": [
+    {
+      "test": "QC-001",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-002",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-003",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-004",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-005",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-006",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-007",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-008",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-009",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-010",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-011",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-012",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-013",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-014",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-015",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-016",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-017",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-018",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-019",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-020",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-021",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-022",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-023",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-024",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-025",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-026",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-027",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-028",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-029",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-030",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-031",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-032",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-033",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-034",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-035",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-036",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-037",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-038",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-039",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-040",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-041",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-042",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-043",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-044",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-045",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-046",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-047",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-048",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-049",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-050",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-051",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-052",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-053",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-054",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-055",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-056",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-057",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-058",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-059",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-060",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-061",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-062",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-063",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-064",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-065",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-066",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-067",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-068",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-069",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-070",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-071",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-072",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-073",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-074",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-075",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-076",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-077",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-078",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-079",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-080",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-081",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-082",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-083",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-084",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-085",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-086",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-087",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-088",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-089",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-090",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-091",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-092",
+      "status": "PASSED"
+    },
+    {
+      "test": "QC-093",
+      "status": "PASSED"
+    }
+  ]
+}

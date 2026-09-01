@@ -6,9 +6,10 @@ from typing import Any, Iterable
 from .normalization import normalize_text
 from .page_evidence_store import canonical_section, is_assignment_source, section_matches
 from .requirement_contracts import build_contract
+from .semantic_slot_gate import evaluate_semantic_slots
 
 
-RESOLVER_VERSION = "2.0-clause-bound-evidence"
+RESOLVER_VERSION = "16.0-clause-and-semantic-slot-evidence"
 DESIGN_MARKERS = (
     "предусмотр", "предусматр", "проектом принят", "проектом выполн",
     "запроектирован", "оборудуется", "ограждается", "осуществляется",
@@ -157,8 +158,19 @@ def resolve_typed_evidence(
             modality_ok = _modality_matches(required_modality, modality)
             design_ok = (not requires_design or design) and not negative_decision
             qualifier_ok = not missing_qualifiers
-            contract_ok = group_ok and modality_ok and design_ok and qualifier_ok
-            score = min(100, 35 + 15 * len(matched_groups) + (15 if design else 0) + (15 if modality_ok else 0) + (20 if qualifier_ok else 0))
+            slot_gate = evaluate_semantic_slots(
+                atom.get("atom_text") or atom.get("requirement_text") or recipe.get("title") or "",
+                clause,
+                minimum_coverage=float(recipe.get("minimum_semantic_slot_coverage") or 0.72),
+            )
+            semantic_ok = slot_gate["state"] == "PASSED"
+            contract_ok = group_ok and modality_ok and design_ok and qualifier_ok and semantic_ok
+            score = min(
+                100,
+                25 + 12 * len(matched_groups) + (12 if design else 0)
+                + (12 if modality_ok else 0) + (14 if qualifier_ok else 0)
+                + round(25 * float(slot_gate["coverage"])),
+            )
             evidence = {
                 "kind": "VERIFIED_CLAUSE_EVIDENCE" if contract_ok else "CANDIDATE_CLAUSE_EVIDENCE",
                 "document": passage.get("document"),
@@ -177,6 +189,13 @@ def resolve_typed_evidence(
                 "required_modality": required_modality,
                 "modality_gate_state": "PASSED" if modality_ok else "BLOCKED",
                 "same_clause_gate_state": "PASSED",
+                "semantic_slot_gate_state": slot_gate["state"],
+                "semantic_slot_gate_version": slot_gate["version"],
+                "semantic_token_coverage": slot_gate["coverage"],
+                "semantic_anchor_terms": slot_gate["anchors"],
+                "matched_semantic_anchors": slot_gate["matched_anchors"],
+                "missing_semantic_anchors": slot_gate["missing_anchors"],
+                "semantic_slot_reasons": slot_gate["reasons"],
                 "contract_state": "SATISFIED" if contract_ok else "UNSATISFIED",
                 "semantic_gate_state": "PASSED" if contract_ok else "BLOCKED",
                 "semantic_verdict": "SUPPORTS" if contract_ok else ("CONTRADICTS" if negative_decision else "CANDIDATE"),

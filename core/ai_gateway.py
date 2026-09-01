@@ -50,10 +50,28 @@ class AIProvider:
             except Exception:
                 valid = False
         if result.ok and not valid:
+            repair_system = (
+                system + "\n\nПредыдущий ответ не прошёл машинную проверку. "
+                "Верните только один JSON-объект требуемой схемы без Markdown, комментариев и пояснений."
+            )
+            repair_prompt = (
+                prompt + "\n\nПРЕДЫДУЩИЙ ОТВЕТ ДЛЯ ИСПРАВЛЕНИЯ:\n"
+                + str(result.text or "")[:5000]
+            )
+            repaired = self.generate(repair_prompt, repair_system)
+            repaired_valid = False
+            if repaired.ok and validator is not None:
+                try:
+                    repaired_valid = bool(validator(repaired.text))
+                except Exception:
+                    repaired_valid = False
+            if repaired.ok and repaired_valid:
+                return repaired
             return AIResult(
-                False, result.provider, text=result.text,
-                error='AI вернул ответ, не соответствующий JSON-контракту.',
-                status_code=422, model=result.model,
+                False, repaired.provider or result.provider,
+                text=repaired.text or result.text,
+                error='AI вернул ответ, не соответствующий JSON-контракту, включая попытку автоматического исправления.',
+                status_code=422, model=repaired.model or result.model,
             )
         return result
 
@@ -358,6 +376,7 @@ class FailoverProvider(AIProvider):
         if not self.providers:
             return AIResult(False, self.name, error='Не задан ни один API-ключ для резервного режима.')
         errors=[]
+        invalid_results: list[tuple[AIProvider, AIResult]] = []
         last_status: int | None = None
         for provider in self.providers:
             result=provider.generate(prompt, system)
@@ -372,12 +391,40 @@ class FailoverProvider(AIProvider):
                 return result
             if result.ok:
                 errors.append(f'{provider.name}: ответ не соответствует JSON-контракту')
+                invalid_results.append((provider, result))
                 # A syntactically successful but unusable response is a valid
                 # reason to try the next independently configured provider.
                 continue
             errors.append(f'{provider.name}: {diagnostic_message(result)}')
+        # Only after every independent lane failed do we spend a second call on
+        # repairing a syntactically successful response.  Healthy failover
+        # remains fast, while free/reasoning models get one bounded recovery.
+        last_invalid: AIResult | None = None
+        for provider, previous in invalid_results:
+            repair_system = (
+                system + "\n\nИсправьте предыдущий ответ. Верните только один JSON-объект "
+                "строго требуемой схемы, без Markdown и пояснений."
+            )
+            repair_prompt = prompt + "\n\nПРЕДЫДУЩИЙ ОТВЕТ:\n" + str(previous.text or "")[:5000]
+            repaired = provider.generate(repair_prompt, repair_system)
+            last_status = repaired.status_code
+            last_invalid = repaired
+            valid = False
+            if repaired.ok and validator is not None:
+                try:
+                    valid = bool(validator(repaired.text))
+                except Exception:
+                    valid = False
+            if repaired.ok and valid:
+                return repaired
+            errors.append(
+                f'{provider.name}: автоматическое исправление JSON-контракта не удалось'
+                if repaired.ok else f'{provider.name}: исправление — {diagnostic_message(repaired)}'
+            )
         return AIResult(
-            False, self.name, error='; '.join(errors),
+            False, self.name,
+            text=str((last_invalid.text if last_invalid else "") or "")[:6000],
+            error='; '.join(errors),
             # Contract damage is actionable by the batch splitter even when a
             # later fallback is temporarily rate-limited.
             status_code=422 if errors and any('JSON-контракту' in error for error in errors) else last_status,

@@ -1,0 +1,66 @@
+{
+  "version": "16.0-quality-gold-standard-v1",
+  "source": "Обезличенный синтетический корпус регрессий ExpertCheck",
+  "privacy": "Все названия и числовые значения синтетические; проектные данные не публикуются.",
+  "release_gates": {
+    "categorical_precision_min": 0.95,
+    "critical_regressions_allowed": 0,
+    "ai_packet_completion_min": 0.95,
+    "assignment_coverage_target": 0.40,
+    "checklist_coverage_target": 0.20
+  },
+  "cases": [
+    {
+      "id": "GOLD-DECIMAL-SCALE-PLAUSIBILITY",
+      "domain": "engineering_plausibility",
+      "requirement": "Высота вспомогательного павильона",
+      "observed": "37 м",
+      "context": "Площадь застройки 41,2 м²; строительный объём 152,4 м³",
+      "expected": "REVIEW_QUESTION",
+      "expected_candidate": "3,7 м",
+      "critical": true
+    },
+    {
+      "id": "GOLD-ENTITY-METRIC-BINDING",
+      "domain": "entity_metric_binding",
+      "requirement": "Площадь застройки корпуса подготовки образцов",
+      "observed": "113,4 м²",
+      "distractor": "31,2 м² — площадка технологического оборудования",
+      "expected": "KEEP_BUILDING_VALUE_REJECT_EQUIPMENT_VALUE",
+      "critical": true
+    },
+    {
+      "id": "GOLD-CROSS-SECTION-FOOTPRINT",
+      "domain": "cross_section_comparison",
+      "requirement": "Площадь застройки здания воздуходувной",
+      "observed": "ПЗ 61,8 м²; ПЗУ 56,2 м²",
+      "expected": "PROJECT_FINDING",
+      "critical": true
+    },
+    {
+      "id": "GOLD-SAFETY-BARRIER-SEMANTICS",
+      "domain": "checklist_semantics",
+      "requirement": "Проверить наличие площадки разворота спецтехники у защитного ограждения проезда",
+      "evidence": "Технологическое оборудование ограждается сетчатым защитным кожухом",
+      "expected": "NOT_VERIFIED",
+      "critical": true,
+      "reason": "Ограждение оборудования не доказывает геометрию проезда у дорожного ограждения."
+    },
+    {
+      "id": "GOLD-WORK-PERIOD-DURATION",
+      "domain": "assignment_numeric",
+      "requirement": "Продолжительность рабочего периода – 10 часов",
+      "evidence": "Технологический раздел: рабочий период длится 10 часов",
+      "expected": "VERIFIED_OK",
+      "critical": true
+    },
+    {
+      "id": "GOLD-ANNUAL-CAPACITY",
+      "domain": "assignment_numeric",
+      "requirement": "Годовая производительность 2 750 тыс. м³/год",
+      "evidence": "Пояснительная записка: производительность 2750 тыс. м³/год",
+      "expected": "VERIFIED_OK",
+      "critical": true
+    }
+  ]
+}

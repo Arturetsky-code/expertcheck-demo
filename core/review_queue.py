@@ -9,6 +9,12 @@ from .normalization import normalize_text
 
 
 LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5}
+MAX_CLUSTER_SIZE = 12
+_TOPIC_STOPWORDS = {
+    "проверить", "проверка", "наличие", "соответствие", "проектной", "документации",
+    "раздел", "часть", "должен", "должна", "должны", "представлен", "приведен",
+    "приведена", "указан", "выполнен", "предусмотрен", "требования", "содержать",
+}
 
 
 def _value(row: dict[str, Any], *keys: str) -> str:
@@ -36,6 +42,28 @@ def _priority(items: list[dict[str, Any]]) -> str:
     return "Низкий"
 
 
+def _topic(row: dict[str, Any]) -> str:
+    text = normalize_text(_value(row, "Проверка", "title", "question", "parameter"))
+    topic_rules = (
+        (("расчет", "расчёт", "баланс"), "Расчёты и балансы"),
+        (("чертеж", "чертёж", "план", "схем", "разрез", "фасад"), "Графические материалы"),
+        (("комплект", "состав", "содержание", "перечень", "ведомост"), "Состав и комплектность"),
+        (("площад", "объем", "объём", "высот", "длин", "ширин", "мощност", "производительност"), "Числовые показатели"),
+        (("пожар", "эвакуац", "безопасност", "охрана труда"), "Безопасность"),
+        (("норматив", "гост", "сп ", "федеральн"), "Нормативные требования"),
+        (("заземл", "молниезащ", "электроснаб", "кабель"), "Электротехнические решения"),
+        (("водоснаб", "водоотвед", "канализац", "насосн"), "Водоснабжение и водоотведение"),
+    )
+    for markers, label in topic_rules:
+        if any(marker in text for marker in markers):
+            return label
+    words = [
+        word for word in re.findall(r"[a-zа-я0-9-]{4,}", text, re.I)
+        if word not in _TOPIC_STOPWORDS and not word.isdigit()
+    ]
+    return " ".join(words[:3]).capitalize() or "Общая проверка"
+
+
 def build_review_clusters(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Collapse an auditable detail queue into actionable specialist work packages.
 
@@ -50,37 +78,43 @@ def build_review_clusters(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
         route = _value(row, "Ожидаемые разделы", "expected_sections", "scope") or "—"
         reason = _value(row, "Код причины", "coverage_reason_code", "Причина", "coverage_reason") or "Требуется решение специалиста"
         family = _value(row, "checker_family", "Семейство проверки") or "—"
-        key = tuple(normalize_text(value) for value in (domain, entity, route, reason, family))
+        topic = _topic(row)
+        key = tuple(normalize_text(value) for value in (domain, entity, route, reason, family, topic))
         grouped[key].append(row)
 
     clusters: list[dict[str, Any]] = []
-    for key, items in grouped.items():
-        first = items[0]
-        ids = list(dict.fromkeys(
-            _value(item, "ID", "plan_id", "id") for item in items
-            if _value(item, "ID", "plan_id", "id")
-        ))
-        levels = [_level(item) for item in items]
-        max_level = max(levels, key=lambda value: LEVEL_RANK.get(value, 0), default="L0")
-        digest = hashlib.sha1("|".join(key).encode("utf-8", "ignore")).hexdigest()[:10].upper()
-        count = len(items)
-        route = _value(first, "Ожидаемые разделы", "expected_sections", "scope") or "—"
-        clusters.append({
-            "ID группы": f"RQ-{digest}",
-            "Приоритет": _priority(items),
-            "Контур": _value(first, "Контур", "domain") or "Не определён",
-            "Объект": _value(first, "Объект", "entity", "object") or "—",
-            "Ожидаемые разделы": route,
-            "Количество вопросов": count,
-            "Максимальный уровень доказательства": max_level,
-            "Типовая причина": _value(first, "Причина", "coverage_reason", "reason") or "Требуется предметное решение специалиста.",
-            "Пример проверки": _value(first, "Проверка", "title", "question", "parameter") or "—",
-            "Рекомендуемое действие": (
-                f"Рассмотреть {count} связанных вопросов по маршруту {route} как один рабочий пакет; "
-                "решение и доказательство фиксировать отдельно по каждому исходному вопросу."
-            ),
-            "ID вопросов": " | ".join(ids[:12]) + (f" | ещё {len(ids)-12}" if len(ids) > 12 else ""),
-        })
+    for key, grouped_items in grouped.items():
+        for chunk_index, offset in enumerate(range(0, len(grouped_items), MAX_CLUSTER_SIZE), 1):
+            items = grouped_items[offset:offset + MAX_CLUSTER_SIZE]
+            first = items[0]
+            ids = list(dict.fromkeys(
+                _value(item, "ID", "plan_id", "id") for item in items
+                if _value(item, "ID", "plan_id", "id")
+            ))
+            levels = [_level(item) for item in items]
+            max_level = max(levels, key=lambda value: LEVEL_RANK.get(value, 0), default="L0")
+            digest = hashlib.sha1(
+                ("|".join(key) + f"|{chunk_index}").encode("utf-8", "ignore")
+            ).hexdigest()[:10].upper()
+            count = len(items)
+            route = _value(first, "Ожидаемые разделы", "expected_sections", "scope") or "—"
+            clusters.append({
+                "ID группы": f"RQ-{digest}",
+                "Приоритет": _priority(items),
+                "Контур": _value(first, "Контур", "domain") or "Не определён",
+                "Объект": _value(first, "Объект", "entity", "object") or "—",
+                "Тема": _topic(first),
+                "Ожидаемые разделы": route,
+                "Количество вопросов": count,
+                "Максимальный уровень доказательства": max_level,
+                "Типовая причина": _value(first, "Причина", "coverage_reason", "reason") or "Требуется предметное решение специалиста.",
+                "Пример проверки": _value(first, "Проверка", "title", "question", "parameter") or "—",
+                "Рекомендуемое действие": (
+                    f"Рассмотреть до {MAX_CLUSTER_SIZE} однородных вопросов темы «{_topic(first)}» "
+                    f"по маршруту {route}; решение и доказательство фиксировать по каждому вопросу."
+                ),
+                "ID вопросов": " | ".join(ids[:12]) + (f" | ещё {len(ids)-12}" if len(ids) > 12 else ""),
+            })
 
     priority_rank = {"Высокий": 0, "Средний": 1, "Низкий": 2}
     clusters.sort(key=lambda row: (

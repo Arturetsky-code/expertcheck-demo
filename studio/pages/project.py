@@ -36,6 +36,19 @@ def _persist_completed_state(ctx) -> bool:
         return False
 
 
+def _semantic_pending_from_result(result) -> dict:
+    """Read the resumable AI queue without depending on the rendered page."""
+    try:
+        docs = result[0]
+        if hasattr(docs, 'iloc'):
+            first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+        else:
+            first_doc = dict(docs[0]) if docs else {}
+        return continuation_pending(first_doc)
+    except (IndexError, TypeError, AttributeError):
+        return {'eligible': 0, 'responses': 0, 'total': 0}
+
+
 def _upload(ctx):
     hero(
         'Новая проверка проекта',
@@ -213,11 +226,22 @@ def _upload(ctx):
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
             st.session_state.pop('analysis_failure', None)
-            update_progress(100, 'Проверка завершена', 'Переходим к подтверждению состава объектов')
+            pending_after_primary = _semantic_pending_from_result(st.session_state.result)
+            update_progress(
+                100,
+                'Первичный этап сохранён' if pending_after_primary['total'] else 'Проверка завершена',
+                'Переходим к обязательной AI-очереди'
+                if pending_after_primary['total']
+                else 'Переходим к подтверждению состава объектов',
+            )
             _persist_completed_state(ctx)
             # The sidebar radio with key 'page' already exists in this run.
             # Defer navigation until the next rerun to comply with Streamlit state rules.
-            st.session_state['_navigate_to'] = 'Подтверждение' if not st.session_state.get('expert_mode') else 'Состав объектов'
+            st.session_state['_navigate_to'] = (
+                'Проект' if pending_after_primary['total']
+                else 'Подтверждение' if not st.session_state.get('expert_mode')
+                else 'Состав объектов'
+            )
             st.rerun()
 
 
@@ -239,7 +263,14 @@ def _dashboard(ctx):
     has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
     if has_semantic_snapshot and (pending['eligible'] or semantic_summary):
         with st.container(border=True):
-            st.markdown('**Возобновляемая AI-проверка**')
+            st.markdown('**Этап 2 из 2 · Завершение AI-проверки**')
+            if pending['total']:
+                st.warning(
+                    'Первичный результат уже сохранён, но итоговый отчёт пока предварительный. '
+                    'Завершите адресную очередь Judge/Critic; её можно безопасно продолжать после перезапуска.'
+                )
+            else:
+                st.success('AI-очередь завершена. Итоговые метрики и Quality Gate пересчитаны.')
             st.caption(
                 f"Доступно адресных пакетов: {pending['eligible']} · "
                 f"ответов Judge/Critic: {pending['responses']} · "
@@ -287,7 +318,15 @@ def _dashboard(ctx):
                     st.stop()
                 st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
                 _persist_completed_state(ctx)
-                st.success('AI-очередь продолжена. Метрики и Quality Gate пересчитаны.')
+                remaining = _semantic_pending_from_result(st.session_state.result)
+                if remaining['total']:
+                    st.success(f"Пакет обработан. В очереди осталось: {remaining['total']}.")
+                else:
+                    st.session_state['_navigate_to'] = (
+                        'Подтверждение' if not st.session_state.get('expert_mode')
+                        else 'Состав объектов'
+                    )
+                    st.success('AI-очередь завершена. Метрики и Quality Gate пересчитаны.')
                 st.rerun()
     object_gate=bool(st.session_state.get('object_registry_confirmed'))
     cols = st.columns(4)

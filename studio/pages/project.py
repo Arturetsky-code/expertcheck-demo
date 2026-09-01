@@ -181,14 +181,14 @@ def _dashboard(ctx):
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
+    pending = continuation_pending(first_doc)
     project_status_bar(
         st.session_state.project_name,
-        'Проверка завершена',
+        'Проверка неполная' if pending['total'] else 'Проверка завершена',
         f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}",
         f"Объекты: {summary['objects']}",
         f"ТЭП: {summary['checks']}",
     )
-    pending = continuation_pending(first_doc)
     semantic_summary = dict(first_doc.get('semantic_evidence_engine') or {})
     has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
     if has_semantic_snapshot and (pending['eligible'] or semantic_summary):

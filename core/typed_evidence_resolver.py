@@ -64,7 +64,18 @@ def _modality_matches(required: str, actual: str) -> bool:
 
 def _groups_present(clause: str, groups: Iterable[Iterable[str]]) -> list[list[str]]:
     low = _norm(clause)
-    return [list(group) for group in groups or [] if all(_norm(token) in low for token in group)]
+    words = set(re.findall(r"[a-zа-яё0-9-]{4,}", low, re.I))
+
+    def present(token: str) -> bool:
+        value = _norm(token)
+        if value in low:
+            return True
+        # Conservative Russian inflection tolerance for artefact titles:
+        # «наличие плана» must match the title «План организации рельефа».
+        stem = value[:max(4, len(value) - 2)]
+        return len(stem) >= 4 and any(word.startswith(stem) for word in words)
+
+    return [list(group) for group in groups or [] if all(present(token) for token in group)]
 
 
 def _local_windows(clause: str, groups: Iterable[Iterable[str]]) -> list[str]:
@@ -116,7 +127,7 @@ def resolve_typed_evidence(
     groups = list(recipe.get("evidence_groups") or [])
     expected = list(recipe.get("expected_sections") or contract.get("expected_sections") or [])
     qualifiers = [str(value) for value in contract.get("critical_qualifiers") or []]
-    required_modality = str(contract.get("required_modality") or "TEXT_OR_TABLE")
+    required_modality = str(recipe.get("required_modality") or contract.get("required_modality") or "TEXT_OR_TABLE")
     minimum_groups = int(recipe.get("minimum_groups") or 1)
     requires_design = bool(recipe.get("requires_design_marker", True))
     candidates: list[dict[str, Any]] = []

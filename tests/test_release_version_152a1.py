@@ -18,6 +18,10 @@ def _app_version() -> str:
     raise AssertionError("VERSION is not defined in app.py")
 
 
-def test_ui_and_core_identify_release_1522():
-    assert _app_version() == "ExpertCheck 15.2.3 · Reliability Hotfix & AI Continuation"
-    assert core_version == "15.2.3-reliability-hotfix-ai-continuation"
+def test_ui_and_core_identify_release_1524():
+    assert _app_version() == "ExpertCheck 15.2.4 · AI Resilience & Verification Readiness"
+    assert core_version == "15.2.4-ai-resilience-verification-readiness"
+
+
+# Backward-compatible name imported by the cumulative 15.2.1–15.2.3 gates.
+test_ui_and_core_identify_release_1522 = test_ui_and_core_identify_release_1524

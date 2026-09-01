@@ -38,6 +38,16 @@ def evaluate_semantic_verdict_gate(
         ]
         if not semantic:
             reasons.append("Ни один адресный фрагмент не прошёл независимый смысловой gate доказательственного контракта.")
+    elif proof == "STRUCTURED_PRESENCE":
+        present = [
+            row for row in rows
+            if row.get("document") and row.get("page") not in (None, "")
+            and str(row.get("contract_state") or "").upper() == "SATISFIED"
+            and str(row.get("semantic_gate_state") or "").upper() == "PASSED"
+            and str(row.get("semantic_verdict") or row.get("judge_verdict") or "").upper() == "SUPPORTS"
+        ]
+        if not present:
+            reasons.append("Наличие не подтверждено адресным структурированным фрагментом требуемого типа.")
     elif proof == "VERIFIED_CLAUSE":
         if not any(row.get("clause_verified") or str(row.get("semantic_gate_state") or "").upper() == "PASSED" for row in rows):
             reasons.append("Нормативный пункт не имеет проверенного адресного доказательства.")

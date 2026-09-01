@@ -474,7 +474,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Настроенный провайдер':check.get('configured_provider') or '—',
                 'Фактический провайдер':check.get('actual_provider') or '—',
                 'Модель':check.get('model') or '—', 'Код HTTP':check.get('status_code'),
-                'Запрошено пакетов':0, 'Получено ответов':0,
+                'Запрошено пакетов':check.get('contract_probe_requested',0),
+                'Получено ответов':check.get('contract_probe_responses',0),
                 'Состояние':ru_label(check.get('state')), 'Ошибка':str(check.get('error') or '')[:1200],
                 'ID пакетов':'',
             })
@@ -545,6 +546,19 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     total_project_findings=int(summary.get('project_findings',0) or 0)+int(review_plan.get('project_findings',0) or 0)
     total_review_questions=int(summary.get('review_questions',0) or 0)+int(review_plan.get('review_questions',0) or 0)
     total_system_limitations=int(summary.get('system_limitations',0) or 0)+int(review_plan.get('system_limitations',0) or 0)
+    semantic_pending=sum(
+        int((semantic_engine_summary.get(code) or {}).get('judge_pending') or 0)
+        + int((semantic_engine_summary.get(code) or {}).get('critic_pending') or 0)
+        for code in ('assignment','checklist')
+    )
+    readiness_reasons=[]
+    if total_review_questions:
+        readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
+    if total_system_limitations:
+        readiness_reasons.append(f'вне автоматического покрытия: {total_system_limitations}')
+    if semantic_pending:
+        readiness_reasons.append(f'AI-пакетов в очереди: {semantic_pending}')
+    verification_readiness='Неполная' if readiness_reasons else 'Завершена'
     conclusion_parts=[]
     if total_project_findings:
         conclusion_parts.append(f"Подтверждённых несоответствий проекта: {total_project_findings}.")
@@ -557,8 +571,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         report_status='Предварительный — состав/комплектность проекта не подтверждены пользователем'
     elif report_quality_gate.get('status')!='PASSED':
         report_status='Предварительный — Quality Gate отчёта не пройден'
+    elif verification_readiness!='Завершена':
+        report_status='Итоговый — проверка неполная'
     else:
-        report_status='Итоговый'
+        report_status='Итоговый — проверка завершена'
     if report_status.startswith('Предварительный'):
         reason=(
             'окончательный вывод удержан до подтверждения состава и комплектности проекта'
@@ -571,6 +587,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Дата и время проверки', datetime.now().strftime('%d.%m.%Y %H:%M')],
         ['Версия ExpertCheck', version],
         ['Статус отчёта', report_status],
+        ['Целостность отчёта', 'Пройдена' if report_quality_gate.get('status')=='PASSED' else 'Не пройдена'],
+        ['Готовность проверки', verification_readiness],
+        ['Причины неполноты', '; '.join(readiness_reasons) if readiness_reasons else '—'],
         ['Комплектность', summary['completeness']],
         ['Загружено документов', summary['documents']],
         ['Подтверждено объектов', summary.get('objects_confirmed',summary['objects'])],
@@ -614,6 +633,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
             'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
+            'Целостность отчёта','Готовность проверки','Причины неполноты',
             'Контроль согласованности отчёта','Итоговый вывод',
         }
         summary_rows=[row for row in summary_rows if row[0] in manager_metrics]
@@ -743,9 +763,29 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Обоснование': r.get('evidence') or r.get('Обоснование') or '',
         'Источники': _evidence_sources(r),
     } for r in report['checklist_results'] if str(r.get('status') or r.get('Соответствие') or r.get('result') or '').lower() in {'нет','частично','требует проверки','нет данных','не соответствует'}])
-    actions=list(report['recommendations'] or [])
+    actions=[] if report_kind=='manager' else list(report['recommendations'] or [])
     def add_action(text):
         if text and text not in actions: actions.append(text)
+    if report_kind=='manager':
+        for problem in confirmed_problems[:5]:
+            add_action(
+                f"Подтверждённое расхождение: {problem.get('object') or 'объект'}, "
+                f"показатель «{problem.get('parameter') or 'не определён'}». "
+                "Проверить авторитетный источник и привести проектные разделы к единому значению."
+            )
+        ai_selected=sum(
+            int((semantic_engine_summary.get(code) or {}).get('judge_selected') or 0)
+            for code in ('assignment','checklist')
+        )
+        ai_responses=sum(
+            int((semantic_engine_summary.get(code) or {}).get('judge_responses') or 0)
+            for code in ('assignment','checklist')
+        )
+        if ai_selected and ai_responses < ai_selected:
+            add_action(
+                f"AI-проверка: получено {ai_responses} ответов из {ai_selected} отобранных пакетов; "
+                "после восстановления провайдеров продолжить очередь из цифрового снимка."
+            )
     for label,domain in (
         ('Задание на проектирование',assignment_plan),('Требования НТД',normative_plan),('Чек-листы',checklist_plan)
     ):
@@ -993,9 +1033,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     coverage_matrix_df = _excel_safe_frame(coverage_matrix_df)
     quality_gate_rows=[{
         'Статус':'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует исправления',
-        'Проверка':'Итоговый Quality Gate',
+        'Проверка':'Целостность и согласованность отчёта',
         'Результат':report_quality_gate.get('status') or 'NOT_RUN',
         'Причина':'Ошибок согласованности не выявлено.' if not report_quality_gate.get('issues') else 'См. строки ниже.',
+    },{
+        'Статус':'Пройдено' if verification_readiness=='Завершена' else 'Требует продолжения',
+        'Проверка':'Полнота автоматической и экспертной проверки',
+        'Результат':'COMPLETED' if verification_readiness=='Завершена' else 'INCOMPLETE',
+        'Причина':'; '.join(readiness_reasons) if readiness_reasons else 'Все контуры проверки завершены.',
     }]
     quality_gate_rows.extend({
         'Статус':'Ошибка', 'Проверка':f'QG-{index:03d}', 'Результат':'FAILED', 'Причина':issue,

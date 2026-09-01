@@ -485,8 +485,11 @@ def _provider_name(provider: Any) -> str:
     return str(getattr(provider, "name", "") or getattr(provider, "provider", "") or type(provider).__name__ if provider is not None else "")
 
 
-def _preflight_provider(provider: Any, role: str) -> dict[str, Any]:
-    """Check key/model availability before sending project evidence packets."""
+def _preflight_provider(
+    provider: Any, role: str, *, structured: bool = True,
+    connection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate the real structured-output contract before project packets."""
     base = {
         "role": role,
         "configured_provider": _provider_name(provider),
@@ -496,12 +499,83 @@ def _preflight_provider(provider: Any, role: str) -> dict[str, Any]:
         "state": "NOT_CONFIGURED" if provider is None else "SKIPPED",
         "error": "",
         "ok": provider is not None,
+        "contract_probe_requested": 0,
+        "contract_probe_responses": 0,
     }
-    probe = getattr(provider, "test_connection", None)
-    if provider is None or not callable(probe):
+    if provider is None:
         return base
+    if connection is None:
+        probe = getattr(provider, "test_connection", None)
+        # Lightweight test doubles and legacy custom providers have no probe;
+        # keep them usable while production providers (all AIProvider classes)
+        # must pass both connectivity and the structured contract below.
+        if not callable(probe):
+            return {
+                **base, "state": "SKIPPED", "ok": True,
+                "actual_provider": _provider_name(provider),
+            }
+        try:
+            connection_result = probe()
+        except Exception as exc:
+            return {
+                **base, "state": "FAILED", "ok": False,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        connection = {
+            **base,
+            "actual_provider": str(getattr(connection_result, "provider", "") or ""),
+            "model": str(getattr(connection_result, "model", "") or ""),
+            "status_code": getattr(connection_result, "status_code", None),
+            "state": "PASSED" if getattr(connection_result, "ok", False) else "FAILED",
+            "error": "" if getattr(connection_result, "ok", False) else str(getattr(connection_result, "error", "AI provider error")),
+            "ok": bool(getattr(connection_result, "ok", False)),
+        }
+    if not connection.get("ok") or not structured:
+        return dict(connection)
+    critic = str(role).upper() == "CRITIC"
+    root_key = "reviews" if critic else "decisions"
+    packet = {
+        "packet_id": "PREFLIGHT-CONTRACT",
+        "domain": "preflight",
+        "requirement": "Подтвердить только формат ответа; инженерный вывод не используется.",
+        "evidence": [{
+            "evidence_id": "PREFLIGHT-E1", "source_locator": "preflight, стр. 1",
+            "text": "Тест структурированного ответа ExpertCheck.",
+        }],
+    }
+    if critic:
+        packet["judge_decision"] = {
+            "packet_id": packet["packet_id"], "verdict": "INSUFFICIENT",
+            "evidence_ids": [], "confidence": 0.0,
+        }
+    payload = {"task": "evidence_critic" if critic else "evidence_judge", "packets": [packet]}
+    system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
+
+    def valid_contract(text: str) -> bool:
+        parsed = _extract_json(text)
+        return bool(isinstance(parsed, dict) and isinstance(parsed.get(root_key), list))
+
     try:
-        result = probe()
+        generate_validated = getattr(provider, "generate_validated", None)
+        if callable(generate_validated):
+            result = generate_validated(
+                json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                system,
+                valid_contract,
+            )
+        else:
+            generate = getattr(provider, "generate", None)
+            if not callable(generate):
+                return base
+            result = generate(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), system)
+            if getattr(result, "ok", False) and not valid_contract(getattr(result, "text", "")):
+                return {
+                    **base, "state": "FAILED", "ok": False, "status_code": 422,
+                    "actual_provider": str(getattr(result, "provider", "") or ""),
+                    "model": str(getattr(result, "model", "") or ""),
+                    "error": "Провайдер доступен, но не выполнил рабочий JSON-контракт.",
+                    "contract_probe_requested": 1, "contract_probe_responses": 0,
+                }
     except Exception as exc:
         return {
             **base, "state": "FAILED", "ok": False,
@@ -516,6 +590,8 @@ def _preflight_provider(provider: Any, role: str) -> dict[str, Any]:
         "state": "PASSED" if ok else "FAILED",
         "error": "" if ok else str(getattr(result, "error", "AI provider error")),
         "ok": ok,
+        "contract_probe_requested": 1,
+        "contract_probe_responses": 1 if ok else 0,
     }
 
 
@@ -525,8 +601,9 @@ def _call_batches(
     *,
     critic: bool = False,
     batch_size: int = 4,
-    retry_limit: int = 4,
+    retry_limit: int = 2,
     max_consecutive_failures: int = 2,
+    max_calls: int = 32,
     progress_callback: Any = None,
     checkpoint: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[str], list[dict[str, Any]]]:
@@ -543,9 +620,6 @@ def _call_batches(
     calls: list[dict[str, Any]] = []
     root_key = "reviews" if critic else "decisions"
     system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
-    halt_lane = False
-    retry_as_single = False
-    consecutive_failures = 0
     notified_processed = 0
 
     if collected:
@@ -573,8 +647,7 @@ def _call_batches(
         except Exception:
             pass
 
-    def call(batch: list[dict[str, Any]], attempt: int) -> None:
-        nonlocal halt_lane, retry_as_single, consecutive_failures
+    def call(batch: list[dict[str, Any]], attempt: int) -> dict[str, Any]:
         payload = {"task": "evidence_critic" if critic else "evidence_judge", "packets": batch}
         packet_ids = [str(packet.get("packet_id") or "") for packet in batch]
         log = {
@@ -609,10 +682,7 @@ def _call_batches(
             errors.append(message)
             log["error"] = message
             calls.append(log)
-            consecutive_failures += 1
-            if consecutive_failures >= max_consecutive_failures:
-                halt_lane = True
-            return
+            return {"status_code": 0, "state": "FAILED", "accepted": 0}
         if not getattr(result, "ok", False):
             message = str(getattr(result, "error", "AI provider error"))
             status_code = getattr(result, "status_code", None)
@@ -620,18 +690,17 @@ def _call_batches(
             log["status_code"] = status_code
             log["error"] = message
             if status_code == 413 and len(batch) > 1:
-                retry_as_single = True
-                log["state"] = "PAYLOAD_TOO_LARGE"
-            elif status_code in {401, 402, 403, 413, 429}:
-                halt_lane = True
-                log["state"] = "BLOCKED"
+                log["state"] = "SPLIT_REQUIRED"
+            elif status_code == 422 and len(batch) > 1:
+                log["state"] = "CONTRACT_RETRY_SPLIT"
+            elif status_code == 429:
+                log["state"] = "RATE_LIMITED"
+            elif status_code in {401, 402, 403}:
+                log["state"] = "PROVIDER_BLOCKED"
             else:
-                consecutive_failures += 1
-                if consecutive_failures >= max_consecutive_failures:
-                    halt_lane = True
-                    log["state"] = "CIRCUIT_BREAKER"
+                log["state"] = "FAILED"
             calls.append(log)
-            return
+            return {"status_code": status_code, "state": log["state"], "accepted": 0}
         log["actual_provider"] = str(getattr(result, "provider", "") or getattr(provider, "name", ""))
         log["model"] = str(getattr(result, "model", "") or "")
         parsed = _extract_json(getattr(result, "text", ""))
@@ -639,11 +708,9 @@ def _call_batches(
             message = "AI вернул ответ, не соответствующий JSON-контракту."
             errors.append(message)
             log["error"] = message
+            log["state"] = "CONTRACT_RETRY_SPLIT" if len(batch) > 1 else "FAILED"
             calls.append(log)
-            consecutive_failures += 1
-            if consecutive_failures >= max_consecutive_failures:
-                halt_lane = True
-            return
+            return {"status_code": 422, "state": log["state"], "accepted": 0}
         actual_provider = log["actual_provider"]
         actual_model = log["model"]
         allowed_ids = {str(packet.get("packet_id") or "") for packet in batch}
@@ -665,31 +732,72 @@ def _call_batches(
             accepted += 1
         log["responses"] = accepted
         log["state"] = "PASSED" if accepted == len(allowed_ids) else "PARTIAL"
-        consecutive_failures = 0 if accepted else consecutive_failures + 1
-        if not accepted and consecutive_failures >= max_consecutive_failures:
-            halt_lane = True
         if accepted < len(allowed_ids):
             missing = sorted(allowed_ids - set(collected))
             log["error"] = f"Нет ответов для packet_id: {', '.join(missing)}"
         calls.append(log)
+        return {"status_code": getattr(result, "status_code", None), "state": log["state"], "accepted": accepted}
 
     pending_packets = [
         packet for packet in packets
         if str(packet.get("packet_id") or "") not in collected
     ]
     notify(len(collected))
-    for offset in range(0, len(pending_packets), batch_size):
-        batch = pending_packets[offset:offset + batch_size]
-        call(batch, 1)
+    queue: list[tuple[list[dict[str, Any]], int]] = [
+        (pending_packets[offset:offset + batch_size], 1)
+        for offset in range(0, len(pending_packets), batch_size)
+    ]
+    consecutive_single_failures = 0
+    while queue and len([row for row in calls if row.get("attempt")]) < max_calls:
+        batch, attempt = queue.pop(0)
+        batch = [
+            packet for packet in batch
+            if str(packet.get("packet_id") or "") not in collected
+        ]
+        if not batch:
+            continue
+        outcome = call(batch, attempt)
         notify(len(collected))
-        if halt_lane or retry_as_single:
+        missing = [
+            packet for packet in batch
+            if str(packet.get("packet_id") or "") not in collected
+        ]
+        if not missing:
+            consecutive_single_failures = 0
+            continue
+        state = str(outcome.get("state") or "FAILED")
+        status_code = outcome.get("status_code")
+        if state in {"RATE_LIMITED", "PROVIDER_BLOCKED"}:
             break
-    missing_packets = [packet for packet in packets if str(packet.get("packet_id") or "") not in collected]
-    for retry_index, packet in enumerate(missing_packets[:retry_limit], 1):
-        if halt_lane:
+        if len(missing) > 1 and state in {
+            "CONTRACT_RETRY_SPLIT", "SPLIT_REQUIRED", "PARTIAL",
+        }:
+            midpoint = max(1, len(missing) // 2)
+            queue = [
+                (missing[:midpoint], attempt + 1),
+                (missing[midpoint:], attempt + 1),
+            ] + queue
+            continue
+        if len(missing) > 1:
+            consecutive_single_failures += 1
+            if (
+                status_code in {0, 408, 500, 502, 503, 504}
+                and consecutive_single_failures < max_consecutive_failures
+            ):
+                queue.insert(0, (missing, attempt + 1))
+                continue
+            calls[-1]["state"] = "CIRCUIT_BREAKER"
             break
-        call([packet], 2)
-        notify(len(packets) - len(missing_packets) + retry_index)
+        consecutive_single_failures += 1
+        if (
+            attempt <= retry_limit
+            and (state == "PARTIAL" or status_code in {0, 408, 500, 502, 503, 504})
+            and consecutive_single_failures < max_consecutive_failures
+        ):
+            queue.append((missing, attempt + 1))
+        if consecutive_single_failures >= max_consecutive_failures:
+            calls[-1]["state"] = "CIRCUIT_BREAKER"
+            break
     return collected, list(dict.fromkeys(errors)), calls
 
 
@@ -992,7 +1100,7 @@ def run_semantic_evidence_engine(
                 "Critic не настроен; Judge выполняется только в консультативном режиме без права на L5."
             )
         else:
-            preflight["critic"] = _preflight_provider(critic_provider, "CRITIC")
+            preflight["critic"] = _preflight_provider(critic_provider, "CRITIC", structured=False)
             if not preflight["critic"].get("ok"):
                 advisory_reasons.append(
                     f"Preflight Critic не пройден: {preflight['critic'].get('error') or 'провайдер или модель недоступны'}. "
@@ -1015,7 +1123,29 @@ def run_semantic_evidence_engine(
                         "Judge выполняется консультативно, независимый консенсус и L5 запрещены."
                     )
                 else:
-                    independent_consensus_available = True
+                    preflight["critic"] = _preflight_provider(
+                        critic_provider, "CRITIC", structured=True,
+                        connection=preflight["critic"],
+                    )
+                    if not preflight["critic"].get("ok"):
+                        advisory_reasons.append(
+                            f"Рабочий JSON-контракт Critic не пройден: "
+                            f"{preflight['critic'].get('error') or 'структурированный ответ недоступен'}. "
+                            "Judge выполняется только в консультативном режиме без права на L5."
+                        )
+                    else:
+                        final_critic_identity = str(
+                            preflight["critic"].get("actual_provider")
+                            or preflight["critic"].get("configured_provider")
+                            or _provider_name(critic_provider)
+                        )
+                        if judge_identity and final_critic_identity == judge_identity:
+                            advisory_reasons.append(
+                                "После рабочего preflight Judge и Critic фактически выбрали один AI-провайдер; "
+                                "независимый консенсус и L5 запрещены."
+                            )
+                        else:
+                            independent_consensus_available = True
     requested_limit = int(limit or 0)
     advisory_limit = 12
     if activation_reasons:

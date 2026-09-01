@@ -19,7 +19,7 @@ from .semantic_evidence_engine import build_semantic_project_graph
 from .verification_core import domain_summary
 
 
-CONTINUATION_VERSION = "15.2.3-reliability-hotfix-ai-continuation"
+CONTINUATION_VERSION = "15.2.4-ai-resilience-verification-readiness"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:

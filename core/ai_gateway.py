@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import ast
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -344,8 +345,9 @@ class FailoverProvider(AIProvider):
             if result.ok:
                 return result
             errors.append(f'{provider.name}: {diagnostic_message(result)}')
-            if not _is_retryable_provider_failure(result):
-                break
+            # Providers are isolated lanes.  A forbidden model, malformed
+            # request or exhausted key of one provider must never suppress an
+            # independently configured fallback.
         return AIResult(False, self.name, error='; '.join(errors))
 
     def generate_validated(
@@ -374,10 +376,10 @@ class FailoverProvider(AIProvider):
                 # reason to try the next independently configured provider.
                 continue
             errors.append(f'{provider.name}: {diagnostic_message(result)}')
-            if not _is_retryable_provider_failure(result):
-                break
         return AIResult(
             False, self.name, error='; '.join(errors),
+            # Contract damage is actionable by the batch splitter even when a
+            # later fallback is temporarily rate-limited.
             status_code=422 if errors and any('JSON-контракту' in error for error in errors) else last_status,
         )
 
@@ -467,24 +469,92 @@ def diagnostic_message(result: AIResult) -> str:
     return f'Ошибка API{f" HTTP {code}" if code else ""}: {result.error}'
 
 
-def _extract_json(text: str) -> dict[str, Any] | list[Any] | None:
-    raw = str(text or '').strip()
-    if raw.startswith('```'):
-        raw = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw, flags=re.I | re.S)
-    try:
-        return json.loads(raw)
-    except Exception:
-        start_candidates=[i for i in (raw.find('{'),raw.find('[')) if i>=0]
-        if not start_candidates:
-            return None
-        start=min(start_candidates)
-        end=max(raw.rfind('}'),raw.rfind(']'))
-        if end<=start:
-            return None
+def _json_load_candidate(raw: str) -> dict[str, Any] | list[Any] | None:
+    candidate = str(raw or '').strip().lstrip('\ufeff')
+    if not candidate:
+        return None
+    attempts = [candidate]
+    repaired = re.sub(r',\s*([}\]])', r'\1', candidate)
+    if repaired != candidate:
+        attempts.append(repaired)
+    for value in attempts:
         try:
-            return json.loads(raw[start:end+1])
+            parsed = json.loads(value)
         except Exception:
-            return None
+            try:
+                parsed = ast.literal_eval(value)
+            except Exception:
+                continue
+        if isinstance(parsed, (dict, list)):
+            return parsed
+    return None
+
+
+def _balanced_json_candidates(raw: str, opener: str = '{', closer: str = '}') -> list[str]:
+    """Extract balanced JSON values without being confused by quoted braces."""
+    result: list[str] = []
+    depth = 0
+    start = -1
+    quoted = False
+    escaped = False
+    for index, char in enumerate(raw):
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                quoted = False
+            continue
+        if char == '"':
+            quoted = True
+        elif char == opener:
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == closer and depth:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                result.append(raw[start:index + 1])
+                start = -1
+    return result
+
+
+def _extract_json(text: str) -> dict[str, Any] | list[Any] | None:
+    """Parse strict JSON and safely recover common model formatting damage.
+
+    The recovery is deliberately structural: Markdown fences, prose wrappers,
+    trailing commas and fully closed items from a truncated root array are
+    accepted.  Missing fields or invented closing content are never inferred.
+    """
+    raw = str(text or '').strip().lstrip('\ufeff')
+    raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.I)
+    raw = re.sub(r'\s*```\s*$', '', raw, flags=re.I)
+    parsed = _json_load_candidate(raw)
+    if parsed is not None:
+        return parsed
+
+    # A model may be cut off after returning several valid objects inside the
+    # required root list.  Preserve only the fully closed objects.
+    root_match = re.search(r'["\'](?P<key>decisions|reviews|items)["\']\s*:\s*\[', raw, re.I)
+    if root_match:
+        rows: list[dict[str, Any]] = []
+        for candidate in _balanced_json_candidates(raw[root_match.end():], '{', '}'):
+            value = _json_load_candidate(candidate)
+            if isinstance(value, dict):
+                rows.append(value)
+        if rows:
+            return {root_match.group('key').lower(): rows}
+
+    # Prefer the largest balanced top-level value embedded in explanatory
+    # prose.  Trying every candidate also handles two fenced alternatives.
+    candidates = _balanced_json_candidates(raw, '{', '}') + _balanced_json_candidates(raw, '[', ']')
+    candidates.sort(key=len, reverse=True)
+    for candidate in candidates:
+        parsed = _json_load_candidate(candidate)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 

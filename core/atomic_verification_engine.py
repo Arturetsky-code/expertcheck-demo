@@ -39,6 +39,7 @@ DESIGN_MARKERS = (
 STRONG_PROOFS = {
     "STRUCTURED_VALUE", "STRUCTURED_COMPARISON", "VERIFIED_ENGINEERING_EVIDENCE",
     "VERIFIED_SET_EVIDENCE", "STRUCTURED_COMPLETENESS", "VERIFIED_CLAUSE",
+    "STRUCTURED_PRESENCE",
 }
 
 
@@ -433,6 +434,63 @@ def _directed_value_check(atom: dict[str, Any], recipe: dict[str, Any]) -> dict[
     )
 
 
+def _parameter_presence_check(
+    atom: dict[str, Any], recipe: dict[str, Any], fact_graph: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Confirm only the presence of an addressable structured parameter."""
+    if str(recipe.get("check_method") or "").upper() != "ENGINEERING_PARAMETER_PRESENCE":
+        return None
+    codes = {
+        canonical_parameter_code(value)
+        for value in (recipe.get("parameter_codes") or (atom.get("compiled_rule") or {}).get("parameter_codes") or [])
+        if canonical_parameter_code(value)
+    }
+    if not codes:
+        return None
+    expected = list(recipe.get("expected_sections") or [])
+    evidence: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    for fact in fact_graph.get("facts") or []:
+        code = canonical_parameter_code(fact.get("property_code") or fact.get("parameter_code"))
+        if code not in codes:
+            continue
+        document = str(fact.get("document") or fact.get("source_document") or "").strip()
+        page = fact.get("page") or fact.get("source_page")
+        section = canonical_section(fact.get("document_type") or fact.get("section") or document)
+        if not document or page in (None, "") or not section_matches(section, expected):
+            continue
+        if str(fact.get("fact_admission_decision") or "ADMIT").upper() not in {"ADMIT", "ADMITTED", "VERIFIED"}:
+            continue
+        source = str(fact.get("source_trace") or fact.get("context") or "").strip()
+        value = fact.get("value")
+        unit = str(fact.get("unit") or "").strip()
+        if not source or value in (None, "") or not unit:
+            continue
+        trace = str(fact.get("physical_trace_level") or "").upper()
+        binding = str(fact.get("binding_status") or "").upper()
+        exact_trace = trace in {"ROW_TRACE", "CELL_TRACE"} or binding in {
+            "ROW_LOCKED", "POSITION_LOCKED", "LOGICAL_ROW_LOCKED", "EXACT_OBJECT",
+        }
+        row = {
+            **fact, "kind": "STRUCTURED_VALUE", "document": document, "page": page,
+            "section": section, "text": source, "value": value, "unit": unit,
+            "physical_trace_level": trace or ("ROW_TRACE" if exact_trace else "PAGE_TRACE"),
+            "admitted": True, "retrieval_score": 98 if exact_trace else 82,
+        }
+        (evidence if exact_trace else candidates).append(row)
+    if evidence:
+        return _result(
+            atom, recipe, "VERIFIED_OK", proof="STRUCTURED_VALUE", evidence=evidence[:6],
+            basis="Наличие требуемого инженерного параметра подтверждено структурированной строкой профильного раздела.",
+        )
+    if candidates:
+        return _result(
+            atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE", candidates=candidates[:6],
+            basis="Параметр найден на странице, но точный физический след до строки/ячейки не подтверждён.",
+        )
+    return None
+
+
 def _pattern_check(atom: dict[str, Any], recipe: dict[str, Any], passages: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
     if not list(recipe.get("evidence_groups") or []):
         return None
@@ -444,7 +502,12 @@ def _pattern_check(atom: dict[str, Any], recipe: dict[str, Any], passages: Itera
     if not evidence:
         return _result(atom, recipe, "REVIEW_QUESTION", proof="CANDIDATE_EVIDENCE", candidates=candidates,
                        basis="Найдены адресные кандидаты, но не выполнены все слоты доказательственного контракта: квалификаторы, модальность или проектное действие.")
-    return _result(atom, recipe, "VERIFIED_OK", proof="VERIFIED_ENGINEERING_EVIDENCE", evidence=evidence,
+    proof = (
+        "STRUCTURED_PRESENCE"
+        if str(recipe.get("check_method") or "").upper() in {"DOCUMENT_CONTENT_PRESENCE", "DRAWING_PRESENCE_CHECK"}
+        else "VERIFIED_ENGINEERING_EVIDENCE"
+    )
+    return _result(atom, recipe, "VERIFIED_OK", proof=proof, evidence=evidence,
                    basis=f"Все обязательные предикаты подтверждены в одном адресном фрагменте профильного раздела по паттерну {recipe.get('pattern_id')}.")
 
 
@@ -572,6 +635,8 @@ def verify_atomic_requirements(
         atom_kind = str(atom.get("atomic_kind") or "").upper()
         if atom_kind == "PROHIBITION":
             result = _prohibition_check(atom, recipe, passages)
+        if result is None:
+            result = _parameter_presence_check(atom, recipe, fact_graph)
         if str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON":
             result = _fact_value_check(atom, recipe, fact_graph)
         if result is None and str(atom.get("atomic_kind") or "").upper() == "VALUE_COMPARISON":

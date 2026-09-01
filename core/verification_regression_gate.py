@@ -39,7 +39,11 @@ def regression_gate(recipe:dict[str,Any])->dict[str,Any]:
         violations.append('cross-check has no structured comparison evidence')
     if level in {'L4_COMPLETENESS','L5_ENGINEERING_COMPLIANCE'} and not (evidence & {'VERIFIED_SET_EVIDENCE','STRUCTURED_COMPLETENESS','VERIFIED_ENGINEERING_EVIDENCE','NORMATIVE_EVIDENCE','VERIFIED_CLAUSE'}):
         violations.append('complex check has no executable strong-evidence contract')
-    deterministic=method in {'VALUE_COMPARISON','SET_COMPARISON','ENGINEERING_VALUE_CROSSCHECK','CALCULATION_PRESENCE','STRUCTURED_COMPARISON'}
+    deterministic=method in {
+        'VALUE_COMPARISON','SET_COMPARISON','ENGINEERING_VALUE_CROSSCHECK',
+        'ENGINEERING_PARAMETER_PRESENCE','DOCUMENT_CONTENT_PRESENCE',
+        'DRAWING_PRESENCE_CHECK','CALCULATION_PRESENCE','STRUCTURED_COMPARISON',
+    }
     score=max(0.0,min(0.96,critic + (0.08 if deterministic else 0.0) - 0.18*len(violations)))
     passed=bool(recipe.get('critic_pass')) and not violations and score>=0.78
     case_results=[{**case,'result':'PASS' if not violations else 'BLOCKED_BY_POLICY'} for case in cases]

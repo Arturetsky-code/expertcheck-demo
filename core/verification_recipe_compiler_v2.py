@@ -108,6 +108,9 @@ class VerificationRecipeCompilerV2:
     def _base(atom: dict[str, Any], pattern: dict[str, Any] | None) -> dict[str, Any]:
         kind = str(atom.get("atomic_kind") or "PRESENCE_REQUIREMENT").upper()
         contract = atom.get("evidence_contract_v2") or {}
+        compiled = atom.get("compiled_rule") or {}
+        typed_check = str(atom.get("typed_check") or compiled.get("typed_check") or "").upper()
+        typed_level = str(compiled.get("verification_level") or "").upper()
         sections = list((pattern or {}).get("expected_sections") or atom.get("expected_sections") or contract.get("expected_sections") or [])
         title = str(atom.get("atom_text") or atom.get("requirement_text") or "").strip()
         recipe: dict[str, Any] = {
@@ -124,7 +127,36 @@ class VerificationRecipeCompilerV2:
             "required_modality": str(contract.get("required_modality") or "TEXT_OR_TABLE"),
             "pattern_origin": str((pattern or {}).get("pattern_origin") or ("CURATED" if pattern else "")),
         }
-        if kind == "VALUE_COMPARISON":
+        if (
+            recipe["domain"] == "checklist"
+            and kind in {"PRESENCE_REQUIREMENT", "FEATURE_PRESENCE"}
+            and typed_check == "ENGINEERING_PARAMETER_PRESENCE"
+        ):
+            recipe.update({
+                "verification_level": "L2_VALUE", "check_method": "ENGINEERING_PARAMETER_PRESENCE",
+                "required_evidence": ["STRUCTURED_VALUE", "PAGE_REFERENCE"],
+                "required_evidence_slots": recipe["required_evidence_slots"] + ["OBSERVED_VALUE", "UNIT"],
+                "parameter_codes": list(compiled.get("parameter_codes") or []),
+                "confidence": 0.9,
+            })
+        elif (
+            recipe["domain"] == "checklist"
+            and kind in {"PRESENCE_REQUIREMENT", "FEATURE_PRESENCE"}
+            and typed_check in {"DOCUMENT_CONTENT_PRESENCE", "DRAWING_PRESENCE_CHECK"}
+            and typed_level == "L1_PRESENCE"
+            and pattern
+        ):
+            recipe.update({
+                "verification_level": "L1_PRESENCE", "check_method": typed_check,
+                "required_evidence": ["STRUCTURED_PRESENCE", "PAGE_REFERENCE"],
+                "required_evidence_slots": recipe["required_evidence_slots"] + ["IDENTIFIED_ARTIFACT"],
+                "evidence_groups": list(pattern.get("evidence_groups") or []),
+                "minimum_groups": int(pattern.get("minimum_groups") or 1),
+                "requires_design_marker": False,
+                "required_modality": "DRAWING" if typed_check == "DRAWING_PRESENCE_CHECK" else "TEXT_OR_TABLE",
+                "confidence": 0.88,
+            })
+        elif kind == "VALUE_COMPARISON":
             recipe.update({
                 "verification_level": "L2_VALUE", "check_method": "VALUE_COMPARISON",
                 "required_evidence": ["STRUCTURED_VALUE", "STRUCTURED_COMPARISON"],
@@ -205,6 +237,8 @@ class VerificationRecipeCompilerV2:
             "VALUE_COMPARISON", "EQUIPMENT_IDENTITY_COMPARISON",
             "STRUCTURED_COMPARISON", "SET_COMPARISON",
             "PROHIBITION_EXPLICIT_CONTRADICTION",
+            "ENGINEERING_PARAMETER_PRESENCE", "DOCUMENT_CONTENT_PRESENCE",
+            "DRAWING_PRESENCE_CHECK",
         }
         adaptive = str(recipe.get("pattern_origin") or "").upper() == "ADAPTIVE_CONTRACT_COMPILER"
         lexical_pattern = method == "ATOMIC_PATTERN_PRESENCE"

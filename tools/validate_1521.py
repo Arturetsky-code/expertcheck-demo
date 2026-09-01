@@ -22,7 +22,7 @@ from tests.test_coverage_acceleration_1521 import (  # noqa: E402
     test_semantic_batch_uses_validated_failover_response,
 )
 from tests.test_release_version_152a1 import (  # noqa: E402
-    test_ui_and_core_identify_release_1521,
+    test_ui_and_core_identify_release_1522,
 )
 from tools.validate_152a1 import TESTS as BASE_TESTS  # noqa: E402
 
@@ -35,7 +35,7 @@ TESTS = list(BASE_TESTS) + [
     test_non_admitted_duplicates_are_explicitly_excluded_from_comparison,
     test_pump_height_25_is_preserved_and_routed_as_decimal_review_question,
     test_extended_budget_covers_project_sized_l4_queue_and_order_is_diversified,
-    test_ui_and_core_identify_release_1521,
+    test_ui_and_core_identify_release_1522,
 ]
 
 

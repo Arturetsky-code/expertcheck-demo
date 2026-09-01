@@ -8,7 +8,8 @@ def _reset_project_session():
         "project_name":"Новый проект","result":None,"analysis_time":None,
         "object_registry_confirmed":False,"object_assembly_rows":[],
         "completeness_user_confirmed":False,"completeness_decisions":{},
-        "checklist_run":None,"checklist_user_results":{},"risk_user_decisions":{}
+        "checklist_run":None,"checklist_user_results":{},"risk_user_decisions":{},
+        "semantic_execution_checkpoint":{},
     }.items():
         st.session_state[k]=v
 

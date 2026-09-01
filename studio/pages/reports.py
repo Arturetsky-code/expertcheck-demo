@@ -4,6 +4,7 @@ from core.expert_review_engine import build_expert_risks
 from core.report_engine import build_structured_report
 from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
+from core.project_snapshot import project_snapshot_bytes
 
 
 def _report_documents(docs):
@@ -55,3 +56,13 @@ def render(ctx):
     with cols[2]:
         card('Техническое приложение','Полное','Evidence, извлечение и диагностика')
         st.download_button('Скачать техническое приложение',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='technical',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Техническое_приложение.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
+    with st.expander('Цифровой снимок для повторной проверки', expanded=False):
+        st.caption('Содержит извлечённые страницы, факты, атомарные требования и результаты. Позволяет повторять regression- и AI-проверки без повторного чтения исходных PDF.')
+        st.download_button(
+            'Скачать цифровой снимок проекта',
+            data=project_snapshot_bytes(
+                docs.to_dict('records'), findings.to_dict('records'), comparisons.to_dict('records'),
+            ),
+            file_name='ExpertCheck_Цифровой_снимок.json.gz',
+            mime='application/gzip', width='stretch',
+        )

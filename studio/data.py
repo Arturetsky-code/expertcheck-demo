@@ -32,6 +32,26 @@ def status_group(value: str) -> str:
     return 'info'
 
 
+def reconcile_question_headline(
+    summary_rows: list[list], *, exact_question_count: int,
+    project_findings: int, system_limitations: int, fallback: str,
+) -> None:
+    """Make the executive headline equal the de-duplicated exported queue."""
+    parts=[]
+    if project_findings:
+        parts.append(f"Подтверждённых несоответствий проекта: {project_findings}.")
+    if exact_question_count:
+        parts.append(f"Вопросов, требующих проверки специалистом: {exact_question_count}.")
+    if system_limitations:
+        parts.append(f"Проверок вне текущего автоматического покрытия: {system_limitations}.")
+    conclusion=' '.join(parts) or fallback
+    for row in summary_rows:
+        if row[0]=='Вопросов специалисту':
+            row[1]=exact_question_count
+        elif row[0]=='Итоговый вывод':
+            row[1]=conclusion
+
+
 def _evidence_sources(row) -> str:
     """Build a visible document/page trace from all supported evidence shapes."""
     direct=row.get('sources') or row.get('Источники')
@@ -408,6 +428,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Настроенная контрольная модель':audit.get('configured_critic_provider') or 'Не настроен',
             'Готово атомарных пакетов L4':audit.get('judge_candidates',0),
             'Отобрано для проверяющей модели':audit.get('judge_selected',0),
+            'Фактически отправлено проверяющей модели':audit.get('judge_attempted',0),
+            'Возобновлено из снимка':audit.get('judge_checkpoint_reused',0),
+            'Осталось в очереди':audit.get('judge_pending',0),
             'Предварительная проверка основной модели':ru_label(judge_preflight.get('state') or 'NOT_REQUIRED'),
             'Фактический основной провайдер':judge_preflight.get('actual_provider') or '—',
             'Основная модель':judge_preflight.get('model') or '—',
@@ -446,6 +469,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Уровень доказательства':ru_label(row.get('evidence_level')),
                 'Контракт доказательства':ru_label(row.get('evidence_contract_state')),
                 'Отобран':'Да' if row.get('selected') else 'Нет',
+                'Фактически отправлен':'Да' if row.get('judge_attempted') else 'Нет',
+                'Восстановлен из снимка':'Да' if row.get('judge_checkpoint_reused') else 'Нет',
                 'Режим выполнения':ru_label(row.get('execution_mode') or '—'),
                 'Основание отбора':row.get('selection_reason'),
                 'Решение проверяющей модели':ru_label(row.get('judge_state')),
@@ -634,7 +659,17 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if key in seen_questions:
             continue
         seen_questions.add(key); deduped_questions.append(item)
-    selected_questions=deduped_questions[:40] if report_kind=='manager' else deduped_questions
+    # The headline must reconcile to the rows the report can actually show.
+    # Comparison diagnostics may contain many raw classifications which are
+    # deliberately de-duplicated in the specialist queue.
+    exact_question_count=len(deduped_questions)
+    reconcile_question_headline(
+        summary_rows, exact_question_count=exact_question_count,
+        project_findings=total_project_findings,
+        system_limitations=total_system_limitations,
+        fallback=report['conclusion'],
+    )
+    selected_questions=deduped_questions
     questions_df=pd.DataFrame(selected_questions)
     review_clusters=build_review_clusters(deduped_questions)
     review_clusters_df=pd.DataFrame(review_clusters[:20] if report_kind=='manager' else review_clusters)
@@ -924,6 +959,16 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     review_clusters_df = _excel_safe_frame(review_clusters_df)
     limitations_df = _excel_safe_frame(limitations_df)
     coverage_matrix_df = _excel_safe_frame(coverage_matrix_df)
+    quality_gate_rows=[{
+        'Статус':'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует исправления',
+        'Проверка':'Итоговый Quality Gate',
+        'Результат':report_quality_gate.get('status') or 'NOT_RUN',
+        'Причина':'Ошибок согласованности не выявлено.' if not report_quality_gate.get('issues') else 'См. строки ниже.',
+    }]
+    quality_gate_rows.extend({
+        'Статус':'Ошибка', 'Проверка':f'QG-{index:03d}', 'Результат':'FAILED', 'Причина':issue,
+    } for index,issue in enumerate(report_quality_gate.get('issues') or [],1))
+    quality_gate_df=_excel_safe_frame(pd.DataFrame(quality_gate_rows))
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
@@ -962,6 +1007,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         sheets.append(('Вопросы специалисту', questions_df))
     if not review_clusters_df.empty:
         sheets.append(('Очередь проверки', review_clusters_df))
+    if not quality_gate_df.empty:
+        sheets.append(('Контроль отчёта', quality_gate_df))
     if report_kind == 'manager':
         def readiness_row(label,domain):
             total=int(domain.get('total',0) or 0); ok=int(domain.get('confirmed',0) or 0); issues=int(domain.get('issue',0) or 0)

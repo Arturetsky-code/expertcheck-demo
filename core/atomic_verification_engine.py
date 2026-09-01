@@ -929,7 +929,13 @@ def verify_checklist_rows(
             value for item in conditions for value in (item.get("evidence_candidates") or [])
         ]
         diagnostic=next((item for item in conditions if item.get("verification_kind")=="REVIEW_QUESTION"),None) or next((item for item in conditions if item.get("verification_kind")=="SYSTEM_LIMITATION"),None) or conditions[0]
-        row["atomic_conditions"] = conditions
+        # Full conditions are already stored once in atomic_verification.atoms.
+        # Repeating them below every parent checklist row multiplied the JSON
+        # snapshot size and could exhaust a Streamlit worker on large projects.
+        row.pop("atomic_conditions", None)
+        row["atomic_condition_ids"] = [
+            str(item.get("atom_id") or "") for item in conditions if item.get("atom_id")
+        ]
         row["atomic_condition_count"] = len(conditions)
         row["atomic_completed"] = counts["VERIFIED_OK"] + counts["PROJECT_FINDING"]
         level_order = {"L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5}

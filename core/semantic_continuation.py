@@ -11,7 +11,10 @@ from .atomic_verification_engine import (
     verify_checklist_rows,
 )
 from .coverage_matrix import build_coverage_matrix
-from .deep_evidence_intelligence import apply_deep_evidence_decisions, run_deep_evidence_review
+from .deep_evidence_intelligence import (
+    apply_deep_evidence_decisions, compact_deep_evidence_review,
+    run_deep_evidence_review,
+)
 from .project_review_planner import build_review_plan
 from .project_snapshot import corpus_fingerprint
 from .report_quality_gate import validate_review_plan
@@ -19,7 +22,7 @@ from .semantic_evidence_engine import build_semantic_project_graph
 from .verification_core import domain_summary
 
 
-CONTINUATION_VERSION = "15.2.4-ai-resilience-verification-readiness"
+CONTINUATION_VERSION = "15.2.5-checklist-stability-resumable-queue"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -108,8 +111,16 @@ def continue_semantic_analysis(
     checklist_checkpoint = checkpoint.setdefault("checklist", {})
 
     budget = dict(first.get("coverage_acceleration_budget") or {})
-    assignment_limit = int(budget.get("assignment_semantic_limit") or 200)
-    checklist_limit = int(budget.get("checklist_semantic_limit") or 800)
+    assignment_target = int(budget.get("assignment_semantic_limit") or 200)
+    checklist_target = int(budget.get("checklist_semantic_limit") or 800)
+    assignment_limit = min(
+        assignment_target,
+        int(budget.get("continuation_assignment_batch_limit") or 8),
+    )
+    checklist_limit = min(
+        checklist_target,
+        int(budget.get("continuation_checklist_batch_limit") or 16),
+    )
     fact_graph = dict(first.get("universal_project_fact_graph") or {})
     fact_graph["passages"] = page_corpus
     graph = dict(first.get("atomic_requirement_graph") or {})
@@ -183,6 +194,7 @@ def continue_semantic_analysis(
         normative_rows=normative_rows,
         checklist_review=automatic_review,
     )
+    deep_review = compact_deep_evidence_review(deep_review)
 
     assignment_rows = aggregate_atomic_results(parent_rows, assignment_atomic)
     assignment_summary = parent_assignment_summary(
@@ -244,6 +256,10 @@ def continue_semantic_analysis(
             "assignment_checkpoint_entries": sum(len(value) for value in assignment_checkpoint.values() if isinstance(value, dict)),
             "checklist_checkpoint_entries": sum(len(value) for value in checklist_checkpoint.values() if isinstance(value, dict)),
             "quality_gate": quality_gate.get("status"),
+            "batch_limits": {
+                "assignment": assignment_limit,
+                "checklist": checklist_limit,
+            },
         },
     })
     for document in documents:

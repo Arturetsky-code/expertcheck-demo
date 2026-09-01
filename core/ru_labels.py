@@ -22,6 +22,7 @@ _LABELS = {
  'CONTRACT_RETRY_SPLIT':'Повтор с уменьшенным пакетом','SPLIT_REQUIRED':'Требуется уменьшить пакет',
  'RATE_LIMITED':'Достигнут лимит запросов','PROVIDER_BLOCKED':'Провайдер недоступен',
  'INDEPENDENT_CONSENSUS':'Независимый Judge/Critic','ADVISORY_JUDGE_ONLY':'Консультативный Judge',
+ 'DEFERRED_TO_RESUMABLE_QUEUE':'Отложено в возобновляемую очередь',
  'NO_ELIGIBLE_PACKETS':'Нет подходящих пакетов','DISABLED':'Отключено',
  'CONSENSUS':'Независимый консенсус','DETERMINISTIC':'Детерминированная проверка','SPECIALIST':'Проверка специалистом',
  'SPECIALIST_REVIEW':'Проверка специалистом','ENGINEERING_SEMANTIC_REVIEW':'Смысловая инженерная проверка',

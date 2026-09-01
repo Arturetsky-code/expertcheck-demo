@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "15.2.4-ai-resilience-verification-readiness"
+__version__ = "15.2.5-checklist-stability-resumable-queue"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine

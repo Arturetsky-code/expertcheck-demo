@@ -25,6 +25,36 @@ def run_deep_evidence_review(checks:list[dict[str,Any]], documents:list[dict[str
     return {'version':'1.0','passes':['PROJECT_RECONSTRUCTION','TARGETED_VERIFICATION','ADVERSARIAL_REVIEW'],'evidence_db':db,'results':results,'metrics':{'checks':len(results),'with_candidates':sum(bool(x['evidence_candidates']) for x in results),'adversarial_blocked':sum(x.get('adversarial_state')=='BLOCKED' for x in results)}}
 
 
+def compact_deep_evidence_review(review:dict[str,Any])->dict[str,Any]:
+    """Keep an auditable result without duplicating the complete page corpus.
+
+    The full evidence database is a transient search index.  Addressable
+    candidates selected from it are already merged into assignment/checklist
+    rows, while the rerunnable source corpus lives once in analysis_snapshot.
+    Persisting all three representations could exhaust Streamlit Cloud memory.
+    """
+    source=dict(review or {})
+    evidence_db=dict(source.pop('evidence_db',{}) or {})
+    compact_results=[]
+    keep=(
+        'plan_id','source_id','domain','title','verification_kind','verification_state',
+        'adversarial_state','adversarial_reasons','evidence_candidate_count',
+        'coverage_state','coverage_reason_code','coverage_reason','missing_evidence_slots',
+        'expected_evidence_route','retrieval_state','retrieval_reasons',
+    )
+    for row in source.get('results') or []:
+        compact_results.append({key:row.get(key) for key in keep if row.get(key) not in (None,'',[],{})})
+    source['results']=compact_results
+    source['evidence_db_summary']={
+        'version':evidence_db.get('version'),
+        'record_count':int(evidence_db.get('record_count') or len(evidence_db.get('records') or [])),
+        'owners':len(evidence_db.get('by_owner') or {}),
+        'metrics':len(evidence_db.get('by_metric') or {}),
+        'storage_policy':'SOURCE_CORPUS_STORED_ONCE_IN_ANALYSIS_SNAPSHOT',
+    }
+    return source
+
+
 def _apply_final_verdict(row:dict[str,Any], verdict:dict[str,Any])->None:
     """Write the adjudicated verdict back to the domain row.
 

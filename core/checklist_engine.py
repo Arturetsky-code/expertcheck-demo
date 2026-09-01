@@ -317,7 +317,14 @@ class ChecklistEngine:
                 )
             else:
                 practice_context={}
-            results.append({**item,'compiled_rule':compiled_dict,'verification_recipe':recipe or {},'recipe_id':(recipe or {}).get('recipe_id'),'recipe_status':(recipe or {}).get('recipe_status','EXPERIMENTAL'),'recipe_quality':(recipe or {}).get('critic_score',0),'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'automatic_verdict_eligible':automatic_verdict_eligible,'automatic_verdict_policy':'SPECIALIZED_DETERMINISTIC_CHECKER' if automatic_verdict_eligible else 'CANDIDATE_EVIDENCE_ONLY','candidate_evidence_only':not automatic_verdict_eligible,'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
+            public_recipe={
+                key:(recipe or {}).get(key) for key in (
+                    'recipe_id','recipe_status','check_method','verification_level',
+                    'expected_sections','required_modality','specialized_checker_id',
+                    'categorical_verdict_allowed','retrieval_only',
+                ) if (recipe or {}).get(key) not in (None,'',[],{})
+            }
+            results.append({**item,'compiled_rule':compiled_dict,'verification_recipe':public_recipe,'recipe_id':(recipe or {}).get('recipe_id'),'recipe_status':(recipe or {}).get('recipe_status','EXPERIMENTAL'),'recipe_quality':(recipe or {}).get('critic_score',0),'proof_kind':proof_kind,'typed_check':compiled.typed_check,'execution_class':compiled.automation_class,'required_evidence_types':list(compiled.evidence_types),'automatic_verdict_eligible':automatic_verdict_eligible,'automatic_verdict_policy':'SPECIALIZED_DETERMINISTIC_CHECKER' if automatic_verdict_eligible else 'CANDIDATE_EVIDENCE_ONLY','candidate_evidence_only':not automatic_verdict_eligible,'normative_context':normative_context,'expert_practice_context':practice_context,'status':status,'evidence':evidence,'applicable':applicable,'user_decision':'Не рассмотрено','user_comment':''})
         return results
 
     def evaluate_with_pp87(self, documents: list[dict[str,Any]], comparisons: list[dict[str,Any]], findings: list[dict[str,Any]], *, source_file: str | None = None, section: str | None = None, include_practice: bool = True) -> list[dict[str,Any]]:

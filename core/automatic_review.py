@@ -10,6 +10,28 @@ from .pp87_compliance import PP87Compliance
 from .checklist_routing import ChecklistRoutingEngine, canonical_section
 from .checklist_verification import qualify_checklist_results
 
+
+def _compact_practice_context(value:dict[str,Any]|None)->dict[str,Any]:
+    """Retain decision-useful expert-practice metadata without full case copies."""
+    source=dict(value or {})
+    analog_fields=(
+        'remark_id','project','source_type','section','remark','issue_families',
+        'target_code','check_strategy','similarity_score','normative_refs',
+    )
+    rule_fields=('rule_id','title','risk','risk_level','issue_family','recommendation')
+    return {
+        'risk_score':source.get('risk_score'),
+        'status':source.get('status'),
+        'remark_analogs':[
+            {key:item.get(key) for key in analog_fields if item.get(key) not in (None,'',[],{})}
+            for item in (source.get('remark_analogs') or [])[:3] if isinstance(item,dict)
+        ],
+        'recurrent_rules':[
+            {key:item.get(key) for key in rule_fields if item.get(key) not in (None,'',[],{})}
+            for item in (source.get('recurrent_rules') or [])[:3] if isinstance(item,dict)
+        ],
+    }
+
 class AutomaticProjectReview:
     """Builds and executes a project-specific checklist programme automatically.
 
@@ -78,8 +100,10 @@ class AutomaticProjectReview:
             fam=["MISSING_INFORMATION"] if rule_type in {"presence","mandatory_document"} else (
                 ["CROSS_SECTION_MISMATCH"] if rule_type=="numeric_crosscheck" else ["INSUFFICIENT_JUSTIFICATION"]
             )
-            r["expert_practice_context"]=self.checklists.expert_practice.risk_from_evidence(
-                str(r.get("question") or ""),str(r.get("automatic_section") or ""),"",fam,r.get("normative_context") or []
+            r["expert_practice_context"]=_compact_practice_context(
+                self.checklists.expert_practice.risk_from_evidence(
+                    str(r.get("question") or ""),str(r.get("automatic_section") or ""),"",fam,r.get("normative_context") or []
+                )
             )
         counts=Counter(str(x.get("status") or "Нет данных") for x in actionable)
         semantic_pending=sum(1 for x in actionable if (x.get("execution_class") in {"SEMANTIC","EXPERT"} and x.get("status") in {"Требует проверки","Нет данных","Не проверено системой"}))

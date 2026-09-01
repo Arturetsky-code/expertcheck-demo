@@ -12,8 +12,28 @@ from core.review_profiles import filter_prepared_files, PROFILES
 from core.report_engine import build_decision_report
 from core.ai_gateway import provider_for_role
 from core.semantic_continuation import continue_semantic_analysis, continuation_pending
+from core.workspace_store import session_snapshot, snapshot_signature
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
+
+
+def _persist_completed_state(ctx) -> bool:
+    """Persist a completed analysis before Streamlit intentionally reruns."""
+    project_id = st.session_state.get('active_project_id')
+    user = st.session_state.get('auth_user') or {}
+    if not project_id or not user.get('id') or st.session_state.get('result') is None:
+        return False
+    try:
+        payload = session_snapshot(st.session_state)
+        ctx.workspace_store.save_project(
+            user['id'], project_id, st.session_state.get('project_name') or 'Проект',
+            payload, status='analyzed', app_version=ctx.version,
+        )
+        st.session_state['_workspace_saved_signature'] = snapshot_signature(payload)
+        return True
+    except Exception as exc:
+        st.session_state['analysis_persistence_warning'] = f'{type(exc).__name__}: {exc}'[:2000]
+        return False
 
 
 def _upload(ctx):
@@ -155,9 +175,33 @@ def _upload(ctx):
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
             except TypeError as exc:
                 if 'unexpected keyword argument' not in str(exc):
-                    raise
+                    update_progress(0, 'Проверка остановлена', 'Внутренняя ошибка не уничтожила текущий проект')
+                    st.error(f'Проверка остановлена: {type(exc).__name__}: {exc}')
+                    st.stop()
                 update_progress(15, 'Подготовка комплекта', 'Запускаем обработку документов')
-                st.session_state.result = ctx.analyze(files, ctx.config_dir)
+                try:
+                    st.session_state.result = ctx.analyze(files, ctx.config_dir)
+                except Exception as fallback_exc:
+                    st.session_state['analysis_failure'] = {
+                        'stage': 'legacy_project_analysis', 'type': type(fallback_exc).__name__,
+                        'error': str(fallback_exc)[:2000],
+                    }
+                    update_progress(0, 'Проверка остановлена', 'Текущая страница и сессия сохранены; можно повторить запуск')
+                    st.error(
+                        f'Проверка остановлена без сброса проекта: '
+                        f'{type(fallback_exc).__name__}: {fallback_exc}'
+                    )
+                    st.stop()
+            except Exception as exc:
+                # Keep the authenticated session and current project visible.
+                # A recoverable pipeline error must not bubble through the page
+                # renderer and look like a return to the start screen.
+                st.session_state['analysis_failure'] = {
+                    'stage': 'project_analysis', 'type': type(exc).__name__, 'error': str(exc)[:2000],
+                }
+                update_progress(0, 'Проверка остановлена', 'Текущая страница и сессия сохранены; можно повторить запуск')
+                st.error(f'Проверка остановлена без сброса проекта: {type(exc).__name__}: {exc}')
+                st.stop()
             st.session_state.project_name = name.strip() or 'Новый проект'
             st.session_state.review_mode = mode_code
             st.session_state.review_mode_label = mode_label
@@ -168,7 +212,9 @@ def _upload(ctx):
             st.session_state.object_assembly_rows = []
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
+            st.session_state.pop('analysis_failure', None)
             update_progress(100, 'Проверка завершена', 'Переходим к подтверждению состава объектов')
+            _persist_completed_state(ctx)
             # The sidebar radio with key 'page' already exists in this run.
             # Defer navigation until the next rerun to comply with Streamlit state rules.
             st.session_state['_navigate_to'] = 'Подтверждение' if not st.session_state.get('expert_mode') else 'Состав объектов'
@@ -240,6 +286,7 @@ def _dashboard(ctx):
                     st.error(f'Не удалось продолжить AI-проверку: {type(exc).__name__}: {exc}')
                     st.stop()
                 st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
+                _persist_completed_state(ctx)
                 st.success('AI-очередь продолжена. Метрики и Quality Gate пересчитаны.')
                 st.rerun()
     object_gate=bool(st.session_state.get('object_registry_confirmed'))

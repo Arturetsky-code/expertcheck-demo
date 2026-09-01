@@ -1072,6 +1072,9 @@ def run_semantic_evidence_engine(
         if packet.get("evidence_level") == "L4" and packet.get("checker", {}).get("consensus_eligible")
     ]
     candidates = diversified_candidate_order(eligible_candidates)
+    checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
+    judge_checkpoint = checkpoint.setdefault("judge", {})
+    critic_checkpoint = checkpoint.setdefault("critic", {})
     activation_reasons: list[str] = []
     advisory_reasons: list[str] = []
     if not enabled:
@@ -1152,14 +1155,33 @@ def run_semantic_evidence_engine(
         candidates = []
     elif independent_consensus_available:
         if requested_limit > 0:
-            candidates = candidates[:requested_limit]
+            completed_ids = set(judge_checkpoint)
+            pending_ids = [
+                str(packet.get("packet_id") or "") for packet in candidates
+                if str(packet.get("packet_id") or "") not in completed_ids
+            ][:requested_limit]
+            selected_ids = completed_ids.union(pending_ids)
+            # Reapply checkpointed decisions and add only a bounded amount of
+            # new network work.  This makes every continuation advance instead
+            # of repeatedly selecting the first N packets.
+            candidates = [
+                packet for packet in candidates
+                if str(packet.get("packet_id") or "") in selected_ids
+            ]
     else:
-        candidates = candidates[:min(requested_limit or advisory_limit, advisory_limit)]
+        new_limit = min(requested_limit or advisory_limit, advisory_limit)
+        completed_ids = set(judge_checkpoint)
+        pending_ids = [
+            str(packet.get("packet_id") or "") for packet in candidates
+            if str(packet.get("packet_id") or "") not in completed_ids
+        ][:new_limit]
+        selected_ids = completed_ids.union(pending_ids)
+        candidates = [
+            packet for packet in candidates
+            if str(packet.get("packet_id") or "") in selected_ids
+        ]
 
     judge_payloads = [_public_packet(packet) for packet in candidates]
-    checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
-    judge_checkpoint = checkpoint.setdefault("judge", {})
-    critic_checkpoint = checkpoint.setdefault("critic", {})
     raw_judges, judge_errors, judge_calls = _call_batches(
         judge_provider, judge_payloads, critic=False, progress_callback=progress_callback,
         checkpoint=judge_checkpoint,

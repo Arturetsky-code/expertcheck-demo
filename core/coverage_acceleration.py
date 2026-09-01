@@ -11,6 +11,12 @@ class CoverageBudget:
     assignment_semantic_limit: int
     checklist_semantic_limit: int
     policy: str = "ALL_ADDRESSABLE_L4_WITH_FAIL_CLOSED_CONSENSUS"
+    # External Judge/Critic calls must not hold one Streamlit run for the whole
+    # project-sized queue.  The full limits above describe target coverage;
+    # these limits describe safe new work per resumable continuation run.
+    initial_checklist_semantic_limit: int = 0
+    continuation_assignment_batch_limit: int = 8
+    continuation_checklist_batch_limit: int = 16
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -21,11 +27,23 @@ def coverage_budget(review_mode: str = "extended", ai_level: str = "extended") -
     mode = str(review_mode or "extended").strip().lower()
     level = str(ai_level or "extended").strip().lower()
     if level in {"off", "helper", "отключён", "помощник"}:
-        return CoverageBudget(mode, level, 0, 0, "DETERMINISTIC_ONLY")
+        return CoverageBudget(
+            mode, level, 0, 0, "DETERMINISTIC_ONLY",
+            continuation_assignment_batch_limit=0,
+            continuation_checklist_batch_limit=0,
+        )
     if mode == "quick":
-        return CoverageBudget(mode, level, 40, 80, "BOUNDED_HIGH_PRIORITY_L4")
+        return CoverageBudget(
+            mode, level, 40, 80, "BOUNDED_HIGH_PRIORITY_L4",
+            continuation_assignment_batch_limit=6,
+            continuation_checklist_batch_limit=8,
+        )
     if mode == "full" or level in {"maximum", "максимальный"}:
-        return CoverageBudget(mode, level, 1000, 5000)
+        return CoverageBudget(
+            mode, level, 1000, 5000,
+            continuation_assignment_batch_limit=12,
+            continuation_checklist_batch_limit=20,
+        )
     return CoverageBudget(mode, level, 200, 800)
 
 

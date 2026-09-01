@@ -217,7 +217,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     review_mode = str(ai_options.get("review_mode") or "extended").lower()
     acceleration_budget = coverage_budget(review_mode, semantic_level)
     assignment_semantic_limit = acceleration_budget.assignment_semantic_limit
-    checklist_semantic_limit = acceleration_budget.checklist_semantic_limit
+    initial_checklist_semantic_limit = acceleration_budget.initial_checklist_semantic_limit
     progress(3, "Подготовка комплекта", "Проверяем форматы и распределяем документы по обработчикам")
 
     # PDF обрабатываются legacy-движком, XML — отдельным версионным движком Core 3.0.
@@ -348,7 +348,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "15.2.4-ai-resilience-verification-readiness"
+        item["core_version"] = "15.2.5-checklist-stability-resumable-queue"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -652,7 +652,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "15.2.4-ai-resilience-verification-readiness"
+        item["core_version"] = "15.2.5-checklist-stability-resumable-queue"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -664,9 +664,26 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         "description": " ".join(str(x.get("Раздел") or x.get("Тип документа") or "") for x in documents),
     }
     checklist_atomic_review = {"version":"1.0","atoms":[],"summary":{"atomic_conditions":0}}
+    automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True}}
     try:
         automatic_review = AutomaticProjectReview(root / "knowledge").execute(
             documents, comparisons, findings, project_context=project_context
+        )
+    except Exception as exc:
+        automatic_review["summary"]["error"] = str(exc)
+        pipeline_errors.append({"stage":"automatic_checklist_programme","error":str(exc)})
+    progress(
+        94, "Автоматические чек-листы",
+        f"Детерминированная программа сформирована: {len(automatic_review.get('results') or [])} строк",
+    )
+    try:
+        # The initial request must finish and persist the project before a
+        # project-sized external AI queue starts.  Every L4 checklist packet is
+        # still prepared here; Judge/Critic work is resumed safely from the UI.
+        initial_checklist_level = semantic_level if initial_checklist_semantic_limit > 0 else "off"
+        progress(
+            95, "Доказательная проверка чек-листов",
+            "Проверяем детерминированные условия и формируем возобновляемую AI-очередь",
         )
         checklist_atomic_review = verify_checklist_rows(
             list(automatic_review.get("results") or []),
@@ -675,14 +692,32 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             page_corpus=project_page_corpus,
             judge_provider=semantic_judge_provider,
             critic_provider=semantic_critic_provider,
-            semantic_level=semantic_level,
-            semantic_limit=checklist_semantic_limit,
+            semantic_level=initial_checklist_level,
+            semantic_limit=initial_checklist_semantic_limit,
             semantic_checkpoint=checklist_semantic_checkpoint,
         )
+        if initial_checklist_level == "off" and semantic_level in {"extended", "maximum"}:
+            deferred_audit = dict(checklist_atomic_review.get("semantic_engine_audit") or {})
+            deferred_audit.update({
+                "enabled": True,
+                "deferred": True,
+                "execution_mode": "DEFERRED_TO_RESUMABLE_QUEUE",
+                "activation_reasons": [
+                    "Внешняя AI-проверка отложена до сохранения первичного результата."
+                ],
+            })
+            checklist_atomic_review["semantic_engine_audit"] = deferred_audit
+            if checklist_atomic_review.get("atoms"):
+                checklist_atomic_review["atoms"][0]["semantic_engine_audit"] = deferred_audit
         automatic_review["atomic_verification"] = checklist_atomic_review
     except Exception as exc:
-        automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True,"error":str(exc)}}
-        pipeline_errors.append({"stage":"automatic_checklists","error":str(exc)})
+        automatic_review["atomic_verification"] = checklist_atomic_review
+        automatic_review.setdefault("summary", {})["atomic_verification_error"] = str(exc)
+        pipeline_errors.append({"stage":"automatic_checklist_evidence","error":str(exc)})
+    progress(
+        96, "Автоматические чек-листы",
+        "Детерминированная проверка завершена; внешняя AI-очередь не блокирует сохранение проекта",
+    )
     decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     evidence_review_plan = build_review_plan(
         assignment_rows=assignment_atomic_rows,
@@ -696,10 +731,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
         comparisons=cross_section_checks,
     )
+    progress(97, "Контроль доказательств", "Проверяем адресность и согласованность сформированных выводов")
     # Deep Evidence Intelligence: reconstruct evidence once, then target every planned check.
     # This layer is conservative: it may downgrade weak positives, never invent evidence.
     try:
-        from .deep_evidence_intelligence import run_deep_evidence_review, apply_deep_evidence_decisions
+        from .deep_evidence_intelligence import (
+            apply_deep_evidence_decisions, compact_deep_evidence_review,
+            run_deep_evidence_review,
+        )
         deep_evidence_review = run_deep_evidence_review(
             evidence_review_plan.get("items") or [], documents=documents,
             facts=findings + assignment_directed_facts + atomic_evidence_facts(checklist_atomic_review.get("atoms") or []),
@@ -754,10 +793,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'review_questions':review_plan.get('review_questions',0),
             'system_limitations':review_plan.get('system_limitations',0),
         }
+        deep_evidence_review=compact_deep_evidence_review(deep_evidence_review)
         decision_coverage = coverage_summary(cross_section_checks, (automatic_review.get("results") or []) if isinstance(automatic_review,dict) else [])
     except Exception as exc:
         deep_evidence_review = {"version":"1.0","results":[],"metrics":{"error":str(exc)}}
         pipeline_errors.append({"stage":"deep_evidence_intelligence","error":str(exc)})
+    progress(98, "Контроль качества", "Формируем итоговые метрики, очередь продолжения и Quality Gate")
     coverage_matrix=build_coverage_matrix(review_plan.get('items') or [])
     semantic_packets = [
         dict(row.get("semantic_evidence_packet") or {})
@@ -799,7 +840,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "15.2.4-ai-resilience-verification-readiness"
+        doc["core_version"] = "15.2.5-checklist-stability-resumable-queue"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue

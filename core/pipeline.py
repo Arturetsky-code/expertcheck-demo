@@ -78,6 +78,7 @@ from .atomic_verification_engine import (
 from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .coverage_acceleration import coverage_budget
+from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
 from .semantic_evidence_engine import build_semantic_project_graph
 try:
@@ -210,6 +211,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     semantic_level = str(ai_options.get("level") or "off").lower()
     semantic_judge_provider = ai_options.get("judge_provider") or ai_options.get("provider")
     semantic_critic_provider = ai_options.get("critic_provider") or ai_options.get("reviewer_provider")
+    semantic_checkpoint = ai_options.get("semantic_checkpoint")
+    if not isinstance(semantic_checkpoint, dict):
+        semantic_checkpoint = {}
     review_mode = str(ai_options.get("review_mode") or "extended").lower()
     acceleration_budget = coverage_budget(review_mode, semantic_level)
     assignment_semantic_limit = acceleration_budget.assignment_semantic_limit
@@ -344,7 +348,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "15.2.1-coverage-acceleration-reliability"
+        item["core_version"] = "15.2.2-resumable-verification-snapshot"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -518,6 +522,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         assignment_page_corpus = []
         pipeline_errors.append({"stage":"assignment_page_corpus","error":str(exc)})
     project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
+    semantic_project_fingerprint = corpus_fingerprint(assignment_page_corpus)
+    if semantic_checkpoint.get("_project_fingerprint") != semantic_project_fingerprint:
+        semantic_checkpoint.clear()
+        semantic_checkpoint["_project_fingerprint"] = semantic_project_fingerprint
+    assignment_semantic_checkpoint = semantic_checkpoint.setdefault("assignment", {})
+    checklist_semantic_checkpoint = semantic_checkpoint.setdefault("checklist", {})
     try:
         evidence_reconstruction = reconstruct_high_value_evidence(project_page_corpus)
         findings.extend(evidence_reconstruction.get("facts") or [])
@@ -572,6 +582,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             semantic_level=semantic_level,
             semantic_limit=assignment_semantic_limit,
             semantic_progress_callback=assignment_semantic_progress,
+            semantic_checkpoint=assignment_semantic_checkpoint,
         )
         progress(86, "Задание на проектирование", "Агрегируем результаты без категоричных выводов по недостаточным данным")
         assignment_compliance = aggregate_atomic_results(assignment_parent_baseline, assignment_atomic_rows)
@@ -641,7 +652,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "15.2.1-coverage-acceleration-reliability"
+        item["core_version"] = "15.2.2-resumable-verification-snapshot"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -666,6 +677,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             critic_provider=semantic_critic_provider,
             semantic_level=semantic_level,
             semantic_limit=checklist_semantic_limit,
+            semantic_checkpoint=checklist_semantic_checkpoint,
         )
         automatic_review["atomic_verification"] = checklist_atomic_review
     except Exception as exc:
@@ -773,6 +785,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'error':'Нарушены инварианты итоговых метрик.',
             'issues':report_quality_gate.get('issues') or [],
         })
+    analysis_snapshot = build_analysis_snapshot(
+        documents, page_corpus=assignment_page_corpus,
+        fact_graph=universal_project_fact_graph,
+        object_registry=object_registry,
+        quality_gate_comparisons=cross_section_checks,
+    )
     # The structures below describe the analysis run as a whole, not an
     # individual source document.  Storing them on every document multiplied a
     # real 12-volume project result roughly twelvefold and caused Streamlit
@@ -781,7 +799,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "15.2.1-coverage-acceleration-reliability"
+        doc["core_version"] = "15.2.2-resumable-verification-snapshot"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -793,6 +811,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["semantic_evidence_engine"] = semantic_engine_summary
         doc["semantic_project_graph"] = semantic_project_graph
         doc["coverage_acceleration_budget"] = acceleration_budget.as_dict()
+        doc["analysis_snapshot"] = analysis_snapshot
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

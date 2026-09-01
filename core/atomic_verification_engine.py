@@ -561,6 +561,7 @@ def verify_atomic_requirements(
     judge_provider: Any = None, critic_provider: Any = None,
     semantic_level: str = "off", semantic_limit: int = 0,
     semantic_progress_callback: Any = None,
+    semantic_checkpoint: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     compiler = VerificationRecipeCompilerV2(knowledge_root)
     rows: list[dict[str, Any]] = []
@@ -598,6 +599,7 @@ def verify_atomic_requirements(
         level=semantic_level,
         limit=semantic_limit,
         progress_callback=semantic_progress_callback,
+        checkpoint=semantic_checkpoint,
     )
     if rows:
         rows[0]["semantic_engine_audit"] = semantic_audit
@@ -774,6 +776,7 @@ def verify_checklist_rows(
     fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
     judge_provider: Any = None, critic_provider: Any = None,
     semantic_level: str = "off", semantic_limit: int = 0,
+    semantic_checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the same atomic evidence gate over actionable corporate checklist rows.
 
@@ -816,6 +819,7 @@ def verify_checklist_rows(
         atoms, knowledge_root=knowledge_root, fact_graph=fact_graph, page_corpus=page_corpus,
         judge_provider=judge_provider, critic_provider=critic_provider,
         semantic_level=semantic_level, semantic_limit=semantic_limit,
+        semantic_checkpoint=semantic_checkpoint,
     )
     by_parent: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for atom in verified:

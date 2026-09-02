@@ -50,6 +50,18 @@ def reconcile_question_headline(
     for row in summary_rows:
         if row[0]=='Вопросов специалисту':
             row[1]=exact_question_count
+        elif row[0]=='Причины неполноты':
+            reasons = [
+                part.strip() for part in str(row[1] or '').split(';')
+                if part.strip() and part.strip() != '—'
+            ]
+            reasons = [
+                part for part in reasons
+                if not part.casefold().startswith('вопросов специалисту:')
+            ]
+            if exact_question_count:
+                reasons.insert(0, f'вопросов специалисту: {exact_question_count}')
+            row[1] = '; '.join(reasons) or '—'
         elif row[0]=='Итоговый вывод':
             row[1]=conclusion
 

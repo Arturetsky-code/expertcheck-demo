@@ -71,6 +71,7 @@ def test_invalid_semantic_decision_is_not_persisted_in_checkpoint():
 def test_report_headline_reconciles_to_exported_specialist_queue():
     rows = [
         ["Вопросов специалисту", 410],
+        ["Причины неполноты", "вопросов специалисту: 366; вне автоматического покрытия: 253; AI-пакетов в очереди: 83"],
         ["Итоговый вывод", "Старый итог"],
     ]
     reconcile_question_headline(
@@ -78,7 +79,8 @@ def test_report_headline_reconciles_to_exported_specialist_queue():
         system_limitations=253, fallback="—",
     )
     assert rows[0][1] == 370
-    assert "370" in rows[1][1] and "253" in rows[1][1]
+    assert rows[1][1] == "вопросов специалисту: 370; вне автоматического покрытия: 253; AI-пакетов в очереди: 83"
+    assert "370" in rows[2][1] and "253" in rows[2][1]
 
 
 def test_xlsx_question_total_and_quality_gate_sheet_are_auditable():

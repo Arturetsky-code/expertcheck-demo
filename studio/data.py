@@ -231,6 +231,20 @@ def _excel_safe_value(value):
     return text[:_EXCEL_MAX_TEXT]
 
 
+def _safe_join(values, separator=' | '):
+    """Join mixed runtime diagnostics without breaking XLSX generation."""
+    if values is None:
+        return ''
+    items = list(values) if isinstance(values, (list, tuple, set)) else [values]
+    rendered = []
+    for item in items:
+        safe = _excel_safe_value(item)
+        if safe in (None, ''):
+            continue
+        rendered.append(str(safe))
+    return separator.join(rendered)
+
+
 def _excel_safe_frame(frame: pd.DataFrame, *, columns: list[str] | None = None, max_rows: int | None = None) -> pd.DataFrame:
     if frame is not None and not isinstance(frame,pd.DataFrame):
         frame=pd.DataFrame(frame)
@@ -292,14 +306,14 @@ def _compact_technical_frames(docs, findings, comparisons, report):
             'sources':row.get('sources') or row.get('sections') or '',
             'genplan_position':row.get('genplan_position') or row.get('Позиция по ГП') or '',
             'strong_evidence_count':row.get('strong_evidence_count') or 0,
-            'owner_sections':', '.join(row.get('data_owner_sections') or []),
-            'control_sections':', '.join(row.get('dependent_sections') or []),
-            'owner_present':', '.join((row.get('dependency_diagnostics') or {}).get('owner_present') or []),
-            'control_present':', '.join((row.get('dependency_diagnostics') or {}).get('control_present') or []),
+            'owner_sections':_safe_join(row.get('data_owner_sections'), ', '),
+            'control_sections':_safe_join(row.get('dependent_sections'), ', '),
+            'owner_present':_safe_join((row.get('dependency_diagnostics') or {}).get('owner_present'), ', '),
+            'control_present':_safe_join((row.get('dependency_diagnostics') or {}).get('control_present'), ', '),
             'verification_kind':row.get('final_verification_kind') or row.get('verification_kind') or '',
             'evidence_level':row.get('evidence_level') or '',
             'cross_section_gate_state':row.get('cross_section_gate_state') or '',
-            'gate_reasons':' | '.join(row.get('cross_section_gate_reasons') or []),
+            'gate_reasons':_safe_join(row.get('cross_section_gate_reasons')),
         })
     first_doc=_first_document_record(docs)
     plausibility_rows=[{
@@ -528,8 +542,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Подтверждено консенсусом':audit.get('promoted_verified',0),
             'Подтверждено несоответствий':audit.get('project_findings',0),
             'Заблокировано контролем':audit.get('blocked_consensus',0),
-            'Причина неактивности':' | '.join(audit.get('activation_reasons') or []),
-            'Причина консультативного режима':' | '.join(audit.get('advisory_reasons') or []),
+            'Причина неактивности':_safe_join(audit.get('activation_reasons')),
+            'Причина консультативного режима':_safe_join(audit.get('advisory_reasons')),
             'Ошибки проверяющей модели — кратко':_ai_error_summary(audit.get('judge_errors') or []),
             'Ошибки контрольной модели — кратко':_ai_error_summary(audit.get('critic_errors') or []),
         })
@@ -573,7 +587,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Фактический контрольный провайдер':row.get('critic_provider') or '—',
                 'Контрольная модель':row.get('critic_model') or '—',
                 'Итог консенсуса':ru_label(row.get('consensus_state')),
-                'Причины блокировки':' | '.join(row.get('blocking_reasons') or []),
+                'Причины блокировки':_safe_join(row.get('blocking_reasons')),
             })
         for role_key, role_label in (('judge_calls','Проверяющая модель'),('critic_calls','Контрольная модель')):
             for call in audit.get(role_key) or []:
@@ -589,7 +603,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                     'Получено ответов':call.get('responses',0),
                     'Состояние':ru_label(call.get('state')),
                     'Ошибка':str(call.get('error') or '')[:1200],
-                    'ID пакетов':' | '.join(call.get('packet_ids') or []),
+                    'ID пакетов':_safe_join(call.get('packet_ids')),
                 })
     ai_summary_df=_excel_safe_frame(pd.DataFrame(ai_summary_rows))
     ai_execution_df=_excel_safe_frame(pd.DataFrame(ai_execution_rows))
@@ -751,7 +765,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Источники': r.get('sources'),
         'Сценарий базы': r.get('scenario_id'),
         'Повторяемость': r.get('recurrence'),
-        'Проекты-аналоги': ', '.join(r.get('analog_projects') or []),
+        'Проекты-аналоги': _safe_join(r.get('analog_projects'), ', '),
         'Решение пользователя': r.get('user_status') or 'Не рассмотрено',
         'Комментарий пользователя': r.get('user_comment') or '',
     } for r in selected_risks])
@@ -794,7 +808,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'ID':_stable_report_id('Q',item),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
             'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
             'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
-            'Ожидаемые разделы':', '.join(item.get('expected_evidence_route') or item.get('expected_sections') or []) or '—',
+            'Ожидаемые разделы':_safe_join(item.get('expected_evidence_route') or item.get('expected_sections'), ', ') or '—',
             'Уровень доказательства':ru_label(item.get('evidence_level') or 'L0'),
         })
     deduped_questions=[]; seen_questions=set()
@@ -837,13 +851,13 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Архетип покрытия':ru_label(r.get('coverage_archetype')),
         'Код причины незавершения':r.get('coverage_reason_code') or '',
         'Причина незавершения':r.get('coverage_reason') or '',
-        'Недостающие слоты':', '.join(r.get('missing_evidence_slots') or []),
+        'Недостающие слоты':_safe_join(r.get('missing_evidence_slots'), ', '),
         'Углублённый анализ доказательств': ru_label(r.get('deep_evidence_state')),
         'Уровень доказательства':ru_label(r.get('evidence_level') or 'L0'),
         'Доказательное покрытие атомов, %':r.get('evidence_coverage_pct'),
         'Смысловой консенсус':ru_label(r.get('semantic_consensus_state')),
         'Смысловых условий завершено':r.get('semantic_consensus_completed',0),
-        'Причины ограничения': ' | '.join(r.get('deep_evidence_reasons') or []),
+        'Причины ограничения': _safe_join(r.get('deep_evidence_reasons')),
         'Источники': _evidence_sources(r),
     } for r in report['checklist_results'] if not r.get('is_heading')])
 
@@ -912,11 +926,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Режим проверяющего механизма':ru_label(x.get('checker_mode')) if x.get('checker_mode') else '—',
         'Независимый смысловой консенсус':ru_label(x.get('semantic_consensus_state')) if x.get('semantic_consensus_state') else '—',
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
-        'Маршрут доказательства':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
+        'Маршрут доказательства':_safe_join(x.get('expected_evidence_route') or x.get('expected_sections'), ', '),
         'Итоговый класс':verification_label(x.get('verification_kind')),
         'Проверка достаточности':ru_label(x.get('adversarial_state') or x.get('deep_evidence_state')),
         'Код причины незавершения':ru_label(x.get('coverage_reason_code')) if x.get('coverage_reason_code') else '',
-        'Причина незавершения':x.get('coverage_reason') or ' | '.join(x.get('adversarial_reasons') or x.get('deep_evidence_reasons') or []),
+        'Причина незавершения':x.get('coverage_reason') or _safe_join(x.get('adversarial_reasons') or x.get('deep_evidence_reasons')),
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
     } for x in review_plan.get('items') or []])
     limitations_df=pd.DataFrame([{
@@ -925,7 +939,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Код ограничения':ru_label(x.get('coverage_reason_code') or 'UNSPECIFIED'),
         'Что не получено':x.get('coverage_reason') or 'Доказательный контракт не завершён.',
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
-        'Ожидаемые разделы':', '.join(x.get('expected_evidence_route') or x.get('expected_sections') or []),
+        'Ожидаемые разделы':_safe_join(x.get('expected_evidence_route') or x.get('expected_sections'), ', '),
         'Статус':'Ограничение ExpertCheck — не замечание проекта',
     } for x in review_plan.get('items') or [] if str(x.get('verification_kind') or '').upper()=='SYSTEM_LIMITATION'])
     coverage_matrix_df=pd.DataFrame([{
@@ -951,7 +965,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             understanding_rows.append({
               'ID объекта':obj.get('object_id'),'Объект':obj.get('name'),'Позиция по ГП':obj.get('position') or '—',
               'Тип объекта':obj.get('object_type'),'Показатель':prop.get('parameter_name'),
-              'Код показателя':parameter_label(prop.get('parameter_code')),'Разделы':', '.join(prop.get('sections') or []),
+              'Код показателя':parameter_label(prop.get('parameter_code')),'Разделы':_safe_join(prop.get('sections'), ', '),
               'Количество доказательств':prop.get('evidence_count',0),
               'Профильный источник':'Да' if prop.get('owner_evidence') else 'Нет',
               'Конфликт значений':'Да' if prop.get('value_conflict') else 'Нет',
@@ -966,7 +980,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Тип проверки':ru_label(x.get('requirement_type')),
         'Область требования':ru_label(x.get('requirement_scope') or (x.get('evidence_contract_v2') or {}).get('scope')),
         'Метод проверки':ru_label((x.get('evidence_contract_v2') or {}).get('check_method')),
-        'Ожидаемые разделы':', '.join((x.get('evidence_contract_v2') or {}).get('expected_sections') or []),
+        'Ожидаемые разделы':_safe_join((x.get('evidence_contract_v2') or {}).get('expected_sections'), ', '),
         'Способ восстановления':ru_label(x.get('cell_reconstruction')),
         'Требование Задания':x.get('requirement_text'),
         'Объект':x.get('object_name') or '—',
@@ -976,7 +990,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Результат':x.get('status'),
         'Документ':_primary_project_source(x)[0],
         'Страница':_primary_project_source(x)[1],
-        'Доказательства':' | '.join(x.get('evidence') or []),
+        'Доказательства':_safe_join(x.get('evidence')),
         'Качество доказательства':ru_label(x.get('evidence_quality_state')),
         'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
@@ -991,7 +1005,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Доказательное покрытие атомов, %':x.get('evidence_coverage_pct'),
         'Смысловой консенсус':ru_label(x.get('semantic_consensus_state')),
-        'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or []),
+        'Причины ограничения':_safe_join(x.get('deep_evidence_reasons')),
     } for x in assignment_rows])
     assignment_gip_df=_excel_safe_frame(assignment_df,columns=[
         'ID требования','Раздел / вопрос Задания','Требование Задания','Объект','Показатель',
@@ -1018,12 +1032,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Значение проекта':_difference_field(x,'observed'),
         'Единица сравнения':_difference_field(x,'unit'),
         'Условие выполнено':('Да' if _difference_field(x,'satisfied',None) is True else 'Нет' if _difference_field(x,'satisfied',None) is False else '—'),
-        'Ожидаемые разделы':', '.join((x.get('verification_recipe') or {}).get('expected_sections') or x.get('expected_sections') or []),
+        'Ожидаемые разделы':_safe_join((x.get('verification_recipe') or {}).get('expected_sections') or x.get('expected_sections'), ', '),
         'Рецепт':x.get('recipe_id'),
         'Статус рецепта':ru_label(x.get('recipe_status')),
         'Результат':x.get('status'),
         'Итоговый класс':verification_label(x.get('final_verification_kind') or x.get('verification_kind')),
-        'Доказательства':' | '.join(x.get('evidence') or []),
+        'Доказательства':_safe_join(x.get('evidence')),
         'Явное различие':x.get('difference') or '',
         'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation') or '',
@@ -1037,8 +1051,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Недостающие слоты':', '.join(ru_label(v) for v in (x.get('missing_evidence_slots') or [])),
         'Смысловой контроль':ru_label(x.get('semantic_gate_state')),
         'Требуемая модальность':ru_label((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('required_modality')),
-        'Критические квалификаторы':', '.join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers') or []),
-        'Причины смыслового удержания':' | '.join(x.get('semantic_gate_reasons') or []),
+        'Критические квалификаторы':_safe_join((x.get('evidence_contract') or x.get('evidence_contract_v2') or {}).get('critical_qualifiers'), ', '),
+        'Причины смыслового удержания':_safe_join(x.get('semantic_gate_reasons')),
         'Уровень доказательства':ru_label(x.get('evidence_level') or 'L0'),
         'Причина уровня доказательства':x.get('evidence_level_reason') or '',
         'Семейство проверяющего механизма':ru_label(x.get('checker_family')),
@@ -1049,9 +1063,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Провайдер проверяющей модели':(x.get('semantic_judge') or {}).get('provider'),
         'Контрольная модель приняла':('Да' if (x.get('semantic_critic') or {}).get('accept') is True else 'Нет' if x.get('semantic_critic') else '—'),
         'Провайдер контрольной модели':(x.get('semantic_critic') or {}).get('provider'),
-        'Причины блокировки консенсуса':' | '.join(x.get('semantic_consensus_reasons') or []),
+        'Причины блокировки консенсуса':_safe_join(x.get('semantic_consensus_reasons')),
         'Углублённый анализ доказательств':ru_label(x.get('deep_evidence_state') or x.get('adversarial_state')),
-        'Причины ограничения':' | '.join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons') or []),
+        'Причины ограничения':_safe_join(x.get('deep_evidence_reasons') or x.get('adversarial_reasons')),
     } for x in assignment_atomic_rows])
 
     normative_requirement_df = pd.DataFrame([{
@@ -1077,7 +1091,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Актуальная редакция / замена':(x.get('edition_assessment') or {}).get('current_reference','') or x.get('replacement',''),
         'Количество упоминаний':x.get('mentions',1),
         'Документов':x.get('documents_count',1 if x.get('document') else 0),
-        'Где встречается':'; '.join(x.get('pages') or []) if isinstance(x.get('pages'),list) else f"{x.get('document') or ''}, стр. {x.get('page') or ''}",
+        'Где встречается':_safe_join(x.get('pages'), '; ') if isinstance(x.get('pages'),list) else f"{x.get('document') or ''}, стр. {x.get('page') or ''}",
         'Риск влияния':x.get('impact_risk') if x.get('coverage_status')=='Проверено по реестру' else 'Не оценивается — статус НТД не верифицирован',
         'Покрытие ExpertCheck':x.get('coverage_status') or '—',
         'Состояние записи KB':x.get('registry_match_state') or '—',

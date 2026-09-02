@@ -1,0 +1,480 @@
+{
+  "version": "18.0-stage1-project-data-contract",
+  "stage": "Стабильное ядро и единый контракт данных",
+  "tests": 115,
+  "passed": 115,
+  "failed": 0,
+  "quality_policy": {
+    "verified_core_inherited": true,
+    "public_result_contract_required": true,
+    "legacy_result_migration_required": true,
+    "snapshot_contract_required": true,
+    "report_contract_required": true,
+    "isolated_report_failures_required": true,
+    "stable_result_fingerprint_required": true,
+    "stability_runs": 10,
+    "xlsx_report_kinds_per_run": 3
+  },
+  "results": [
+    {
+      "test": "STAGE1-001",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-002",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-003",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-004",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-005",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-006",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-007",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-008",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-009",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-010",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-011",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-012",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-013",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-014",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-015",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-016",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-017",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-018",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-019",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-020",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-021",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-022",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-023",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-024",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-025",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-026",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-027",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-028",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-029",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-030",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-031",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-032",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-033",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-034",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-035",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-036",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-037",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-038",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-039",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-040",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-041",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-042",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-043",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-044",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-045",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-046",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-047",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-048",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-049",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-050",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-051",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-052",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-053",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-054",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-055",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-056",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-057",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-058",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-059",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-060",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-061",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-062",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-063",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-064",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-065",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-066",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-067",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-068",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-069",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-070",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-071",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-072",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-073",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-074",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-075",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-076",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-077",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-078",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-079",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-080",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-081",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-082",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-083",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-084",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-085",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-086",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-087",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-088",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-089",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-090",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-091",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-092",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-093",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-094",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-095",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-096",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-097",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-098",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-099",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-100",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-101",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-102",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-103",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-104",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-105",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-106",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-107",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-108",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-109",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-110",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-111",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-112",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-113",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-114",
+      "status": "PASSED"
+    },
+    {
+      "test": "STAGE1-115",
+      "status": "PASSED"
+    }
+  ]
+}

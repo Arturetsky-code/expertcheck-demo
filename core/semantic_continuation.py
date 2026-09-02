@@ -23,7 +23,7 @@ from .verification_core import domain_summary
 from .verified_verdict_gate import enforce_project_verdicts
 
 
-CONTINUATION_VERSION = "17.1-proof-th-cross-section"
+CONTINUATION_VERSION = "18.0-stage1-project-data-contract"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:

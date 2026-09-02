@@ -80,6 +80,7 @@ from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .coverage_acceleration import coverage_budget
 from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
+from .project_data_contract import enforce_project_data_contract
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
 from .semantic_evidence_engine import build_semantic_project_graph
 try:
@@ -349,7 +350,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "17.1-proof-th-cross-section"
+        item["core_version"] = "18.0-stage1-project-data-contract"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -659,7 +660,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "17.1-proof-th-cross-section"
+        item["core_version"] = "18.0-stage1-project-data-contract"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -856,12 +857,28 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             'error':'Нарушены инварианты итоговых метрик.',
             'issues':report_quality_gate.get('issues') or [],
         })
+    documents, findings, comparisons, project_data_contract = enforce_project_data_contract(
+        documents, findings, comparisons, source="pipeline_final_boundary",
+    )
+    contracted_cross_section_checks = [
+        row for row in comparisons
+        if str(row.get("category") or "") == "Межраздельная сверка"
+        or str(row.get("check_type") or "") == "Сводная межраздельная проверка"
+        or str(row.get("check_code") or "").startswith("CORE-XSEC-")
+    ]
     analysis_snapshot = build_analysis_snapshot(
         documents, page_corpus=assignment_page_corpus,
         fact_graph=universal_project_fact_graph,
         object_registry=object_registry,
-        quality_gate_comparisons=cross_section_checks,
+        quality_gate_comparisons=contracted_cross_section_checks,
     )
+    analysis_snapshot["project_data_contract"] = {
+        "version": project_data_contract["version"],
+        "status": project_data_contract["status"],
+        "repairs": project_data_contract["repairs"],
+        "fatal_issues": list(project_data_contract["fatal_issues"]),
+        "result_identity_fingerprint": project_data_contract["result_identity_fingerprint"],
+    }
     # The structures below describe the analysis run as a whole, not an
     # individual source document.  Storing them on every document multiplied a
     # real 12-volume project result roughly twelvefold and caused Streamlit
@@ -870,7 +887,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "17.1-proof-th-cross-section"
+        doc["core_version"] = "18.0-stage1-project-data-contract"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -886,6 +903,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["semantic_project_graph"] = semantic_project_graph
         doc["coverage_acceleration_budget"] = acceleration_budget.as_dict()
         doc["analysis_snapshot"] = analysis_snapshot
+        doc["project_data_contract"] = project_data_contract
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()
         doc["universal_object_discovery_audit"] = universal_discovery_audit

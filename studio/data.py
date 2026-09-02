@@ -13,6 +13,7 @@ from core.report_engine import build_decision_report, build_structured_report
 from core.evidence_registry import build_evidence_index
 from core.object_intelligence import build_object_decisions
 from core.project_review_planner import build_review_plan
+from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
@@ -24,7 +25,25 @@ from core.project_assembly import (
 
 def frames(result):
     if not result: return pd.DataFrame(),pd.DataFrame(),pd.DataFrame()
-    d,f,c=result; return pd.DataFrame(d),pd.DataFrame(f),pd.DataFrame(c)
+    d,f,c=result
+    first = d[0] if isinstance(d,list) and d and isinstance(d[0],dict) else {}
+    contract = first.get('project_data_contract') or {}
+    if contract.get('version') != CONTRACT_VERSION:
+        d,f,c,contract = enforce_project_data_contract(
+            d,f,c,source='ui_result_boundary',
+        )
+        if d:
+            d[0]['project_data_contract'] = contract
+        # Persist the migrated public collections when the session result uses
+        # the normal mutable list containers.  Subsequent Streamlit reruns then
+        # take the fast path instead of rebuilding the contracted structures.
+        try:
+            if isinstance(result[0],list): result[0][:]=d
+            if isinstance(result[1],list): result[1][:]=f
+            if isinstance(result[2],list): result[2][:]=c
+        except (TypeError, IndexError):
+            pass
+    return pd.DataFrame(d),pd.DataFrame(f),pd.DataFrame(c)
 
 def status_group(value: str) -> str:
     t=str(value or '').upper()
@@ -421,9 +440,16 @@ def _report_context(project, docs, comparisons, risks=None, checklist_results=No
 
 def structured_excel_report(project, version, docs, findings, comparisons, *, report_kind='gip', risks=None, checklist_results=None, assembly_rows_data=None):
     doc_records=deepcopy(docs.to_dict('records') if hasattr(docs,'to_dict') else list(docs or []))
+    finding_records=deepcopy(findings.to_dict('records') if hasattr(findings,'to_dict') else list(findings or []))
+    comparison_records=deepcopy(comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or []))
+    doc_records, finding_records, comparison_records, report_data_contract = enforce_project_data_contract(
+        doc_records, finding_records, comparison_records, source="xlsx_report_boundary",
+    )
     docs=doc_records
-    comparison_records=comparisons.to_dict('records') if hasattr(comparisons,'to_dict') else list(comparisons or [])
+    findings=finding_records
     first_record=(doc_records[0] or {}) if doc_records else {}
+    if first_record:
+        first_record["report_data_contract"] = report_data_contract
     register_comparison_codes={'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}
     register_comparisons=[x for x in comparison_records if str(x.get('parameter_code') or '').upper() in register_comparison_codes]
     engineering_comparisons=[x for x in comparison_records if str(x.get('parameter_code') or '').upper() not in register_comparison_codes]
@@ -735,6 +761,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Сверка реестров/чертежей: завершено', f"{_cross_completed(register_comparisons)} из {len(register_comparisons)}"],
         ['Инженерные параметры: завершено', f"{_cross_completed(engineering_comparisons)} из {len(engineering_comparisons)}"],
         ['Контроль согласованности отчёта', 'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует проверки'],
+        ['Контракт данных 18.0', report_data_contract.get('status') or 'Не выполнен'],
+        ['Исправлено значений контрактом', report_data_contract.get('repairs',0)],
+        ['Отпечаток результата', report_data_contract.get('result_identity_fingerprint') or '—'],
         ['Итоговый вывод', final_conclusion],
     ]
     if report_kind=='manager':
@@ -753,6 +782,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
             'Целостность отчёта','Готовность проверки','Причины неполноты',
             'Контроль согласованности отчёта','Итоговый вывод',
+            'Контракт данных 18.0','Исправлено значений контрактом','Отпечаток результата',
         }
         summary_rows=[row for row in summary_rows if row[0] in manager_metrics]
     elif report_kind=='gip':
@@ -1164,6 +1194,22 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Статус':'Ошибка', 'Проверка':f'QG-{index:03d}', 'Результат':'FAILED', 'Причина':issue,
     } for index,issue in enumerate(report_quality_gate.get('issues') or [],1))
     quality_gate_df=_excel_safe_frame(pd.DataFrame(quality_gate_rows))
+    data_contract_rows = [
+        {'Показатель':'Версия контракта','Значение':report_data_contract.get('version')},
+        {'Показатель':'Статус','Значение':report_data_contract.get('status')},
+        {'Показатель':'Исправлено значений','Значение':report_data_contract.get('repairs',0)},
+        {'Показатель':'Документов','Значение':(report_data_contract.get('counts') or {}).get('documents',0)},
+        {'Показатель':'Находок','Значение':(report_data_contract.get('counts') or {}).get('findings',0)},
+        {'Показатель':'Сверок','Значение':(report_data_contract.get('counts') or {}).get('comparisons',0)},
+        {'Показатель':'Отпечаток результата','Значение':report_data_contract.get('result_identity_fingerprint')},
+    ]
+    data_contract_rows.extend({
+        'Показатель':f'Исправление: {kind}', 'Значение':count,
+    } for kind,count in sorted((report_data_contract.get('repairs_by_kind') or {}).items()))
+    data_contract_rows.extend({
+        'Показатель':f'Критическая ошибка {index}', 'Значение':issue,
+    } for index,issue in enumerate(report_data_contract.get('fatal_issues') or [],1))
+    data_contract_df = _excel_safe_frame(pd.DataFrame(data_contract_rows))
 
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
@@ -1251,6 +1297,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
     if report_kind == 'technical':
+        sheets.append(('Контроль данных',data_contract_df))
         if not coverage_matrix_df.empty: sheets.append(('Карта покрытия',coverage_matrix_df))
         if not limitations_df.empty: sheets.append(('Границы автоматизации',limitations_df))
         if not object_df.empty: sheets.append(('Состав проекта', object_df))

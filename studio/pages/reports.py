@@ -4,6 +4,7 @@ from core.expert_review_engine import build_expert_risks
 from core.report_engine import build_structured_report
 from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
+from studio.report_resilience import build_report_isolated
 from core.project_snapshot import project_snapshot_bytes
 
 
@@ -25,12 +26,36 @@ def _checklist_results(first:dict)->list[dict]:
     return list((first.get('automatic_checklist_review') or {}).get('results') or [])
 
 
+def _build_report_bytes(ctx, docs, findings, comparisons, kind, risks, checklist, assembly):
+    def build():
+        return structured_excel_report(
+            st.session_state.project_name,ctx.version,docs,findings,comparisons,
+            report_kind=kind,risks=risks,checklist_results=checklist,
+            assembly_rows_data=assembly,
+        )
+
+    def show_error(exc):
+        st.error('Не удалось сформировать этот файл. Остальные отчёты и проект сохранены.')
+        if st.session_state.get('expert_mode'):
+            st.caption(f'{type(exc).__name__}: {exc}')
+
+    return build_report_isolated(build, show_error)
+
+
 def render(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
     hero('Отчёт','Короткий рабочий результат без технического шума.','Резюме → несоответствия → контроль соответствия → действия')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     docs=_report_documents(docs)
     first=docs.iloc[0].to_dict(); checklist=_checklist_results(first)
+    data_contract=dict(first.get('project_data_contract') or {})
+    if data_contract.get('status')=='FAILED':
+        st.error('Контракт данных 18.0 обнаружил критическое нарушение структуры результата. Экспорт заблокирован, чтобы не сформировать недостоверный отчёт.')
+        if st.session_state.get('expert_mode'):
+            st.json(data_contract)
+        return
+    if data_contract.get('status')=='REPAIRED':
+        st.info(f"Контракт данных 18.0 безопасно нормализовал значений: {data_contract.get('repairs',0)}.")
     assembly=st.session_state.get('object_assembly_rows') or []
     risks=build_expert_risks(comparisons.to_dict('records') if not comparisons.empty else [],assembly,checklist,documents=docs.to_dict('records'))
     report=build_structured_report(st.session_state.project_name,docs.to_dict('records'),comparisons.to_dict('records'),risks=risks,checklist_results=checklist,assembly_rows=assembly)
@@ -49,13 +74,16 @@ def render(ctx):
     cols=st.columns(3)
     with cols[0]:
         card('Резюме руководителя','3–4 листа','Статус проекта, готовность проверки, риски и действия')
-        st.download_button('Скачать резюме',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='manager',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Резюме_руководителя.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
+        payload=_build_report_bytes(ctx,docs,findings,comparisons,'manager',risks,checklist,assembly)
+        if payload is not None:st.download_button('Скачать резюме',data=payload,file_name='ExpertCheck_Резюме_руководителя.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
     with cols[1]:
         card('Отчёт ГИПа','до 6 листов','Резюме, проблемы, Задание, НТД, чек-листы и действия')
-        st.download_button('Скачать отчёт ГИПа',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='gip',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Отчёт_ГИПа.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
+        payload=_build_report_bytes(ctx,docs,findings,comparisons,'gip',risks,checklist,assembly)
+        if payload is not None:st.download_button('Скачать отчёт ГИПа',data=payload,file_name='ExpertCheck_Отчёт_ГИПа.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
     with cols[2]:
         card('Техническое приложение','Полное','Evidence, извлечение и диагностика')
-        st.download_button('Скачать техническое приложение',data=structured_excel_report(st.session_state.project_name,ctx.version,docs,findings,comparisons,report_kind='technical',risks=risks,checklist_results=checklist,assembly_rows_data=assembly),file_name='ExpertCheck_Техническое_приложение.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
+        payload=_build_report_bytes(ctx,docs,findings,comparisons,'technical',risks,checklist,assembly)
+        if payload is not None:st.download_button('Скачать техническое приложение',data=payload,file_name='ExpertCheck_Техническое_приложение.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
     with st.expander('Цифровой снимок для повторной проверки', expanded=False):
         st.caption('Содержит извлечённые страницы, факты, атомарные требования и результаты. Позволяет повторять regression- и AI-проверки без повторного чтения исходных PDF.')
         st.download_button(

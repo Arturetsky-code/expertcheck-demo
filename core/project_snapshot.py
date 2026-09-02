@@ -5,8 +5,10 @@ import hashlib
 import json
 from typing import Any, Iterable
 
+from .project_data_contract import enforce_project_data_contract
 
-SNAPSHOT_VERSION = "1.0-rerunnable-evidence-corpus"
+
+SNAPSHOT_VERSION = "18.0-rerunnable-contracted-evidence-corpus"
 
 
 def _text(value: Any, limit: int = 12000) -> str:
@@ -84,19 +86,25 @@ def project_snapshot_bytes(
     comparisons: Iterable[dict[str, Any]],
 ) -> bytes:
     """Export a portable compressed snapshot for regression and AI continuation."""
-    document_rows = list(documents or [])
-    first = dict(document_rows[0] if document_rows else {})
+    source_documents = list(documents or [])
+    first = dict(source_documents[0] if source_documents else {})
+    document_manifest = [{
+        "Файл": row.get("Файл"), "Тип документа": row.get("Тип документа"),
+        "Страниц": row.get("Страниц"), "core_version": row.get("core_version"),
+    } for row in source_documents]
+    document_rows, finding_rows, comparison_rows, export_contract = enforce_project_data_contract(
+        document_manifest, findings, comparisons, source="snapshot_export_boundary",
+    )
     payload = {
         "format": "ExpertCheck Project Verification Snapshot",
         "version": SNAPSHOT_VERSION,
         "analysis_snapshot": first.get("analysis_snapshot") or {},
         "core_version": first.get("core_version"),
-        "documents": [{
-            "Файл": row.get("Файл"), "Тип документа": row.get("Тип документа"),
-            "Страниц": row.get("Страниц"), "core_version": row.get("core_version"),
-        } for row in document_rows],
-        "findings": list(findings or []),
-        "comparisons": list(comparisons or []),
+        "documents": document_rows,
+        "findings": finding_rows,
+        "comparisons": comparison_rows,
+        "project_data_contract": first.get("project_data_contract") or export_contract,
+        "snapshot_export_contract": export_contract,
         "assignment_requirements": first.get("assignment_requirements") or [],
         "assignment_compliance": first.get("assignment_compliance") or [],
         "assignment_atomic_compliance": first.get("assignment_atomic_compliance") or [],
@@ -117,6 +125,19 @@ def load_project_snapshot(data: bytes) -> dict[str, Any]:
         raise ValueError("Файл не является цифровым снимком ExpertCheck.")
     if not isinstance(payload.get("analysis_snapshot"), dict):
         raise ValueError("В цифровом снимке отсутствует корпус доказательств.")
+    documents, findings, comparisons, contract = enforce_project_data_contract(
+        payload.get("documents"), payload.get("findings"), payload.get("comparisons"),
+        source="snapshot_load_boundary",
+    )
+    if contract.get("fatal_issues"):
+        raise ValueError(
+            "Цифровой снимок не прошёл контракт данных: "
+            + "; ".join(str(item) for item in contract["fatal_issues"][:5])
+        )
+    payload["documents"] = documents
+    payload["findings"] = findings
+    payload["comparisons"] = comparisons
+    payload["snapshot_load_contract"] = contract
     return payload
 
 
@@ -149,5 +170,6 @@ def recheck_project_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
         "review_items_rechecked": len(rows),
         "quality_gate": gate,
         "coverage_matrix": coverage,
+        "project_data_contract": payload.get("snapshot_load_contract") or payload.get("project_data_contract") or {},
         "source_pdf_required": False,
     }

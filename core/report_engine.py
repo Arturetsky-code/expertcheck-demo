@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+import math
 from typing import Any
 from .global_finding_gate import classify_finding
 
@@ -16,11 +17,28 @@ def _group(status: Any) -> str:
     return "info"
 
 
+def _safe_text(value: Any, default: str = "") -> str:
+    """Return stable display text for values coming from pandas/dataframes.
+
+    Report rows may contain ``None``, ``NaN`` or numeric service values.  Those
+    values must never reach string-only operations such as ``strip``/``lower``.
+    """
+    if value is None:
+        return default
+    if isinstance(value, float) and math.isnan(value):
+        return default
+    text = str(value).strip()
+    if text.casefold() in {"nan", "nat", "none", "<na>"}:
+        return default
+    return text or default
+
+
 def _text(row: dict[str, Any], *keys: str) -> str:
     for key in keys:
         value = row.get(key)
-        if value not in (None, "", []):
-            return str(value)
+        text = _safe_text(value)
+        if text:
+            return text
     return ""
 
 
@@ -82,7 +100,7 @@ def build_structured_report(
             "id": _text(row, "comparison_id", "check_code", "rule_id") or f"XCHK-{index+1:03d}",
             "object": _text(row, "object", "Объект", "object_name") or "Объект не определён",
             "parameter": _text(row, "parameter_name", "rule_name", "parameter", "Параметр") or "Проверка",
-            "status": gate.get("user_status") or (
+            "status": _safe_text(gate.get("user_status")) or (
                 "Выявлено несоответствие" if finding_type == "PROJECT_FINDING" else "Требует проверки"
             ),
             "finding_type": finding_type,
@@ -104,8 +122,8 @@ def build_structured_report(
             if key in existing_keys: continue
             vals=' | '.join(str(v) for v in (prop.get('values') or []))
             problems.append({
-                'id':f"PU-CONFLICT-{len(problems)+1:03d}", 'object':obj.get('name') or 'Объект не определён',
-                'parameter':prop.get('parameter_name') or prop.get('parameter_code') or 'Показатель',
+                'id':f"PU-CONFLICT-{len(problems)+1:03d}", 'object':_safe_text(obj.get('name'), 'Объект не определён'),
+                'parameter':_safe_text(prop.get('parameter_name') or prop.get('parameter_code'), 'Показатель'),
                 'status':'РАСХОЖДЕНИЕ', 'priority':'Высокий', 'values':vals,
                 'finding_type':'PROJECT_FINDING',
                 'explanation':'Модель проекта содержит разные структурированные значения одного показателя из нескольких разделов. Требуется проверить и согласовать исходные данные.',
@@ -117,11 +135,25 @@ def build_structured_report(
     # Один инженерный вопрос — одна строка в стандартном отчёте.
     deduped = {}
     for item in problems:
-        key = (item["object"].strip().lower(), item["parameter"].strip().lower(), item["status"].strip().lower())
+        key = tuple(
+            _safe_text(item.get(field), fallback).casefold()
+            for field, fallback in (
+                ("object", "Объект не определён"),
+                ("parameter", "Проверка"),
+                ("status", "Требует проверки"),
+            )
+        )
         if key not in deduped:
+            item["object"] = _safe_text(item.get("object"), "Объект не определён")
+            item["parameter"] = _safe_text(item.get("parameter"), "Проверка")
+            item["status"] = _safe_text(item.get("status"), "Требует проверки")
             deduped[key] = item
     problems = list(deduped.values())
-    problems.sort(key=lambda x: (x["priority"] != "Высокий", x["object"], x["parameter"]))
+    problems.sort(key=lambda x: (
+        _safe_text(x.get("priority")) != "Высокий",
+        _safe_text(x.get("object")).casefold(),
+        _safe_text(x.get("parameter")).casefold(),
+    ))
 
     high_risks = [r for r in risks if str(r.get("level")) == "Высокий"]
     medium_risks = [r for r in risks if str(r.get("level")) == "Средний"]

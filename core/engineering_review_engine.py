@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,19 @@ class CrossSectionDependencyEngine:
     @staticmethod
     def _sections_in_row(row: dict[str, Any]) -> set[str]:
         """Best-effort section extraction from comparison evidence."""
+        explicit=set()
+        for key in ("source_records", "verification_evidence"):
+            records=row.get(key)
+            if not isinstance(records,list):
+                continue
+            for item in records:
+                if not isinstance(item,dict):
+                    continue
+                section=str(item.get("section") or item.get("document_type") or "").strip().upper()
+                if section:
+                    explicit.add(section)
+        if explicit:
+            return explicit
         values=[]
         for key in ("sections","section","document_values","sources","documents"):
             value=row.get(key)
@@ -65,7 +79,11 @@ class CrossSectionDependencyEngine:
         }
         found=set()
         for section,tokens in aliases.items():
-            if any(t in blob for t in tokens):
+            if any(
+                (t.isalpha() and len(t) <= 5 and re.search(rf"(?<![А-ЯA-Z0-9]){re.escape(t)}(?![А-ЯA-Z0-9])", blob))
+                or (len(t) > 5 and t in blob)
+                for t in tokens
+            ):
                 found.add(section)
         return found
 

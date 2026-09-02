@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "17.0-verified-core"
+__version__ = "17.1-proof-th-cross-section"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine
@@ -17,6 +17,7 @@ from .object_register_engine import ObjectRegisterEngine, build_registry
 from .passport_engine import build_object_passports, passport_summary
 from .general_plan_engine import GeneralPlanRegisterEngine, GeneralPlanEntry
 from .register_reconciliation import RegisterReconciliationEngine, ReconciledObject, reconcile_register
+from .cross_section_verification import qualify_cross_section_verdicts, technology_proof_summary
 from .project_profiles import ProjectProfileRegistry, ProjectProfile
 
 from .object_identity import ObjectIdentityEngine, IdentityDecision

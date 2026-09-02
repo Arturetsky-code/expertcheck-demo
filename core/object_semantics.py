@@ -27,6 +27,8 @@ ENGINEERING_PARAMETERS = {
     "MOISTURE", "BULK_DENSITY",
     "PRESSURE", "VOLTAGE", "DIAMETER", "LINE_COUNT", "TEMPERATURE",
     "VOLUME", "DEPTH", "WIDTH", "AREA_ROOM", "AREA_ROOM_SUM",
+    "SHIFT_DURATION", "DESIGN_CAPACITY", "STORAGE_CAPACITY", "STORAGE_MASS",
+    "EQUIPMENT_COUNT", "PIPELINE_CAPACITY", "PUMP_HEAD",
 }
 
 FILE_EXTENSIONS = (".pdf", ".xml", ".sig", ".zip", ".rar", ".7z", ".dwg", ".dxf", ".docx", ".xlsx")
@@ -302,6 +304,10 @@ _APPLICABILITY: dict[str, dict[str, str]] = {
         "CAPACITY": "required", "POWER_INSTALLED": "expected", "POWER_CALCULATED": "conditional",
         "PERSONNEL": "expected", "QUANTITY": "conditional", "AREA_BUILD": "conditional",
         "MOISTURE": "expected", "BULK_DENSITY": "expected",
+        "DESIGN_CAPACITY": "required", "SHIFT_DURATION": "expected",
+        "EQUIPMENT_COUNT": "expected", "STORAGE_CAPACITY": "conditional",
+        "STORAGE_MASS": "conditional", "PIPELINE_CAPACITY": "conditional",
+        "PUMP_HEAD": "conditional",
     },
     "PIPELINE": {
         "LENGTH": "required", "DIAMETER": "expected", "PRESSURE": "expected", "CAPACITY": "conditional", "FLOW_RATE": "expected", "TEMPERATURE": "conditional", "LINE_COUNT": "conditional",

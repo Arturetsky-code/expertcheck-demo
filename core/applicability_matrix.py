@@ -26,6 +26,14 @@ _SECTION_ROLES: dict[str, tuple[str, ...]] = {
     "RES_VOLUME": ("ТХ", "ИОС2", "ПЗ"),
     "MOISTURE": ("ТХ", "ПЗ"),
     "BULK_DENSITY": ("ТХ", "ПЗ"),
+    "PERSONNEL": ("ТХ", "ПЗ", "ПОС"),
+    "SHIFT_DURATION": ("ТХ", "ПЗ", "ПОС"),
+    "DESIGN_CAPACITY": ("ТХ", "ПЗ", "ООС", "ИОС"),
+    "STORAGE_CAPACITY": ("ТХ", "ПЗ", "ПЗУ", "ООС", "ПБ"),
+    "STORAGE_MASS": ("ТХ", "ПЗ", "ПЗУ", "ООС", "ПБ"),
+    "EQUIPMENT_COUNT": ("ТХ", "ПЗ", "ПОС", "ИОС"),
+    "PIPELINE_CAPACITY": ("ТХ", "ИОС", "ПЗ", "ООС"),
+    "PUMP_HEAD": ("ТХ", "ИОС", "ПЗ", "ПЗУ"),
 }
 
 

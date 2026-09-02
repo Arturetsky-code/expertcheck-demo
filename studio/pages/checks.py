@@ -15,15 +15,17 @@ def render(ctx):
     if df.empty:
         return empty('Для подтверждённых объектов сопоставимые характеристики не найдены.')
 
-    status=df.get('status',pd.Series(dtype=str)).fillna('').astype(str)
-    bad_mask=status.str.contains('РАСХОЖД|КОНФЛИКТ',case=False,regex=True)
-    warn_mask=status.str.contains('НЕДОСТАТОЧ|УТОЧ|НЕ ПРОВЕР',case=False,regex=True)
-    ok_mask=status.str.contains('СОВПАД',case=False,regex=True)
+    status=df.get('status',pd.Series('',index=df.index,dtype=str)).fillna('').astype(str)
+    final_kind=df.get('final_verification_kind',pd.Series('',index=df.index,dtype=str)).fillna('').astype(str).str.upper()
+    has_final=final_kind.ne('')
+    bad_mask=final_kind.eq('PROJECT_FINDING') | (~has_final & status.str.contains('РАСХОЖД|КОНФЛИКТ',case=False,regex=True))
+    warn_mask=final_kind.isin({'REVIEW_QUESTION','SYSTEM_LIMITATION'}) | (~has_final & status.str.contains('НЕДОСТАТОЧ|УТОЧ|НЕ ПРОВЕР',case=False,regex=True))
+    ok_mask=final_kind.eq('VERIFIED_OK') | (~has_final & status.str.contains('СОВПАД',case=False,regex=True))
     a,b,c,d=st.columns(4)
     with a: card('Проверок',len(df),'Всего сопоставленных характеристик')
-    with b: card('Совпадает',int(ok_mask.sum()),'Подтверждено разделами','ok')
-    with c: card('Требует проверки',int(warn_mask.sum()),'Недостаточно доказательств','warn')
-    with d: card('Расхождения',int(bad_mask.sum()),'Приоритетная проверка','bad')
+    with b: card('Завершено L5',int(ok_mask.sum()),'Строгая сверка пройдена','ok')
+    with c: card('Не завершено',int(warn_mask.sum()),'Не пройден контракт доказательств','warn')
+    with d: card('Несоответствия L5',int(bad_mask.sum()),'Адресные расхождения','bad')
 
     tab_attention,tab_all=st.tabs(['Требует внимания','Все результаты'])
     for tab,base_view in ((tab_attention,df[bad_mask|warn_mask].copy()),(tab_all,df.copy())):
@@ -35,8 +37,8 @@ def render(ctx):
             if view.empty:
                 st.success('Результатов, требующих внимания, нет.')
                 continue
-            compact=['object','parameter_name','status','preliminary_compliance','document_values']
-            labels={'object':'Объект','parameter_name':'Характеристика','status':'Результат','preliminary_compliance':'Предварительная оценка','document_values':'Значения по разделам'}
+            compact=['object','parameter_name','verification_state','evidence_level','status','document_values']
+            labels={'object':'Объект','parameter_name':'Характеристика','verification_state':'Итог ExpertCheck','evidence_level':'Уровень','status':'Диагностический статус','document_values':'Значения по разделам'}
             st.dataframe(view[[c for c in compact if c in view]].rename(columns=labels),width='stretch',hide_index=True,height=430)
             choices=[]; mapping={}
             for idx,row in view.iterrows():
@@ -55,6 +57,12 @@ def render(ctx):
                     if owners: st.write('Профильный источник данных: ' + ', '.join(str(x) for x in owners))
                     if dependents: st.write('Разделы для контрольной сверки: ' + ', '.join(str(x) for x in dependents))
                     if row.get('dependency_rationale'): st.caption(str(row.get('dependency_rationale')))
+                gate=row.get('cross_section_gate') or {}
+                if gate:
+                    st.markdown('**Строгий доказательный gate:** ' + ('пройден' if gate.get('passed') else 'не пройден'))
+                    st.write('Фактически найден владелец: ' + (', '.join(gate.get('owner_present') or []) or '—'))
+                    st.write('Фактически найден контроль: ' + (', '.join(gate.get('control_present') or []) or '—'))
+                    if gate.get('reasons'): st.caption('Причины: ' + ' | '.join(gate.get('reasons') or []))
                 norms=row.get('normative_requirements') or []
                 if norms:
                     with st.expander('Нормативный контекст · предварительная оценка'):

@@ -2,7 +2,12 @@ from __future__ import annotations
 from typing import Any
 from .verification_core import classify_verification, domain_summary
 
-DOMAIN_LABELS={"assignment":"Задание на проектирование","normative":"НТД","checklist":"Чек-листы"}
+DOMAIN_LABELS={
+    "assignment":"Задание на проектирование",
+    "normative":"НТД",
+    "checklist":"Чек-листы",
+    "comparison":"Межраздельная сверка",
+}
 
 
 def _txt(v:Any)->str:return str(v or '').strip()
@@ -157,11 +162,55 @@ def build_review_plan(
             'verified_core_gate_state':_txt(row.get('verified_core_gate_state')),
             'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or []),
         })
+    comparison_rows=list(comparisons or [])
+    for i,row in enumerate(comparison_rows,1):
+        q=classify_verification(row,'comparison')
+        evidence=list(row.get('verification_evidence') or row.get('source_records') or [])
+        diagnostics=dict(row.get('dependency_diagnostics') or {})
+        items.append({
+            'plan_id':_txt(row.get('check_code') or row.get('comparison_id') or f'XSEC-{i:04d}'),
+            'domain':'Межраздельная сверка','domain_code':'comparison',
+            'title':f"{_txt(row.get('object'))}: {_txt(row.get('parameter_name') or row.get('rule_name'))}".strip(': '),
+            'check_type':_txt(row.get('check_type') or 'Сводная межраздельная проверка'),
+            'scope':_txt(row.get('comparison_scope') or 'default'),
+            'expected_evidence':'Профильный раздел-владелец и независимый контрольный раздел',
+            'entity':_txt(row.get('object')),'metric':_txt(row.get('parameter_code') or row.get('parameter_name')),
+            'required_value':None,'unit':_txt(row.get('unit')),
+            'proof_kind':_txt(row.get('proof_kind')),
+            'deep_evidence_state':_txt(row.get('deep_evidence_state')),
+            'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
+            'deep_evidence_reasons':list(row.get('cross_section_gate_reasons') or row.get('deep_evidence_reasons') or []),
+            'adversarial_reasons':list(row.get('cross_section_gate_reasons') or row.get('adversarial_reasons') or []),
+            'evidence_candidate_count':len(evidence),
+            'expected_sections':list(row.get('data_owner_sections') or [])+list(row.get('dependent_sections') or []),
+            'status':_legacy_status(q['verification_kind']),**q,
+            'source_id':_txt(row.get('check_code') or row.get('comparison_id')),
+            'recommendation':_txt(row.get('comment') or row.get('recommendation')),
+            'coverage_archetype':'CROSS_SECTION_RECONCILIATION',
+            'coverage_state':_txt(row.get('coverage_state')),
+            'coverage_reason_code':_txt(row.get('coverage_reason_code')),
+            'coverage_reason':_txt(row.get('coverage_reason')),
+            'missing_evidence_slots':list(dict.fromkeys(
+                list(diagnostics.get('owner_missing') or [])+list(diagnostics.get('control_missing') or [])
+            )),
+            'expected_evidence_route':list(row.get('data_owner_sections') or [])+list(row.get('dependent_sections') or []),
+            'recipe_status':'EXECUTABLE',
+            'evidence_level':_txt(row.get('evidence_level') or 'L0'),
+            'evidence_level_reason':_txt(row.get('evidence_level_reason')),
+            'evidence_coverage_pct':round(100*len(evidence)/max(2,len(evidence)),1) if evidence else 0,
+            'semantic_consensus_state':'NOT_REQUIRED',
+            'semantic_consensus_completed':0,
+            'checker_family':_txt(row.get('checker_family')),
+            'checker_mode':_txt(row.get('checker_mode')),
+            'verified_core_gate_state':_txt(row.get('verified_core_gate_state') or row.get('cross_section_gate_state')),
+            'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or row.get('cross_section_gate_reasons') or []),
+        })
 
     raw_summaries={
         'assignment':domain_summary(assignment,'assignment'),
         'normative':domain_summary(normative,'normative'),
         'checklist':domain_summary(checklist,'checklist'),
+        'comparison':domain_summary(comparison_rows,'comparison'),
     }
     domains={}
     for code,s in raw_summaries.items():

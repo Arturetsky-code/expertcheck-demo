@@ -257,6 +257,8 @@ def _compact_technical_frames(docs, findings, comparisons, report):
     comparison_columns = [
         'check_id','object','parameter','status','priority','values_by_section',
         'explanation','sources','genplan_position','strong_evidence_count',
+        'owner_sections','control_sections','owner_present','control_present',
+        'verification_kind','evidence_level','cross_section_gate_state','gate_reasons',
     ]
     document_columns = [
         'document','document_type','page_count','size_mb','status','completeness_status',
@@ -290,6 +292,14 @@ def _compact_technical_frames(docs, findings, comparisons, report):
             'sources':row.get('sources') or row.get('sections') or '',
             'genplan_position':row.get('genplan_position') or row.get('Позиция по ГП') or '',
             'strong_evidence_count':row.get('strong_evidence_count') or 0,
+            'owner_sections':', '.join(row.get('data_owner_sections') or []),
+            'control_sections':', '.join(row.get('dependent_sections') or []),
+            'owner_present':', '.join((row.get('dependency_diagnostics') or {}).get('owner_present') or []),
+            'control_present':', '.join((row.get('dependency_diagnostics') or {}).get('control_present') or []),
+            'verification_kind':row.get('final_verification_kind') or row.get('verification_kind') or '',
+            'evidence_level':row.get('evidence_level') or '',
+            'cross_section_gate_state':row.get('cross_section_gate_state') or '',
+            'gate_reasons':' | '.join(row.get('cross_section_gate_reasons') or []),
         })
     first_doc=_first_document_record(docs)
     plausibility_rows=[{
@@ -393,7 +403,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     engineering_comparisons=[x for x in comparison_records if str(x.get('parameter_code') or '').upper() not in register_comparison_codes]
     def _cross_completed(rows):
         completed_tokens={'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО','ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ','РАСХОЖДЕНИЕ','КОНФЛИКТ','КОНФЛИКТ ВНУТРИ РАЗДЕЛА'}
-        return sum(str(x.get('status') or x.get('result') or '').strip().upper() in completed_tokens for x in rows)
+        return sum(
+            str(x.get('final_verification_kind') or '').upper() in {'VERIFIED_OK','PROJECT_FINDING'}
+            or (
+                not x.get('final_verification_kind')
+                and str(x.get('status') or x.get('result') or '').strip().upper() in completed_tokens
+            )
+            for x in rows
+        )
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
     checklist_results=deepcopy(list(checklist_results or []))
@@ -404,10 +421,13 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     assignment_for_report=list(first_record.get('assignment_compliance') or [])
     normative_for_report=list(first_record.get('normative_compliance_audit') or [])
     checklist_for_report={'results': checklist_results}
+    from core.cross_section_verification import qualify_cross_section_verdicts
+    qualify_cross_section_verdicts(engineering_comparisons)
     report_verified_gate=enforce_project_verdicts(
         assignment_rows=assignment_for_report,
         normative_rows=normative_for_report,
         checklist_review=checklist_for_report,
+        comparisons=engineering_comparisons,
     )
     if first_record:
         first_record['assignment_compliance']=assignment_for_report
@@ -417,7 +437,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'results': checklist_results,
         }
         first_record['verified_core_report_gate']=report_verified_gate
-    report = _report_context(project, docs, comparisons, risks, checklist_results, assembly_rows_data)
+    report = _report_context(project, docs, comparison_records, risks, checklist_results, assembly_rows_data)
     summary = report['summary']
     out = io.BytesIO()
 
@@ -460,7 +480,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     # from legacy statuses would discard adversarial downgrades.
     review_plan=dict(first_record.get('project_review_plan') or {})
     if not review_plan:
-        review_plan=build_review_plan(doc_records,checklist_results or [])
+        review_plan=build_review_plan(
+            assignment_rows=assignment_for_report,
+            normative_rows=normative_for_report,
+            checklist_review=checklist_for_report,
+            comparisons=engineering_comparisons,
+        )
     review_domains=review_plan.get('domains') or {}
     coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
     semantic_engine_summary=dict(first_record.get('semantic_evidence_engine') or {})
@@ -579,6 +604,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     assignment_plan=review_domains.get('Задание на проектирование',{})
     normative_plan=review_domains.get('НТД',{})
     checklist_plan=review_domains.get('Чек-листы',{})
+    comparison_plan=review_domains.get('Межраздельная сверка',{})
     report_quality_gate=dict(first_record.get('report_quality_gate') or {})
     normative_registry_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру')
     normative_registry_unverified=sum(1 for x in normative_rows if x.get('registry_match_state')=='MATCHED_UNVERIFIED')
@@ -587,9 +613,13 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         int((semantic_engine_summary.get(code) or {}).get('advisory_completed') or 0)
         for code in ('assignment','checklist')
     )
-    total_project_findings=int(summary.get('project_findings',0) or 0)+int(review_plan.get('project_findings',0) or 0)
-    total_review_questions=int(summary.get('review_questions',0) or 0)+int(review_plan.get('review_questions',0) or 0)
-    total_system_limitations=int(summary.get('system_limitations',0) or 0)+int(review_plan.get('system_limitations',0) or 0)
+    # ``summary`` already contains comparison results. Since comparisons are now
+    # a first-class plan domain, add only the other three domains here to avoid
+    # counting every inter-section result twice in the report headline.
+    noncomparison_domains=[assignment_plan,normative_plan,checklist_plan]
+    total_project_findings=int(summary.get('project_findings',0) or 0)+sum(int(x.get('project_findings',x.get('issue',0)) or 0) for x in noncomparison_domains)
+    total_review_questions=int(summary.get('review_questions',0) or 0)+sum(int(x.get('review_questions',x.get('review',0)) or 0) for x in noncomparison_domains)
+    total_system_limitations=int(summary.get('system_limitations',0) or 0)+sum(int(x.get('system_limitations',x.get('system_limitation',0)) or 0) for x in noncomparison_domains)
     semantic_pending=sum(
         int((semantic_engine_summary.get(code) or {}).get('judge_pending') or 0)
         + int((semantic_engine_summary.get(code) or {}).get('not_selected') or 0)
@@ -673,6 +703,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Чек-листы: покрытие найденными кандидатами L3–L5, %', checklist_plan.get('evidence_coverage_pct',0)],
         ['Чек-листы: подтверждено', checklist_plan.get('confirmed',0)],
         ['Чек-листы: выявлено несоответствий', checklist_plan.get('issue',0)],
+        ['Межраздельная сверка: строгое покрытие L5, %', comparison_plan.get('coverage_pct',0)],
+        ['Межраздельная сверка: завершено', comparison_plan.get('completed',0)],
+        ['Межраздельная сверка: несоответствий', comparison_plan.get('issue',0)],
         ['Сверка реестров/чертежей: завершено', f"{_cross_completed(register_comparisons)} из {len(register_comparisons)}"],
         ['Инженерные параметры: завершено', f"{_cross_completed(engineering_comparisons)} из {len(engineering_comparisons)}"],
         ['Контроль согласованности отчёта', 'Пройден' if report_quality_gate.get('status')=='PASSED' else 'Требует проверки'],
@@ -690,6 +723,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Задание: покрытие найденными кандидатами L3–L5, %','Чек-листы: покрытие найденными кандидатами L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
             'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
+            'Межраздельная сверка: строгое покрытие L5, %','Межраздельная сверка: завершено','Межраздельная сверка: несоответствий',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
             'Целостность отчёта','Готовность проверки','Причины неполноты',
             'Контроль согласованности отчёта','Итоговый вывод',
@@ -1156,7 +1190,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 for x in rows or []
             )
         cross_total=len(comparison_records)
-        cross_ok=sum(1 for x in comparison_records if str(x.get('status') or x.get('result') or '').strip().upper() in {'СОВПАДАЕТ','СООТВЕТСТВУЕТ','ПОДТВЕРЖДЕНО'})
+        cross_ok=sum(str(x.get('final_verification_kind') or '').upper()=='VERIFIED_OK' for x in comparison_records)
         cross_issues=comparison_count(comparison_records,'PROJECT_FINDING')
         cross_attention=comparison_count(comparison_records,'REVIEW_QUESTION')+comparison_count(comparison_records,'SYSTEM_LIMITATION')
         readiness=pd.DataFrame([

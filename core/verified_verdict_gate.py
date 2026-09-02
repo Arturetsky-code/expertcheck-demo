@@ -174,12 +174,14 @@ def enforce_project_verdicts(
     assignment_rows: list[dict[str, Any]],
     normative_rows: list[dict[str, Any]],
     checklist_review: dict[str, Any],
+    comparisons: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     checklist_rows = list((checklist_review or {}).get("results") or [])
     domains = {
         "assignment": enforce_verified_verdicts(assignment_rows, domain="assignment"),
         "normative": enforce_verified_verdicts(normative_rows, domain="normative"),
         "checklist": enforce_verified_verdicts(checklist_rows, domain="checklist"),
+        "comparison": enforce_verified_verdicts(comparisons or [], domain="comparison"),
     }
     return {
         "version": GATE_VERSION,

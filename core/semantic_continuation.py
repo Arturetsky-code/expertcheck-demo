@@ -23,7 +23,7 @@ from .verification_core import domain_summary
 from .verified_verdict_gate import enforce_project_verdicts
 
 
-CONTINUATION_VERSION = "17.0-verified-core"
+CONTINUATION_VERSION = "17.1-proof-th-cross-section"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -180,7 +180,7 @@ def continue_semantic_analysis(
         assignment_rows=assignment_atomic,
         normative_rows=normative_rows,
         checklist_review=automatic_review,
-        comparisons=gate_comparisons,
+        comparisons=[],
     )
     _progress(progress_callback, 82, "Контроль доказательств", "Повторяем fail-closed проверку адресных доказательств")
     deep_review = run_deep_evidence_review(
@@ -200,6 +200,7 @@ def continue_semantic_analysis(
         assignment_rows=assignment_atomic,
         normative_rows=normative_rows,
         checklist_review=automatic_review,
+        comparisons=gate_comparisons,
     )
     assignment_rows = aggregate_atomic_results(parent_rows, assignment_atomic)
     from .verified_verdict_gate import enforce_verified_verdicts

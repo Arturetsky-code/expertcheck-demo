@@ -28,6 +28,7 @@ from .project_profiles import ProjectProfileRegistry
 from .xml_engine import XmlEngine
 from .cross_source_consistency import build_pdf_xml_checks
 from .cross_section_consistency import build_cross_section_checks
+from .cross_section_verification import qualify_cross_section_verdicts, technology_proof_summary
 from .object_semantics import enrich_findings_with_object_semantics, is_service_object_candidate, object_candidate_evidence
 from .universal_object_discovery import discover_object_candidates
 from .knowledge_engine import default_knowledge_engine
@@ -348,7 +349,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         item["core2_confidence"] = score
         item["confidence_factors"] = factors
-        item["core_version"] = "17.0-verified-core"
+        item["core_version"] = "17.1-proof-th-cross-section"
 
     # Универсальный поиск выполняется после распознавания контекста таблиц.
     discovered_objects, universal_discovery_audit = discover_object_candidates(findings)
@@ -546,6 +547,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         _enrich_rules(categorical_checks,registry)
     except Exception as exc:
         pipeline_errors.append({'stage':'categorical_consistency','error':str(exc)})
+    # The final high-trust pass used to discard the dependency enrichment that
+    # had been calculated for an earlier diagnostic pass. Reapply the owner →
+    # control matrix to the exact rows consumed by reports and public metrics.
+    engineering_review.enrich_comparisons(cross_section_checks)
+    cross_section_gate_summary=qualify_cross_section_verdicts(cross_section_checks)
+    technology_proof=technology_proof_summary(cross_section_checks)
     atomic_requirement_graph = {"version":"1.0","atoms":[],"summary":{"source_requirements":0,"atomic_requirements":0}}
     universal_project_fact_graph = {"version":"1.0","facts":[],"passages":[],"summary":{"facts":0}}
     assignment_atomic_rows = []
@@ -652,7 +659,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     evidence_graph = build_evidence_graph(findings, comparisons)
     progress(91, "Формирование результата", "Рассчитываем риски, статусы и цифровые паспорта")
     for item in comparisons:
-        item["core_version"] = "17.0-verified-core"
+        item["core_version"] = "17.1-proof-th-cross-section"
         item["dem_model_quality"] = model_quality.get("model_quality_index", 0.0)
     for item in findings:
         item["dem_object_count"] = dem.metadata.get("object_count", 0)
@@ -724,7 +731,9 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         assignment_rows=assignment_atomic_rows,
         normative_rows=normative_compliance_audit,
         checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
-        comparisons=cross_section_checks,
+        # Межраздельный Proof-контур детерминирован и уже имеет адресные
+        # структурированные доказательства; не расходуем на него AI-очередь.
+        comparisons=[],
     )
     review_plan = build_review_plan(
         assignment_rows=assignment_compliance,
@@ -763,6 +772,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             assignment_rows=assignment_atomic_rows,
             normative_rows=normative_compliance_audit,
             checklist_review=automatic_review if isinstance(automatic_review,dict) else {},
+            comparisons=cross_section_checks,
         )
         deep_evidence_review['verified_core_gate']=verified_core_gate_summary
 
@@ -860,7 +870,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # on every row and attach the run-level evidence graph only to the first row;
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
-        doc["core_version"] = "17.0-verified-core"
+        doc["core_version"] = "17.1-proof-th-cross-section"
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue
@@ -869,6 +879,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["high_value_sanitization_audit"] = high_value_sanitization_audit
         doc["report_quality_gate"] = report_quality_gate
         doc["verified_core_gate"] = verified_core_gate_summary
+        doc["cross_section_verified_gate"] = cross_section_gate_summary
+        doc["technology_proof_summary"] = technology_proof
         doc["coverage_matrix"] = coverage_matrix
         doc["semantic_evidence_engine"] = semantic_engine_summary
         doc["semantic_project_graph"] = semantic_project_graph

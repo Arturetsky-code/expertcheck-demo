@@ -18,7 +18,8 @@ def validate_review_plan(
     issues: list[str] = []
     domains = plan.get("domains") or {}
     checked_domains = 0
-    for code in ("assignment", "normative", "checklist"):
+    required_domain_codes=("assignment", "normative", "checklist", "comparison") if "comparison" in domains else ("assignment", "normative", "checklist")
+    for code in required_domain_codes:
         summary = domains.get(code) or {}
         if not summary:
             issues.append(f"Отсутствует сводка контура {code}.")
@@ -116,7 +117,7 @@ def validate_review_plan(
             issues.append(f"Межраздельная сверка «{parameter or 'без показателя'}» не содержит сопоставленные значения.")
 
     return {
-        "status": "PASSED" if not issues and checked_domains == 3 else "FAILED",
+        "status": "PASSED" if not issues and checked_domains == len(required_domain_codes) else "FAILED",
         "issues": issues,
         "checked_domains": checked_domains,
         "checks": len(plan.get("items") or []),

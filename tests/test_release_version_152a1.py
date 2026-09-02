@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 17.0 · Verified Core"
-    assert core_version == "17.0-verified-core"
+    assert _app_version() == "ExpertCheck 17.1 Proof · ТХ + межраздельная сверка"
+    assert core_version == "17.1-proof-th-cross-section"
 
 
 # Backward-compatible names imported by cumulative release gates.

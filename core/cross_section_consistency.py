@@ -41,6 +41,16 @@ TOLERANCES: dict[str, tuple[float, float, str]] = {
     "LINE_COUNT": (0.0, 0.0, "Высокий"),
     "MOISTURE": (0.05, 0.005, "Высокий"),
     "BULK_DENSITY": (0.01, 0.005, "Высокий"),
+    # Технологический Proof-контур. Эти коды уже присутствуют в библиотеке
+    # свойств/межраздельных зависимостей, но до 17.0 не попадали в числовую
+    # сверку и поэтому не могли дать автоматический результат.
+    "SHIFT_DURATION": (0.0, 0.0, "Средний"),
+    "DESIGN_CAPACITY": (0.01, 0.002, "Высокий"),
+    "STORAGE_CAPACITY": (0.1, 0.001, "Высокий"),
+    "STORAGE_MASS": (0.1, 0.001, "Высокий"),
+    "EQUIPMENT_COUNT": (0.0, 0.0, "Средний"),
+    "PIPELINE_CAPACITY": (0.01, 0.005, "Высокий"),
+    "PUMP_HEAD": (0.05, 0.002, "Высокий"),
 }
 
 SECTION_FAMILIES = (
@@ -85,6 +95,13 @@ EXPECTED_SECTION_HINTS: dict[str, tuple[str, ...]] = {
     "LINE_COUNT": ("ПЗ", "ТХ", "ИОС"),
     "MOISTURE": ("ПЗ", "ТХ"),
     "BULK_DENSITY": ("ПЗ", "ТХ"),
+    "SHIFT_DURATION": ("ТХ", "ПЗ", "ПОС"),
+    "DESIGN_CAPACITY": ("ТХ", "ПЗ", "ООС", "ИОС"),
+    "STORAGE_CAPACITY": ("ТХ", "ПЗ", "ПЗУ", "ООС", "ПБ"),
+    "STORAGE_MASS": ("ТХ", "ПЗ", "ПЗУ", "ООС", "ПБ"),
+    "EQUIPMENT_COUNT": ("ТХ", "ПЗ", "ПОС", "ИОС"),
+    "PIPELINE_CAPACITY": ("ТХ", "ИОС", "ПЗ", "ООС"),
+    "PUMP_HEAD": ("ТХ", "ИОС", "ПЗ", "ПЗУ"),
 }
 
 
@@ -254,16 +271,20 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
     - не выбирает автоматически "правильный" источник.
     """
     usable = [item for item in findings if _usable(item)]
-    by_code: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    by_code: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for item in usable:
         code = canonical_parameter_code(item.get("parameter_code"))
         item["parameter_code"] = code
         scope = value_scope(item)
         item["comparison_scope"] = scope
-        by_code[(code, scope)].append(item)
+        normalized = normalize_engineering_value(item)
+        # Единицы являются частью смыслового ключа. Значения разных физических
+        # размерностей нельзя сопоставлять только потому, что у них один код.
+        canonical_unit = str((normalized.unit if normalized else item.get("unit")) or "").strip()
+        by_code[(code, scope, canonical_unit)].append(item)
 
     rows: list[dict[str, Any]] = []
-    for (code, comparison_scope), code_items in by_code.items():
+    for (code, comparison_scope, canonical_unit), code_items in by_code.items():
         for object_items in _merge_name_groups(code_items):
             object_items = _dedupe(object_items)
             if not object_items:
@@ -335,14 +356,32 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 continue
             parameter_name = parameter_display_name(code)
             normalized_first = next((normalize_engineering_value(x) for x in object_items if normalize_engineering_value(x)), None)
-            unit = normalized_first.unit if normalized_first else str(next((x.get("unit") for x in object_items if x.get("unit")), ""))
+            unit = canonical_unit or (normalized_first.unit if normalized_first else str(next((x.get("unit") for x in object_items if x.get("unit")), "")))
             abs_tol, rel_tol, priority = TOLERANCES[code]
             applicability_matrix = section_expectations(object_type, code)
             expected = tuple(expected_sections(object_type, code))
             missing_hints = [section for section in expected if section not in section_values]
             source_parts = [f"{section}: {value:g} {unit}".strip() for section, value in sorted(section_values.items())]
             evidence_parts = []
+            source_records = []
             for item in sorted(object_items, key=lambda x: (section_family(x), str(x.get("document") or ""), int(x.get("page") or 0))):
+                normalized_item = normalize_engineering_value(item)
+                locator = item.get("source_locator") if isinstance(item.get("source_locator"), dict) else None
+                source_records.append({
+                    "document": str(item.get("document") or ""),
+                    "page": item.get("page"),
+                    "section": section_family(item),
+                    "object": name,
+                    "object_id": object_id,
+                    "parameter_code": code,
+                    "parameter_name": parameter_name,
+                    "value": normalized_item.value if normalized_item else numeric_value(item),
+                    "unit": normalized_item.unit if normalized_item else str(item.get("unit") or unit),
+                    "source_locator": locator,
+                    "source_fingerprint": independent_source_key(item),
+                    "trusted_for_mismatch": _mismatch_trusted(item),
+                    "text": str(item.get("value_text") or item.get("context") or ""),
+                })
                 evidence_parts.append(
                     f"{section_family(item)} — {item.get('document')}, стр. {item.get('page') or '-'}: "
                     f"{name} · {parameter_name} — {numeric_value(item):g} {item.get('unit') or unit}".strip()
@@ -395,6 +434,8 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 "documents": ", ".join(sorted(section_values)),
                 "document_values": " | ".join(source_parts),
                 "sources": " | ".join(evidence_parts),
+                "verification_evidence": source_records,
+                "source_records": source_records,
                 "internal_conflict_sections": ", ".join(internal_conflicts),
                 "comment": (
                     "Проверить и синхронизировать значения в исходных разделах."

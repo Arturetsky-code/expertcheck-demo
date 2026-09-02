@@ -20,7 +20,7 @@ def _domain_card(label,summary):
 
 def render(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
-    hero('Проверка проекта','ExpertCheck формирует план проверки под конкретный комплект и выполняет только применимые проверки.','Три главных контура: Задание · НТД · Чек-листы')
+    hero('Проверка проекта','ExpertCheck формирует план проверки под конкретный комплект и выполняет только применимые проверки.','Четыре контура: Задание · НТД · Чек-листы · Межраздельная сверка')
     if docs.empty:return empty('Сначала загрузите и обработайте комплект проекта.')
     first=_first(docs)
     plan=dict(first.get('project_review_plan') or {})
@@ -32,10 +32,11 @@ def render(ctx):
             comparisons=comparisons.to_dict('records') if not comparisons.empty else [],
         )
     domains=plan.get('domains') or {}
-    c1,c2,c3=st.columns(3)
+    c1,c2,c3,c4=st.columns(4)
     with c1:_domain_card('Задание на проектирование',domains.get('assignment') or {})
     with c2:_domain_card('Нормативные требования',domains.get('normative') or {})
     with c3:_domain_card('Корпоративные чек-листы',domains.get('checklist') or {})
+    with c4:_domain_card('Межраздельная сверка',domains.get('comparison') or {})
 
     st.caption('Строгое покрытие L5 показывает завершённые выводы. Доказательное покрытие L3–L5 отдельно показывает адресные материалы, которые уже найдены и готовы к проверке. Ненайденные сведения и ограничения алгоритма не считаются несоответствиями проекта.')
 

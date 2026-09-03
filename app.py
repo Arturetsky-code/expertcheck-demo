@@ -15,6 +15,7 @@ try:
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
     from core.free_ai_patch import install as install_free_ai_patch
     from core.gemini_runtime_preference import install as install_gemini_runtime_preference
+    from core.quality_gates_patch import install as install_quality_gates
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
@@ -22,8 +23,9 @@ except Exception as startup_error:
     st.stop()
 install_free_ai_patch()
 install_gemini_runtime_preference()
+install_quality_gates()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.2 Candidate · Free Agent Quality'
+VERSION='ExpertCheck 18.3 Candidate · Quality Gates'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -52,6 +54,14 @@ if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('external_ai_provider') == 'OpenRouter':
         st.session_state.external_ai_provider = 'Отключён'
     st.session_state._resilient_free_ai_181_migrated = True
+# 18.3 changes the semantic contract and therefore invalidates old qualification
+# state. The stored protocol remains downloadable outside the session, but it
+# must not authorize L5 decisions under the new quality gates.
+if not st.session_state.get('_quality_gates_183_migrated'):
+    st.session_state.provider_benchmark_results = {}
+    st.session_state.provider_benchmark_runs = {}
+    st.session_state.semantic_execution_checkpoint = {}
+    st.session_state._quality_gates_183_migrated = True
 # Apply deferred navigation before the sidebar radio widget is instantiated.
 _pending_page = st.session_state.pop('_navigate_to', None)
 if _pending_page:

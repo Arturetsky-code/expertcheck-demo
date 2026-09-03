@@ -13,13 +13,15 @@ try:
     from studio.pages import PAGES
     from studio.auth import auth_screen
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
+    from core.free_ai_patch import install as install_free_ai_patch
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
+install_free_ai_patch()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.1 Candidate · Resilient Free AI'
+VERSION='ExpertCheck 18.2 Candidate · Free Agent Quality'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -28,7 +30,7 @@ if not st.session_state.get('auth_user'):
     st.stop()
 for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None}.items():
     st.session_state.setdefault(k,v)
-# One-time migration from the 16.0 defaults.  Explicit non-default choices are
+# One-time migration from the 16.0 defaults. Explicit non-default choices are
 # preserved, while existing sessions receive the deterministic Verified Core
 # routing instead of the old OpenRouter-first automatic route.
 if not st.session_state.get('_verified_core_ai_migrated'):
@@ -38,8 +40,8 @@ if not st.session_state.get('_verified_core_ai_migrated'):
         st.session_state.ai_critic_provider = 'OpenRouter'
     st.session_state.ai_reviewer_provider = st.session_state.ai_critic_provider
     st.session_state._verified_core_ai_migrated = True
-# 18.1 replaces the removed OpenRouter lane with the explicitly configured
-# Gemini key.  Existing sessions retain other deliberate provider choices.
+# 18.1 replaced the removed OpenRouter lane with Gemini. 18.2 keeps this
+# routing but Gemini now discovers a working model dynamically.
 if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('ai_critic_provider') == 'OpenRouter':
         st.session_state.ai_critic_provider = 'Gemini'
@@ -81,7 +83,6 @@ with st.sidebar:
             guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
     else:
-        # Рабочий интерфейс: только пользовательский маршрут.
         guided_pages=['Мои проекты','Проект']
         if has_result:
             guided_pages.extend(['Подтверждение','Проверка','Чек-листы','Результаты','Отчёт'])
@@ -133,8 +134,6 @@ class Context:
 ctx=Context(data,VERSION,CONFIG_DIR,analyze_uploaded,WORKSPACE_STORE,st.session_state.get('auth_user') or {})
 PAGES[page](ctx)
 
-# Persist the current private project after every completed rerun.
-# Access is owner-scoped in WorkspaceStore, so a project id from another user cannot be saved.
 _active=st.session_state.get('active_project_id')
 _user=st.session_state.get('auth_user') or {}
 if _active and _user.get('id') and st.session_state.get('result') is not None:

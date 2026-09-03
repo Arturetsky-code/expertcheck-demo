@@ -37,8 +37,10 @@ def install() -> None:
         AutoGeminiProvider._generate_resilient = tracked_generate  # type: ignore[assignment]
 
     # 18.4 deliberately reuses the existing startup hook instead of adding yet
-    # another top-level patch import to app.py.  This keeps the release isolated
+    # another top-level patch import to app.py. This keeps the release isolated
     # and easy to revert while the branch is under test.
     from core.verification_runtime_patch import install as install_verification_runtime
+    from core.verification_runtime_audit_patch import install as install_runtime_audit
     install_verification_runtime()
+    install_runtime_audit()
     _INSTALLED = True

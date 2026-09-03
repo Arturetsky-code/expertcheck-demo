@@ -15,7 +15,7 @@ from core import ai_gateway
 
 
 class AutoGeminiProvider(ai_gateway.GeminiProvider):
-    """Gemini adapter with model discovery and safe model failover."""
+    """Gemini adapter with free-first model discovery and bounded failover."""
 
     FREE_FIRST_MODELS = (
         'gemini-3.8-flash',
@@ -27,6 +27,8 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
         'gemini-2.5-flash-lite',
         'gemini-2.5-flash',
     )
+    TRANSIENT_STATUS_CODES = frozenset({0, 408, 429, 500, 502, 503, 504})
+    MAX_MODEL_ATTEMPTS = 4
 
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
@@ -38,6 +40,20 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
         if model.startswith('models/'):
             model = model.split('/', 1)[1]
         return model
+
+    @staticmethod
+    def _is_free_text_candidate(model: str) -> bool:
+        """Keep the automatic lane on text-capable Flash/Flash-Lite models.
+
+        A stale explicit Pro model in Secrets must not be retried merely because
+        the Gemini list-models endpoint still advertises it to the project.
+        """
+        low = str(model or '').lower()
+        if 'gemini' not in low or 'flash' not in low:
+            return False
+        if any(token in low for token in ('embedding', 'image', 'tts', 'audio', 'live', 'pro')):
+            return False
+        return True
 
     def available_models(self) -> tuple[ai_gateway.AIResult, list[str]]:
         if self._available_models_cache is not None:
@@ -58,30 +74,37 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
             name = self._normalise_model(item.get('name', ''))
             if not name or 'generateContent' not in methods:
                 continue
-            low = name.lower()
-            if 'gemini' not in low:
-                continue
-            if any(token in low for token in ('embedding', 'image', 'tts', 'audio', 'live')):
-                continue
-            models.append(name)
+            if self._is_free_text_candidate(name):
+                models.append(name)
         self._available_models_cache = list(dict.fromkeys(models))
-        return ai_gateway.AIResult(True, self.name, text='Список доступных Gemini-моделей получен.', status_code=200), list(self._available_models_cache)
+        return ai_gateway.AIResult(True, self.name, text='Список доступных бесплатных Gemini Flash-моделей получен.', status_code=200), list(self._available_models_cache)
 
     def _candidate_models(self, available: list[str]) -> list[str]:
         available_set = set(available)
         configured = self._normalise_model(self.model)
         candidates: list[str] = []
-        # A deliberate explicit model is tried first, but a retired/unavailable
-        # value can no longer disable the whole Critic lane.
-        if configured and configured.lower() not in {'auto', 'авто', 'automatic'}:
+
+        # Honour an explicit model only when it still belongs to the free-first
+        # Flash lane. Legacy/pro models from old Secrets are deliberately ignored.
+        if (
+            configured
+            and configured.lower() not in {'auto', 'авто', 'automatic'}
+            and self._is_free_text_candidate(configured)
+        ):
             candidates.append(configured)
+
         for model in self.FREE_FIRST_MODELS:
             if model not in candidates:
                 candidates.append(model)
-        # Then accept other available Flash text models before Pro candidates.
-        for model in sorted(available, key=lambda m: (0 if 'flash-lite' in m else 1 if 'flash' in m else 2, m), reverse=False):
+
+        # Future Flash models returned by Gemini are accepted automatically.
+        for model in sorted(
+            (m for m in available if self._is_free_text_candidate(m)),
+            key=lambda m: (0 if 'flash-lite' in m else 1, m),
+        ):
             if model not in candidates:
                 candidates.append(model)
+
         if available:
             candidates = [model for model in candidates if model in available_set]
         return candidates
@@ -91,7 +114,7 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
         if not discovered.ok:
             return discovered
         if not self._candidate_models(available):
-            return ai_gateway.AIResult(False, self.name, error='Ключ Gemini действителен, но не найдено доступных моделей generateContent.', status_code=403)
+            return ai_gateway.AIResult(False, self.name, error='Ключ Gemini действителен, но не найдено доступных бесплатных Flash-моделей generateContent.', status_code=403)
         return self._generate_resilient('Ответьте одним словом: OK', _known_models=available)
 
     def generate(self, prompt: str, system: str = '') -> ai_gateway.AIResult:
@@ -117,7 +140,8 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
 
         attempts: list[str] = []
         last: ai_gateway.AIResult | None = None
-        for model in self._candidate_models(available):
+        candidates = self._candidate_models(available)[: self.MAX_MODEL_ATTEMPTS]
+        for model in candidates:
             url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
             generation_config: dict[str, Any] = {'temperature': 0.1, 'maxOutputTokens': 1600}
             if json_schema:
@@ -140,17 +164,40 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
                 except (KeyError, IndexError, TypeError):
                     return ai_gateway.AIResult(False, self.name, error='Gemini вернул ответ без текста.', status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
                 return ai_gateway.AIResult(True, self.name, text=text, status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
+
             message = (((body.get('error') or {}).get('message')) or str(body))
             attempts.append(f'{model}: HTTP {status} — {message}')
             last = ai_gateway.AIResult(False, self.name, error=message, status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
             lower = message.lower()
-            model_problem = status in {400, 403, 404} or 'no longer available' in lower or 'not found' in lower or 'not supported' in lower
-            if not model_problem:
-                break
+            model_problem = (
+                status in {400, 403, 404}
+                or 'no longer available' in lower
+                or 'not found' in lower
+                or 'not supported' in lower
+            )
+            transient_problem = (
+                status in self.TRANSIENT_STATUS_CODES
+                or 'high demand' in lower
+                or 'temporarily unavailable' in lower
+                or 'try again later' in lower
+            )
+            if model_problem or transient_problem:
+                # Do not let one overloaded/retired model disable the Critic.
+                # The attempt count is bounded to protect the free quota.
+                continue
+            break
 
         if last is None:
-            return ai_gateway.AIResult(False, self.name, error='Gemini не предоставил рабочую модель.', status_code=403)
-        return ai_gateway.AIResult(False, self.name, error='Не удалось выполнить запрос к доступным Gemini-моделям. ' + ' | '.join(attempts), status_code=last.status_code, model=last.model, latency_ms=last.latency_ms, schema_mode=last.schema_mode)
+            return ai_gateway.AIResult(False, self.name, error='Gemini не предоставил рабочую бесплатную Flash-модель.', status_code=403)
+        return ai_gateway.AIResult(
+            False,
+            self.name,
+            error='Не удалось выполнить запрос к доступным бесплатным Gemini Flash-моделям. ' + ' | '.join(attempts),
+            status_code=last.status_code,
+            model=last.model,
+            latency_ms=last.latency_ms,
+            schema_mode=last.schema_mode,
+        )
 
 
 def install() -> None:

@@ -29,6 +29,8 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
     )
     TRANSIENT_STATUS_CODES = frozenset({0, 408, 429, 500, 502, 503, 504})
     MAX_MODEL_ATTEMPTS = 4
+    BENCHMARK_MODEL_ATTEMPTS = 2
+    BENCHMARK_TIMEOUT_SECONDS = 18
 
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
@@ -57,7 +59,10 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
 
     def available_models(self) -> tuple[ai_gateway.AIResult, list[str]]:
         if self._available_models_cache is not None:
-            return ai_gateway.AIResult(True, self.name, text='Список моделей Gemini получен из кэша.', status_code=200), list(self._available_models_cache)
+            return ai_gateway.AIResult(
+                True, self.name,
+                text='Список моделей Gemini получен из кэша.', status_code=200,
+            ), list(self._available_models_cache)
         if not self.api_key:
             return ai_gateway.AIResult(False, self.name, error='API-ключ Gemini не задан.'), []
         status, body = self._get(
@@ -77,7 +82,10 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
             if self._is_free_text_candidate(name):
                 models.append(name)
         self._available_models_cache = list(dict.fromkeys(models))
-        return ai_gateway.AIResult(True, self.name, text='Список доступных бесплатных Gemini Flash-моделей получен.', status_code=200), list(self._available_models_cache)
+        return ai_gateway.AIResult(
+            True, self.name,
+            text='Список доступных бесплатных Gemini Flash-моделей получен.', status_code=200,
+        ), list(self._available_models_cache)
 
     def _candidate_models(self, available: list[str]) -> list[str]:
         available_set = set(available)
@@ -114,13 +122,22 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
         if not discovered.ok:
             return discovered
         if not self._candidate_models(available):
-            return ai_gateway.AIResult(False, self.name, error='Ключ Gemini действителен, но не найдено доступных бесплатных Flash-моделей generateContent.', status_code=403)
+            return ai_gateway.AIResult(
+                False, self.name,
+                error='Ключ Gemini действителен, но не найдено доступных бесплатных Flash-моделей generateContent.',
+                status_code=403,
+            )
         return self._generate_resilient('Ответьте одним словом: OK', _known_models=available)
 
     def generate(self, prompt: str, system: str = '') -> ai_gateway.AIResult:
         return self._generate_resilient(prompt, system)
 
-    def generate_structured(self, prompt: str, system: str = '', json_schema: dict[str, Any] | None = None) -> ai_gateway.AIResult:
+    def generate_structured(
+        self,
+        prompt: str,
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> ai_gateway.AIResult:
         return self._generate_resilient(prompt, system, json_schema=json_schema)
 
     def _generate_resilient(
@@ -138,14 +155,21 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
             if not discovered.ok:
                 return discovered
 
+        benchmark_mode = 'provider_qualification' in str(prompt or '')
+        max_attempts = self.BENCHMARK_MODEL_ATTEMPTS if benchmark_mode else self.MAX_MODEL_ATTEMPTS
+        request_timeout = self.BENCHMARK_TIMEOUT_SECONDS if benchmark_mode else 45
+
         attempts: list[str] = []
         last: ai_gateway.AIResult | None = None
-        candidates = self._candidate_models(available)[: self.MAX_MODEL_ATTEMPTS]
+        candidates = self._candidate_models(available)[:max_attempts]
         for model in candidates:
             url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
             generation_config: dict[str, Any] = {'temperature': 0.1, 'maxOutputTokens': 1600}
             if json_schema:
-                generation_config.update({'responseMimeType': 'application/json', 'responseJsonSchema': json_schema})
+                generation_config.update({
+                    'responseMimeType': 'application/json',
+                    'responseJsonSchema': json_schema,
+                })
             elif 'JSON' in system.upper():
                 generation_config['responseMimeType'] = 'application/json'
             payload: dict[str, Any] = {
@@ -155,19 +179,39 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
             if system:
                 payload['systemInstruction'] = {'parts': [{'text': system}]}
             started = time.perf_counter()
-            status, body = self._post(url, {'x-goog-api-key': self.api_key}, payload)
+            status, body = self._post(
+                url,
+                {'x-goog-api-key': self.api_key},
+                payload,
+                timeout=request_timeout,
+            )
             latency_ms = round((time.perf_counter() - started) * 1000)
-            schema_mode = 'STRICT_JSON_SCHEMA' if json_schema else 'JSON_OBJECT' if 'JSON' in system.upper() else 'TEXT'
+            schema_mode = (
+                'STRICT_JSON_SCHEMA' if json_schema
+                else 'JSON_OBJECT' if 'JSON' in system.upper()
+                else 'TEXT'
+            )
             if status == 200:
                 try:
                     text = body['candidates'][0]['content']['parts'][0]['text']
                 except (KeyError, IndexError, TypeError):
-                    return ai_gateway.AIResult(False, self.name, error='Gemini вернул ответ без текста.', status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
-                return ai_gateway.AIResult(True, self.name, text=text, status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
+                    return ai_gateway.AIResult(
+                        False, self.name,
+                        error='Gemini вернул ответ без текста.',
+                        status_code=status, model=model,
+                        latency_ms=latency_ms, schema_mode=schema_mode,
+                    )
+                return ai_gateway.AIResult(
+                    True, self.name, text=text, status_code=status, model=model,
+                    latency_ms=latency_ms, schema_mode=schema_mode,
+                )
 
             message = (((body.get('error') or {}).get('message')) or str(body))
             attempts.append(f'{model}: HTTP {status} — {message}')
-            last = ai_gateway.AIResult(False, self.name, error=message, status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode)
+            last = ai_gateway.AIResult(
+                False, self.name, error=message, status_code=status, model=model,
+                latency_ms=latency_ms, schema_mode=schema_mode,
+            )
             lower = message.lower()
             model_problem = (
                 status in {400, 403, 404}
@@ -188,7 +232,11 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
             break
 
         if last is None:
-            return ai_gateway.AIResult(False, self.name, error='Gemini не предоставил рабочую бесплатную Flash-модель.', status_code=403)
+            return ai_gateway.AIResult(
+                False, self.name,
+                error='Gemini не предоставил рабочую бесплатную Flash-модель.',
+                status_code=403,
+            )
         return ai_gateway.AIResult(
             False,
             self.name,
@@ -200,7 +248,48 @@ class AutoGeminiProvider(ai_gateway.GeminiProvider):
         )
 
 
+def _install_benchmark_guard() -> None:
+    """Make Gemini qualification responsive and safely resumable.
+
+    Streamlit cannot repaint progress while one synchronous button handler is
+    still running. Gemini therefore advances only one five-packet benchmark
+    call per click/rerun. The provider itself also uses short benchmark-only
+    timeouts and at most two model attempts, so the UI never silently waits
+    through four 45-second fallbacks.
+    """
+    from core import provider_benchmark
+
+    provider_benchmark.BENCHMARK_VERSION = '18.2-provider-qualification-v3'
+    current = provider_benchmark.advance_provider_benchmark
+    if getattr(current, '_expertcheck_gemini_guard', False):
+        return
+
+    original = current
+
+    def guarded_advance(
+        provider: Any,
+        state: dict[str, Any] | None = None,
+        *,
+        max_calls: int = 3,
+        now: float | None = None,
+        cases: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        if isinstance(provider, AutoGeminiProvider):
+            max_calls = 1
+        return original(
+            provider,
+            state,
+            max_calls=max_calls,
+            now=now,
+            cases=cases,
+        )
+
+    guarded_advance._expertcheck_gemini_guard = True  # type: ignore[attr-defined]
+    provider_benchmark.advance_provider_benchmark = guarded_advance
+
+
 def install() -> None:
     """Install the provider patch once for all runtime role resolution."""
     if ai_gateway.GeminiProvider is not AutoGeminiProvider:
         ai_gateway.GeminiProvider = AutoGeminiProvider
+    _install_benchmark_guard()

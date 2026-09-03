@@ -50,6 +50,25 @@ if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('external_ai_provider') == 'OpenRouter':
         st.session_state.external_ai_provider = 'Отключён'
     st.session_state._resilient_free_ai_181_migrated = True
+# Qualification state is session-persistent. A hard failure from an older
+# benchmark build must not permanently poison a provider that is healthy now.
+# 18.2-v3 therefore keeps only current, resumable runs/results and drops stale
+# blocked snapshots once after deployment.
+if not st.session_state.get('_provider_qualification_v3_migrated'):
+    from core.provider_benchmark import BENCHMARK_VERSION
+    runs = dict(st.session_state.get('provider_benchmark_runs') or {})
+    st.session_state.provider_benchmark_runs = {
+        name: run for name, run in runs.items()
+        if isinstance(run, dict)
+        and run.get('version') == BENCHMARK_VERSION
+        and not run.get('blocked')
+    }
+    results = dict(st.session_state.get('provider_benchmark_results') or {})
+    st.session_state.provider_benchmark_results = {
+        name: result for name, result in results.items()
+        if isinstance(result, dict) and result.get('version') == BENCHMARK_VERSION
+    }
+    st.session_state._provider_qualification_v3_migrated = True
 # Apply deferred navigation before the sidebar radio widget is instantiated.
 _pending_page = st.session_state.pop('_navigate_to', None)
 if _pending_page:

@@ -14,12 +14,14 @@ try:
     from studio.auth import auth_screen
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
     from core.free_ai_patch import install as install_free_ai_patch
+    from core.gemini_runtime_preference import install as install_gemini_runtime_preference
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
     st.code(f'{type(startup_error).__name__}: {startup_error}')
     st.stop()
 install_free_ai_patch()
+install_gemini_runtime_preference()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
 VERSION='ExpertCheck 18.2 Candidate · Free Agent Quality'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
@@ -50,25 +52,6 @@ if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('external_ai_provider') == 'OpenRouter':
         st.session_state.external_ai_provider = 'Отключён'
     st.session_state._resilient_free_ai_181_migrated = True
-# Qualification state is session-persistent. A hard failure from an older
-# benchmark build must not permanently poison a provider that is healthy now.
-# 18.2-v3 therefore keeps only current, resumable runs/results and drops stale
-# blocked snapshots once after deployment.
-if not st.session_state.get('_provider_qualification_v3_migrated'):
-    from core.provider_benchmark import BENCHMARK_VERSION
-    runs = dict(st.session_state.get('provider_benchmark_runs') or {})
-    st.session_state.provider_benchmark_runs = {
-        name: run for name, run in runs.items()
-        if isinstance(run, dict)
-        and run.get('version') == BENCHMARK_VERSION
-        and not run.get('blocked')
-    }
-    results = dict(st.session_state.get('provider_benchmark_results') or {})
-    st.session_state.provider_benchmark_results = {
-        name: result for name, result in results.items()
-        if isinstance(result, dict) and result.get('version') == BENCHMARK_VERSION
-    }
-    st.session_state._provider_qualification_v3_migrated = True
 # Apply deferred navigation before the sidebar radio widget is instantiated.
 _pending_page = st.session_state.pop('_navigate_to', None)
 if _pending_page:

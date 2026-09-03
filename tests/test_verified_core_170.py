@@ -6,7 +6,7 @@ import io
 from openpyxl import load_workbook
 
 from core.ai_gateway import AIResult, GroqProvider, OpenRouterProvider
-from core.provider_benchmark import benchmark_cases, qualified_ranking, run_provider_benchmark
+from core.provider_benchmark import BENCHMARK_VERSION, benchmark_cases, qualified_ranking, run_provider_benchmark
 from core.verified_verdict_gate import enforce_verified_verdicts
 from studio.data import structured_excel_report
 
@@ -67,6 +67,8 @@ def test_provider_benchmark_has_thirty_anonymous_cases_and_strict_gates():
 def test_provider_ranking_excludes_unqualified_candidate_and_selects_stable_winner():
     results = {
         "Groq": {
+            "version": BENCHMARK_VERSION,
+            "completed": True,
             "qualified": True,
             "metrics": {
                 "request_success_pct": 100, "schema_adherence_pct": 100,
@@ -75,6 +77,8 @@ def test_provider_ranking_excludes_unqualified_candidate_and_selects_stable_winn
             },
         },
         "OpenRouter": {
+            "version": BENCHMARK_VERSION,
+            "completed": True,
             "qualified": False,
             "metrics": {
                 "request_success_pct": 100, "schema_adherence_pct": 100,

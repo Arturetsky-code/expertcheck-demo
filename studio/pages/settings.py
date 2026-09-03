@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import streamlit as st
 
 from studio.components import hero, section, status_badge
@@ -120,12 +121,10 @@ def render(ctx) -> None:
 
     with tabs[5]:
         section('AI-модули', 'Подключение внешних аналитических сервисов. Полные PDF по умолчанию не передаются.')
-        provider_options = [
-            'Отключён', 'OpenRouter', 'Groq', 'DeepSeek',
-            'Авто: OpenRouter → Groq', 'Авто: Groq → OpenRouter',
-            'Авто: DeepSeek → OpenRouter → Groq', 'Авто: OpenRouter → Groq → DeepSeek',
-            'Gemini',
-        ]
+        direct_provider_options = ['Groq', 'Gemini', 'DeepSeek', 'OpenRouter']
+        automatic_provider_options = ['Авто: Groq → Gemini', 'Авто: Gemini → Groq']
+        provider_options = ['Отключён', *direct_provider_options, *automatic_provider_options]
+        role_provider_options = [*direct_provider_options, *automatic_provider_options]
         provider = st.selectbox(
             'Провайдер для свободного AI-диалога',
             provider_options,
@@ -136,24 +135,24 @@ def render(ctx) -> None:
         with c_extract:
             extraction_provider = st.selectbox(
                 'AI Extraction — извлечение фактов',
-                provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_extraction_provider', 'Groq')) if st.session_state.get('ai_extraction_provider', 'Groq') in provider_options[1:-1] else 0,
+                role_provider_options,
+                index=role_provider_options.index(st.session_state.get('ai_extraction_provider', 'Groq')) if st.session_state.get('ai_extraction_provider', 'Groq') in role_provider_options else 0,
                 key='settings_ai_extraction_provider',
                 help='Быстро извлекает объекты, показатели и спорные смысловые кандидаты. Рекомендуется Groq.',
             )
         with c_judge:
             judge_provider = st.selectbox(
                 'AI Judge — оценка доказательства',
-                provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_judge_provider', 'Groq')) if st.session_state.get('ai_judge_provider', 'Groq') in provider_options[1:-1] else 0,
+                role_provider_options,
+                index=role_provider_options.index(st.session_state.get('ai_judge_provider', 'Groq')) if st.session_state.get('ai_judge_provider', 'Groq') in role_provider_options else 0,
                 key='settings_ai_judge_provider',
                 help='Сопоставляет одно атомарное требование с небольшим адресным evidence packet.',
             )
         with c_critic:
             critic_provider = st.selectbox(
                 'AI Critic — независимая проверка',
-                provider_options[1:-1],
-                index=provider_options[1:-1].index(st.session_state.get('ai_critic_provider', 'OpenRouter')) if st.session_state.get('ai_critic_provider', 'OpenRouter') in provider_options[1:-1] else 0,
+                role_provider_options,
+                index=role_provider_options.index(st.session_state.get('ai_critic_provider', 'Gemini')) if st.session_state.get('ai_critic_provider', 'Gemini') in role_provider_options else 1,
                 key='settings_ai_critic_provider',
                 help='Ищет подмену объекта, показателя, единицы, модальности и квалификаторов. Должен фактически отличаться от Judge.',
             )
@@ -177,7 +176,7 @@ def render(ctx) -> None:
             help='AI анализирует только ограниченные адресные фрагменты: имена файлов заменяются псевдонимами, контакты и служебные шифры маскируются. В режиме «Расширенный» он автоматически проверяет неоднозначные объекты, привязку ТЭП и смысловые пункты чек-листов. Окончательный реестр подтверждает пользователь.',
             key='settings_ai_assisted_extraction',
         )
-        st.caption('Во внешний AI передаются только ограниченные evidence packets; имена документов псевдонимизируются, контакты и служебные шифры маскируются. Ключи сохраняются в Streamlit Secrets, а не в GitHub. Для OpenRouter: OPENROUTER_API_KEY и OPENROUTER_MODEL. Для Groq: GROQ_API_KEY; GROQ_MODEL можно указать как auto. Для DeepSeek: DEEPSEEK_API_KEY и DEEPSEEK_MODEL для автоматического выбора разрешённой модели. Режим «Авто» переключается на резервного провайдера при временной недоступности или исчерпании лимита.')
+        st.caption('Во внешний AI передаются только ограниченные evidence packets; имена документов псевдонимизируются, контакты и служебные шифры маскируются. Ключи сохраняются в Streamlit Secrets, а не в GitHub. Бесплатная базовая схема: GROQ_API_KEY + GROQ_MODEL=`openai/gpt-oss-120b`; GEMINI_API_KEY + GEMINI_MODEL=`gemini-2.5-pro`. Режим «Авто» переключается между Groq и Gemini при временной недоступности или исчерпании лимита.')
         if st.button('Сохранить AI-настройки', width='content'):
             st.session_state.external_ai_provider = provider
             st.session_state.ai_extraction_provider = extraction_provider
@@ -188,7 +187,8 @@ def render(ctx) -> None:
             st.session_state.ai_pipeline_level = ai_level
             st.success('Настройки AI сохранены для текущей сессии.')
         if st.button('Проверить агентный контур Extraction → Judge → Critic', width='content'):
-            from core.ai_gateway import diagnostic_message, provider_for_role
+            from core.ai_gateway import provider_for_role
+            from core.semantic_evidence_engine import preflight_provider
             selected_state = dict(st.session_state)
             selected_state.update({
                 'ai_extraction_provider': extraction_provider,
@@ -197,23 +197,33 @@ def render(ctx) -> None:
             })
             role_rows=[]
             actual={}
-            with st.spinner('Проверяем три AI-роли на коротком обезличенном запросе...'):
+            role_ok={}
+            with st.spinner('Проверяем подключение и рабочие JSON-контракты ролей...'):
                 for role,label in (('extraction','Извлечение'),('judge','Оценка доказательства'),('critic','Независимая критика')):
                     role_provider=provider_for_role(role,selected_state,st.secrets)
-                    result=role_provider.test_connection() if role_provider else None
-                    ok=bool(result and result.ok)
-                    actual[role]=str(getattr(result,'provider','') or '') if result else ''
+                    probe=preflight_provider(role_provider,role.upper(),structured=role != 'extraction')
+                    ok=bool(probe.get('ok'))
+                    role_ok[role]=ok
+                    actual[role]=str(probe.get('actual_provider') or '') if ok else ''
                     role_rows.append({
                         'Роль':label,
                         'Настройка':selected_state.get(f'ai_{role}_provider',''),
                         'Фактический провайдер':actual[role] or '—',
-                        'Модель':str(getattr(result,'model','') or '—') if result else '—',
-                        'Результат':'Подключение работает' if ok else 'Ошибка подключения',
-                        'Диагностика':diagnostic_message(result) if result else 'Провайдер не настроен.',
+                        'Модель':str(probe.get('model') or '—'),
+                        'Результат':('Рабочий JSON-контракт' if role != 'extraction' else 'Подключение работает') if ok else 'Проверка не пройдена',
+                        'Диагностика':('Строгий контракт подтверждён.' if role != 'extraction' else 'Короткий запрос выполнен.') if ok else str(probe.get('error') or 'Провайдер не настроен.'),
                     })
             st.dataframe(role_rows,hide_index=True,width='stretch')
-            if actual.get('judge') and actual.get('critic') and actual['judge'] != actual['critic']:
-                st.success('Judge и Critic фактически обслуживаются разными провайдерами: независимый консенсус L5 доступен.')
+            from core.provider_benchmark import BENCHMARK_VERSION
+            benchmark_results = dict(st.session_state.get('provider_benchmark_results') or {})
+            judge_benchmark = benchmark_results.get(actual.get('judge')) or {}
+            critic_benchmark = benchmark_results.get(actual.get('critic')) or {}
+            judge_qualified = bool(judge_benchmark.get('qualified') and judge_benchmark.get('completed') and judge_benchmark.get('version') == BENCHMARK_VERSION)
+            critic_qualified = bool(critic_benchmark.get('qualified') and critic_benchmark.get('completed') and critic_benchmark.get('version') == BENCHMARK_VERSION)
+            if role_ok.get('judge') and role_ok.get('critic') and actual.get('judge') != actual.get('critic') and judge_qualified and critic_qualified:
+                st.success('Judge и Critic прошли рабочий JSON-контракт и полный стенд у разных провайдеров: независимый консенсус L5 доступен.')
+            elif role_ok.get('judge') and role_ok.get('critic') and actual.get('judge') != actual.get('critic'):
+                st.info('Обе роли технически работают через разных провайдеров. До завершения квалификационного стенда их смысловые решения остаются на L4.')
             elif actual.get('judge') and actual.get('critic'):
                 st.warning('Judge и Critic фактически ответили через одного провайдера. Judge будет работать консультативно: сформирует адресные вопросы, но смысловые выводы останутся на L4 до независимой проверки.')
         if provider != 'Отключён':
@@ -231,28 +241,51 @@ def render(ctx) -> None:
         st.divider()
         section(
             'Квалификация AI-провайдера',
-            '30 синтетических инженерных пакетов × 3 повтора. Проектные документы не передаются.',
+            '30 синтетических инженерных пакетов × 3 повтора. Выполняется возобновляемыми порциями с учётом бесплатных лимитов; проектные документы не передаются.',
         )
         benchmark_candidate = st.selectbox(
-            'Кандидат для проверки', ['Groq', 'OpenRouter'], key='provider_benchmark_candidate',
-            help='Проверяйте кандидатов по очереди. Один прогон выполняет 18 пакетных вызовов.',
+            'Кандидат для проверки', ['Groq', 'Gemini'], key='provider_benchmark_candidate',
+            help='Проверяйте кандидатов по очереди. Стенд сохраняет прогресс после каждой порции и не считает временный HTTP 429 смысловой ошибкой модели.',
         )
-        if st.button('Запустить квалификационный стенд', width='content'):
+        benchmark_runs = dict(st.session_state.get('provider_benchmark_runs') or {})
+        active_run = dict(benchmark_runs.get(benchmark_candidate) or {})
+        if active_run and not active_run.get('completed'):
+            completed_calls = int(active_run.get('next_call_index') or 0)
+            total_calls = int(active_run.get('total_calls') or 18)
+            st.progress(completed_calls / max(1,total_calls), text=f'Выполнено пакетных вызовов: {completed_calls} из {total_calls}')
+            remaining = max(0, int(float(active_run.get('cooldown_until') or 0)-time.time()+0.999))
+            if remaining:
+                st.info(f'Прогресс сохранён. Следующую порцию можно запустить примерно через {remaining} с — это защита бесплатной квоты.')
+            if active_run.get('last_transport_error') and st.session_state.expert_mode:
+                st.caption('Последнее транспортное событие: '+str(active_run.get('last_transport_error')))
+        run_label = 'Начать квалификационный стенд' if not active_run or active_run.get('completed') else 'Продолжить квалификационный стенд'
+        if st.button(run_label, width='content'):
             from core.ai_gateway import provider_from_settings
-            from core.provider_benchmark import run_provider_benchmark
+            from core.provider_benchmark import advance_provider_benchmark, start_provider_benchmark
             candidate_provider = provider_from_settings(benchmark_candidate, st.secrets)
-            if not candidate_provider:
-                st.error('Провайдер не настроен.')
+            if not candidate_provider or not getattr(candidate_provider,'api_key',''):
+                st.error(f'API-ключ {benchmark_candidate} не найден в Streamlit Secrets.')
             else:
-                with st.spinner('Проверяем API, строгую JSON Schema, смысловую точность и повторяемость...'):
-                    benchmark = run_provider_benchmark(candidate_provider, repeats=3, batch_size=5)
-                stored = dict(st.session_state.get('provider_benchmark_results') or {})
-                stored[benchmark_candidate] = benchmark
-                st.session_state.provider_benchmark_results = stored
-                if benchmark.get('qualified'):
-                    st.success(f'{benchmark_candidate} прошёл квалификационный барьер.')
+                if not active_run or active_run.get('completed'):
+                    active_run=start_provider_benchmark(candidate_provider,repeats=3,batch_size=5)
+                with st.spinner('Обрабатываем следующую безопасную порцию и сохраняем прогресс...'):
+                    active_run=advance_provider_benchmark(candidate_provider,active_run,max_calls=3)
+                benchmark_runs[benchmark_candidate]=active_run
+                st.session_state.provider_benchmark_runs=benchmark_runs
+                benchmark=dict(active_run.get('summary') or {})
+                if active_run.get('completed'):
+                    stored = dict(st.session_state.get('provider_benchmark_results') or {})
+                    stored[benchmark_candidate] = benchmark
+                    st.session_state.provider_benchmark_results = stored
+                    if benchmark.get('qualified'):
+                        st.success(f'{benchmark_candidate} прошёл квалификационный барьер.')
+                    else:
+                        st.error(f'{benchmark_candidate} завершил стенд, но не прошёл квалификационный барьер.')
+                elif active_run.get('blocked'):
+                    st.error(f'{benchmark_candidate}: провайдер заблокировал продолжение. Проверьте ключ, модель и доступ проекта.')
                 else:
-                    st.error(f'{benchmark_candidate} не прошёл квалификационный барьер.')
+                    done=int(active_run.get('next_call_index') or 0)
+                    st.success(f'Прогресс сохранён: {done} из {active_run.get("total_calls",18)} пакетных вызовов.')
         benchmark_results = dict(st.session_state.get('provider_benchmark_results') or {})
         if benchmark_results:
             from core.provider_benchmark import comparison_rows, qualified_ranking
@@ -281,8 +314,8 @@ def render(ctx) -> None:
                     getattr(st, notice[0])(notice[1])
                 if len(ranking) == 1:
                     st.caption('Для автоматического L5 квалифицируйте второй независимый провайдер.')
-        st.info('Рекомендуемая базовая схема Verified Core: Extraction/Judge — Groq `openai/gpt-oss-120b` со строгой JSON Schema; Critic — фиксированная модель OpenRouter. `openrouter/free` не допускается в проверочный контур. Настройка считается рабочей только после прохождения квалификационного стенда.')
-        st.warning('Не передавайте конфиденциальные документы в бесплатные внешние сервисы без согласования с владельцем информации.')
+        st.info('Базовая бесплатная схема 18.1: Extraction — Groq `openai/gpt-oss-120b`; Judge и Critic назначаются только по итогам стенда Groq/Gemini и должны фактически обслуживаться разными провайдерами. До этого смысловые решения остаются консультативными L4.')
+        st.warning('Бесплатный тариф Gemini может использовать переданное содержимое для улучшения продуктов Google. Передавайте только ограниченные обезличенные evidence packets и не передавайте полные конфиденциальные PDF.')
 
     with tabs[6]:
         section('Core', 'Служебные параметры инженерного ядра.')

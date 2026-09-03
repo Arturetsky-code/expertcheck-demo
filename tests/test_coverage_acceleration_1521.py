@@ -45,7 +45,12 @@ def test_failover_treats_invalid_json_as_provider_failure():
 def test_semantic_batch_uses_validated_failover_response():
     bad = _Provider("OpenRouter", "not-json")
     good = _Provider("Groq", json.dumps({
-        "decisions": [{"packet_id": "P-1", "verdict": "INSUFFICIENT"}],
+        "decisions": [{
+            "packet_id": "P-1", "verdict": "INSUFFICIENT", "evidence_ids": [],
+            "same_entity": False, "same_property": False,
+            "qualifiers_satisfied": False, "modality_satisfied": False,
+            "confidence": 0.2, "reason": "Доказательств недостаточно.",
+        }],
     }))
     responses, errors, calls = _call_batches(
         FailoverProvider([bad, good]), [{"packet_id": "P-1"}], batch_size=4,

@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 18.0 Development · Verified Platform"
-    assert core_version == "18.0-stage1-project-data-contract"
+    assert _app_version() == "ExpertCheck 18.1 Candidate · Resilient Free AI"
+    assert core_version == "18.1-resilient-free-ai"
 
 
 # Backward-compatible names imported by cumulative release gates.

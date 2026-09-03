@@ -1,0 +1,513 @@
+{
+  "version": "18.1-resilient-free-ai",
+  "stage": "Устойчивые бесплатные AI-роли Groq/Gemini",
+  "tests": 124,
+  "passed": 124,
+  "failed": 0,
+  "quality_policy": {
+    "verified_platform_inherited": true,
+    "gemini_native_json_schema_required": true,
+    "groq_gemini_independent_route_supported": true,
+    "rate_limits_are_transport_events": true,
+    "qualification_is_resumable": true,
+    "l5_requires_two_qualified_providers": true
+  },
+  "results": [
+    {
+      "test": "AI181-001",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-002",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-003",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-004",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-005",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-006",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-007",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-008",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-009",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-010",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-011",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-012",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-013",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-014",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-015",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-016",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-017",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-018",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-019",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-020",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-021",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-022",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-023",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-024",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-025",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-026",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-027",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-028",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-029",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-030",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-031",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-032",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-033",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-034",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-035",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-036",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-037",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-038",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-039",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-040",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-041",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-042",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-043",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-044",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-045",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-046",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-047",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-048",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-049",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-050",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-051",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-052",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-053",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-054",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-055",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-056",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-057",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-058",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-059",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-060",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-061",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-062",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-063",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-064",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-065",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-066",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-067",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-068",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-069",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-070",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-071",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-072",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-073",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-074",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-075",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-076",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-077",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-078",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-079",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-080",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-081",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-082",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-083",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-084",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-085",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-086",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-087",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-088",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-089",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-090",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-091",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-092",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-093",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-094",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-095",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-096",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-097",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-098",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-099",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-100",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-101",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-102",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-103",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-104",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-105",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-106",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-107",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-108",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-109",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-110",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-111",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-112",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-113",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-114",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-115",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-116",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-117",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-118",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-119",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-120",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-121",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-122",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-123",
+      "status": "PASSED"
+    },
+    {
+      "test": "AI181-124",
+      "status": "PASSED"
+    }
+  ]
+}

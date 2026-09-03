@@ -31,7 +31,12 @@ class _Provider:
         self.calls += 1
         packet_id = json.loads(prompt)["packets"][0]["packet_id"]
         return AIResult(True, self.name, text=json.dumps({
-            "decisions": [{"packet_id": packet_id, "verdict": "INSUFFICIENT"}],
+            "decisions": [{
+                "packet_id": packet_id, "verdict": "INSUFFICIENT", "evidence_ids": [],
+                "same_entity": False, "same_property": False,
+                "qualifiers_satisfied": False, "modality_satisfied": False,
+                "confidence": 0.2, "reason": "Доказательств недостаточно.",
+            }],
         }), status_code=200, model="test-model")
 
 
@@ -40,7 +45,12 @@ class _InvalidVerdictProvider(_Provider):
         self.calls += 1
         packet_id = json.loads(prompt)["packets"][0]["packet_id"]
         return AIResult(True, self.name, text=json.dumps({
-            "decisions": [{"packet_id": packet_id, "verdict": "MAYBE"}],
+            "decisions": [{
+                "packet_id": packet_id, "verdict": "MAYBE", "evidence_ids": [],
+                "same_entity": False, "same_property": False,
+                "qualifiers_satisfied": False, "modality_satisfied": False,
+                "confidence": 0.2, "reason": "Недопустимый тестовый вывод.",
+            }],
         }), status_code=200, model="test-model")
 
 

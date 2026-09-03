@@ -133,25 +133,61 @@ class GeminiProvider(AIProvider):
     name = 'Gemini'
 
     def generate(self, prompt: str, system: str = '') -> AIResult:
+        return self._generate(prompt, system)
+
+    def generate_structured(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self._generate(prompt, system, json_schema=json_schema)
+
+    def _generate(
+        self, prompt: str, system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
         if not self.api_key:
             return AIResult(False, self.name, error='API-ключ Gemini не задан.', model=self.model)
         model = self.model or 'gemini-2.5-flash'
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}'
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+        generation_config: dict[str, Any] = {
+            'temperature': 0.1,
+            'maxOutputTokens': 1600,
+        }
+        if json_schema:
+            generation_config.update({
+                'responseMimeType': 'application/json',
+                'responseJsonSchema': json_schema,
+            })
+        elif 'JSON' in system.upper():
+            generation_config['responseMimeType'] = 'application/json'
         payload: dict[str, Any] = {
             'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
-            'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 1600},
+            'generationConfig': generation_config,
         }
         if system:
             payload['systemInstruction'] = {'parts': [{'text': system}]}
-        status, body = self._post(url, {}, payload)
+        started = time.perf_counter()
+        status, body = self._post(url, {'x-goog-api-key': self.api_key}, payload)
+        latency_ms = round((time.perf_counter() - started) * 1000)
         if status != 200:
             message = (((body.get('error') or {}).get('message')) or str(body))
-            return AIResult(False, self.name, error=message, status_code=status, model=model)
+            return AIResult(
+                False, self.name, error=message, status_code=status,
+                model=model, latency_ms=latency_ms,
+                schema_mode='STRICT_JSON_SCHEMA' if json_schema else 'JSON_OBJECT' if 'JSON' in system.upper() else 'TEXT',
+            )
         try:
             text = body['candidates'][0]['content']['parts'][0]['text']
         except (KeyError, IndexError, TypeError):
-            return AIResult(False, self.name, error='Gemini вернул ответ без текста.', status_code=status, model=model)
-        return AIResult(True, self.name, text=text, status_code=status, model=model)
+            return AIResult(
+                False, self.name, error='Gemini вернул ответ без текста.',
+                status_code=status, model=model, latency_ms=latency_ms,
+            )
+        return AIResult(
+            True, self.name, text=text, status_code=status, model=model,
+            latency_ms=latency_ms,
+            schema_mode='STRICT_JSON_SCHEMA' if json_schema else 'JSON_OBJECT' if 'JSON' in system.upper() else 'TEXT',
+        )
 
 
 class GroqProvider(AIProvider):
@@ -535,6 +571,10 @@ def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | N
         'gemini': GeminiProvider(get('GEMINI_API_KEY'), get('GEMINI_MODEL', 'gemini-2.5-flash')),
     }
     aliases = {
+        'авто: groq → gemini': ['groq', 'gemini'],
+        'auto-groq-gemini': ['groq', 'gemini'],
+        'авто: gemini → groq': ['gemini', 'groq'],
+        'auto-gemini-groq': ['gemini', 'groq'],
         'авто: openrouter → groq': ['openrouter', 'groq'],
         'auto-openrouter-groq': ['openrouter', 'groq'],
         'авто: groq → openrouter': ['groq', 'openrouter'],
@@ -563,7 +603,31 @@ def provider_for_role(role: str, session_state: Any, secrets: Any = None) -> AIP
         selected = session_state.get('ai_critic_provider') or session_state.get('ai_reviewer_provider') or session_state.get('external_ai_provider', 'Отключён')
     else:
         selected = session_state.get('ai_reviewer_provider') or session_state.get('external_ai_provider', 'Отключён')
-    return provider_from_settings(str(selected), secrets)
+    provider = provider_from_settings(str(selected), secrets)
+    if provider is not None and role_key in {
+        'judge', 'evidence_judge', 'судья',
+        'critic', 'evidence_critic', 'критик',
+    }:
+        # Production semantic roles must pass the current synthetic benchmark
+        # before they can participate in an L5 conclusion.  Test doubles and
+        # direct low-level callers remain backward compatible because the flag
+        # is attached only at this application boundary.
+        results = session_state.get('provider_benchmark_results') or {}
+        benchmark = results.get(str(getattr(provider, 'name', '') or selected)) or {}
+        try:
+            from .provider_benchmark import BENCHMARK_VERSION
+        except Exception:
+            benchmark_version = '18.1-provider-qualification-v2'
+        else:
+            benchmark_version = BENCHMARK_VERSION
+        provider.qualification_required = True
+        provider.qualification_passed = bool(
+            benchmark.get('version') == benchmark_version
+            and benchmark.get('completed')
+            and benchmark.get('qualified')
+        )
+        provider.qualification_summary = dict(benchmark)
+    return provider
 
 
 def diagnostic_message(result: AIResult) -> str:
@@ -574,7 +638,7 @@ def diagnostic_message(result: AIResult) -> str:
         return 'Ключ недействителен или отозван.'
     if code == 402:
         if result.provider == 'DeepSeek':
-            return 'Недостаточно средств на балансе DeepSeek API. Пополните баланс или выберите Groq/OpenRouter.'
+            return 'Недостаточно средств на балансе DeepSeek API. Пополните баланс или выберите Groq/Gemini.'
         return 'Недостаточно кредитов или бесплатный лимит исчерпан.'
     if code == 403:
         detail = str(result.error or '')
@@ -582,7 +646,7 @@ def diagnostic_message(result: AIResult) -> str:
             return (
                 'Groq отклонил соединение на уровне Cloudflare (ошибка 1010). '
                 'Это не ошибка API-ключа и не запрет модели: заблокирован сетевой запрос из текущего облачного окружения. '
-                'Используйте режим «Авто: Groq → OpenRouter» или OpenRouter; приложение переключится на резерв автоматически. '
+                'Используйте режим «Авто: Groq → Gemini»; приложение переключится на независимый резерв автоматически. '
                 'Подробности: ' + detail
             )
         if result.provider == 'Groq':
@@ -593,7 +657,14 @@ def diagnostic_message(result: AIResult) -> str:
             )
         return 'Доступ запрещён настройками ключа или провайдера. ' + detail
     if code == 429:
-        return 'Превышен лимит запросов. Повторите позже.'
+        detail = str(result.error or '')
+        match = re.search(r'(?:try again in|retry[- ]after)\s*([0-9]+(?:\.[0-9]+)?)\s*(ms|s|sec|seconds)?', detail, re.I)
+        if match:
+            delay = float(match.group(1))
+            if str(match.group(2) or '').lower() == 'ms':
+                delay /= 1000
+            return f'Достигнут бесплатный лимит провайдера. Повторите примерно через {max(1, round(delay))} с.'
+        return 'Достигнут бесплатный лимит провайдера. Запрос безопасно отложен; повторите позже.'
     if code in {502, 503}:
         return 'Выбранная модель временно недоступна.'
     if code == 0:

@@ -565,8 +565,68 @@ CRITIC_JSON_SCHEMA = {
 }
 
 
+def valid_structured_contract(text: str, *, critic: bool = False) -> bool:
+    """Validate the complete local contract even if a provider ignores schema mode."""
+    parsed = _extract_json(text)
+    root_key = "reviews" if critic else "decisions"
+    if not isinstance(parsed, dict) or set(parsed) != {root_key}:
+        return False
+    rows = parsed.get(root_key)
+    if not isinstance(rows, list) or not rows:
+        return False
+    required = (
+        {"packet_id", "accept", "evidence_ids", "blocking_concerns", "confidence", "reason"}
+        if critic else
+        {
+            "packet_id", "verdict", "evidence_ids", "same_entity", "same_property",
+            "qualifiers_satisfied", "modality_satisfied", "confidence", "reason",
+        }
+    )
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != required:
+            return False
+        if not isinstance(row["packet_id"], str) or not row["packet_id"].strip():
+            return False
+        if not isinstance(row["evidence_ids"], list) or not all(
+            isinstance(value, str) for value in row["evidence_ids"]
+        ):
+            return False
+        if not isinstance(row["reason"], str):
+            return False
+        confidence = row["confidence"]
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            return False
+        if not math.isfinite(float(confidence)) or not 0 <= float(confidence) <= 1:
+            return False
+        if critic:
+            if not isinstance(row["accept"], bool):
+                return False
+            if not isinstance(row["blocking_concerns"], list) or not all(
+                isinstance(value, str) for value in row["blocking_concerns"]
+            ):
+                return False
+        else:
+            if str(row["verdict"]).upper() not in JUDGE_VERDICTS:
+                return False
+            if not all(isinstance(row[key], bool) for key in (
+                "same_entity", "same_property", "qualifiers_satisfied", "modality_satisfied",
+            )):
+                return False
+    return True
+
+
 def _provider_name(provider: Any) -> str:
     return str(getattr(provider, "name", "") or getattr(provider, "provider", "") or type(provider).__name__ if provider is not None else "")
+
+
+def _provider_qualified_for_l5(provider: Any) -> bool:
+    return bool(
+        provider is not None
+        and (
+            not bool(getattr(provider, "qualification_required", False))
+            or bool(getattr(provider, "qualification_passed", False))
+        )
+    )
 
 
 def _preflight_provider(
@@ -639,18 +699,7 @@ def _preflight_provider(
     system = CRITIC_SYSTEM if critic else JUDGE_SYSTEM
 
     def valid_contract(text: str) -> bool:
-        parsed = _extract_json(text)
-        rows = parsed.get(root_key) if isinstance(parsed, dict) else None
-        if not isinstance(rows, list) or not rows:
-            return False
-        for row in rows:
-            if not isinstance(row, dict) or not str(row.get("packet_id") or ""):
-                return False
-            if critic and not isinstance(row.get("accept"), bool):
-                return False
-            if not critic and str(row.get("verdict") or "").upper() not in JUDGE_VERDICTS:
-                return False
-        return True
+        return valid_structured_contract(text, critic=critic)
 
     try:
         generate_validated = getattr(provider, "generate_validated", None)
@@ -693,6 +742,11 @@ def _preflight_provider(
         "contract_probe_responses": 1 if ok else 0,
         "response_excerpt": "" if ok else redact_text(str(getattr(result, "text", "") or ""))[:600],
     }
+
+
+def preflight_provider(provider: Any, role: str, *, structured: bool = True) -> dict[str, Any]:
+    """Public, fail-closed provider probe used by the settings workspace."""
+    return _preflight_provider(provider, role, structured=structured)
 
 
 def _call_batches(
@@ -764,19 +818,7 @@ def _call_batches(
             "error": "",
         }
         def valid_contract(text: str) -> bool:
-            parsed = _extract_json(text)
-            rows = parsed.get(root_key) if isinstance(parsed, dict) else None
-            if not isinstance(rows, list) or not rows:
-                return False
-            return all(
-                isinstance(row, dict)
-                and str(row.get("packet_id") or "")
-                and (
-                    isinstance(row.get("accept"), bool)
-                    if critic else str(row.get("verdict") or "").upper() in JUDGE_VERDICTS
-                )
-                for row in rows
-            )
+            return valid_structured_contract(text, critic=critic)
 
         try:
             generate_validated = getattr(provider, "generate_validated", None)
@@ -1268,6 +1310,14 @@ def run_semantic_evidence_engine(
                             advisory_reasons.append(
                                 "После рабочего preflight Judge и Critic фактически выбрали один AI-провайдер; "
                                 "независимый консенсус и L5 запрещены."
+                            )
+                        elif not (
+                            _provider_qualified_for_l5(judge_provider)
+                            and _provider_qualified_for_l5(critic_provider)
+                        ):
+                            advisory_reasons.append(
+                                "Judge и Critic выполнили рабочий JSON-контракт, но не оба прошли "
+                                "актуальный квалификационный стенд; смысловые решения остаются L4."
                             )
                         else:
                             independent_consensus_available = True

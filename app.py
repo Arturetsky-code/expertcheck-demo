@@ -15,6 +15,8 @@ try:
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
     from core.free_ai_patch import install as install_free_ai_patch
     from core.gemini_runtime_preference import install as install_gemini_runtime_preference
+    from core.quality_gates_patch import install as install_quality_gates
+    from core.gemini_model_tracking_patch import install as install_gemini_model_tracking
 except Exception as startup_error:
     st.set_page_config(page_title='ExpertCheck Studio — ошибка запуска',layout='wide')
     st.error('ExpertCheck не смог загрузить обязательные модули.')
@@ -22,8 +24,10 @@ except Exception as startup_error:
     st.stop()
 install_free_ai_patch()
 install_gemini_runtime_preference()
+install_quality_gates()
+install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.2 Candidate · Free Agent Quality'
+VERSION='ExpertCheck 18.3 Candidate · Quality Gates'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -32,9 +36,6 @@ if not st.session_state.get('auth_user'):
     st.stop()
 for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None}.items():
     st.session_state.setdefault(k,v)
-# One-time migration from the 16.0 defaults. Explicit non-default choices are
-# preserved, while existing sessions receive the deterministic Verified Core
-# routing instead of the old OpenRouter-first automatic route.
 if not st.session_state.get('_verified_core_ai_migrated'):
     if st.session_state.get('ai_judge_provider') == 'Авто: OpenRouter → Groq':
         st.session_state.ai_judge_provider = 'Groq'
@@ -42,8 +43,6 @@ if not st.session_state.get('_verified_core_ai_migrated'):
         st.session_state.ai_critic_provider = 'OpenRouter'
     st.session_state.ai_reviewer_provider = st.session_state.ai_critic_provider
     st.session_state._verified_core_ai_migrated = True
-# 18.1 replaced the removed OpenRouter lane with Gemini. 18.2 keeps this
-# routing but Gemini now discovers a working model dynamically.
 if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('ai_critic_provider') == 'OpenRouter':
         st.session_state.ai_critic_provider = 'Gemini'
@@ -52,7 +51,11 @@ if not st.session_state.get('_resilient_free_ai_181_migrated'):
     if st.session_state.get('external_ai_provider') == 'OpenRouter':
         st.session_state.external_ai_provider = 'Отключён'
     st.session_state._resilient_free_ai_181_migrated = True
-# Apply deferred navigation before the sidebar radio widget is instantiated.
+if not st.session_state.get('_quality_gates_183_migrated'):
+    st.session_state.provider_benchmark_results = {}
+    st.session_state.provider_benchmark_runs = {}
+    st.session_state.semantic_execution_checkpoint = {}
+    st.session_state._quality_gates_183_migrated = True
 _pending_page = st.session_state.pop('_navigate_to', None)
 if _pending_page:
     st.session_state['page'] = _pending_page

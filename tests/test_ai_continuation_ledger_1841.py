@@ -187,3 +187,11 @@ def test_non_l4_or_non_consensus_packets_are_not_counted_as_ai_queue():
     assert audit["judge_pending"] == 83
     assert ledger["packet_total"] == 83
     assert len(ledger["packet_ids"]) == 83
+
+
+def test_continuation_exposes_full_checklist_queue_after_initial_50():
+    import inspect
+    from core import semantic_continuation
+
+    source = inspect.getsource(semantic_continuation.continue_semantic_analysis)
+    assert "semantic_candidate_cap=0" in source

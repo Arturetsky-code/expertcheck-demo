@@ -10,7 +10,7 @@ slice can never make completed work disappear from the report.
 
 from typing import Any, Iterable
 
-LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v1"
+LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v2"
 _CATEGORICAL_JUDGE = {"SUPPORTS", "CONTRADICTS"}
 
 
@@ -22,13 +22,29 @@ def _packet_id(row: dict[str, Any]) -> str:
 
 
 def packet_ids_from_rows(rows: Iterable[dict[str, Any]]) -> set[str]:
-    return {
-        packet_id
-        for row in rows or []
-        if isinstance(row, dict)
-        for packet_id in [_packet_id(row)]
-        if packet_id
-    }
+    """Return only packets that are actually eligible for Judge.
+
+    Every atomic row may carry a semantic_evidence_packet (L0-L4), but the
+    runtime sends only L4 packets whose checker explicitly allows consensus.
+    Counting all packet ids made old snapshots look like hundreds of pending
+    AI calls even though most rows were not eligible for semantic judgement.
+    """
+    packet_ids: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        packet = row.get("semantic_evidence_packet")
+        if not isinstance(packet, dict):
+            continue
+        if str(packet.get("evidence_level") or "").upper() != "L4":
+            continue
+        checker = packet.get("checker")
+        if not isinstance(checker, dict) or not bool(checker.get("consensus_eligible")):
+            continue
+        packet_id = str(packet.get("packet_id") or "").strip()
+        if packet_id:
+            packet_ids.add(packet_id)
+    return packet_ids
 
 
 def _lane(checkpoint_domain: dict[str, Any] | None, role: str) -> dict[str, dict[str, Any]]:

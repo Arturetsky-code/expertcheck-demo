@@ -21,9 +21,14 @@ from .report_quality_gate import validate_review_plan
 from .semantic_evidence_engine import build_semantic_project_graph
 from .verification_core import domain_summary
 from .verified_verdict_gate import enforce_project_verdicts
+from .ai_continuation_ledger import (
+    LEDGER_VERSION,
+    queue_status_from_document,
+    reconcile_domain_audit,
+)
 
 
-CONTINUATION_VERSION = "18.0-stage1-project-data-contract"
+CONTINUATION_VERSION = "18.4.1-cumulative-ai-ledger"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -55,23 +60,12 @@ def _checklist_summary(review: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
-def continuation_pending(doc: dict[str, Any]) -> dict[str, int]:
-    """Return truthful queue counters for the dashboard continuation control."""
-    semantic = dict(doc.get("semantic_evidence_engine") or {})
-    result = {
-        "judge": 0,
-        "critic": 0,
-        "eligible": 0,
-        "responses": 0,
-    }
-    for domain in ("assignment", "checklist"):
-        audit = dict(semantic.get(domain) or {})
-        result["judge"] += int(audit.get("judge_pending") or 0) + int(audit.get("not_selected") or 0)
-        result["critic"] += int(audit.get("critic_pending") or 0)
-        result["eligible"] += int(audit.get("judge_candidates") or 0)
-        result["responses"] += int(audit.get("judge_responses") or 0) + int(audit.get("critic_responses") or 0)
-    result["total"] = result["judge"] + result["critic"]
-    return result
+def continuation_pending(
+    doc: dict[str, Any],
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return cumulative package/role counters from the persisted checkpoint."""
+    return queue_status_from_document(doc, checkpoint)
 
 
 def continue_semantic_analysis(
@@ -98,6 +92,7 @@ def continue_semantic_analysis(
     if not documents:
         raise ValueError("В результате проекта отсутствуют документы.")
     first = documents[0]
+    previous_semantic = dict(first.get("semantic_evidence_engine") or {})
     snapshot = dict(first.get("analysis_snapshot") or {})
     page_corpus = list(snapshot.get("page_corpus") or [])
     if not page_corpus:
@@ -169,7 +164,12 @@ def continue_semantic_analysis(
         semantic_limit=checklist_limit,
         semantic_checkpoint=checklist_checkpoint,
         semantic_progress_callback=semantic_progress("Чек-листы"),
-        semantic_candidate_cap=checklist_target,
+        # Continuation must see the full L4 queue. The per-click network budget
+        # is already bounded by semantic_limit/checklist_limit. Capping the
+        # candidate set at the historical initial-review target (50) made any
+        # additional eligible packets permanently unreachable after checkpoint
+        # resume (Test 77: 60 eligible, first 50 completed, last 10 deadlocked).
+        semantic_candidate_cap=0,
     )
     automatic_review["atomic_verification"] = checklist_atomic
 
@@ -214,6 +214,17 @@ def continue_semantic_analysis(
         assignment_rows, assignment_atomic, graph.get("summary") or {},
     )
     assignment_audit = dict((assignment_atomic[0] if assignment_atomic else {}).get("semantic_engine_audit") or {})
+    previous_root_ledger = checkpoint.get("_ledger") if isinstance(checkpoint.get("_ledger"), dict) else {}
+    previous_ledger_domains = dict((previous_root_ledger or {}).get("domains") or {})
+    assignment_audit, assignment_ledger = reconcile_domain_audit(
+        assignment_audit,
+        rows=assignment_atomic,
+        checkpoint_domain=assignment_checkpoint,
+        previous_audit=dict(previous_semantic.get("assignment") or {}),
+        previous_ledger_domain=dict(previous_ledger_domains.get("assignment") or {}),
+    )
+    if assignment_atomic:
+        assignment_atomic[0]["semantic_engine_audit"] = assignment_audit
     assignment_summary["ai_evidence_review"] = {
         "reviewed": assignment_audit.get("judge_responses", 0),
         "confirmed": assignment_audit.get("promoted_verified", 0),
@@ -229,8 +240,27 @@ def continue_semantic_analysis(
     )
     coverage = build_coverage_matrix(review_plan.get("items") or [])
     checklist_audit = dict(checklist_atomic.get("semantic_engine_audit") or {})
+    checklist_audit, checklist_ledger = reconcile_domain_audit(
+        checklist_audit,
+        rows=list(checklist_atomic.get("atoms") or []),
+        checkpoint_domain=checklist_checkpoint,
+        previous_audit=dict(previous_semantic.get("checklist") or {}),
+        previous_ledger_domain=dict(previous_ledger_domains.get("checklist") or {}),
+    )
+    checklist_atomic["semantic_engine_audit"] = checklist_audit
+    checklist_atoms = list(checklist_atomic.get("atoms") or [])
+    if checklist_atoms:
+        checklist_atoms[0]["semantic_engine_audit"] = checklist_audit
+    checkpoint["_ledger"] = {
+        "version": LEDGER_VERSION,
+        "snapshot_id": snapshot_id,
+        "domains": {
+            "assignment": assignment_ledger,
+            "checklist": checklist_ledger,
+        },
+    }
     semantic_summary = {
-        "version": "1.1-resumable-continuation",
+        "version": "18.4.1-cumulative-ai-ledger",
         "assignment": assignment_audit,
         "checklist": checklist_audit,
         "evidence_coverage_pct": coverage.get("evidence_coverage_pct", 0),
@@ -265,8 +295,10 @@ def continue_semantic_analysis(
         "verified_core_gate": verified_core_gate,
         "semantic_continuation": {
             "version": CONTINUATION_VERSION,
+            "ledger_version": LEDGER_VERSION,
             "snapshot_id": snapshot_id,
             "source_pdf_required": False,
+            "cumulative_ai_ledger": checkpoint.get("_ledger"),
             "assignment_checkpoint_entries": sum(len(value) for value in assignment_checkpoint.values() if isinstance(value, dict)),
             "checklist_checkpoint_entries": sum(len(value) for value in checklist_checkpoint.values() if isinstance(value, dict)),
             "quality_gate": quality_gate.get("status"),

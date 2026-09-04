@@ -27,7 +27,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.3 Candidate · Quality Gates'
+VERSION='ExpertCheck 18.4.1 Candidate · Cumulative Verification Runtime'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -56,6 +56,11 @@ if not st.session_state.get('_quality_gates_183_migrated'):
     st.session_state.provider_benchmark_runs = {}
     st.session_state.semantic_execution_checkpoint = {}
     st.session_state._quality_gates_183_migrated = True
+if not st.session_state.get('_verification_runtime_184_migrated'):
+    # 18.4 changes queue semantics and Critic participation. Reuse of an old
+    # partial 18.3 semantic checkpoint would make the control run incomparable.
+    st.session_state.semantic_execution_checkpoint = {}
+    st.session_state._verification_runtime_184_migrated = True
 _pending_page = st.session_state.pop('_navigate_to', None)
 if _pending_page:
     st.session_state['page'] = _pending_page

@@ -18,8 +18,14 @@ def render(ctx):
     user=st.session_state.get("auth_user") or {}
     store=ctx.workspace_store
     section("Мои проекты",f"Личное рабочее пространство: {user.get('email','')}")
-    if not store.persistent_mode:
-        st.warning("Сейчас используется локальное хранилище разработки. Для постоянного многопользовательского хранения в Streamlit Cloud подключите PostgreSQL через DATABASE_URL.")
+    if store.persistent_mode:
+        st.success("Постоянное хранилище PostgreSQL подключено: аккаунты и проекты переживают redeploy приложения.")
+    else:
+        st.warning(
+            "Сейчас используется локальный SQLite режима разработки. "
+            "В Streamlit Cloud аккаунты и проекты могут исчезнуть после restart/redeploy. "
+            "До подключения PostgreSQL сохраняйте цифровой снимок важных проектов."
+        )
     with st.expander("Восстановить проект из цифрового снимка", expanded=False):
         st.caption(
             "Загрузите ExpertCheck_Цифровой_снимок.json.gz. "

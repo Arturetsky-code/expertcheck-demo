@@ -269,9 +269,18 @@ def queue_status_from_document(
         totals["packages_complete"] += packages_complete
         totals["packages_remaining"] += packages_remaining
 
+        checkpoint_domain = checkpoint.get(domain) if isinstance(checkpoint.get(domain), dict) else {}
+        has_checkpoint_responses = bool(
+            _lane(checkpoint_domain, "judge") or _lane(checkpoint_domain, "critic")
+        )
         for key in ("last_judge_runtime_event", "last_critic_runtime_event"):
             event = reconciled.get(key)
             if not isinstance(event, dict):
+                continue
+            # Old portable snapshots contain historical audit calls but did not
+            # contain the actual AI checkpoint. Do not present those old calls
+            # as the state of the newly restored queue.
+            if doc.get("snapshot_restored") and not has_checkpoint_responses:
                 continue
             state = str(event.get("state") or "").upper()
             status = event.get("status_code")

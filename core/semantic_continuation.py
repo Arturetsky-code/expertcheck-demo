@@ -164,7 +164,12 @@ def continue_semantic_analysis(
         semantic_limit=checklist_limit,
         semantic_checkpoint=checklist_checkpoint,
         semantic_progress_callback=semantic_progress("Чек-листы"),
-        semantic_candidate_cap=checklist_target,
+        # Continuation must see the full L4 queue. The per-click network budget
+        # is already bounded by semantic_limit/checklist_limit. Capping the
+        # candidate set at the historical initial-review target (50) made any
+        # additional eligible packets permanently unreachable after checkpoint
+        # resume (Test 77: 60 eligible, first 50 completed, last 10 deadlocked).
+        semantic_candidate_cap=0,
     )
     automatic_review["atomic_verification"] = checklist_atomic
 

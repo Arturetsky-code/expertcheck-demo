@@ -272,6 +272,19 @@ def _dashboard(ctx):
         f"Объекты: {summary['objects']}",
         f"ТЭП: {summary['checks']}",
     )
+    restore_notice = st.session_state.pop('snapshot_restore_notice', None)
+    if isinstance(restore_notice, dict):
+        if restore_notice.get('ai_checkpoint_restored'):
+            st.success(
+                f"Проект восстановлен из цифрового снимка {restore_notice.get('snapshot_id') or ''}. "
+                "Корпус страниц и AI-checkpoint восстановлены; исходные PDF не требуются."
+            )
+        else:
+            st.info(
+                f"Проект восстановлен из цифрового снимка {restore_notice.get('snapshot_id') or ''}. "
+                "Корпус страниц восстановлен без PDF. В этом снимке нет переносимого AI-checkpoint, "
+                "поэтому смысловая очередь будет выполнена заново по сохранённому корпусу."
+            )
     semantic_summary = dict(first_doc.get('semantic_evidence_engine') or {})
     has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
     if has_semantic_snapshot and (pending['eligible'] or semantic_summary):

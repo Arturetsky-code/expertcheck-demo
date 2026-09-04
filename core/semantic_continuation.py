@@ -218,6 +218,8 @@ def continue_semantic_analysis(
         previous_audit=dict(previous_semantic.get("assignment") or {}),
         previous_ledger_domain=dict(previous_ledger_domains.get("assignment") or {}),
     )
+    if assignment_atomic:
+        assignment_atomic[0]["semantic_engine_audit"] = assignment_audit
     assignment_summary["ai_evidence_review"] = {
         "reviewed": assignment_audit.get("judge_responses", 0),
         "confirmed": assignment_audit.get("promoted_verified", 0),
@@ -240,6 +242,10 @@ def continue_semantic_analysis(
         previous_audit=dict(previous_semantic.get("checklist") or {}),
         previous_ledger_domain=dict(previous_ledger_domains.get("checklist") or {}),
     )
+    checklist_atomic["semantic_engine_audit"] = checklist_audit
+    checklist_atoms = list(checklist_atomic.get("atoms") or [])
+    if checklist_atoms:
+        checklist_atoms[0]["semantic_engine_audit"] = checklist_audit
     checkpoint["_ledger"] = {
         "version": LEDGER_VERSION,
         "snapshot_id": snapshot_id,

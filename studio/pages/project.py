@@ -36,17 +36,24 @@ def _persist_completed_state(ctx) -> bool:
         return False
 
 
-def _semantic_pending_from_result(result) -> dict:
-    """Read the resumable AI queue without depending on the rendered page."""
+def _semantic_pending_from_result(result, checkpoint=None) -> dict:
+    """Read cumulative resumable AI state without depending on the rendered page."""
     try:
         docs = result[0]
         if hasattr(docs, 'iloc'):
             first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
         else:
             first_doc = dict(docs[0]) if docs else {}
-        return continuation_pending(first_doc)
+        return continuation_pending(first_doc, checkpoint)
     except (IndexError, TypeError, AttributeError):
-        return {'eligible': 0, 'responses': 0, 'total': 0}
+        return {
+            'eligible': 0, 'responses': 0, 'total': 0,
+            'judge_done': 0, 'judge_remaining': 0,
+            'critic_required': 0, 'critic_done': 0, 'critic_remaining': 0,
+            'packages_complete': 0, 'packages_remaining': 0,
+            'operation_remaining': 0, 'completion_pct': 100.0,
+            'quota_events': [],
+        }
 
 
 def _upload(ctx):
@@ -226,7 +233,10 @@ def _upload(ctx):
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
             st.session_state.pop('analysis_failure', None)
-            pending_after_primary = _semantic_pending_from_result(st.session_state.result)
+            pending_after_primary = _semantic_pending_from_result(
+                st.session_state.result,
+                st.session_state.get('semantic_execution_checkpoint'),
+            )
             update_progress(
                 100,
                 'Первичный этап сохранён' if pending_after_primary['total'] else 'Проверка завершена',
@@ -251,7 +261,10 @@ def _dashboard(ctx):
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
-    pending = continuation_pending(first_doc)
+    pending = continuation_pending(
+        first_doc,
+        st.session_state.get('semantic_execution_checkpoint'),
+    )
     project_status_bar(
         st.session_state.project_name,
         'Проверка неполная' if pending['total'] else 'Проверка завершена',
@@ -272,11 +285,28 @@ def _dashboard(ctx):
             else:
                 st.success('AI-очередь завершена. Итоговые метрики и Quality Gate пересчитаны.')
             st.caption(
-                f"Доступно адресных пакетов: {pending['eligible']} · "
-                f"ответов Judge/Critic: {pending['responses']} · "
-                f"в очереди или вне лимита: {pending['total']}. "
+                f"Уникальных адресных пакетов: {pending['eligible']} · "
+                f"завершено пакетов: {pending['packages_complete']} · "
+                f"осталось пакетов: {pending['packages_remaining']} · "
+                f"общая готовность: {pending['completion_pct']:.1f}%."
+            )
+            st.caption(
+                f"Judge: {pending['judge_done']} завершено / {pending['judge_remaining']} осталось · "
+                f"Critic: {pending['critic_done']} завершено из {pending['critic_required']} требуемых / "
+                f"{pending['critic_remaining']} осталось · "
+                f"AI-операций осталось: {pending['operation_remaining']}. "
                 'Исходные PDF повторно не обрабатываются.'
             )
+            for event in pending.get('quota_events') or []:
+                role = str(event.get('role') or 'AI')
+                provider = str(event.get('provider') or 'провайдер')
+                model = str(event.get('model') or '')
+                state = str(event.get('state') or 'QUOTA_PAUSED')
+                st.info(
+                    f"{role}: {provider}{' / ' + model if model else ''} — "
+                    f"очередь сохранена, последнее состояние {state}. "
+                    "Уже полученные ответы остаются в checkpoint."
+                )
             if st.button(
                 'Продолжить AI-проверку' if pending['total'] else 'Пересчитать результаты из снимка',
                 type='primary',
@@ -318,9 +348,15 @@ def _dashboard(ctx):
                     st.stop()
                 st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
                 _persist_completed_state(ctx)
-                remaining = _semantic_pending_from_result(st.session_state.result)
+                remaining = _semantic_pending_from_result(
+                    st.session_state.result,
+                    st.session_state.get('semantic_execution_checkpoint'),
+                )
                 if remaining['total']:
-                    st.success(f"Пакет обработан. В очереди осталось: {remaining['total']}.")
+                    st.success(
+                        f"Порция завершена. Уникальных пакетов осталось: "
+                        f"{remaining['packages_remaining']}; AI-операций: {remaining['operation_remaining']}."
+                    )
                 else:
                     st.session_state['_navigate_to'] = (
                         'Подтверждение' if not st.session_state.get('expert_mode')

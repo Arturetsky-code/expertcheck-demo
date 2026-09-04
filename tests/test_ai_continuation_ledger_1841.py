@@ -8,11 +8,12 @@ from core.ai_continuation_ledger import (
 from core.verification_runtime_patch import _quota_pause_state
 
 
-def _row(packet_id: str) -> dict:
+def _row(packet_id: str, *, level: str = "L4", eligible: bool = True) -> dict:
     return {
         "semantic_evidence_packet": {
             "packet_id": packet_id,
-            "evidence_level": "L4",
+            "evidence_level": level,
+            "checker": {"consensus_eligible": eligible},
         }
     }
 
@@ -168,3 +169,21 @@ def test_explicit_daily_quota_pauses_without_immediate_retry():
 def test_short_retry_hint_remains_transient_not_daily_pause():
     error = "HTTP 429: rate limit reached; retry after 12s"
     assert _quota_pause_state(429, error) == ""
+
+
+def test_non_l4_or_non_consensus_packets_are_not_counted_as_ai_queue():
+    rows = []
+    rows.extend(_row(f"L4-{index}") for index in range(83))
+    rows.extend(_row(f"L3-{index}", level="L3") for index in range(500))
+    rows.extend(_row(f"NO-{index}", eligible=False) for index in range(146))
+
+    audit, ledger = reconcile_domain_audit(
+        {"judge_candidates": 83},
+        rows=rows,
+        checkpoint_domain={"judge": {}, "critic": {}},
+    )
+
+    assert audit["cumulative_packet_total"] == 83
+    assert audit["judge_pending"] == 83
+    assert ledger["packet_total"] == 83
+    assert len(ledger["packet_ids"]) == 83

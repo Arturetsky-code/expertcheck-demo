@@ -8,7 +8,7 @@ from typing import Any, Iterable
 from .project_data_contract import enforce_project_data_contract
 
 
-SNAPSHOT_VERSION = "18.0-rerunnable-contracted-evidence-corpus"
+SNAPSHOT_VERSION = "18.4.1-portable-project-with-ai-checkpoint"
 
 
 def _text(value: Any, limit: int = 12000) -> str:
@@ -83,7 +83,9 @@ def build_analysis_snapshot(
 
 def project_snapshot_bytes(
     documents: Iterable[dict[str, Any]], findings: Iterable[dict[str, Any]],
-    comparisons: Iterable[dict[str, Any]],
+    comparisons: Iterable[dict[str, Any]], *,
+    semantic_checkpoint: dict[str, Any] | None = None,
+    workspace_state: dict[str, Any] | None = None,
 ) -> bytes:
     """Export a portable compressed snapshot for regression and AI continuation."""
     source_documents = list(documents or [])
@@ -114,6 +116,15 @@ def project_snapshot_bytes(
         "project_review_plan": first.get("project_review_plan") or {},
         "report_quality_gate": first.get("report_quality_gate") or {},
         "coverage_matrix": first.get("coverage_matrix") or {},
+        "semantic_evidence_engine": first.get("semantic_evidence_engine") or {},
+        "semantic_continuation": first.get("semantic_continuation") or {},
+        "semantic_project_graph": first.get("semantic_project_graph") or {},
+        "atomic_requirement_graph": first.get("atomic_requirement_graph") or {},
+        "coverage_acceleration_budget": first.get("coverage_acceleration_budget") or {},
+        "deep_evidence_review": first.get("deep_evidence_review") or {},
+        "verified_core_gate": first.get("verified_core_gate") or {},
+        "semantic_execution_checkpoint": dict(semantic_checkpoint or {}),
+        "workspace_state": dict(workspace_state or {}),
     }
     raw = json.dumps(payload, ensure_ascii=False, default=str, separators=(",", ":")).encode("utf-8")
     return gzip.compress(raw, compresslevel=6)
@@ -125,6 +136,16 @@ def load_project_snapshot(data: bytes) -> dict[str, Any]:
         raise ValueError("Файл не является цифровым снимком ExpertCheck.")
     if not isinstance(payload.get("analysis_snapshot"), dict):
         raise ValueError("В цифровом снимке отсутствует корпус доказательств.")
+    page_corpus = list((payload.get("analysis_snapshot") or {}).get("page_corpus") or [])
+    if not page_corpus:
+        raise ValueError("Цифровой снимок не содержит извлечённого корпуса страниц.")
+    stored_snapshot_id = str((payload.get("analysis_snapshot") or {}).get("snapshot_id") or "")
+    actual_snapshot_id = corpus_fingerprint(page_corpus)
+    if stored_snapshot_id and stored_snapshot_id != actual_snapshot_id:
+        raise ValueError(
+            "Цифровой снимок повреждён: fingerprint корпуса страниц не совпадает."
+        )
+    payload["analysis_snapshot"]["snapshot_id"] = actual_snapshot_id
     documents, findings, comparisons, contract = enforce_project_data_contract(
         payload.get("documents"), payload.get("findings"), payload.get("comparisons"),
         source="snapshot_load_boundary",
@@ -139,6 +160,112 @@ def load_project_snapshot(data: bytes) -> dict[str, Any]:
     payload["comparisons"] = comparisons
     payload["snapshot_load_contract"] = contract
     return payload
+
+
+def snapshot_to_workspace_payload(
+    payload: dict[str, Any], *,
+    project_name: str = "",
+) -> dict[str, Any]:
+    """Rebuild a resumable workspace project from a portable snapshot.
+
+    Old snapshots that predate AI-checkpoint export remain supported.  Their
+    deterministic extraction layer is restored and semantic continuation starts
+    from an empty checkpoint against the preserved page corpus.
+    """
+    documents = [dict(row) for row in payload.get("documents") or []]
+    findings = [dict(row) for row in payload.get("findings") or []]
+    comparisons = [dict(row) for row in payload.get("comparisons") or []]
+    if not documents:
+        documents = [{
+            "Файл": "Цифровой снимок ExpertCheck",
+            "Тип документа": "Снимок проекта",
+            "Страниц": len((payload.get("analysis_snapshot") or {}).get("page_corpus") or []),
+        }]
+
+    first = documents[0]
+    project_fields = (
+        "analysis_snapshot",
+        "project_data_contract",
+        "assignment_requirements",
+        "assignment_compliance",
+        "assignment_atomic_compliance",
+        "automatic_checklist_review",
+        "normative_compliance_audit",
+        "universal_project_fact_graph",
+        "project_review_plan",
+        "report_quality_gate",
+        "coverage_matrix",
+        "semantic_evidence_engine",
+        "semantic_continuation",
+        "semantic_project_graph",
+        "atomic_requirement_graph",
+        "coverage_acceleration_budget",
+        "deep_evidence_review",
+        "verified_core_gate",
+    )
+    for key in project_fields:
+        if key in payload:
+            first[key] = payload.get(key)
+
+    first["core_version"] = payload.get("core_version") or first.get("core_version")
+    first["snapshot_restored"] = True
+    first["snapshot_restore_version"] = SNAPSHOT_VERSION
+
+    # Older snapshots did not export the top-level semantic audit. Recover it
+    # from the nested atomic structures when possible.
+    if not isinstance(first.get("semantic_evidence_engine"), dict) or not first.get("semantic_evidence_engine"):
+        assignment_atoms = list(first.get("assignment_atomic_compliance") or [])
+        assignment_audit = dict(
+            (assignment_atoms[0] if assignment_atoms else {}).get("semantic_engine_audit") or {}
+        )
+        checklist = dict(first.get("automatic_checklist_review") or {})
+        checklist_atomic = dict(checklist.get("atomic_verification") or {})
+        checklist_audit = dict(checklist_atomic.get("semantic_engine_audit") or {})
+        first["semantic_evidence_engine"] = {
+            "version": "snapshot-migrated",
+            "assignment": assignment_audit,
+            "checklist": checklist_audit,
+        }
+
+    checkpoint = payload.get("semantic_execution_checkpoint")
+    checkpoint = dict(checkpoint) if isinstance(checkpoint, dict) else {}
+    snapshot_id = str((first.get("analysis_snapshot") or {}).get("snapshot_id") or "")
+    if checkpoint and checkpoint.get("_project_fingerprint") != snapshot_id:
+        # Never reuse AI decisions when their corpus identity is not provably
+        # the same. The deterministic snapshot is still perfectly reusable.
+        checkpoint = {}
+    if not checkpoint:
+        checkpoint = {"_project_fingerprint": snapshot_id} if snapshot_id else {}
+
+    workspace = dict(payload.get("workspace_state") or {})
+    restored_name = (
+        str(project_name or "").strip()
+        or str(workspace.get("project_name") or "").strip()
+        or "Восстановленный проект"
+    )
+    return {
+        "project_name": restored_name,
+        "analysis_time": workspace.get("analysis_time"),
+        "result": (documents, findings, comparisons),
+        "object_registry_confirmed": bool(workspace.get("object_registry_confirmed", False)),
+        "object_assembly_rows": list(workspace.get("object_assembly_rows") or []),
+        "completeness_user_confirmed": bool(workspace.get("completeness_user_confirmed", False)),
+        "completeness_decisions": dict(workspace.get("completeness_decisions") or {}),
+        "checklist_run": workspace.get("checklist_run"),
+        "checklist_user_results": dict(workspace.get("checklist_user_results") or {}),
+        "risk_user_decisions": dict(workspace.get("risk_user_decisions") or {}),
+        "object_learning_examples": list(workspace.get("object_learning_examples") or []),
+        "semantic_execution_checkpoint": checkpoint,
+        "snapshot_restore_info": {
+            "version": payload.get("version"),
+            "snapshot_id": snapshot_id,
+            "source_pdf_required": False,
+            "ai_checkpoint_restored": bool(
+                payload.get("semantic_execution_checkpoint")
+                and len(checkpoint) > int(bool(snapshot_id))
+            ),
+        },
+    }
 
 
 def recheck_project_snapshot(payload: dict[str, Any]) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import streamlit as st
 from studio.components import section, card
+from core.project_snapshot import load_project_snapshot, snapshot_to_workspace_payload
 
 def _reset_project_session():
     for k,v in {
@@ -19,6 +20,61 @@ def render(ctx):
     section("Мои проекты",f"Личное рабочее пространство: {user.get('email','')}")
     if not store.persistent_mode:
         st.warning("Сейчас используется локальное хранилище разработки. Для постоянного многопользовательского хранения в Streamlit Cloud подключите PostgreSQL через DATABASE_URL.")
+    with st.expander("Восстановить проект из цифрового снимка", expanded=False):
+        st.caption(
+            "Загрузите ExpertCheck_Цифровой_снимок.json.gz. "
+            "Извлечённый корпус страниц и результаты будут восстановлены без повторного чтения исходных PDF."
+        )
+        restore_file=st.file_uploader(
+            "Цифровой снимок ExpertCheck",
+            type=["gz"],
+            accept_multiple_files=False,
+            key="workspace_snapshot_restore_file",
+        )
+        restore_name=st.text_input(
+            "Наименование восстановленного проекта",
+            value="Восстановленный проект",
+            key="workspace_snapshot_restore_name",
+        )
+        if st.button(
+            "Восстановить проект",
+            type="primary",
+            width="stretch",
+            key="workspace_restore_snapshot",
+            disabled=restore_file is None,
+        ):
+            try:
+                snapshot=load_project_snapshot(restore_file.getvalue())
+                restored=snapshot_to_workspace_payload(
+                    snapshot,
+                    project_name=restore_name.strip() or "",
+                )
+                pid=store.create_project(user["id"],restored["project_name"])
+                store.save_project(
+                    user["id"],
+                    pid,
+                    restored["project_name"],
+                    restored,
+                    status="analyzed",
+                    app_version=ctx.version,
+                )
+            except Exception as exc:
+                st.error(f"Не удалось восстановить цифровой снимок: {type(exc).__name__}: {exc}")
+            else:
+                _reset_project_session()
+                st.session_state.active_project_id=pid
+                for k,v in restored.items():
+                    st.session_state[k]=v
+                st.session_state.project_name=restored["project_name"]
+                st.session_state["_navigate_to"]="Проект"
+                info=restored.get("snapshot_restore_info") or {}
+                st.session_state["snapshot_restore_notice"]={
+                    "snapshot_id":info.get("snapshot_id"),
+                    "ai_checkpoint_restored":bool(info.get("ai_checkpoint_restored")),
+                    "source_pdf_required":False,
+                }
+                st.rerun()
+
     with st.container(border=True):
         c1,c2=st.columns([4,1])
         with c1:

@@ -29,7 +29,7 @@ from core import table_row_integrity as tri
 from core import table_semantic_scope as tss
 
 
-VERSION = "18.4-verification-runtime-v1"
+VERSION = "18.4.1-verification-runtime-v2"
 _FREE_NAMES = {"groq", "gemini"}
 _PREFLIGHT_CACHE_TTL = 300.0
 _PREFLIGHT_CACHE: dict[tuple[str, ...], tuple[float, dict[str, Any]]] = {}
@@ -66,6 +66,38 @@ def _retry_seconds(text: str, default: float) -> float:
             except ValueError:
                 pass
     return default
+
+
+def _explicit_retry_seconds(text: str) -> float | None:
+    low = str(text or "").lower().replace(",", ".")
+    patterns = (
+        r"try again(?: in)?\s*([0-9]+(?:\.[0-9]+)?)\s*s",
+        r"retry(?: after| in)?\s*([0-9]+(?:\.[0-9]+)?)\s*s",
+        r"retry[- ]after[^0-9]*([0-9]+(?:\.[0-9]+)?)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, low)
+        if match:
+            try:
+                return max(1.0, min(30.0, float(match.group(1)) + 0.75))
+            except ValueError:
+                return None
+    return None
+
+
+def _quota_pause_state(status: Any, detail: str) -> str:
+    if status != 429:
+        return ""
+    low = str(detail or "").lower()
+    if any(token in low for token in ("tokens per day", "requests per day", " per day", "tpd", "rpd", "daily limit")):
+        return "DAILY_QUOTA_PAUSED"
+    # A 429 without an explicit short retry hint is not retried immediately:
+    # on free routes this is usually quota exhaustion, not a useful transient.
+    if _explicit_retry_seconds(detail) is None and any(
+        token in low for token in ("quota", "rate limit", "too many requests", "exceeded")
+    ):
+        return "QUOTA_PAUSED"
+    return ""
 
 
 def _pacing_seconds(provider: Any, packet: dict[str, Any], *, critic: bool) -> float:
@@ -209,10 +241,17 @@ def _install_free_queue() -> None:
                 status = last.get("status_code")
                 detail = str(last.get("error") or " ".join(partial_errors))
                 transient = state == "RATE_LIMITED" or status in {408, 429, 500, 502, 503, 504}
+                quota_pause = _quota_pause_state(status, detail)
+                if quota_pause:
+                    if calls:
+                        calls[-1]["runtime_state"] = quota_pause
+                    stop_queue = True
+                    break
                 if transient and transient_retry < 1:
                     transient_retry += 1
+                    explicit_wait = _explicit_retry_seconds(detail)
                     default_wait = 12.0 if status == 429 and "groq" in _provider_name(provider).lower() else 5.0
-                    wait = _retry_seconds(detail, default_wait)
+                    wait = explicit_wait if explicit_wait is not None else _retry_seconds(detail, default_wait)
                     if calls:
                         calls[-1]["runtime_wait_seconds"] = wait
                         calls[-1]["runtime_state"] = "WAIT_AND_RETRY"

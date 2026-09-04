@@ -237,6 +237,56 @@ def snapshot_to_workspace_payload(
     if not checkpoint:
         checkpoint = {"_project_fingerprint": snapshot_id} if snapshot_id else {}
 
+    portable_checkpoint = bool(
+        payload.get("semantic_execution_checkpoint")
+        and len(checkpoint) > int(bool(snapshot_id))
+    )
+    if not portable_checkpoint:
+        def reset_runtime_audit(audit: dict[str, Any] | None) -> dict[str, Any]:
+            cleaned = dict(audit or {})
+            for key in (
+                "judge_responses", "critic_responses", "judge_attempted",
+                "critic_attempted", "judge_checkpoint_reused",
+                "critic_checkpoint_reused", "advisory_completed",
+                "cumulative_responses", "unique_packages_complete",
+            ):
+                cleaned[key] = 0
+            cleaned["judge_calls"] = []
+            cleaned["critic_calls"] = []
+            cleaned["judge_errors"] = []
+            cleaned["critic_errors"] = []
+            cleaned.pop("last_judge_runtime_event", None)
+            cleaned.pop("last_critic_runtime_event", None)
+            cleaned.pop("cumulative_ledger_version", None)
+            cleaned.pop("cumulative_packet_total", None)
+            cleaned.pop("unique_packages_pending", None)
+            cleaned.pop("package_completion_pct", None)
+            return cleaned
+
+        semantic = dict(first.get("semantic_evidence_engine") or {})
+        semantic["assignment"] = reset_runtime_audit(semantic.get("assignment"))
+        semantic["checklist"] = reset_runtime_audit(semantic.get("checklist"))
+        semantic["version"] = "snapshot-migrated-without-ai-checkpoint"
+        first["semantic_evidence_engine"] = semantic
+
+        assignment_atoms = list(first.get("assignment_atomic_compliance") or [])
+        if assignment_atoms and isinstance(assignment_atoms[0], dict):
+            assignment_atoms[0]["semantic_engine_audit"] = reset_runtime_audit(
+                assignment_atoms[0].get("semantic_engine_audit")
+            )
+        checklist = dict(first.get("automatic_checklist_review") or {})
+        checklist_atomic = dict(checklist.get("atomic_verification") or {})
+        checklist_atomic["semantic_engine_audit"] = reset_runtime_audit(
+            checklist_atomic.get("semantic_engine_audit")
+        )
+        checklist_atoms = list(checklist_atomic.get("atoms") or [])
+        if checklist_atoms and isinstance(checklist_atoms[0], dict):
+            checklist_atoms[0]["semantic_engine_audit"] = reset_runtime_audit(
+                checklist_atoms[0].get("semantic_engine_audit")
+            )
+        checklist["atomic_verification"] = checklist_atomic
+        first["automatic_checklist_review"] = checklist
+
     workspace = dict(payload.get("workspace_state") or {})
     restored_name = (
         str(project_name or "").strip()
@@ -260,10 +310,7 @@ def snapshot_to_workspace_payload(
             "version": payload.get("version"),
             "snapshot_id": snapshot_id,
             "source_pdf_required": False,
-            "ai_checkpoint_restored": bool(
-                payload.get("semantic_execution_checkpoint")
-                and len(checkpoint) > int(bool(snapshot_id))
-            ),
+            "ai_checkpoint_restored": portable_checkpoint,
         },
     }
 

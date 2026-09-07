@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 18.5 Candidate · Evidence Quality"
-    assert core_version == "18.5-evidence-quality"
+    assert _app_version() == "ExpertCheck 18.5.1 Candidate · Evidence Binding"
+    assert core_version == "18.5.1-evidence-binding"
 
 
 # Backward-compatible names imported by cumulative release gates.

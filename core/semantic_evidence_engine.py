@@ -53,6 +53,26 @@ def _all_token_stems(value: Any) -> set[str]:
     }
 
 
+_ENTITY_GENERIC_STEMS = {
+    "объект", "здание", "сооружен", "станция", "площадк", "систем",
+    "установк", "корпус", "комплекс", "участок", "отделени", "территор",
+}
+
+
+def _entity_tokens(value: Any) -> list[str]:
+    """Keep short project identifiers (ДСК, ККВ, ПС) while dropping generic nouns."""
+    result: list[str] = []
+    for token in re.findall(r"[a-zа-я0-9-]{2,}", _norm(value), re.I):
+        if token.isdigit():
+            continue
+        stem = token[:8] if len(token) > 8 else token
+        if stem in _ENTITY_GENERIC_STEMS:
+            continue
+        if stem not in result:
+            result.append(stem)
+    return result[:12]
+
+
 def _token_hits(text: str, tokens: Iterable[str]) -> list[str]:
     low = _norm(text)
     return [token for token in tokens if token and token in low]
@@ -118,18 +138,31 @@ def _owner_match(atom: dict[str, Any], row: dict[str, Any], text: str) -> bool |
     owner = str(atom.get("object_name") or atom.get("scope_entity") or "").strip()
     if not owner:
         return None
-    observed = " ".join(str(row.get(key) or "") for key in ("owner", "entity_name", "object_name")) + " " + text
+    observed = " ".join(
+        str(row.get(key) or "")
+        for key in ("owner", "entity_name", "object_name", "object_hint")
+    ) + " " + text
+
+    expected_position = re.sub(
+        r"\s+", "", str(atom.get("genplan_position") or atom.get("position") or "")
+    ).casefold()
+    observed_position = re.sub(
+        r"\s+", "", str(row.get("genplan_position") or row.get("position") or "")
+    ).casefold()
+    if expected_position and observed_position and expected_position != observed_position:
+        return False
+
     if _norm(owner) and _norm(owner) in _norm(observed):
         return True
-    generic = {
-        "объект", "здание", "сооружен", "станция", "площадка", "система",
-        "установк", "корпус", "комплекс", "участок", "отделени",
-    }
-    expected = {token for token in _tokens(owner) if token not in generic}
+    expected = set(_entity_tokens(owner))
     if not expected:
-        expected = set(_tokens(owner))
-    hits = set(_token_hits(observed, expected))
-    return bool(expected and len(hits) / len(expected) >= 0.6)
+        # A purely generic owner such as «здание» is not enough to prove
+        # identity; fail closed rather than matching every building on a page.
+        return None
+    observed_tokens = set(_entity_tokens(observed))
+    hits = expected.intersection(observed_tokens)
+    threshold = 1.0 if len(expected) == 1 else 0.67
+    return len(hits) / len(expected) >= threshold
 
 
 def _qualifiers(atom: dict[str, Any]) -> list[str]:

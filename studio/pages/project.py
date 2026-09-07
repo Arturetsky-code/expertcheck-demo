@@ -55,7 +55,9 @@ def _semantic_pending_from_result(result, checkpoint=None) -> dict:
         )
         pending = continuation_pending(first_doc, checkpoint)
         pending["_state_reconciled"] = bool(
-            mutable_source and before_pending != int(pending.get("operation_remaining") or 0)
+            mutable_source
+            and not pending.get("checkpoint_stale")
+            and before_pending != int(pending.get("operation_remaining") or 0)
         )
         return pending
     except (IndexError, TypeError, AttributeError):

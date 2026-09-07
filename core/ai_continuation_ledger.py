@@ -10,7 +10,7 @@ slice can never make completed work disappear from the report.
 
 from typing import Any, Iterable
 
-LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v2"
+LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v3"
 _CATEGORICAL_JUDGE = {"SUPPORTS", "CONTRADICTS"}
 
 
@@ -68,6 +68,35 @@ def _requires_critic(judge: dict[str, Any]) -> bool:
     return str(judge.get("verdict") or "").upper() in _CATEGORICAL_JUDGE
 
 
+def _validated_critic_requirements(
+    rows: Iterable[dict[str, Any]],
+) -> tuple[set[str], set[str]]:
+    """Return required Critic ids and ids with authoritative validated Judge data.
+
+    Checkpoint lanes store the provider raw structured response. A categorical
+    raw verdict can still fail the local Judge validator (for example confidence
+    0.80 < 0.82). Critic is never scheduled for such a row, so counting every
+    raw SUPPORTS/CONTRADICTS as Critic-required creates a permanent one-packet
+    deadlock. Current project rows contain the validated semantic_judge and are
+    therefore authoritative for Critic eligibility.
+    """
+    required: set[str] = set()
+    observed: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        packet_id = _packet_id(row)
+        judge = row.get("semantic_judge")
+        if not packet_id or not isinstance(judge, dict) or not judge:
+            continue
+        if not any(key in judge for key in ("valid", "validation_reasons", "response_received")):
+            continue
+        observed.add(packet_id)
+        if judge.get("valid") is True and _requires_critic(judge):
+            required.add(packet_id)
+    return required, observed
+
+
 def _last_runtime_event(audit: dict[str, Any], role: str) -> dict[str, Any]:
     calls = audit.get("critic_calls" if role == "CRITIC" else "judge_calls")
     if not isinstance(calls, list):
@@ -123,12 +152,19 @@ def reconcile_domain_audit(
     packet_total = max(known_total, legacy_total)
 
     judge_ids = set(judge)
-    critic_required_ids = {
-        packet_id for packet_id, value in judge.items()
-        if _requires_critic(value)
-    }
-    # Existing Critic responses are proof that a packet required Critic even if
-    # an older raw Judge payload was compacted.
+    validated_required, validated_observed = _validated_critic_requirements(rows)
+    critic_required_ids: set[str] = set()
+    for packet_id, value in judge.items():
+        if packet_id in validated_observed:
+            if packet_id in validated_required:
+                critic_required_ids.add(packet_id)
+        elif _requires_critic(value):
+            # Backward-compatible fallback for older checkpoint/snapshot rows
+            # that do not contain the local validated semantic_judge payload.
+            critic_required_ids.add(packet_id)
+
+    # Existing Critic responses are proof that a packet was eligible even if
+    # older row metadata was compacted or unavailable.
     critic_required_ids.update(critic)
     critic_ids = set(critic).intersection(critic_required_ids)
 

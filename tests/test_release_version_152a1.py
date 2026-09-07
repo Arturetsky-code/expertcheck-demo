@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 18.4.1 Candidate · Cumulative Verification Runtime"
-    assert core_version == "18.4.1-cumulative-verification-runtime"
+    assert _app_version() == "ExpertCheck 18.5 Candidate · Evidence Quality"
+    assert core_version == "18.5-evidence-quality"
 
 
 # Backward-compatible names imported by cumulative release gates.

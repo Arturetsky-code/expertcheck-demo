@@ -28,7 +28,23 @@ from .ai_continuation_ledger import (
 )
 
 
-CONTINUATION_VERSION = "18.5-evidence-quality-continuation"
+CONTINUATION_VERSION = "18.5.1-evidence-binding-continuation"
+
+
+_STALE_SEMANTIC_KEYS = (
+    "semantic_evidence_packet", "semantic_judge", "semantic_critic",
+    "semantic_consensus_state", "semantic_consensus_reasons",
+    "semantic_consensus_independent", "semantic_advisory_state",
+    "semantic_advisory_decision", "semantic_engine_audit",
+)
+
+
+def _clear_stale_semantic_state(rows: list[dict[str, Any]]) -> None:
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        for key in _STALE_SEMANTIC_KEYS:
+            row.pop(key, None)
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -134,6 +150,8 @@ def continue_semantic_analysis(
     atoms = deepcopy(list(graph.get("atoms") or []))
     if not atoms:
         atoms = deepcopy(list(first.get("assignment_atomic_compliance") or []))
+    if semantic_engine_changed:
+        _clear_stale_semantic_state(atoms)
     parent_rows = list(first.get("assignment_compliance") or [])
 
     def semantic_progress(domain: str):
@@ -164,8 +182,16 @@ def continue_semantic_analysis(
 
     _progress(progress_callback, 48, "Продолжение AI-проверки", "Продолжаем очередь корпоративных чек-листов")
     automatic_review = deepcopy(dict(first.get("automatic_checklist_review") or {}))
+    checklist_source_rows = list(automatic_review.get("results") or [])
+    if semantic_engine_changed:
+        _clear_stale_semantic_state(checklist_source_rows)
+        previous_atomic = dict(automatic_review.get("atomic_verification") or {})
+        previous_atoms = list(previous_atomic.get("atoms") or [])
+        _clear_stale_semantic_state(previous_atoms)
+        previous_atomic["atoms"] = previous_atoms
+        automatic_review["atomic_verification"] = previous_atomic
     checklist_atomic = verify_checklist_rows(
-        list(automatic_review.get("results") or []),
+        checklist_source_rows,
         knowledge_root=knowledge_root,
         fact_graph=fact_graph,
         page_corpus=page_corpus,

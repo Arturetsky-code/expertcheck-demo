@@ -37,14 +37,27 @@ def _persist_completed_state(ctx) -> bool:
 
 
 def _semantic_pending_from_result(result, checkpoint=None) -> dict:
-    """Read cumulative resumable AI state without depending on the rendered page."""
+    """Read cumulative resumable AI state and reconcile stale persisted counters."""
     try:
         docs = result[0]
         if hasattr(docs, 'iloc'):
             first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+            mutable_source = False
         else:
-            first_doc = dict(docs[0]) if docs else {}
-        return continuation_pending(first_doc, checkpoint)
+            first_doc = docs[0] if docs and isinstance(docs[0], dict) else (dict(docs[0]) if docs else {})
+            mutable_source = bool(docs and isinstance(docs[0], dict))
+        semantic_before = dict(first_doc.get("semantic_evidence_engine") or {})
+        before_pending = sum(
+            int((semantic_before.get(code) or {}).get("judge_pending") or 0)
+            + int((semantic_before.get(code) or {}).get("not_selected") or 0)
+            + int((semantic_before.get(code) or {}).get("critic_pending") or 0)
+            for code in ("assignment", "checklist")
+        )
+        pending = continuation_pending(first_doc, checkpoint)
+        pending["_state_reconciled"] = bool(
+            mutable_source and before_pending != int(pending.get("operation_remaining") or 0)
+        )
+        return pending
     except (IndexError, TypeError, AttributeError):
         return {
             'eligible': 0, 'responses': 0, 'total': 0,
@@ -261,10 +274,12 @@ def _dashboard(ctx):
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
-    pending = continuation_pending(
-        first_doc,
+    pending = _semantic_pending_from_result(
+        st.session_state.get("result"),
         st.session_state.get('semantic_execution_checkpoint'),
     )
+    if pending.pop("_state_reconciled", False):
+        _persist_completed_state(ctx)
     project_status_bar(
         st.session_state.project_name,
         'Проверка неполная' if pending['total'] else 'Проверка завершена',

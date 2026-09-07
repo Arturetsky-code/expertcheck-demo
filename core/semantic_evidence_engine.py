@@ -173,13 +173,18 @@ def _qualifiers(atom: dict[str, Any]) -> list[str]:
 def _focus_anchors(atom: dict[str, Any], raw: dict[str, Any]) -> list[str]:
     """Build privacy-safe lexical anchors for the evidence window."""
     anchors: list[str] = []
-    sources = (
-        atom.get("atom_text") or atom.get("requirement_text"),
-        atom.get("object_name") or atom.get("scope_entity"),
+    for token in _tokens(atom.get("atom_text") or atom.get("requirement_text")):
+        if token and token not in anchors:
+            anchors.append(token)
+    # Entity tokens use a separate tokenizer so short identifiers such as ДСК
+    # remain available to the window selector.
+    for token in _entity_tokens(atom.get("object_name") or atom.get("scope_entity")):
+        if token and token not in anchors:
+            anchors.append(token)
+    for source in (
         raw.get("property_name") or raw.get("parameter_name"),
         " ".join(_qualifiers(atom)),
-    )
-    for source in sources:
+    ):
         for token in _tokens(source):
             if token and token not in anchors:
                 anchors.append(token)

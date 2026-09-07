@@ -596,6 +596,8 @@ def _compact_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "retrieval_score", "owner_match", "property_match", "source_modality",
         "required_modality", "modality_gate_state", "missing_critical_qualifiers",
         "contract_ready_for_judgement", "semantic_token_coverage",
+        "ai_evidence_text", "evidence_window_version", "entity_binding_state",
+        "property_binding_state", "observed_owner", "observed_property_code",
     }
     return {
         **{key: value for key, value in packet.items() if key != "evidence"},
@@ -612,6 +614,10 @@ JUDGE_SYSTEM = """Вы — независимый Evidence Judge системы 
 Для каждого packet_id верните один verdict: SUPPORTS, CONTRADICTS, INSUFFICIENT, OTHER_ENTITY или OTHER_METRIC.
 SUPPORTS допустим только когда цитируемый фрагмент прямо подтверждает всё атомарное требование для той же сущности, того же свойства, нужной модальности и всех квалификаторов.
 CONTRADICTS допустим только при прямом содержательном противоречии, а не при отсутствии находки.
+Поля binding_contract и entity_binding_state/property_binding_state являются детерминированными сигналами ExpertCheck и имеют приоритет над смысловым сходством:
+- если requires_same_owner=true, для категоричного вывода cited evidence должен иметь owner_match=true / entity_binding_state=MATCHED; MISMATCH означает OTHER_ENTITY, UNPROVEN означает INSUFFICIENT;
+- если requires_same_parameter=true, для категоричного вывода cited evidence должен иметь property_match=true / property_binding_state=MATCHED; MISMATCH означает OTHER_METRIC, UNPROVEN означает INSUFFICIENT;
+- одинаковое число, единица или похожая формулировка не доказывают тождество показателя.
 evidence_ids могут содержать только ID из соответствующего пакета. Верните только JSON:
 {"decisions":[{"packet_id":"...","verdict":"SUPPORTS|CONTRADICTS|INSUFFICIENT|OTHER_ENTITY|OTHER_METRIC","evidence_ids":["..."],"same_entity":true|false,"same_property":true|false,"qualifiers_satisfied":true|false,"modality_satisfied":true|false,"confidence":0.0,"reason":"кратко по-русски"}]}"""
 
@@ -1082,6 +1088,28 @@ def _confidence(value: Any) -> float:
         return 0.0
 
 
+def _deterministic_binding_reasons(
+    packet: dict[str, Any], evidence_ids: Iterable[str],
+) -> list[str]:
+    """Fail closed when AI categorical claims outrun local entity/property binding."""
+    cited = _evidence_by_id(packet, evidence_ids)
+    contract = dict(packet.get("binding_contract") or {})
+    reasons: list[str] = []
+    if contract.get("requires_same_owner"):
+        states = [row.get("owner_match") for row in cited]
+        if any(value is False for value in states):
+            reasons.append("Детерминированный binding gate выявил доказательство другого объекта.")
+        elif not any(value is True for value in states):
+            reasons.append("Детерминированный binding gate не подтвердил тождество объекта.")
+    if contract.get("requires_same_parameter"):
+        states = [row.get("property_match") for row in cited]
+        if any(value is False for value in states):
+            reasons.append("Детерминированный binding gate выявил доказательство другого показателя.")
+        elif not any(value is True for value in states):
+            reasons.append("Детерминированный binding gate не подтвердил тот же инженерный показатель.")
+    return reasons
+
+
 def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[str, Any]:
     raw = dict(raw or {})
     received = bool(raw)
@@ -1110,6 +1138,7 @@ def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[
             reasons.append("Judge не подтвердил все критические квалификаторы.")
         if raw.get("modality_satisfied") is not True:
             reasons.append("Judge не подтвердил требуемую модальность.")
+        reasons.extend(_deterministic_binding_reasons(packet, cited))
     valid = received and verdict in JUDGE_VERDICTS and not reasons
     return {
         **raw,

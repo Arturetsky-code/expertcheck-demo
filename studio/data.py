@@ -623,6 +623,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Основная модель':row.get('judge_model') or '—',
                 'Решение контрольной модели':ru_label(row.get('critic_state')),
                 'Ответ контрольной модели получен':'Да' if row.get('critic_response_received') else 'Нет',
+                'Достоверность контрольной модели':row.get('critic_confidence'),
+                'Причина решения контрольной модели':row.get('critic_reason') or '—',
+                'Блокирующие замечания контрольной модели':_safe_join(row.get('critic_blocking_concerns')) or '—',
                 'Фактический контрольный провайдер':row.get('critic_provider') or '—',
                 'Контрольная модель':row.get('critic_model') or '—',
                 'Итог консенсуса':ru_label(row.get('consensus_state')),
@@ -742,7 +745,24 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         int((semantic_engine_summary.get(code) or {}).get('judge_responses') or 0)
         for code in ('assignment','checklist')
     )
-    semantic_completion_pct=round(100*semantic_responses/max(1,semantic_candidates),1)
+    semantic_critic_responses=sum(
+        int((semantic_engine_summary.get(code) or {}).get('critic_responses') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_packages_complete=sum(
+        int((semantic_engine_summary.get(code) or {}).get('unique_packages_complete') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_packages_pending=sum(
+        int((semantic_engine_summary.get(code) or {}).get('unique_packages_pending') or 0)
+        for code in ('assignment','checklist')
+    )
+    # Older non-ledger audits may not carry package counters. Use the current
+    # operation-safe approximation only as a backward-compatible fallback.
+    if semantic_candidates and not semantic_packages_complete and not semantic_packages_pending:
+        semantic_packages_pending=min(semantic_candidates, semantic_pending)
+        semantic_packages_complete=max(0, semantic_candidates-semantic_packages_pending)
+    semantic_completion_pct=round(100*semantic_packages_complete/max(1,semantic_candidates),1)
     readiness_reasons=[]
     if total_review_questions:
         readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
@@ -794,8 +814,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Проверок с независимым AI-консенсусом', coverage_matrix_payload.get('semantic_consensus_completed',0)],
         ['Консультативных AI-оценок без L5', semantic_advisory_total],
         ['AI-пакетов подготовлено', semantic_candidates],
-        ['AI-пакетов обработано', semantic_responses],
-        ['Выполнение AI-очереди, %', semantic_completion_pct],
+        ['AI-пакетов полностью завершено', semantic_packages_complete],
+        ['AI-пакетов осталось', semantic_packages_pending],
+        ['Ответов Judge получено', semantic_responses],
+        ['Ответов Critic получено', semantic_critic_responses],
+        ['AI-операций осталось', semantic_pending],
+        ['Выполнение AI-очереди по завершённым пакетам, %', semantic_completion_pct],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
         ['Задание: покрытие найденными кандидатами L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
@@ -919,6 +943,21 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     # Comparison diagnostics may contain many raw classifications which are
     # deliberately de-duplicated in the specialist queue.
     exact_question_count=len(deduped_questions)
+    # The exported de-duplicated queue is authoritative for all report-facing
+    # question counts. Rebuild readiness text from that same number so the
+    # Quality Gate cannot say 344 while the visible report contains 345 rows.
+    total_review_questions=exact_question_count
+    readiness_reasons=[]
+    if total_review_questions:
+        readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
+    if total_system_limitations:
+        readiness_reasons.append(f'вне автоматического покрытия: {total_system_limitations}')
+    if semantic_pending:
+        readiness_reasons.append(f'AI-пакетов в очереди: {semantic_packages_pending}')
+    verification_readiness='Неполная' if readiness_reasons else 'Завершена'
+    for summary_row in summary_rows:
+        if summary_row[0]=='Готовность проверки':
+            summary_row[1]=verification_readiness
     reconcile_question_headline(
         summary_rows, exact_question_count=exact_question_count,
         project_findings=total_project_findings,

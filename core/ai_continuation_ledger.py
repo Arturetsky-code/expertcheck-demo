@@ -261,6 +261,7 @@ def queue_status_from_document(
         "domains": {},
     }
 
+    reconciled_ledgers: dict[str, dict[str, Any]] = {}
     for domain in ("assignment", "checklist"):
         audit = dict(semantic.get(domain) or {})
         if checkpoint:
@@ -274,6 +275,8 @@ def queue_status_from_document(
         else:
             reconciled = audit
             ledger = dict(ledger_domains.get(domain) or {})
+        semantic[domain] = reconciled
+        reconciled_ledgers[domain] = ledger
 
         packet_total = int(reconciled.get("cumulative_packet_total") or reconciled.get("judge_candidates") or ledger.get("packet_total") or 0)
         judge_done = int(reconciled.get("judge_responses") or ledger.get("judge_done") or 0)
@@ -322,6 +325,17 @@ def queue_status_from_document(
             status = event.get("status_code")
             if status == 429 or "QUOTA" in state or "RATE_LIMIT" in state:
                 totals["quota_events"].append(dict(event))
+
+    # Persist the reconciled audit/ledger into the supplied project record so
+    # migrations can self-heal stale counters without another provider call.
+    doc["semantic_evidence_engine"] = semantic
+    if isinstance(checkpoint, dict) and checkpoint:
+        snapshot_id = str((doc.get("analysis_snapshot") or {}).get("snapshot_id") or "")
+        checkpoint["_ledger"] = {
+            "version": LEDGER_VERSION,
+            "snapshot_id": snapshot_id or str((root_ledger or {}).get("snapshot_id") or ""),
+            "domains": reconciled_ledgers,
+        }
 
     totals["judge"] = totals["judge_remaining"]
     totals["critic"] = totals["critic_remaining"]

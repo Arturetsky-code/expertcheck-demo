@@ -12,7 +12,7 @@ from typing import Any, Iterable
 
 from .semantic_evidence_engine import ENGINE_VERSION as CURRENT_SEMANTIC_ENGINE_VERSION
 
-LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v3"
+LEDGER_VERSION = "18.5-evidence-quality-ledger-v1"
 _CATEGORICAL_JUDGE = {"SUPPORTS", "CONTRADICTS"}
 
 
@@ -345,16 +345,18 @@ def queue_status_from_document(
             if status == 429 or "QUOTA" in state or "RATE_LIMIT" in state:
                 totals["quota_events"].append(dict(event))
 
-    # Persist the reconciled audit/ledger into the supplied project record so
-    # migrations can self-heal stale counters without another provider call.
-    doc["semantic_evidence_engine"] = semantic
-    if isinstance(checkpoint, dict) and checkpoint:
-        snapshot_id = str((doc.get("analysis_snapshot") or {}).get("snapshot_id") or "")
-        checkpoint["_ledger"] = {
-            "version": LEDGER_VERSION,
-            "snapshot_id": snapshot_id or str((root_ledger or {}).get("snapshot_id") or ""),
-            "domains": reconciled_ledgers,
-        }
+    # Persist reconciliation only when the checkpoint belongs to the current
+    # semantic engine. A stale 18.4.x ledger is display-only until 18.5 rebuilds
+    # the packets; otherwise its historical totals can become a phantom minimum.
+    if not checkpoint_stale:
+        doc["semantic_evidence_engine"] = semantic
+        if isinstance(checkpoint, dict) and checkpoint:
+            snapshot_id = str((doc.get("analysis_snapshot") or {}).get("snapshot_id") or "")
+            checkpoint["_ledger"] = {
+                "version": LEDGER_VERSION,
+                "snapshot_id": snapshot_id or str((root_ledger or {}).get("snapshot_id") or ""),
+                "domains": reconciled_ledgers,
+            }
 
     totals["checkpoint_stale"] = checkpoint_stale
     totals["checkpoint_engine_version"] = checkpoint_engine

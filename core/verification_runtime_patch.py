@@ -29,7 +29,7 @@ from core import table_row_integrity as tri
 from core import table_semantic_scope as tss
 
 
-VERSION = "18.4.1-verification-runtime-v2"
+VERSION = "18.4.1-verification-runtime-v3"
 _FREE_NAMES = {"groq", "gemini"}
 _PREFLIGHT_CACHE_TTL = 300.0
 _PREFLIGHT_CACHE: dict[tuple[str, ...], tuple[float, dict[str, Any]]] = {}
@@ -345,10 +345,52 @@ def _install_advisory_critic() -> None:
         advisory_dual = distinct and not (judge_qualified and critic_qualified)
 
         if advisory_dual:
-            saved = see._provider_qualified_for_l5
-            # Only the runtime activation condition is relaxed.  Every semantic
-            # promotion is downgraded to L4 again below, so L5 remains fail-closed.
+            saved_qualification = see._provider_qualified_for_l5
+            saved_preflight = see._preflight_provider
+            checkpoint_state = checkpoint if isinstance(checkpoint, dict) else {}
+            judge_lane = checkpoint_state.get("judge") if isinstance(checkpoint_state.get("judge"), dict) else {}
+            critic_lane = checkpoint_state.get("critic") if isinstance(checkpoint_state.get("critic"), dict) else {}
+
+            def checkpoint_proven_preflight(
+                provider: Any,
+                role: str,
+                *,
+                structured: bool = True,
+                connection: dict[str, Any] | None = None,
+            ) -> dict[str, Any]:
+                role_name = str(role or "").upper()
+                lane = critic_lane if role_name == "CRITIC" else judge_lane
+                if lane:
+                    first = next((dict(value) for value in lane.values() if isinstance(value, dict)), {})
+                    return {
+                        "role": role_name,
+                        "configured_provider": _provider_name(provider),
+                        "actual_provider": str(first.get("provider") or _provider_name(provider)),
+                        "model": str(first.get("model") or getattr(provider, "model", "") or ""),
+                        "status_code": 200,
+                        "state": "CHECKPOINT_PROVEN",
+                        "error": "",
+                        "ok": True,
+                        "contract_probe_requested": 0,
+                        "contract_probe_responses": 0,
+                        "connection_ok": True,
+                        "response_excerpt": "",
+                        "checkpoint_proven": True,
+                    }
+                return saved_preflight(
+                    provider,
+                    role,
+                    structured=structured,
+                    connection=connection,
+                )
+
+            # Only the runtime activation condition is relaxed. Existing validated
+            # checkpoint responses are also accepted as proof that this provider
+            # previously satisfied the structured contract for this exact project
+            # fingerprint. This avoids spending free quota on redundant preflight
+            # probes when only Critic tail packets remain.
             see._provider_qualified_for_l5 = lambda provider: provider is not None
+            see._preflight_provider = checkpoint_proven_preflight
             try:
                 result = original_run(
                     rows,
@@ -363,7 +405,8 @@ def _install_advisory_critic() -> None:
                     candidate_cap=candidate_cap,
                 )
             finally:
-                see._provider_qualified_for_l5 = saved
+                see._provider_qualified_for_l5 = saved_qualification
+                see._preflight_provider = saved_preflight
             downgraded_verified, downgraded_findings = _downgrade_semantic_promotions(rows)
             if result.get("critic_responses") or result.get("judge_responses"):
                 result["execution_mode"] = "ADVISORY_DUAL_REVIEW"

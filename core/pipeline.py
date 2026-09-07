@@ -82,7 +82,7 @@ from .coverage_acceleration import coverage_budget
 from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
 from .project_data_contract import enforce_project_data_contract
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
-from .semantic_evidence_engine import build_semantic_project_graph
+from .semantic_evidence_engine import build_semantic_project_graph, ENGINE_VERSION as SEMANTIC_ENGINE_VERSION
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -525,9 +525,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"assignment_page_corpus","error":str(exc)})
     project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
     semantic_project_fingerprint = corpus_fingerprint(assignment_page_corpus)
-    if semantic_checkpoint.get("_project_fingerprint") != semantic_project_fingerprint:
+    if (
+        semantic_checkpoint.get("_project_fingerprint") != semantic_project_fingerprint
+        or semantic_checkpoint.get("_semantic_engine_version") != SEMANTIC_ENGINE_VERSION
+    ):
         semantic_checkpoint.clear()
         semantic_checkpoint["_project_fingerprint"] = semantic_project_fingerprint
+        semantic_checkpoint["_semantic_engine_version"] = SEMANTIC_ENGINE_VERSION
     assignment_semantic_checkpoint = semantic_checkpoint.setdefault("assignment", {})
     checklist_semantic_checkpoint = semantic_checkpoint.setdefault("checklist", {})
     try:

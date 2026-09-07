@@ -84,9 +84,16 @@ def _refresh_assignment_contracts(
         changed = _contract_signature(old_contract) != _contract_signature(fresh_contract)
         row["evidence_contract_v2"] = fresh_contract
         row["expected_sections"] = list(fresh_contract.get("expected_sections") or [])
-        if not changed:
-            continue
         packet_id = str(row.get("atom_id") or row.get("requirement_id") or row.get("checklist_parent_id") or "")
+        cached_judge = judge_lane.get(packet_id) if packet_id else None
+        nonrequired_owner_other_entity = bool(
+            packet_id
+            and not bool(fresh_contract.get("requires_same_owner"))
+            and isinstance(cached_judge, dict)
+            and str(cached_judge.get("verdict") or "").upper() == "OTHER_ENTITY"
+        )
+        if not changed and not nonrequired_owner_other_entity:
+            continue
         if packet_id:
             judge_lane.pop(packet_id, None)
             critic_lane.pop(packet_id, None)

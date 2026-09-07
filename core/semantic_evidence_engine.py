@@ -619,7 +619,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "domain": redact_text(str(packet.get("domain") or "")),
         "requirement": redact_text(str(packet.get("requirement") or ""))[:900],
         "atomic_kind": str(packet.get("atomic_kind") or ""),
-        "object": redact_text(str(packet.get("object") or "")),
+        "object": (redact_text(str(packet.get("object") or "")) if bool((packet.get("binding_contract") or {}).get("requires_same_owner")) else ""),
         "property_code": str(packet.get("property_code") or ""),
         "required_value": packet.get("required_value"),
         "unit": str(packet.get("unit") or ""),
@@ -630,7 +630,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "binding_contract": {
             "requires_same_owner": bool((packet.get("binding_contract") or {}).get("requires_same_owner")),
             "requires_same_parameter": bool((packet.get("binding_contract") or {}).get("requires_same_parameter")),
-            "expected_entity": redact_text(str((packet.get("binding_contract") or {}).get("expected_entity") or "")),
+            "expected_entity": (redact_text(str((packet.get("binding_contract") or {}).get("expected_entity") or "")) if bool((packet.get("binding_contract") or {}).get("requires_same_owner")) else ""),
             "expected_property_code": str((packet.get("binding_contract") or {}).get("expected_property_code") or ""),
         },
         "checker": {

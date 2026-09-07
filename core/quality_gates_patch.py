@@ -28,6 +28,7 @@ QUALITY_JUDGE_SYSTEM = """Вы — независимый Evidence Judge сис�
 
 Детерминированные поля ExpertCheck имеют приоритет над смысловым сходством:
 - binding_contract.requires_same_owner=true требует owner_match=true / entity_binding_state=MATCHED в цитируемом evidence; MISMATCH => OTHER_ENTITY, UNPROVEN => INSUFFICIENT;
+- если binding_contract.requires_same_owner=false, не сравнивайте название элемента/функции требования с названием родительского объекта и не выбирайте OTHER_ENTITY только потому, что проектное решение описано через площадку, территорию или систему;
 - binding_contract.requires_same_parameter=true требует property_match=true / property_binding_state=MATCHED; MISMATCH => OTHER_METRIC, UNPROVEN => INSUFFICIENT.
 Никогда не подтверждайте требование только из-за одинакового числа, единицы измерения или похожих слов. Различайте тип показателя прежде значения показателя.
 evidence_ids могут содержать только ID из соответствующего пакета.

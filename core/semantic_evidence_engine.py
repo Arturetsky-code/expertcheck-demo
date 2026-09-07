@@ -18,7 +18,7 @@ from .coverage_acceleration import diversified_candidate_order
 from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "17.0-verified-core-consensus"
+ENGINE_VERSION = "18.5-evidence-quality-v1"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -137,6 +137,80 @@ def _qualifiers(atom: dict[str, Any]) -> list[str]:
     return [str(x) for x in contract.get("critical_qualifiers") or [] if str(x).strip()]
 
 
+def _focus_anchors(atom: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+    """Build privacy-safe lexical anchors for the evidence window."""
+    anchors: list[str] = []
+    sources = (
+        atom.get("atom_text") or atom.get("requirement_text"),
+        atom.get("object_name") or atom.get("scope_entity"),
+        raw.get("property_name") or raw.get("parameter_name"),
+        " ".join(_qualifiers(atom)),
+    )
+    for source in sources:
+        for token in _tokens(source):
+            if token and token not in anchors:
+                anchors.append(token)
+    return anchors[:28]
+
+
+def _focused_evidence_text(text: Any, anchors: Iterable[str], max_chars: int = 960) -> str:
+    """Return the densest bounded window around requirement/entity anchors.
+
+    Earlier builds correctly found a relevant clause and then sent only the
+    first 720 characters to Judge.  On long table/narrative fragments this
+    could cut off the actual project decision.  The window below is selected by
+    anchor density, then bounded for free-tier token safety.
+    """
+    clean = re.sub(r"(?<=[A-Za-zА-Яа-яЁё])[-‐]\s+(?=[A-Za-zА-Яа-яЁё])", "", str(text or ""))
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if not clean or len(clean) <= max_chars:
+        return clean
+
+    low = clean.lower().replace("ё", "е")
+    unique_anchors = [str(value).lower().replace("ё", "е") for value in anchors if str(value).strip()]
+    occurrences: list[tuple[int, str]] = []
+    for anchor in unique_anchors:
+        occurrences.extend((match.start(), anchor) for match in re.finditer(re.escape(anchor), low))
+    if not occurrences:
+        return clean[:max_chars].rstrip() + " …"
+
+    candidates: list[tuple[tuple[int, int, int], int, int]] = []
+    for position, _ in occurrences[:80]:
+        start = max(0, min(position - max_chars // 3, len(clean) - max_chars))
+        end = min(len(clean), start + max_chars)
+        window = low[start:end]
+        distinct = sum(1 for anchor in unique_anchors if anchor in window)
+        total = sum(window.count(anchor) for anchor in unique_anchors)
+        center_distance = abs((start + end) // 2 - position)
+        candidates.append(((distinct, total, -center_distance), start, end))
+    _, start, end = max(candidates, key=lambda item: item[0])
+
+    # Prefer human-readable clause boundaries when they are close enough.
+    if start > 0:
+        boundary = max(clean.rfind(". ", max(0, start - 120), start + 1),
+                       clean.rfind("; ", max(0, start - 120), start + 1))
+        if boundary >= 0:
+            start = boundary + 2
+    if end < len(clean):
+        candidates_end = [
+            value for value in (
+                clean.find(". ", end, min(len(clean), end + 120)),
+                clean.find("; ", end, min(len(clean), end + 120)),
+            ) if value >= 0
+        ]
+        if candidates_end:
+            end = min(candidates_end) + 1
+    if end - start > max_chars:
+        end = start + max_chars
+
+    rendered = clean[start:end].strip()
+    if start > 0:
+        rendered = "… " + rendered
+    if end < len(clean):
+        rendered = rendered + " …"
+    return rendered
+
+
 def _normalise_candidate(
     raw: dict[str, Any], atom: dict[str, Any], recipe: dict[str, Any], *, score: int | None = None,
 ) -> dict[str, Any] | None:
@@ -167,6 +241,26 @@ def _normalise_candidate(
         raw.get("property_code") or raw.get("parameter_code") or raw.get("metric")
     )
     property_match: bool | None = None if not property_code else property_code == observed_code
+    requires_owner = bool(contract.get("requires_same_owner"))
+    requires_parameter = bool(contract.get("requires_same_parameter"))
+    owner_ready = owner_match is True if requires_owner else owner_match is not False
+    property_ready = property_match is True if requires_parameter else property_match is not False
+    observed_owner = str(
+        raw.get("owner") or raw.get("entity_name") or raw.get("object_name") or ""
+    ).strip()
+    entity_binding_state = (
+        "MATCHED" if owner_match is True
+        else "MISMATCH" if owner_match is False
+        else "UNPROVEN" if requires_owner
+        else "NOT_REQUIRED"
+    )
+    property_binding_state = (
+        "MATCHED" if property_match is True
+        else "MISMATCH" if property_match is False
+        else "UNPROVEN" if requires_parameter
+        else "NOT_REQUIRED"
+    )
+    ai_evidence_text = _focused_evidence_text(text, _focus_anchors(atom, raw), max_chars=960)
     design_marker = bool(raw.get("design_marker")) or any(marker in _norm(text) for marker in DESIGN_MARKERS)
     coverage = len(hits) / max(1, min(len(query_tokens), 8))
     calculated = 20 + min(35, len(hits) * 7)
@@ -180,7 +274,7 @@ def _normalise_candidate(
     final_score = max(0, min(100, int(score if score is not None else raw.get("retrieval_score") or raw.get("score") or calculated)))
     contract_ready = bool(
         _addressable({"document": document, "page": page, "section": section})
-        and modality_ok and not missing_qualifiers and owner_match is not False
+        and modality_ok and not missing_qualifiers and owner_ready and property_ready
         and (
             str(raw.get("contract_state") or "").upper() == "SATISFIED"
             or (property_match is True and final_score >= 72)
@@ -193,13 +287,21 @@ def _normalise_candidate(
         "document": document,
         "page": page,
         "section": section,
-        "text": text[:1200],
+        "text": text[:1600],
+        "ai_evidence_text": ai_evidence_text,
+        "evidence_window_version": "18.5-anchor-density-v1",
         "source_locator": f"{document}, стр. {page}",
         "retrieval_score": final_score,
         "semantic_token_hits": hits,
         "semantic_token_coverage": round(coverage, 3),
         "owner_match": owner_match,
         "property_match": property_match,
+        "observed_owner": observed_owner,
+        "observed_property_code": observed_code,
+        "entity_binding_state": entity_binding_state,
+        "property_binding_state": property_binding_state,
+        "requires_same_owner": requires_owner,
+        "requires_same_parameter": requires_parameter,
         "required_modality": required_modality,
         "source_modality": actual_modality,
         "modality_gate_state": "PASSED" if modality_ok else "BLOCKED",
@@ -362,6 +464,12 @@ def build_evidence_packet(
         "expected_sections": list(recipe.get("expected_sections") or contract.get("expected_sections") or []),
         "required_modality": str(contract.get("required_modality") or recipe.get("required_modality") or "TEXT_OR_TABLE"),
         "critical_qualifiers": _qualifiers(row),
+        "binding_contract": {
+            "requires_same_owner": bool(contract.get("requires_same_owner")),
+            "requires_same_parameter": bool(contract.get("requires_same_parameter")),
+            "expected_entity": str(row.get("object_name") or row.get("scope_entity") or ""),
+            "expected_property_code": canonical_parameter_code(row.get("parameter_code")),
+        },
         "checker": profile,
         "evidence_level": level,
         "evidence_level_reason": reason,
@@ -433,12 +541,17 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
             "document": alias,
             "page": page,
             "section": redact_text(str(row.get("section") or "")),
-            "text": redact_text(str(row.get("text") or ""))[:720],
+            "text": redact_text(str(row.get("ai_evidence_text") or row.get("text") or ""))[:1000],
+            "evidence_window_version": str(row.get("evidence_window_version") or ""),
             "source_locator": f"{alias}, стр. {page}",
             "kind": str(row.get("kind") or ""),
             "retrieval_score": int(row.get("retrieval_score") or 0),
             "owner_match": row.get("owner_match"),
             "property_match": row.get("property_match"),
+            "entity_binding_state": str(row.get("entity_binding_state") or ""),
+            "property_binding_state": str(row.get("property_binding_state") or ""),
+            "observed_entity": redact_text(str(row.get("observed_owner") or "")),
+            "observed_property_code": str(row.get("observed_property_code") or ""),
             "required_modality": str(row.get("required_modality") or ""),
             "source_modality": str(row.get("source_modality") or ""),
             "modality_gate_state": str(row.get("modality_gate_state") or ""),
@@ -461,6 +574,12 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "expected_sections": [redact_text(str(value)) for value in packet.get("expected_sections") or []],
         "required_modality": str(packet.get("required_modality") or ""),
         "critical_qualifiers": [redact_text(str(value)) for value in packet.get("critical_qualifiers") or []],
+        "binding_contract": {
+            "requires_same_owner": bool((packet.get("binding_contract") or {}).get("requires_same_owner")),
+            "requires_same_parameter": bool((packet.get("binding_contract") or {}).get("requires_same_parameter")),
+            "expected_entity": redact_text(str((packet.get("binding_contract") or {}).get("expected_entity") or "")),
+            "expected_property_code": str((packet.get("binding_contract") or {}).get("expected_property_code") or ""),
+        },
         "checker": {
             key: value for key, value in dict(packet.get("checker") or {}).items()
             if key in {"checker_family", "checker_mode", "consensus_eligible"}

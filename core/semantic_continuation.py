@@ -100,13 +100,20 @@ def continue_semantic_analysis(
 
     snapshot_id = str(snapshot.get("snapshot_id") or corpus_fingerprint(page_corpus))
     checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
+    semantic_engine_changed = (
+        checkpoint.get("_semantic_engine_version") != SEMANTIC_ENGINE_VERSION
+    )
     if (
         checkpoint.get("_project_fingerprint") != snapshot_id
-        or checkpoint.get("_semantic_engine_version") != SEMANTIC_ENGINE_VERSION
+        or semantic_engine_changed
     ):
         checkpoint.clear()
         checkpoint["_project_fingerprint"] = snapshot_id
         checkpoint["_semantic_engine_version"] = SEMANTIC_ENGINE_VERSION
+        if semantic_engine_changed:
+            # New evidence-window/binding rules may change the eligible L4 set.
+            # Do not carry monotonic aggregate totals from the previous engine.
+            previous_semantic = {}
     assignment_checkpoint = checkpoint.setdefault("assignment", {})
     checklist_checkpoint = checkpoint.setdefault("checklist", {})
 

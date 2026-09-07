@@ -8,6 +8,7 @@ from core.semantic_evidence_engine import (
     build_evidence_packet,
 )
 from core.ai_continuation_ledger import queue_status_from_document
+from core.requirement_contracts import SCOPE_SITE, build_contract
 
 
 def _support(packet_id: str, evidence_id: str) -> dict:
@@ -202,3 +203,75 @@ def test_old_184_checkpoint_is_displayed_as_revalidation_queue_not_completed_wor
     assert status["judge_done"] == 0
     assert status["judge_remaining"] == 1
     assert status["packages_complete"] == 0
+
+
+def test_site_fence_requirement_does_not_require_standalone_fence_owner():
+    row = {
+        "atom_id": "REQ-FENCE-SITE",
+        "domain": "assignment",
+        "atom_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "requirement_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "object_name": "Ограждение",
+        "scope_entity": "Ограждение",
+        "atomic_kind": "PRESENCE_REQUIREMENT",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+    }
+    contract = build_contract(row)
+    assert contract["scope"] == SCOPE_SITE
+    assert contract["requires_same_owner"] is False
+    assert contract["expected_sections"] == ["ПЗУ"]
+
+    row["evidence_contract_v2"] = contract
+    row["verification_recipe"] = {
+        "expected_sections": ["ПЗУ"],
+        "required_modality": "TEXT_OR_TABLE",
+    }
+    row["evidence_candidates"] = [{
+        "document": "ПЗУ.pdf",
+        "page": 27,
+        "section": "ПЗУ",
+        "text": "Территория площадки ДСК ограждается панелями FENSYS по металлическим столбам высотой 2,0 м.",
+        "contract_state": "SATISFIED",
+        "source_modality": "TEXT_OR_TABLE",
+        "design_marker": True,
+        "score": 94,
+        "owner_match": False,
+    }]
+    packet = build_evidence_packet(row, {"facts": [], "passages": []})
+    assert packet["evidence_level"] == "L4"
+    assert packet["evidence"][0]["contract_ready_for_judgement"] is True
+    assert packet["binding_contract"]["requires_same_owner"] is False
+
+
+def test_required_owner_mismatch_still_blocks_l4():
+    row = {
+        "atom_id": "REQ-BUILDING",
+        "domain": "assignment",
+        "atom_text": "В здании проборазделки предусмотреть вентиляцию.",
+        "requirement_text": "В здании проборазделки предусмотреть вентиляцию.",
+        "object_name": "Здание проборазделки",
+        "scope_entity": "Здание проборазделки",
+        "atomic_kind": "PRESENCE_REQUIREMENT",
+        "verification_recipe": {"expected_sections": ["ИОС4"], "required_modality": "TEXT_OR_TABLE"},
+        "evidence_contract_v2": {
+            "scope": "OBJECT_SPECIFIC",
+            "expected_sections": ["ИОС4"],
+            "required_modality": "TEXT_OR_TABLE",
+            "critical_qualifiers": [],
+            "requires_same_owner": True,
+            "requires_same_parameter": False,
+        },
+        "evidence_candidates": [{
+            "document": "ИОС4.pdf",
+            "page": 4,
+            "section": "ИОС4",
+            "text": "В здании лаборатории предусмотрена общеобменная вентиляция.",
+            "contract_state": "SATISFIED",
+            "source_modality": "TEXT_OR_TABLE",
+            "design_marker": True,
+            "score": 95,
+            "owner_match": False,
+        }],
+    }
+    packet = build_evidence_packet(row, {"facts": [], "passages": []})
+    assert packet["evidence_level"] != "L4"

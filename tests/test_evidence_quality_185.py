@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from core.semantic_evidence_engine import (
+    _entity_tokens,
     _focused_evidence_text,
     _public_packet,
     _validate_judge,
     build_evidence_packet,
 )
+from core.ai_continuation_ledger import queue_status_from_document
 
 
 def _support(packet_id: str, evidence_id: str) -> dict:
@@ -157,3 +159,46 @@ def test_categorical_judge_is_blocked_when_required_entity_is_unproven():
     result = _validate_judge(packet, _support("P-ENTITY", "E-1"))
     assert result["valid"] is False
     assert any("не подтвердил тождество объекта" in reason for reason in result["validation_reasons"])
+
+
+
+def test_entity_tokens_keep_short_project_code_and_drop_generic_noun():
+    assert _entity_tokens("Площадка ДСК") == ["дск"]
+    assert "пробораз" in _entity_tokens("Здание проборазделки")
+
+
+def test_old_184_checkpoint_is_displayed_as_revalidation_queue_not_completed_work():
+    row = {
+        "semantic_evidence_packet": {
+            "packet_id": "P-OLD",
+            "engine_version": "17.0-verified-core-consensus",
+            "evidence_level": "L4",
+            "checker": {"consensus_eligible": True},
+        }
+    }
+    doc = {
+        "assignment_atomic_compliance": [row],
+        "automatic_checklist_review": {"atomic_verification": {"atoms": []}},
+        "semantic_evidence_engine": {
+            "assignment": {
+                "judge_candidates": 1,
+                "judge_responses": 1,
+                "critic_responses": 0,
+            }
+        },
+        "analysis_snapshot": {"snapshot_id": "SNAP-1"},
+    }
+    checkpoint = {
+        "_project_fingerprint": "SNAP-1",
+        "_semantic_engine_version": "17.0-verified-core-consensus",
+        "assignment": {
+            "judge": {"P-OLD": {"verdict": "INSUFFICIENT"}},
+            "critic": {},
+        },
+    }
+    status = queue_status_from_document(doc, checkpoint)
+    assert status["checkpoint_stale"] is True
+    assert status["eligible"] == 1
+    assert status["judge_done"] == 0
+    assert status["judge_remaining"] == 1
+    assert status["packages_complete"] == 0

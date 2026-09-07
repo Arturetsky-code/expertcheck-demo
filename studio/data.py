@@ -544,6 +544,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     ai_summary_rows=[]
     ai_execution_rows=[]
     ai_call_rows=[]
+    ai_evidence_quality_rows=[]
     for domain_key, domain_label in (('assignment','Задание на проектирование'),('checklist','Чек-листы')):
         audit=dict(semantic_engine_summary.get(domain_key) or {})
         if not audit:
@@ -643,9 +644,64 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                     'Ошибка':str(call.get('error') or '')[:1200],
                     'ID пакетов':_safe_join(call.get('packet_ids')),
                 })
+    checklist_atomic_rows=list(
+        ((first_record.get('automatic_checklist_review') or {}).get('atomic_verification') or {}).get('atoms') or []
+    )
+    for domain_label, rows in (
+        ('Задание на проектирование', assignment_atomic_rows),
+        ('Чек-листы', checklist_atomic_rows),
+    ):
+        for atomic in rows or []:
+            packet=dict(atomic.get('semantic_evidence_packet') or {})
+            if not packet:
+                continue
+            binding=dict(packet.get('binding_contract') or {})
+            evidence=list(packet.get('evidence') or [])
+            if not evidence:
+                ai_evidence_quality_rows.append({
+                    'Контур':domain_label,
+                    'ID пакета':packet.get('packet_id'),
+                    'Уровень evidence':packet.get('evidence_level'),
+                    'Требование':packet.get('requirement'),
+                    'Ожидаемый объект':binding.get('expected_entity') or packet.get('object'),
+                    'Ожидаемый показатель':binding.get('expected_property_code') or packet.get('property_code'),
+                    'Evidence ID':'—',
+                    'Источник':'—',
+                    'Retrieval score':0,
+                    'Окно Evidence Quality':'—',
+                    'Binding объекта':'—',
+                    'Binding показателя':'—',
+                    'Наблюдаемый объект':'—',
+                    'Наблюдаемый показатель':'—',
+                    'Готово для Judge':'Нет',
+                    'Критические квалификаторы отсутствуют':'—',
+                })
+                continue
+            for item in evidence[:6]:
+                ai_evidence_quality_rows.append({
+                    'Контур':domain_label,
+                    'ID пакета':packet.get('packet_id'),
+                    'Уровень evidence':packet.get('evidence_level'),
+                    'Требование':packet.get('requirement'),
+                    'Ожидаемый объект':binding.get('expected_entity') or packet.get('object'),
+                    'Ожидаемый показатель':binding.get('expected_property_code') or packet.get('property_code'),
+                    'Evidence ID':item.get('evidence_id'),
+                    'Источник':item.get('source_locator'),
+                    'Retrieval score':item.get('retrieval_score'),
+                    'Окно Evidence Quality':item.get('ai_evidence_text') or item.get('text'),
+                    'Версия окна':item.get('evidence_window_version'),
+                    'Binding объекта':item.get('entity_binding_state'),
+                    'Binding показателя':item.get('property_binding_state'),
+                    'Наблюдаемый объект':item.get('observed_owner'),
+                    'Наблюдаемый показатель':item.get('observed_property_code'),
+                    'Готово для Judge':'Да' if item.get('contract_ready_for_judgement') else 'Нет',
+                    'Критические квалификаторы отсутствуют':_safe_join(item.get('missing_critical_qualifiers'), ', ') or '—',
+                })
+
     ai_summary_df=_excel_safe_frame(pd.DataFrame(ai_summary_rows))
     ai_execution_df=_excel_safe_frame(pd.DataFrame(ai_execution_rows))
     ai_calls_df=_excel_safe_frame(pd.DataFrame(ai_call_rows))
+    ai_evidence_quality_df=_excel_safe_frame(pd.DataFrame(ai_evidence_quality_rows))
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -1312,6 +1368,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
         if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
         if not ai_calls_df.empty: sheets.append(('AI — вызовы',ai_calls_df))
+        if not ai_evidence_quality_df.empty: sheets.append(('AI — качество evidence',ai_evidence_quality_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
         if normative_reference_details:
             detailed_normative_df=pd.DataFrame(normative_reference_details)

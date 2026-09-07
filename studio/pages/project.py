@@ -335,12 +335,32 @@ def _dashboard(ctx):
                     f"очередь сохранена, последнее состояние {state}. "
                     "Уже полученные ответы остаются в checkpoint."
                 )
-            if st.button(
-                'Продолжить AI-проверку' if pending['total'] else 'Пересчитать результаты из снимка',
-                type='primary',
-                key='continue_semantic_analysis',
-                help='Успешные ответы берутся из checkpoint; отправляются только незавершённые пакеты.',
-            ):
+            if pending.get('checkpoint_stale'):
+                st.info(
+                    "Evidence Quality engine обновлён. Старые Judge/Critic-ответы не переиспользуются, "
+                    "потому что окно доказательства и binding-контракт изменились. "
+                    "Исходные PDF повторно не читаются — перепроверяется только AI-слой по сохранённому корпусу."
+                )
+            run_semantic = False
+            if pending['total']:
+                run_semantic = st.button(
+                    'Продолжить AI-проверку',
+                    type='primary',
+                    key='continue_semantic_analysis',
+                    help='Совместимые ответы берутся из checkpoint; отправляются только незавершённые пакеты.',
+                )
+            else:
+                with st.expander('Дополнительные действия', expanded=False):
+                    st.caption(
+                        'Повторный пересчёт нужен только для диагностики после изменения локальных правил. '
+                        'В штатном завершённом проекте запускать его не требуется.'
+                    )
+                    run_semantic = st.button(
+                        'Пересчитать результаты из цифрового снимка',
+                        type='secondary',
+                        key='recalculate_snapshot_results',
+                    )
+            if run_semantic:
                 ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
                 semantic_level = {
                     'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',

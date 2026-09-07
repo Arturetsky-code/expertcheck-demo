@@ -10,6 +10,8 @@ slice can never make completed work disappear from the report.
 
 from typing import Any, Iterable
 
+from .semantic_evidence_engine import ENGINE_VERSION as CURRENT_SEMANTIC_ENGINE_VERSION
+
 LEDGER_VERSION = "18.4.1-cumulative-ai-ledger-v3"
 _CATEGORICAL_JUDGE = {"SUPPORTS", "CONTRADICTS"}
 
@@ -238,6 +240,8 @@ def queue_status_from_document(
 ) -> dict[str, Any]:
     semantic = dict(doc.get("semantic_evidence_engine") or {})
     checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
+    checkpoint_engine = str(checkpoint.get("_semantic_engine_version") or "")
+    checkpoint_stale = checkpoint_engine != CURRENT_SEMANTIC_ENGINE_VERSION
     root_ledger = checkpoint.get("_ledger") if isinstance(checkpoint.get("_ledger"), dict) else {}
     ledger_domains = dict((root_ledger or {}).get("domains") or {})
 
@@ -264,7 +268,7 @@ def queue_status_from_document(
     reconciled_ledgers: dict[str, dict[str, Any]] = {}
     for domain in ("assignment", "checklist"):
         audit = dict(semantic.get(domain) or {})
-        if checkpoint:
+        if checkpoint and not checkpoint_stale:
             reconciled, ledger = reconcile_domain_audit(
                 audit,
                 rows=domain_rows[domain],
@@ -273,8 +277,23 @@ def queue_status_from_document(
                 previous_ledger_domain=ledger_domains.get(domain),
             )
         else:
-            reconciled = audit
-            ledger = dict(ledger_domains.get(domain) or {})
+            # Evidence Quality revisions deliberately revalidate old Judge/Critic
+            # decisions against the new bounded window/binding contract.
+            reconciled, ledger = reconcile_domain_audit(
+                {
+                    **audit,
+                    "judge_responses": 0,
+                    "critic_responses": 0,
+                    "judge_pending": 0,
+                    "critic_pending": 0,
+                    "not_selected": 0,
+                    "queue_remaining": 0,
+                },
+                rows=domain_rows[domain],
+                checkpoint_domain={},
+                previous_audit={},
+                previous_ledger_domain={},
+            )
         semantic[domain] = reconciled
         reconciled_ledgers[domain] = ledger
 
@@ -337,6 +356,9 @@ def queue_status_from_document(
             "domains": reconciled_ledgers,
         }
 
+    totals["checkpoint_stale"] = checkpoint_stale
+    totals["checkpoint_engine_version"] = checkpoint_engine
+    totals["current_semantic_engine_version"] = CURRENT_SEMANTIC_ENGINE_VERSION
     totals["judge"] = totals["judge_remaining"]
     totals["critic"] = totals["critic_remaining"]
     totals["total"] = totals["packages_remaining"]

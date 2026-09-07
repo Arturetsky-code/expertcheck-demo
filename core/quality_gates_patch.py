@@ -228,7 +228,7 @@ def _install_model_specific_qualification() -> None:
 
 def _install_benchmark_contract() -> None:
     from core import provider_benchmark
-    provider_benchmark.BENCHMARK_VERSION = '18.3-provider-qualification-v4'
+    provider_benchmark.BENCHMARK_VERSION = '18.5-provider-qualification-v5'
     provider_benchmark.JUDGE_SYSTEM = QUALITY_JUDGE_SYSTEM
 
 

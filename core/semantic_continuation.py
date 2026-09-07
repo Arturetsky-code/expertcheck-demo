@@ -18,7 +18,7 @@ from .deep_evidence_intelligence import (
 from .project_review_planner import build_review_plan
 from .project_snapshot import corpus_fingerprint
 from .report_quality_gate import validate_review_plan
-from .semantic_evidence_engine import build_semantic_project_graph
+from .semantic_evidence_engine import build_semantic_project_graph, ENGINE_VERSION as SEMANTIC_ENGINE_VERSION
 from .verification_core import domain_summary
 from .verified_verdict_gate import enforce_project_verdicts
 from .ai_continuation_ledger import (
@@ -28,7 +28,7 @@ from .ai_continuation_ledger import (
 )
 
 
-CONTINUATION_VERSION = "18.4.1-cumulative-ai-ledger"
+CONTINUATION_VERSION = "18.5-evidence-quality-continuation"
 
 
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
@@ -100,9 +100,13 @@ def continue_semantic_analysis(
 
     snapshot_id = str(snapshot.get("snapshot_id") or corpus_fingerprint(page_corpus))
     checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
-    if checkpoint.get("_project_fingerprint") != snapshot_id:
+    if (
+        checkpoint.get("_project_fingerprint") != snapshot_id
+        or checkpoint.get("_semantic_engine_version") != SEMANTIC_ENGINE_VERSION
+    ):
         checkpoint.clear()
         checkpoint["_project_fingerprint"] = snapshot_id
+        checkpoint["_semantic_engine_version"] = SEMANTIC_ENGINE_VERSION
     assignment_checkpoint = checkpoint.setdefault("assignment", {})
     checklist_checkpoint = checkpoint.setdefault("checklist", {})
 

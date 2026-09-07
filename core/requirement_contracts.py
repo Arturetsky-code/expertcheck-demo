@@ -78,6 +78,13 @@ def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
     if direct:
         return direct
     text=normalize_text(requirement.get('requirement_text') or '')
+    # Explicit site-layout features belong first to PZU even when their wording
+    # also contains generic technology words such as «оборудование».
+    if any(marker in text for marker in (
+        'ограждение части площадк', 'территор площадк', 'ворота и калит',
+        'проезда и прохода', 'внутриплощадочн проезд', 'благоустройств территор',
+    )):
+        return ['ПЗУ']
     result=[]
     for hints,sections in TEXT_SECTION_HINTS:
         if any(hint in text for hint in hints):
@@ -90,6 +97,16 @@ def infer_scope(requirement:dict[str,Any])->str:
     title=normalize_text(requirement.get('source_row_title') or '')
     obj=normalize_text(requirement.get('object_name') or '')
     code=canonical_parameter_code(requirement.get('parameter_code'))
+    # Assignment atomisation may name a site feature (Ограждение, Проезд) as an
+    # object. It is still a property/feature of the site when the requirement is
+    # explicitly about territory/layout, so exact owner identity is not required.
+    site_feature_objects={'ограждение','проезд','ворота','калитка','благоустройство','территория'}
+    site_feature_context=any(marker in text for marker in (
+        'части площадк','территор','проезда и прохода','ворота','калит',
+        'внутриплощадочн','благоустройств','дорожн сеть предприятия',
+    ))
+    if obj in site_feature_objects and site_feature_context:
+        return SCOPE_SITE
     if obj:
         if any(x in text for x in ('автосамосвал','погрузчик','оборудован','агрегат','насос','трансформатор')):
             return SCOPE_EQUIPMENT

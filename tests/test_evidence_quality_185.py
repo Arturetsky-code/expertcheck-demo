@@ -9,6 +9,7 @@ from core.semantic_evidence_engine import (
 )
 from core.ai_continuation_ledger import queue_status_from_document
 from core.requirement_contracts import SCOPE_SITE, build_contract
+from core.semantic_continuation import _refresh_assignment_contracts
 
 
 def _support(packet_id: str, evidence_id: str) -> dict:
@@ -275,3 +276,37 @@ def test_required_owner_mismatch_still_blocks_l4():
     }
     packet = build_evidence_packet(row, {"facts": [], "passages": []})
     assert packet["evidence_level"] != "L4"
+
+
+
+def test_snapshot_continuation_refreshes_stale_site_feature_contract():
+    row = {
+        "atom_id": "REQ-FENCE-STORED",
+        "requirement_id": "REQ-FENCE-STORED",
+        "atom_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "requirement_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "object_name": "Ограждение",
+        "scope_entity": "Ограждение",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "atomic_kind": "PRESENCE_REQUIREMENT",
+        "expected_sections": ["ПЗУ", "ТХ"],
+        "evidence_contract_v2": {
+            "scope": "OBJECT_SPECIFIC",
+            "expected_sections": ["ПЗУ", "ТХ"],
+            "required_modality": "TEXT_OR_TABLE",
+            "critical_qualifiers": [],
+            "requires_same_owner": True,
+            "requires_same_parameter": False,
+            "check_method": "AI_EVIDENCE_REVIEW",
+        },
+    }
+    checkpoint = {
+        "judge": {"REQ-FENCE-STORED": {"verdict": "OTHER_ENTITY"}},
+        "critic": {"REQ-FENCE-STORED": {"accept": True}},
+    }
+    _refresh_assignment_contracts([row], checkpoint)
+    assert row["evidence_contract_v2"]["scope"] == "SITE_SPECIFIC"
+    assert row["evidence_contract_v2"]["requires_same_owner"] is False
+    assert row["expected_sections"] == ["ПЗУ"]
+    assert "REQ-FENCE-STORED" not in checkpoint["judge"]
+    assert "REQ-FENCE-STORED" not in checkpoint["critic"]

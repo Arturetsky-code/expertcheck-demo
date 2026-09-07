@@ -291,16 +291,16 @@ def _normalise_candidate(
         raw.get("owner") or raw.get("entity_name") or raw.get("object_name") or ""
     ).strip()
     entity_binding_state = (
-        "MATCHED" if owner_match is True
+        "NOT_REQUIRED" if not requires_owner
+        else "MATCHED" if owner_match is True
         else "MISMATCH" if owner_match is False
-        else "UNPROVEN" if requires_owner
-        else "NOT_REQUIRED"
+        else "UNPROVEN"
     )
     property_binding_state = (
-        "MATCHED" if property_match is True
+        "NOT_REQUIRED" if not requires_parameter
+        else "MATCHED" if property_match is True
         else "MISMATCH" if property_match is False
-        else "UNPROVEN" if requires_parameter
-        else "NOT_REQUIRED"
+        else "UNPROVEN"
     )
     ai_evidence_text = _focused_evidence_text(text, _focus_anchors(atom, raw), max_chars=960)
     design_marker = bool(raw.get("design_marker")) or any(marker in _norm(text) for marker in DESIGN_MARKERS)
@@ -309,8 +309,14 @@ def _normalise_candidate(
     calculated += 15 if expected else 5
     calculated += 15 if design_marker else 0
     calculated += 10 if modality_ok else -25
-    calculated += 15 if owner_match is True else (-25 if owner_match is False else 0)
-    calculated += 30 if property_match is True else (-30 if property_match is False else 0)
+    if requires_owner:
+        calculated += 15 if owner_match is True else (-25 if owner_match is False else 0)
+    elif owner_match is True:
+        calculated += 5
+    if requires_parameter:
+        calculated += 30 if property_match is True else (-30 if property_match is False else 0)
+    elif property_match is True:
+        calculated += 5
     calculated += 15 if not missing_qualifiers else -25
     calculated += 10 if str(raw.get("contract_state") or "").upper() == "SATISFIED" else 0
     final_score = max(0, min(100, int(score if score is not None else raw.get("retrieval_score") or raw.get("score") or calculated)))

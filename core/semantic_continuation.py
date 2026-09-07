@@ -17,6 +17,7 @@ from .deep_evidence_intelligence import (
 )
 from .project_review_planner import build_review_plan
 from .project_snapshot import corpus_fingerprint
+from .requirement_contracts import build_contract
 from .report_quality_gate import validate_review_plan
 from .semantic_evidence_engine import build_semantic_project_graph, ENGINE_VERSION as SEMANTIC_ENGINE_VERSION
 from .verification_core import domain_summary
@@ -46,6 +47,51 @@ def _clear_stale_semantic_state(rows: list[dict[str, Any]]) -> None:
         for key in _STALE_SEMANTIC_KEYS:
             row.pop(key, None)
 
+
+def _contract_signature(contract: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        str(contract.get("scope") or ""),
+        tuple(str(value) for value in contract.get("expected_sections") or []),
+        str(contract.get("required_modality") or ""),
+        tuple(str(value) for value in contract.get("critical_qualifiers") or []),
+        bool(contract.get("requires_same_owner")),
+        bool(contract.get("requires_same_parameter")),
+        str(contract.get("check_method") or ""),
+    )
+
+
+def _refresh_assignment_contracts(
+    rows: list[dict[str, Any]], checkpoint_domain: dict[str, Any],
+) -> None:
+    """Rebuild evidence contracts from current routing rules on snapshot continuation.
+
+    Digital snapshots preserve the atomic graph. Without this refresh, a later
+    scope/routing fix does not reach the restored project. Only packets whose
+    contract materially changed lose their cached Judge/Critic response.
+    """
+    domain = checkpoint_domain if isinstance(checkpoint_domain, dict) else {}
+    judge_lane = domain.get("judge") if isinstance(domain.get("judge"), dict) else {}
+    critic_lane = domain.get("critic") if isinstance(domain.get("critic"), dict) else {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        old_contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
+        fresh_contract = build_contract(row)
+        if not list(fresh_contract.get("expected_sections") or []):
+            fresh_contract["expected_sections"] = list(
+                row.get("expected_sections") or old_contract.get("expected_sections") or []
+            )
+        changed = _contract_signature(old_contract) != _contract_signature(fresh_contract)
+        row["evidence_contract_v2"] = fresh_contract
+        row["expected_sections"] = list(fresh_contract.get("expected_sections") or [])
+        if not changed:
+            continue
+        packet_id = str(row.get("atom_id") or row.get("requirement_id") or row.get("checklist_parent_id") or "")
+        if packet_id:
+            judge_lane.pop(packet_id, None)
+            critic_lane.pop(packet_id, None)
+        for key in _STALE_SEMANTIC_KEYS:
+            row.pop(key, None)
 
 def _prune_uncheckpointed_semantic_state(
     rows: list[dict[str, Any]], checkpoint_domain: dict[str, Any],
@@ -180,6 +226,7 @@ def continue_semantic_analysis(
         atoms = deepcopy(list(first.get("assignment_atomic_compliance") or []))
     if semantic_engine_changed:
         _clear_stale_semantic_state(atoms)
+    _refresh_assignment_contracts(atoms, assignment_checkpoint)
     parent_rows = list(first.get("assignment_compliance") or [])
 
     def semantic_progress(domain: str):

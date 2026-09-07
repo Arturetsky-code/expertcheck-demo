@@ -47,6 +47,34 @@ def _clear_stale_semantic_state(rows: list[dict[str, Any]]) -> None:
             row.pop(key, None)
 
 
+def _prune_uncheckpointed_semantic_state(
+    rows: list[dict[str, Any]], checkpoint_domain: dict[str, Any],
+) -> None:
+    """Remove old row-level AI decisions that have no matching current checkpoint.
+
+    This fixes restored rows that carry an 18.4 Judge verdict even though the
+    current 18.5 packet is L3 and was never sent. Valid 18.5 responses remain
+    reusable and do not consume provider quota again.
+    """
+    domain = checkpoint_domain if isinstance(checkpoint_domain, dict) else {}
+    judge_ids = set((domain.get("judge") or {}).keys()) if isinstance(domain.get("judge"), dict) else set()
+    critic_ids = set((domain.get("critic") or {}).keys()) if isinstance(domain.get("critic"), dict) else set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        packet = row.get("semantic_evidence_packet")
+        packet_id = str((packet or {}).get("packet_id") or row.get("atom_id") or row.get("requirement_id") or "")
+        if packet_id not in judge_ids:
+            for key in (
+                "semantic_judge", "semantic_advisory_state", "semantic_advisory_decision",
+                "semantic_consensus_state", "semantic_consensus_reasons",
+                "semantic_consensus_independent",
+            ):
+                row.pop(key, None)
+        if packet_id not in critic_ids:
+            row.pop("semantic_critic", None)
+
+
 def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detail: str) -> None:
     if callback is None:
         return
@@ -178,6 +206,7 @@ def continue_semantic_analysis(
         semantic_checkpoint=assignment_checkpoint,
         semantic_progress_callback=semantic_progress("Задание"),
     )
+    _prune_uncheckpointed_semantic_state(assignment_atomic, assignment_checkpoint)
     assignment_rows = aggregate_atomic_results(parent_rows, assignment_atomic)
 
     _progress(progress_callback, 48, "Продолжение AI-проверки", "Продолжаем очередь корпоративных чек-листов")
@@ -207,6 +236,9 @@ def continue_semantic_analysis(
         # additional eligible packets permanently unreachable after checkpoint
         # resume (Test 77: 60 eligible, first 50 completed, last 10 deadlocked).
         semantic_candidate_cap=0,
+    )
+    _prune_uncheckpointed_semantic_state(
+        list(checklist_atomic.get("atoms") or []), checklist_checkpoint
     )
     automatic_review["atomic_verification"] = checklist_atomic
 

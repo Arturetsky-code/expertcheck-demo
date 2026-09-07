@@ -18,7 +18,7 @@ from .coverage_acceleration import diversified_candidate_order
 from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "18.5-evidence-quality-v1"
+ENGINE_VERSION = "18.5.1-evidence-binding-v1"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -281,8 +281,12 @@ def _normalise_candidate(
     property_match: bool | None = None if not property_code else property_code == observed_code
     requires_owner = bool(contract.get("requires_same_owner"))
     requires_parameter = bool(contract.get("requires_same_parameter"))
-    owner_ready = owner_match is True if requires_owner else owner_match is not False
-    property_ready = property_match is True if requires_parameter else property_match is not False
+    # A mismatch matters only when the evidence contract requires that
+    # dimension to be bound. Site/global presence requirements may legitimately
+    # describe a feature through its parent site/system rather than a standalone
+    # object named exactly like the feature.
+    owner_ready = (not requires_owner) or owner_match is True
+    property_ready = (not requires_parameter) or property_match is True
     observed_owner = str(
         raw.get("owner") or raw.get("entity_name") or raw.get("object_name") or ""
     ).strip()
@@ -432,6 +436,13 @@ def _passage_candidates(
     return output
 
 
+def _candidate_binding_ready(row: dict[str, Any]) -> bool:
+    return bool(
+        (not bool(row.get("requires_same_owner")) or row.get("owner_match") is True)
+        and (not bool(row.get("requires_same_parameter")) or row.get("property_match") is True)
+    )
+
+
 def _evidence_level(candidates: list[dict[str, Any]]) -> tuple[str, str]:
     if not candidates:
         return "L0", "В проектных источниках не найден кандидат."
@@ -446,8 +457,7 @@ def _evidence_level(candidates: list[dict[str, Any]]) -> tuple[str, str]:
         and int(row.get("retrieval_score") or 0) >= 72
         and str(row.get("modality_gate_state") or "").upper() == "PASSED"
         and not list(row.get("missing_critical_qualifiers") or [])
-        and row.get("owner_match") is not False
-        and row.get("property_match") is not False
+        and _candidate_binding_ready(row)
     ]
     if not contract_ready:
         return "L3", "Сущность/показатель сопоставлены частично; доказательственный контракт ещё не завершён."
@@ -483,8 +493,7 @@ def build_evidence_packet(
         and int(item.get("retrieval_score") or 0) >= 72
         and str(item.get("modality_gate_state") or "").upper() == "PASSED"
         and not list(item.get("missing_critical_qualifiers") or [])
-        and item.get("owner_match") is not False
-        and item.get("property_match") is not False
+        and _candidate_binding_ready(item)
     ]
     contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
     packet_id = str(row.get("atom_id") or row.get("requirement_id") or row.get("checklist_parent_id") or "")
@@ -1255,6 +1264,11 @@ def _apply_consensus(row: dict[str, Any], packet: dict[str, Any], judge: dict[st
         reasons = list(judge.get("validation_reasons") or [])
         if judge.get("valid") and verdict in {"SUPPORTS", "CONTRADICTS"}:
             reasons.extend(critic.get("validation_reasons") or [])
+            if critic.get("response_received") and not critic.get("valid"):
+                reasons.extend(str(value) for value in critic.get("blocking_concerns") or [] if str(value).strip())
+                critic_reason = str(critic.get("reason") or "").strip()
+                if critic_reason:
+                    reasons.append(f"Critic: {critic_reason}")
         if judge.get("response_received") and verdict not in {"SUPPORTS", "CONTRADICTS"}:
             reasons.append(str(judge.get("reason") or "Judge классифицировал доказательство как недостаточное."))
         judge_provider = str(judge.get("provider") or "")
@@ -1643,6 +1657,9 @@ def run_semantic_evidence_engine(
             "judge_model": judge.get("model"),
             "critic_state": "ACCEPTED" if critic.get("valid") else "BLOCKED" if critic.get("response_received") else "NOT_RUN",
             "critic_response_received": bool(critic.get("response_received")),
+            "critic_confidence": critic.get("confidence"),
+            "critic_reason": str(critic.get("reason") or ""),
+            "critic_blocking_concerns": list(critic.get("blocking_concerns") or []),
             "critic_provider": critic.get("provider"),
             "critic_model": critic.get("model"),
             "consensus_state": row.get("semantic_consensus_state") or "BLOCKED",

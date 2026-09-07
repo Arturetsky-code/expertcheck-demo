@@ -26,6 +26,9 @@ QUALITY_JUDGE_SYSTEM = """Вы — независимый Evidence Judge сис�
 4. CONTRADICTS допустим только при прямом содержательном противоречии тому же объекту и тому же показателю.
 5. SUPPORTS допустим ТОЛЬКО если одновременно same_entity=true, same_property=true, qualifiers_satisfied=true, modality_satisfied=true и доказательство прямо подтверждает всё требование.
 
+Детерминированные поля ExpertCheck имеют приоритет над смысловым сходством:
+- binding_contract.requires_same_owner=true требует owner_match=true / entity_binding_state=MATCHED в цитируемом evidence; MISMATCH => OTHER_ENTITY, UNPROVEN => INSUFFICIENT;
+- binding_contract.requires_same_parameter=true требует property_match=true / property_binding_state=MATCHED; MISMATCH => OTHER_METRIC, UNPROVEN => INSUFFICIENT.
 Никогда не подтверждайте требование только из-за одинакового числа, единицы измерения или похожих слов. Различайте тип показателя прежде значения показателя.
 evidence_ids могут содержать только ID из соответствующего пакета.
 Верните только JSON:

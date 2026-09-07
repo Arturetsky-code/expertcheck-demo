@@ -195,3 +195,36 @@ def test_continuation_exposes_full_checklist_queue_after_initial_50():
 
     source = inspect.getsource(semantic_continuation.continue_semantic_analysis)
     assert "semantic_candidate_cap=0" in source
+
+
+def test_invalid_categorical_judge_does_not_create_permanent_critic_pending():
+    row = _row("P-INVALID")
+    row["semantic_judge"] = {
+        "verdict": "SUPPORTS",
+        "valid": False,
+        "response_received": True,
+        "validation_reasons": ["Достоверность Judge ниже 0,82."],
+    }
+    checkpoint = {
+        "judge": {
+            "P-INVALID": {
+                "packet_id": "P-INVALID",
+                "verdict": "SUPPORTS",
+                "confidence": 0.80,
+                "provider": "Groq",
+                "model": "openai/gpt-oss-120b",
+            }
+        },
+        "critic": {},
+    }
+    audit, ledger = reconcile_domain_audit(
+        {},
+        rows=[row],
+        checkpoint_domain=checkpoint,
+    )
+    assert audit["judge_responses"] == 1
+    assert audit["critic_required"] == 0
+    assert audit["critic_pending"] == 0
+    assert audit["unique_packages_complete"] == 1
+    assert audit["unique_packages_pending"] == 0
+    assert ledger["critic_required"] == 0

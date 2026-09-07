@@ -18,7 +18,7 @@ from .coverage_acceleration import diversified_candidate_order
 from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "18.5.1-evidence-binding-v1"
+ENGINE_VERSION = "18.5-evidence-quality-v1"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {

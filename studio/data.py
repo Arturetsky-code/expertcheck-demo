@@ -15,6 +15,7 @@ from core.object_intelligence import build_object_decisions
 from core.project_review_planner import build_review_plan
 from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
+from core.result_surface import build_review_surface_rows
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
 from core.project_knowledge_recovery import recover_project_knowledge
@@ -919,36 +920,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
         'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
     })
-    question_rows=[]
-    for item in all_problems:
-        if str(item.get('finding_type') or '').upper()!='REVIEW_QUESTION':
-            continue
-        question_rows.append({
-            'ID':item.get('id'),'Контур':'Межраздельная сверка','Объект':item.get('object') or '—',
-            'Проверка':item.get('parameter'),'Причина':item.get('explanation') or '',
-            'Код причины':item.get('coverage_reason_code') or 'CROSS_SECTION_REVIEW',
-            'Семейство проверки':item.get('checker_family') or 'Детерминированная межраздельная сверка',
-            'Недостающие доказательства':'Уточнить доверенные источники и актуальность разделов',
-            'Ожидаемые разделы':item.get('sources') or '—','Уровень доказательства':item.get('evidence_level') or '—',
-        })
-    for item in review_plan.get('items') or []:
-        if str(item.get('verification_kind') or '').upper()!='REVIEW_QUESTION':
-            continue
-        question_rows.append({
-            'ID':_stable_report_id('Q',item),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
-            'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
-            'Код причины':item.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
-            'Семейство проверки':item.get('checker_family') or '—',
-            'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
-            'Ожидаемые разделы':_safe_join(item.get('expected_evidence_route') or item.get('expected_sections'), ', ') or '—',
-            'Уровень доказательства':ru_label(item.get('evidence_level') or 'L0'),
-        })
-    deduped_questions=[]; seen_questions=set()
-    for item in question_rows:
-        key=(str(item.get('Контур') or ''),str(item.get('ID') or ''),str(item.get('Проверка') or ''))
-        if key in seen_questions:
-            continue
-        seen_questions.add(key); deduped_questions.append(item)
+    deduped_questions=build_review_surface_rows(
+        report.get('problems') or [],
+        review_plan,
+    )
     # The headline must reconcile to the rows the report can actually show.
     # Comparison diagnostics may contain many raw classifications which are
     # deliberately de-duplicated in the specialist queue.

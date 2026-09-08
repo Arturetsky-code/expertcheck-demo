@@ -924,8 +924,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         question_rows.append({
             'ID':item.get('id'),'Контур':'Межраздельная сверка','Объект':item.get('object') or '—',
             'Проверка':item.get('parameter'),'Причина':item.get('explanation') or '',
+            'Код причины':item.get('coverage_reason_code') or 'CROSS_SECTION_REVIEW',
+            'Семейство проверки':item.get('checker_family') or 'Детерминированная межраздельная сверка',
             'Недостающие доказательства':'Уточнить доверенные источники и актуальность разделов',
-            'Ожидаемые разделы':item.get('sources') or '—','Уровень доказательства':'—',
+            'Ожидаемые разделы':item.get('sources') or '—','Уровень доказательства':item.get('evidence_level') or '—',
         })
     for item in review_plan.get('items') or []:
         if str(item.get('verification_kind') or '').upper()!='REVIEW_QUESTION':
@@ -933,6 +935,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         question_rows.append({
             'ID':_stable_report_id('Q',item),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
             'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
+            'Код причины':item.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
+            'Семейство проверки':item.get('checker_family') or '—',
             'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
             'Ожидаемые разделы':_safe_join(item.get('expected_evidence_route') or item.get('expected_sections'), ', ') or '—',
             'Уровень доказательства':ru_label(item.get('evidence_level') or 'L0'),
@@ -972,9 +976,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     questions_df=pd.DataFrame(selected_questions)
     review_clusters=build_review_clusters(deduped_questions)
     review_clusters_df=pd.DataFrame(review_clusters[:20] if report_kind=='manager' else review_clusters)
+    compression_pct=round(100*(1-len(review_clusters)/max(1,len(deduped_questions))),1) if deduped_questions else 0.0
     summary_rows.extend([
-        ['Рабочих групп вопросов специалисту', len(review_clusters)],
-        ['Групп высокого приоритета', sum(1 for row in review_clusters if row.get('Приоритет')=='Высокий')],
+        ['Рабочих пакетов проверки', len(review_clusters)],
+        ['Сжатие очереди специалиста, %', compression_pct],
+        ['Пакетов высокого приоритета', sum(1 for row in review_clusters if row.get('Приоритет')=='Высокий')],
     ])
     object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',

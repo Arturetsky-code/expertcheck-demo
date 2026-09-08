@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 4 · Requirement Proof Reconstruction · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 4.1 · Canonical Verification Audit · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -156,7 +156,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha4-dual-run',
+            'version':'20.0-alpha4.1-audit',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -205,6 +205,34 @@ if st.session_state.get('expert_mode'):
                     f"ограничения {counts.get('SYSTEM_LIMITATION',0)}"
                 )
                 st.caption('Legacy verdicts: без изменений')
+
+if st.session_state.get('expert_mode') and canonical_manifest and not canonical_manifest.get('error'):
+    verification=canonical_manifest.get('verification_engine') or {}
+    audit_rows=list(verification.get('audit_rows') or [])
+    with st.expander('20.0 · Canonical Verification Audit', expanded=False):
+        if not audit_rows:
+            st.caption('Автоматические канонические решения пока отсутствуют.')
+        else:
+            st.caption(
+                'Показываются только автоматические канонические решения, PROJECT_FINDING и расхождения с legacy. '
+                'Это диагностический слой; пользовательские legacy-вердикты пока не меняются.'
+            )
+            display_rows=[]
+            for row in audit_rows:
+                display_rows.append({
+                    'Контур': row.get('domain') or '',
+                    'Результат': row.get('kind') or '',
+                    'Объект': row.get('object') or '',
+                    'Проверка': row.get('check') or '',
+                    'Код параметра': row.get('parameter_code') or '',
+                    'Требуется': row.get('required_value'),
+                    'В проекте': row.get('project_value'),
+                    'Ед.': row.get('unit') or '',
+                    'Основание': row.get('reason') or '',
+                    'Evidence': row.get('evidence') or '',
+                    'Trace ID': row.get('trace_id') or '',
+                })
+            st.dataframe(display_rows, hide_index=True, width='stretch')
 
 data=(docs,findings,comparisons,filtered_registry,filtered_passports,metrics(comparisons),engineer_findings(findings))
 @dataclass

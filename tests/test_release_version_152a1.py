@@ -19,7 +19,7 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 18.6 Candidate · Project Knowledge Recovery"
+    assert _app_version() == "ExpertCheck 18.6 Candidate · Project Knowledge Recovery · rev.1"
     assert core_version == "18.6-project-knowledge-recovery"
 
 

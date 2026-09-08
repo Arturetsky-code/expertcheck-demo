@@ -127,3 +127,17 @@ def test_restored_snapshot_conflict_uses_aggregate_trust_and_independent_section
     assert row["final_verification_kind"] == "PROJECT_FINDING"
     assert row["proof_kind"] == "STRUCTURED_CONFLICT"
     assert row["correct_value_verified"] is False
+
+
+
+def test_repeated_qualification_recovers_conflict_after_review_status():
+    row=_comparison('Требует проверки')
+    row["verification_evidence"][1]["value"] = 48.7
+    row["independent_trusted_sources"] = 2
+    row["trusted_section_families"] = []
+    audit=qualify_cross_section_verdicts([row])
+    assert audit["passed"] == 1
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_kind"] == "STRUCTURED_CONFLICT"
+    assert row["comparison_status_recovered_from_evidence"] is True
+    assert row["correct_value_verified"] is False

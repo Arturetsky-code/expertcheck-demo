@@ -13,7 +13,7 @@ from studio.components import card, empty, section
 def _document_types(docs: pd.DataFrame) -> list[str]:
     if docs.empty:
         return []
-    for col in ("Раздел", "document_type", "section", "doc_type"):
+    for col in ("Тип документа", "Раздел", "document_type", "section", "doc_type"):
         if col in docs.columns:
             return docs[col].fillna("").astype(str).tolist()
     return []

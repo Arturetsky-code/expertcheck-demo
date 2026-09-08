@@ -69,7 +69,14 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
         trusted=_bool(row.get('trusted_for_mismatch'), False) or _bool(row.get('trusted'), False),
         confidence=_float_or_text(row.get('confidence')) if isinstance(_float_or_text(row.get('confidence')), float) else None,
         confidence_kind=_text(row,'confidence_kind'),
-        metadata={'migrated_from':'18.x'},
+        metadata={
+            'migrated_from':'18.x',
+            'observed_value':row.get('value'),
+            'observed_value_text':_text(row,'value_text','value','Значение'),
+            'observed_unit':_text(row,'unit','Единица измерения','Ед. изм.'),
+            'observed_object_id':_text(row,'object_id'),
+            'observed_parameter_code':_text(row,'parameter_code'),
+        },
     ))
     return evidence_id
 
@@ -166,12 +173,23 @@ class Legacy18Adapter:
             for source in (row.get('verification_evidence') or []):
                 if not isinstance(source,dict):continue
                 ev=_evidence_from_row(project,source)
-                if ev and ev not in evidence_ids:evidence_ids.append(ev)
+                if ev:
+                    evidence=project.evidence[ev]
+                    evidence.metadata.update({
+                        'comparison_object_id':object_id,
+                        'comparison_parameter_code':code,
+                        'comparison_unit':_text(row,'unit'),
+                    })
+                    if ev not in evidence_ids:evidence_ids.append(ev)
+            property_ids=[
+                prop.property_id for prop in project.properties.values()
+                if prop.object_id==object_id and prop.parameter_code==code
+            ]
             comparison_id=_text(row,'comparison_id','check_id','check_code','id') or stable_id('CMP',object_id,code,_text(row,'unit'))
             project.add_comparison(Comparison(
                 comparison_id=comparison_id,object_id=object_id,parameter_code=code,
                 parameter_name=_text(row,'parameter_name','parameter') or code,unit=_text(row,'unit'),
-                evidence_ids=evidence_ids,status=_text(row,'final_verification_state','verification_state','status'),
+                property_ids=property_ids,evidence_ids=evidence_ids,status=_text(row,'final_verification_state','verification_state','status'),
                 proof_kind=_text(row,'proof_kind'),conflict_confirmed=_bool(row.get('conflict_confirmed'),False),
                 correct_value_verified=_bool(row.get('correct_value_verified'),False),
                 evidence_level=_text(row,'evidence_level') or 'L0',metadata={

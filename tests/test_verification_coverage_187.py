@@ -113,3 +113,17 @@ def test_independent_conflict_confirms_fact_without_claiming_correct_value():
     assert row["cross_section_gate"]["proof_route"] == "INDEPENDENT_CONFLICT"
     assert row["conflict_confirmed"] is True
     assert row["correct_value_verified"] is False
+
+
+def test_restored_snapshot_conflict_uses_aggregate_trust_and_independent_sections():
+    row=_comparison('ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ')
+    row["verification_evidence"][1]["value"] = 48.7
+    row["verification_evidence"][0]["trusted_for_mismatch"] = False
+    row["verification_evidence"][1]["trusted_for_mismatch"] = False
+    row["independent_trusted_sources"] = 2
+    row["trusted_section_families"] = []
+    audit=qualify_cross_section_verdicts([row])
+    assert audit["passed"] == 1
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_kind"] == "STRUCTURED_CONFLICT"
+    assert row["correct_value_verified"] is False

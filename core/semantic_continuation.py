@@ -137,6 +137,75 @@ def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detai
         pass
 
 
+_SITE_FEATURE_NAMES = {
+    "ограждение", "проезд", "ворота", "калитка", "благоустройство", "территория",
+}
+
+
+def _cached_verdict(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    for key in ("verdict", "decision", "semantic_advisory_decision", "result"):
+        raw = str(value.get(key) or "").strip()
+        if raw:
+            upper = raw.upper()
+            if upper in {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}:
+                return upper
+            low = raw.lower().replace("ё", "е")
+            if "другая сущност" in low:
+                return "OTHER_ENTITY"
+    rendered = str(value).lower().replace("ё", "е")
+    if "other_entity" in rendered or "другая сущност" in rendered:
+        return "OTHER_ENTITY"
+    return ""
+
+
+def _invalidate_site_feature_other_entity_checkpoint(
+    doc: dict[str, Any], checkpoint: dict[str, Any] | None,
+) -> int:
+    """Reopen cached OTHER_ENTITY only for site-feature packets.
+
+    A restored checkpoint can otherwise stay 100% complete forever even after
+    18.5.1 changes the Judge payload so a feature label such as «Ограждение» is
+    no longer sent as a standalone expected object.
+    """
+    if not isinstance(checkpoint, dict):
+        return 0
+    domain = checkpoint.get("assignment")
+    if not isinstance(domain, dict):
+        return 0
+    judge_lane = domain.get("judge")
+    critic_lane = domain.get("critic")
+    if not isinstance(judge_lane, dict):
+        return 0
+    if not isinstance(critic_lane, dict):
+        critic_lane = {}
+        domain["critic"] = critic_lane
+
+    graph = dict(doc.get("atomic_requirement_graph") or {})
+    rows = list(graph.get("atoms") or doc.get("assignment_atomic_compliance") or [])
+    reopened = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        object_name = str(row.get("object_name") or row.get("scope_entity") or "").strip().lower().replace("ё", "е")
+        if object_name not in _SITE_FEATURE_NAMES:
+            continue
+        fresh = build_contract(row)
+        if str(fresh.get("scope") or "") != "SITE_SPECIFIC" or bool(fresh.get("requires_same_owner")):
+            continue
+        packet_id = str(row.get("atom_id") or row.get("requirement_id") or "")
+        if not packet_id:
+            continue
+        cached = judge_lane.get(packet_id)
+        if _cached_verdict(cached) != "OTHER_ENTITY":
+            continue
+        judge_lane.pop(packet_id, None)
+        critic_lane.pop(packet_id, None)
+        reopened += 1
+    return reopened
+
+
 def _checklist_summary(review: dict[str, Any]) -> dict[str, Any]:
     rows = list(review.get("results") or [])
     actionable = [row for row in rows if not row.get("is_heading")]
@@ -162,7 +231,11 @@ def continuation_pending(
     checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return cumulative package/role counters from the persisted checkpoint."""
-    return queue_status_from_document(doc, checkpoint)
+    reopened = _invalidate_site_feature_other_entity_checkpoint(doc, checkpoint)
+    status = queue_status_from_document(doc, checkpoint)
+    if reopened:
+        status["contract_revalidation_reopened"] = reopened
+    return status
 
 
 def continue_semantic_analysis(

@@ -407,3 +407,70 @@ def test_completed_queue_reopens_from_assignment_result_when_atomic_graph_is_sta
     assert status["judge_remaining"] == 1
     assert status["packages_remaining"] == 1
     assert status["contract_revalidation_reopened"] == 1
+
+
+
+def test_rev4_recovers_global_other_entity_but_keeps_site_feature_reopened():
+    norm_id = "REQ-NORM-OTHER"
+    fence_id = "REQ-FENCE-OTHER"
+    norm_row = {
+        "atom_id": norm_id,
+        "requirement_id": norm_id,
+        "requirement_text": "Актуализированная редакция СНиП 3.02.01-87",
+        "semantic_evidence_packet": {
+            "packet_id": norm_id,
+            "evidence_level": "L4",
+            "checker": {"consensus_eligible": True},
+            "binding_contract": {
+                "scope": "GLOBAL",
+                "requires_same_owner": False,
+                "requires_same_parameter": False,
+            },
+        },
+        "semantic_judge": {
+            "verdict": "OTHER_ENTITY",
+            "response_received": True,
+            "valid": True,
+            "confidence": 0.9,
+        },
+    }
+    fence_row = {
+        "atom_id": fence_id,
+        "requirement_id": fence_id,
+        "requirement_text": "Предусмотреть ограждение части площадки.",
+        "object_name": "Ограждение",
+        "semantic_evidence_packet": {
+            "packet_id": fence_id,
+            "evidence_level": "L4",
+            "checker": {"consensus_eligible": True},
+            "binding_contract": {
+                "scope": "SITE_SPECIFIC",
+                "requires_same_owner": False,
+                "requires_same_parameter": False,
+            },
+        },
+        "semantic_judge": {
+            "verdict": "OTHER_ENTITY",
+            "response_received": True,
+            "valid": True,
+            "confidence": 0.95,
+        },
+    }
+    doc = {
+        "assignment_atomic_compliance": [norm_row, fence_row],
+        "automatic_checklist_review": {"atomic_verification": {"atoms": []}},
+        "semantic_evidence_engine": {"assignment": {"judge_candidates": 2}},
+        "analysis_snapshot": {"snapshot_id": "SNAP-REV4"},
+    }
+    checkpoint = {
+        "_project_fingerprint": "SNAP-REV4",
+        "_semantic_engine_version": "18.5-evidence-quality-v1",
+        "assignment": {"judge": {}, "critic": {}},
+        "checklist": {"judge": {}, "critic": {}},
+    }
+    status = continuation_pending(doc, checkpoint)
+    assert norm_id in checkpoint["assignment"]["judge"]
+    assert fence_id not in checkpoint["assignment"]["judge"]
+    assert status["judge_remaining"] == 1
+    assert status["packages_remaining"] == 1
+    assert status["checkpoint_responses_recovered"] == 1

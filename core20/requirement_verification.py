@@ -83,12 +83,34 @@ def _section_matches(section: str, routes: list[str]) -> bool:
     return any(_norm(route) in low or low in _norm(route) for route in routes if _norm(route))
 
 
-def _project_value(meta: dict[str,Any]) -> float | None:
-    for key in ("project_value","project_quantity","observed_value","value"):
-        value=_numeric(meta.get(key))
+def _project_value(meta: dict[str,Any], *, required_unit: str="", parameter_code: str="") -> tuple[float | None,str,str]:
+    """Return only a semantically compatible structured project value.
+
+    Quantity fields are counts, not generic engineering values. They may be used
+    only for quantity/count requirements expressed in pieces. Missing evidence
+    units are never silently inherited from the requirement.
+    """
+    code=str(parameter_code or "").upper()
+    if required_unit=="pcs" or code in {"QUANTITY","COUNT","EQUIPMENT_COUNT"}:
+        value=_numeric(meta.get("project_quantity"))
         if value is not None:
-            return value
-    return None
+            return value,"pcs","project_quantity"
+
+    for key in ("project_value","observed_value","value"):
+        value=_numeric(meta.get(key))
+        if value is None:
+            continue
+        unit=_unit(
+            meta.get("project_unit")
+            or meta.get("observed_unit")
+            or meta.get("unit")
+        )
+        if required_unit and not unit:
+            continue
+        if required_unit and unit!=required_unit:
+            continue
+        return value,unit,key
+    return None,"",""
 
 
 def reconstruct_requirement_proof(
@@ -166,22 +188,18 @@ def reconstruct_requirement_proof(
         facts=[]
         for item in trusted:
             meta=item.metadata or {}
-            value=_project_value(meta)
-            if value is None:
-                continue
-            unit=_unit(
-                meta.get("project_unit")
-                or meta.get("observed_unit")
-                or requirement.metadata.get("unit")
+            value,unit,value_source=_project_value(
+                meta,
+                required_unit=required_unit,
+                parameter_code=requirement.expected_parameter_code,
             )
-            if required_unit and unit and required_unit!=unit:
-                continue
-            if required_unit and not unit:
+            if value is None:
                 continue
             facts.append({
                 "evidence_id":item.evidence_id,
                 "value":value,
-                "unit":unit or required_unit,
+                "unit":unit,
+                "value_source":value_source,
                 "address":item.address,
             })
         if facts:

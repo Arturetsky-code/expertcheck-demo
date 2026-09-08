@@ -100,3 +100,16 @@ def test_coverage_refresh_rebuilds_comparison_domain_without_pdf_or_ai():
     assert summary["comparison_completed"] == 1
     assert summary["comparison_verified_ok"] == 1
     assert docs[0]["project_review_plan"]["domains"]["comparison"]["completed"] == 1
+
+
+
+def test_independent_conflict_confirms_fact_without_claiming_correct_value():
+    row=_comparison('ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ')
+    row["verification_evidence"][1]["value"] = 48.7
+    audit=qualify_cross_section_verdicts([row])
+    assert audit["passed"] == 1
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_kind"] == "STRUCTURED_CONFLICT"
+    assert row["cross_section_gate"]["proof_route"] == "INDEPENDENT_CONFLICT"
+    assert row["conflict_confirmed"] is True
+    assert row["correct_value_verified"] is False

@@ -282,12 +282,34 @@ def _dashboard(ctx):
     )
     if pending.pop("_state_reconciled", False):
         _persist_completed_state(ctx)
+    object_confirmed = bool(st.session_state.get('object_registry_confirmed'))
+    knowledge_summary = dict((first_doc.get('project_knowledge_model') or {}).get('summary') or {})
+    recovered_objects = int(
+        knowledge_summary.get('objects')
+        or (first_doc.get('object_registry_summary') or {}).get('registry_positions')
+        or 0
+    )
+    recovered_teps = int(
+        (first_doc.get('object_passport_summary') or {}).get('characteristic_count')
+        or ((first_doc.get('project_understanding') or {}).get('stats') or {}).get('properties_bound')
+        or 0
+    )
+    object_label = (
+        f"Объекты: {summary['objects']}"
+        if object_confirmed
+        else f"Объекты-кандидаты: {recovered_objects}"
+    )
+    tep_label = (
+        f"ТЭП: {summary['checks']}"
+        if object_confirmed
+        else f"ТЭП-кандидаты: {recovered_teps}"
+    )
     project_status_bar(
         st.session_state.project_name,
         'Проверка неполная' if pending['total'] else 'Проверка завершена',
         f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}",
-        f"Объекты: {summary['objects']}",
-        f"ТЭП: {summary['checks']}",
+        object_label,
+        tep_label,
     )
     restore_notice = st.session_state.pop('snapshot_restore_notice', None)
     if isinstance(restore_notice, dict):
@@ -302,6 +324,15 @@ def _dashboard(ctx):
                 "Корпус страниц восстановлен без PDF. В этом снимке нет переносимого AI-checkpoint, "
                 "поэтому смысловая очередь будет выполнена заново по сохранённому корпусу."
             )
+    recovery = dict(first_doc.get('project_knowledge_recovery') or {})
+    if recovery.get('objects') and not object_confirmed:
+        st.info(
+            f"Project Knowledge Model восстановлена без повторного чтения PDF: "
+            f"объектов {int(recovery.get('objects') or 0)}, "
+            f"межраздельных проверок {int(recovery.get('cross_section_checks') or 0)}. "
+            "Подтвердите состав объектов один раз, чтобы разблокировать ТЭП и межраздельную сверку."
+        )
+
     semantic_summary = dict(first_doc.get('semantic_evidence_engine') or {})
     has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
     if has_semantic_snapshot and (pending['eligible'] or semantic_summary):

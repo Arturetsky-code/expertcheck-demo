@@ -160,7 +160,9 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
             and _text(row.get("unit"))
         )
         strong_independent_evidence = bool(
-            trusted_count >= 2 and trusted_family_count >= 2
+            len(sources) >= 2
+            and trusted_count >= 2
+            and trusted_family_count >= 2
         )
 
         reasons: list[str] = []

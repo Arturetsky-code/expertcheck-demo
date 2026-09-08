@@ -26,7 +26,6 @@ def _trusted_evidence(project: CanonicalProject) -> None:
 def test_structured_agreement_needs_two_independent_trusted_sources():
     project = _project()
     _trusted_evidence(project)
-    project.evidence["E-PZU"].metadata["observed_value"] = 48.7
     project.add_comparison(Comparison(
         comparison_id="CMP-1",
         object_id="OBJ-1",
@@ -71,6 +70,7 @@ def test_agreement_with_one_source_does_not_become_verified_ok():
 def test_confirmed_conflict_is_project_finding_but_correct_value_stays_unknown():
     project = _project()
     _trusted_evidence(project)
+    project.evidence["E-PZU"].metadata["observed_value"] = 48.7
     project.add_comparison(Comparison(
         comparison_id="CMP-1",
         object_id="OBJ-1",

@@ -65,6 +65,23 @@ def _route_signature(row: dict[str, Any]) -> str:
     return " + ".join(normalized) or "—"
 
 
+def _family_group(row: dict[str, Any]) -> str:
+    raw = normalize_text(_value(row, "Семейство проверки", "checker_family"))
+    if any(token in raw for token in ("межраздел", "cross", "reconcil")):
+        return "CROSS_SECTION"
+    if any(token in raw for token in ("semantic", "смыслов", "judge", "critic", "ai")):
+        return "SEMANTIC"
+    if any(token in raw for token in ("норматив", "normative", "kb")):
+        return "NORMATIVE"
+    if any(token in raw for token in ("checklist", "чек-лист")):
+        return "CHECKLIST"
+    if any(token in raw for token in ("assignment", "задание")):
+        return "ASSIGNMENT"
+    if any(token in raw for token in ("determin", "структур", "document", "evidence")):
+        return "DETERMINISTIC"
+    return raw.upper() or "GENERIC"
+
+
 def _action_for_reason(code: str, topic: str, route: str) -> str:
     actions = {
         "NO_ADDRESSABLE_EVIDENCE": f"Проверить наличие адресного доказательства по маршруту {route}.",
@@ -126,10 +143,14 @@ def build_review_clusters(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
         domain = _value(row, "Контур", "domain") or "Не определён"
         route = _route_signature(row)
         reason_code = _reason_code(row)
-        family = _value(row, "Семейство проверки", "checker_family") or "—"
+        family = _family_group(row)
         topic = _topic(row)
+        # Stable coverage failures represent one engineering action even when
+        # they occur on different objects/topics. Only the catch-all specialist
+        # judgement keeps topic in the operational key.
+        topic_key = topic if reason_code == "SPECIALIST_JUDGEMENT" else "—"
         key = tuple(normalize_text(value) for value in (
-            domain, route, reason_code, family, topic,
+            domain, reason_code, family, topic_key,
         ))
         grouped[key].append(row)
 
@@ -151,7 +172,8 @@ def build_review_clusters(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
             digest = hashlib.sha1(
                 ("|".join(key) + f"|{chunk_index}").encode("utf-8", "ignore")
             ).hexdigest()[:10].upper()
-            route = _route_signature(first)
+            routes = list(dict.fromkeys(_route_signature(item) for item in items))
+            route = " | ".join(routes[:6]) + (f" | ещё {len(routes)-6}" if len(routes) > 6 else "")
             topic = _topic(first)
             reason_code = _reason_code(first)
             clusters.append({
@@ -163,6 +185,7 @@ def build_review_clusters(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
                 "Ожидаемые разделы": route,
                 "Количество вопросов": len(items),
                 "Количество объектов": len(objects),
+                "Количество маршрутов": len(routes),
                 "Объекты": " | ".join(objects[:8]) + (f" | ещё {len(objects)-8}" if len(objects) > 8 else ""),
                 "Максимальный уровень доказательства": max_level,
                 "Типовая причина": _value(first, "Причина", "coverage_reason", "reason") or "Требуется предметное решение специалиста.",

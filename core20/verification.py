@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from math import isclose
+import re
 from typing import Any, Iterable
 
 from .model import CanonicalProject, Comparison, Requirement, stable_id
 
 
-ENGINE_VERSION = "20.0-alpha2-verification-engine"
+ENGINE_VERSION = "20.0-alpha3-canonical-proof"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",
@@ -88,11 +90,43 @@ def _min_level(current: str, maximum: str) -> str:
     return current if _level_rank(current) <= _level_rank(maximum) else maximum
 
 
-class VerificationEngine20:
-    """Typed, fail-closed verification over CanonicalProject.
+def _numeric(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value or "").strip().replace("\xa0", " ").replace(",", ".")
+    if not text:
+        return None
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+    try:
+        return float(match.group(0))
+    except ValueError:
+        return None
 
-    Alpha 2 is intentionally observational. It reads canonical state and returns
-    decisions without mutating the project or replacing legacy 18.x verdicts.
+
+def _unit(value: Any) -> str:
+    text = str(value or "").strip().casefold()
+    text = text.replace("²", "2").replace("^2", "2").replace(" ", "")
+    aliases = {
+        "м2": "m2", "m²": "m2", "м.кв.": "m2", "кв.м": "m2",
+        "m2": "m2", "sqm": "m2",
+        "м3": "m3", "м³": "m3", "m3": "m3",
+        "мм": "mm", "mm": "mm",
+        "см": "cm", "cm": "cm",
+        "м": "m", "m": "m",
+        "квт": "kw", "kw": "kw",
+        "мпа": "mpa", "mpa": "mpa",
+    }
+    return aliases.get(text, text)
+
+
+class VerificationEngine20:
+    """Fail-closed verification over CanonicalProject.
+
+    Alpha 3 reconstructs cross-section proof from canonical evidence facts.
+    Legacy proof flags are retained only as parity diagnostics and cannot by
+    themselves create an automatic 20.0 verdict.
     """
 
     def __init__(self, project: CanonicalProject):
@@ -119,6 +153,14 @@ class VerificationEngine20:
             for kind in sorted(VERIFICATION_KINDS)
         }
         automatic = sum(1 for decision in decisions if decision.automatic_verdict_eligible)
+        canonical_recomputed = sum(
+            1 for decision in decisions
+            if decision.metadata.get("proof_source") == "CANONICAL_RECOMPUTED"
+        )
+        legacy_disagreements = sum(
+            1 for decision in decisions
+            if decision.metadata.get("legacy_disagreement")
+        )
         return {
             "version": ENGINE_VERSION,
             "mode": "OBSERVATIONAL_DUAL_RUN",
@@ -126,6 +168,8 @@ class VerificationEngine20:
             "decisions": len(decisions),
             "automatic_verdict_eligible": automatic,
             "automatic_coverage_pct": round(100.0 * automatic / max(1, len(decisions)), 1),
+            "canonical_proofs_recomputed": canonical_recomputed,
+            "legacy_disagreements": legacy_disagreements,
             "contract_errors": len(contract_errors),
             "counts": counts,
             "decision_rows": [decision.to_dict() for decision in decisions],
@@ -242,13 +286,97 @@ class VerificationEngine20:
             evidence_level=level,
         )
 
+    def _canonical_comparison_proof(
+        self,
+        comparison: Comparison,
+        assessment: EvidenceAssessment,
+    ) -> dict[str, Any]:
+        facts: list[dict[str, Any]] = []
+        target_unit = _unit(comparison.unit)
+
+        for evidence_id in assessment.trusted_ids:
+            evidence = self.project.evidence[evidence_id]
+            meta = evidence.metadata or {}
+            bound_object = str(
+                meta.get("comparison_object_id")
+                or meta.get("observed_object_id")
+                or ""
+            ).strip()
+            bound_parameter = str(
+                meta.get("comparison_parameter_code")
+                or meta.get("observed_parameter_code")
+                or ""
+            ).strip()
+            if bound_object and bound_object != comparison.object_id:
+                continue
+            if bound_parameter and bound_parameter != comparison.parameter_code:
+                continue
+
+            value = _numeric(meta.get("observed_value"))
+            if value is None:
+                value = _numeric(meta.get("observed_value_text"))
+            if value is None:
+                continue
+
+            unit = _unit(
+                meta.get("observed_unit")
+                or meta.get("comparison_unit")
+                or comparison.unit
+            )
+            facts.append({
+                "evidence_id": evidence_id,
+                "section": evidence.section or evidence.document_name or evidence.document_id,
+                "value": value,
+                "unit": unit or target_unit,
+            })
+
+        independent = {
+            str(fact["section"]).strip().casefold()
+            for fact in facts
+            if str(fact["section"]).strip()
+        }
+        if len(facts) < 2 or len(independent) < 2:
+            return {
+                "state": "INSUFFICIENT",
+                "reason_code": "CANONICAL_VALUES_INSUFFICIENT",
+                "facts": facts,
+            }
+
+        units = {fact["unit"] for fact in facts if fact["unit"]}
+        if len(units) > 1:
+            return {
+                "state": "INSUFFICIENT",
+                "reason_code": "UNIT_CONTRACT_MISMATCH",
+                "facts": facts,
+            }
+
+        values = [float(fact["value"]) for fact in facts]
+        anchor = values[0]
+        equal = all(isclose(value, anchor, rel_tol=1e-9, abs_tol=1e-6) for value in values[1:])
+        return {
+            "state": "AGREEMENT" if equal else "CONFLICT",
+            "reason_code": "CANONICAL_AGREEMENT" if equal else "CANONICAL_CONFLICT",
+            "facts": facts,
+            "values": values,
+            "unit": next(iter(units), target_unit),
+        }
+
+    def _legacy_disagrees(self, comparison: Comparison, canonical_state: str) -> bool:
+        legacy_kind = str(comparison.metadata.get("verification_kind") or "").upper()
+        legacy_conflict = bool(comparison.conflict_confirmed) or legacy_kind == "PROJECT_FINDING"
+        legacy_ok = legacy_kind == "VERIFIED_OK" or str(comparison.proof_kind or "").upper() == "STRUCTURED_AGREEMENT"
+        if canonical_state == "CONFLICT":
+            return legacy_ok and not legacy_conflict
+        if canonical_state == "AGREEMENT":
+            return legacy_conflict
+        return False
+
     def _verify_comparison(
         self,
         request: VerificationRequest,
         assessment: EvidenceAssessment,
     ) -> VerificationDecision:
         comparison = self.project.comparisons[request.comparison_id or ""]
-        proof = str(comparison.proof_kind or "").upper()
 
         if not assessment.has_addressable_evidence:
             return self._decision(
@@ -258,50 +386,48 @@ class VerificationEngine20:
                 assessment,
             )
 
-        # A conflict is a fact about disagreement between sources. It does not
-        # imply that ExpertCheck knows which value is correct.
-        if comparison.conflict_confirmed:
-            if len(assessment.trusted_ids) >= 2 and len(assessment.independent_sections) >= 2:
-                return self._decision(
-                    request,
-                    "PROJECT_FINDING",
-                    "Конфликт подтверждён двумя независимыми доверенными адресными источниками.",
-                    assessment,
-                    automatic=True,
-                    conflict_confirmed=True,
-                    correct_value_verified=bool(comparison.correct_value_verified),
-                )
+        proof = self._canonical_comparison_proof(comparison, assessment)
+        state = proof["state"]
+        diagnostic = {
+            "proof_source": "CANONICAL_RECOMPUTED" if state in {"AGREEMENT", "CONFLICT"} else "CANONICAL_INSUFFICIENT",
+            "canonical_proof_state": state,
+            "canonical_reason_code": proof.get("reason_code"),
+            "canonical_values": proof.get("values") or [fact["value"] for fact in proof.get("facts", [])],
+            "canonical_unit": proof.get("unit") or "",
+            "canonical_fact_count": len(proof.get("facts") or []),
+            "legacy_proof_kind": comparison.proof_kind,
+            "legacy_conflict_confirmed": comparison.conflict_confirmed,
+            "legacy_disagreement": self._legacy_disagrees(comparison, state),
+        }
+
+        if state == "CONFLICT":
             return self._decision(
                 request,
-                "REVIEW_QUESTION",
-                "Конфликт отмечен, но канонической доказательной базы недостаточно для автоматического замечания.",
+                "PROJECT_FINDING",
+                "20.0 независимо пересчитал конфликт по двум адресным доверенным источникам.",
                 assessment,
+                automatic=True,
                 conflict_confirmed=True,
                 correct_value_verified=False,
+                decision_metadata=diagnostic,
             )
 
-        agreement_proofs = {"STRUCTURED_AGREEMENT", "STRUCTURED_COMPARISON"}
-        if proof in agreement_proofs:
-            if len(assessment.trusted_ids) >= 2 and len(assessment.independent_sections) >= 2:
-                return self._decision(
-                    request,
-                    "VERIFIED_OK",
-                    "Значение подтверждено независимыми доверенными адресными источниками.",
-                    assessment,
-                    automatic=True,
-                )
+        if state == "AGREEMENT":
             return self._decision(
                 request,
-                "REVIEW_QUESTION",
-                "Совпадение найдено, но не выполнен контракт независимости доверенных источников.",
+                "VERIFIED_OK",
+                "20.0 независимо пересчитал совпадение по двум адресным доверенным источникам.",
                 assessment,
+                automatic=True,
+                decision_metadata=diagnostic,
             )
 
         return self._decision(
             request,
             "REVIEW_QUESTION",
-            "Есть адресные доказательства, но тип доказательства не закрывает автоматический инженерный вердикт.",
+            "Адресные evidence есть, но 20.0 не смог независимо восстановить достаточный числовой proof; legacy-флаг не используется как автоматическое доказательство.",
             assessment,
+            decision_metadata=diagnostic,
         )
 
     def _verify_requirement(
@@ -334,10 +460,11 @@ class VerificationEngine20:
             return self._decision(
                 request,
                 "PROJECT_FINDING",
-                "Несоответствие уже связано с каноническим требованием и адресным доказательством.",
+                "Несоответствие связано с каноническим требованием и адресным доказательством.",
                 assessment,
                 evidence_level=effective_level,
                 automatic=True,
+                decision_metadata={"proof_source": "CANONICAL_REQUIREMENT_LINK"},
             )
 
         if "VERIFIED_OK" in linked_kinds:
@@ -349,6 +476,7 @@ class VerificationEngine20:
                     assessment,
                     evidence_level=effective_level,
                     automatic=True,
+                    decision_metadata={"proof_source": "CANONICAL_REQUIREMENT_LINK"},
                 )
             return self._decision(
                 request,
@@ -401,11 +529,19 @@ class VerificationEngine20:
         correct_value_verified: bool = False,
         contract_violations: list[str] | None = None,
         evidence_level: str | None = None,
+        decision_metadata: dict[str, Any] | None = None,
     ) -> VerificationDecision:
         if kind not in VERIFICATION_KINDS:
             kind = "SYSTEM_LIMITATION"
             automatic = False
             reason = "Движок получил неизвестный тип результата; автоматический вердикт заблокирован."
+        metadata = {
+            "domain": request.domain,
+            "parameter_code": request.parameter_code,
+            "independent_trusted_sources": len(assessment.trusted_ids),
+            "independent_sections": list(assessment.independent_sections),
+        }
+        metadata.update(decision_metadata or {})
         return VerificationDecision(
             verification_id=request.verification_id,
             kind=kind,
@@ -422,10 +558,5 @@ class VerificationEngine20:
             conflict_confirmed=bool(conflict_confirmed),
             correct_value_verified=bool(correct_value_verified),
             contract_violations=list(contract_violations or []),
-            metadata={
-                "domain": request.domain,
-                "parameter_code": request.parameter_code,
-                "independent_trusted_sources": len(assessment.trusted_ids),
-                "independent_sections": list(assessment.independent_sections),
-            },
+            metadata=metadata,
         )

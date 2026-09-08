@@ -157,10 +157,13 @@ if st.session_state.result:
         if st.session_state.get('expert_mode'):
             st.warning(f'Canonical Core 20.0 не построен: {canonical_manifest["error"]}')
 
-if st.session_state.get('expert_mode') and canonical_manifest:
+if st.session_state.get('expert_mode'):
     with st.sidebar:
         with st.expander('20.0 · Canonical Core', expanded=False):
-            if canonical_manifest.get('error'):
+            if not canonical_manifest:
+                st.caption('Состояние: ожидание проекта')
+                st.caption('Откройте проект для построения canonical model.')
+            elif canonical_manifest.get('error'):
                 st.error('Dual-run: ошибка миграции')
                 st.caption(canonical_manifest.get('error'))
             else:

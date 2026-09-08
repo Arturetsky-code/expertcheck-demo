@@ -182,6 +182,7 @@ def test_runtime_does_not_reuse_other_entity_when_owner_binding_not_required():
     packet = {
         "packet_id": "P-SITE",
         "binding_contract": {
+            "scope": "SITE_SPECIFIC",
             "requires_same_owner": False,
             "requires_same_parameter": False,
         },
@@ -206,3 +207,46 @@ def test_runtime_does_not_reuse_other_entity_when_owner_binding_not_required():
     assert collected["P-SITE"]["verdict"] == "SUPPORTS"
     assert checkpoint["P-SITE"]["verdict"] == "SUPPORTS"
     assert any(call.get("attempt") == 1 for call in calls)
+
+
+
+def test_runtime_keeps_other_entity_for_global_normative_packet():
+    from core import semantic_evidence_engine as see
+    from core.verification_runtime_patch import install
+
+    install()
+
+    class Provider:
+        name = "Groq"
+        model = "openai/gpt-oss-120b"
+        def generate_validated(self, *args, **kwargs):
+            raise AssertionError("Provider must not be called for compatible cached normative verdict")
+
+    packet = {
+        "packet_id": "P-NORM",
+        "binding_contract": {
+            "scope": "GLOBAL",
+            "requires_same_owner": False,
+            "requires_same_parameter": False,
+        },
+        "evidence": [{"evidence_id": "E-1"}],
+    }
+    checkpoint = {
+        "P-NORM": {
+            "packet_id": "P-NORM",
+            "verdict": "OTHER_ENTITY",
+            "evidence_ids": ["E-1"],
+            "confidence": 0.95,
+        }
+    }
+    collected, errors, calls = see._call_batches(
+        Provider(),
+        [packet],
+        checkpoint=checkpoint,
+        batch_size=1,
+        max_calls=1,
+    )
+    assert not errors
+    assert collected["P-NORM"]["verdict"] == "OTHER_ENTITY"
+    assert checkpoint["P-NORM"]["verdict"] == "OTHER_ENTITY"
+    assert not any(call.get("attempt") == 1 for call in calls)

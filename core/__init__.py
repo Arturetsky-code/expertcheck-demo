@@ -1,6 +1,6 @@
 """ExpertCheck Core 2.1 — цифровая инженерная модель и движки проверки."""
 
-__version__ = "18.6-project-knowledge-recovery"
+__version__ = "18.6-project-knowledge-recovery-r3"
 
 from .dem import DigitalEngineeringModel, DEMObject, DEMValue, build_dem
 from .validation import ValidationEngine

@@ -170,8 +170,15 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
         # independent addressable project sources once canonical binding is
         # complete; a missing owner mapping in the knowledge base is then not a
         # reason to keep a true agreement in the specialist queue.
-        agreement_mode = target_kind == "VERIFIED_OK"
         conflict_evidence = _conflict_evidence(row, sources)
+        # Idempotency for restored snapshots / repeated qualification:
+        # an older pass may have replaced the raw comparison status with a
+        # review label. Strong structural evidence must still recover the same
+        # PROJECT_FINDING instead of depending on that mutable presentation field.
+        if not target_kind and conflict_evidence.get("confirmed"):
+            target_kind = "PROJECT_FINDING"
+            row.setdefault("comparison_status_recovered_from_evidence", True)
+        agreement_mode = target_kind == "VERIFIED_OK"
         independent_conflict_mode = bool(
             target_kind == "PROJECT_FINDING"
             and conflict_evidence.get("confirmed")

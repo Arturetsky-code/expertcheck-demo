@@ -49,7 +49,7 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
     document=_text(row,'document','Файл','file','source_document')
     page=_page(row.get('page') if 'page' in row else row.get('Страница'))
     section=_text(row,'section','Раздел','document_type','Тип документа')
-    fragment=_text(row,'fragment','text','evidence','Фрагмент') or fallback_fragment
+    fragment=_text(row,'fragment','text','context','snippet','evidence','Фрагмент') or fallback_fragment
     table_id=_text(row,'table_id','Таблица')
     row_id=_text(row,'row_id','table_row','row_index','Строка таблицы')
     if not any((document, page is not None, fragment, table_id, row_id)):
@@ -66,7 +66,13 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
         fragment=fragment,
         source_kind=_text(row,'source_kind','Тип источника'),
         addressable=bool(document and page is not None),
-        trusted=_bool(row.get('trusted_for_mismatch'), False) or _bool(row.get('trusted'), False),
+        trusted=(
+            _bool(row.get('trusted_for_mismatch'), False)
+            or _bool(row.get('trusted'), False)
+            or _text(row,'evidence_state').casefold() in {'verified','verified_candidate','qualified'}
+            or _text(row,'evidence_kind').upper().startswith(('VERIFIED_','QUALIFIED_'))
+            or _text(row,'evidence_kind').upper() in {'EQUIPMENT_REGISTER_COMPARISON'}
+        ),
         confidence=_float_or_text(row.get('confidence')) if isinstance(_float_or_text(row.get('confidence')), float) else None,
         confidence_kind=_text(row,'confidence_kind'),
         metadata={
@@ -200,19 +206,64 @@ class Legacy18Adapter:
             ))
 
         plan=dict(first.get('project_review_plan') or {})
+        raw_assignment=list(first.get('assignment_compliance') or [])
+        raw_normative=list(first.get('normative_compliance_audit') or [])
+        raw_requirement_by_id={}
+        for raw in raw_assignment + raw_normative:
+            if not isinstance(raw,dict):
+                continue
+            rid=_text(raw,'requirement_id','atom_id','plan_id','id','source_row')
+            if rid:
+                raw_requirement_by_id[rid]=raw
         for item in (plan.get('items') or []):
             if not isinstance(item,dict):continue
             requirement_id=_text(item,'requirement_id','atom_id','plan_id','id') or stable_id('REQ',_text(item,'domain'),_text(item,'title'))
             object_id=resolve_object(item)
+            source_id=_text(item,'source_id','requirement_id','atom_id','plan_id','id')
+            raw=raw_requirement_by_id.get(source_id) or raw_requirement_by_id.get(requirement_id) or {}
+            requirement_evidence_ids=[]
+            for source in list(raw.get('verification_evidence') or raw.get('evidence_candidates') or []):
+                if not isinstance(source,dict):
+                    continue
+                ev=_evidence_from_row(project,source)
+                if ev:
+                    evidence=project.evidence[ev]
+                    evidence.metadata.update({
+                        'requirement_id':requirement_id,
+                        'requirement_domain':_text(item,'domain_code','domain'),
+                        'requirement_object_id':object_id or '',
+                        'requirement_parameter_code':_text(item,'parameter_code','metric'),
+                    })
+                    if ev not in requirement_evidence_ids:
+                        requirement_evidence_ids.append(ev)
+            raw_contract=dict(raw.get('evidence_contract_v2') or raw.get('evidence_contract') or {})
             project.add_requirement(Requirement(
-                requirement_id=requirement_id,domain=_text(item,'domain') or 'UNKNOWN',
-                text=_text(item,'requirement_text','requirement','title','question'),
+                requirement_id=requirement_id,domain=_text(item,'domain_code','domain') or 'UNKNOWN',
+                text=_text(raw,'requirement_text','requirement') or _text(item,'requirement_text','requirement','title','question'),
                 applicable=item.get('applicable') if isinstance(item.get('applicable'),bool) else None,
-                target_object_id=object_id,expected_parameter_code=_text(item,'parameter_code'),
-                expected_evidence_route=_list(item.get('expected_evidence_route') or item.get('expected_sections')),
+                target_object_id=object_id,expected_parameter_code=_text(raw,'parameter_code') or _text(item,'parameter_code','metric'),
+                expected_evidence_route=_list(
+                    raw.get('expected_evidence_route') or raw_contract.get('expected_sections')
+                    or item.get('expected_evidence_route') or item.get('expected_sections')
+                ),
                 required_slots=_list(item.get('required_slots') or item.get('missing_evidence_slots')),
+                evidence_ids=requirement_evidence_ids,
                 verification_kind=_text(item,'verification_kind'),evidence_level=_text(item,'evidence_level') or 'L0',
-                metadata={'migrated_from':'18.x','source':'review_plan'},
+                metadata={
+                    'migrated_from':'18.x','source':'review_plan',
+                    'domain_code':_text(item,'domain_code'),
+                    'requirement_type':_text(raw,'requirement_type','check_type') or _text(item,'check_type'),
+                    'required_value':raw.get('required_value', item.get('required_value')),
+                    'unit':_text(raw,'unit') or _text(item,'unit'),
+                    'proof_kind':_text(raw,'proof_kind','evidence_quality_state') or _text(item,'proof_kind'),
+                    'legacy_status':_text(raw,'status','result'),
+                    'canonical_id':_text(raw,'canonical_id'),
+                    'verified_clause':_bool(raw.get('verified_clause'),False),
+                    'source_reference':_text(raw,'source','reference'),
+                    'paragraph':_text(raw,'paragraph','clause'),
+                    'decision_basis':_text(raw,'decision_basis'),
+                    'coverage_reason_code':_text(raw,'coverage_reason_code') or _text(item,'coverage_reason_code'),
+                },
             ))
             kind=_text(item,'verification_kind')
             if kind in {'PROJECT_FINDING','REVIEW_QUESTION','VERIFIED_OK','SYSTEM_LIMITATION'}:

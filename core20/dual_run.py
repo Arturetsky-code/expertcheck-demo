@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha4-dual-run"
+DUAL_RUN_VERSION = "20.0-alpha4.1-audit"
 
 
 def build_dual_run_manifest(
@@ -25,6 +25,46 @@ def build_dual_run_manifest(
     issues=project.validate()
     golden=evaluate_golden_cases(project)
     verification=VerificationEngine20(project).run()
+    audit_rows=[]
+    for decision in verification.get("decision_rows") or []:
+        meta=dict(decision.get("metadata") or {})
+        if not (
+            decision.get("automatic_verdict_eligible")
+            or decision.get("kind")=="PROJECT_FINDING"
+            or meta.get("legacy_disagreement")
+        ):
+            continue
+        trace_ids=list(decision.get("trace_ids") or [])
+        requirement_id=next((item for item in trace_ids if item in project.requirements),None)
+        comparison_id=next((item for item in trace_ids if item in project.comparisons),None)
+        object_id=next((item for item in trace_ids if item in project.objects),None)
+        requirement=project.requirements.get(requirement_id) if requirement_id else None
+        comparison=project.comparisons.get(comparison_id) if comparison_id else None
+        obj=project.objects.get(object_id) if object_id else None
+        evidence_addresses=[]
+        for evidence_id in decision.get("evidence_ids") or []:
+            evidence=project.evidence.get(evidence_id)
+            if evidence and evidence.address:
+                evidence_addresses.append(evidence.address)
+        audit_rows.append({
+            "domain":meta.get("domain") or "",
+            "kind":decision.get("kind") or "",
+            "object":obj.name if obj else "",
+            "check":(
+                requirement.text if requirement
+                else (comparison.parameter_name or comparison.parameter_code) if comparison
+                else ""
+            ),
+            "parameter_code":meta.get("parameter_code") or "",
+            "required_value":meta.get("required_value"),
+            "project_value":meta.get("project_value"),
+            "unit":meta.get("required_unit") or meta.get("canonical_unit") or "",
+            "reason":decision.get("reason") or "",
+            "proof_source":meta.get("proof_source") or "",
+            "legacy_disagreement":bool(meta.get("legacy_disagreement")),
+            "evidence":" | ".join(dict.fromkeys(evidence_addresses)),
+            "trace_id":requirement_id or comparison_id or decision.get("verification_id") or "",
+        })
     manifest={
         "version":DUAL_RUN_VERSION,
         "schema_version":project.schema_version,
@@ -48,6 +88,7 @@ def build_dual_run_manifest(
             "legacy_disagreements":verification.get("legacy_disagreements",0),
             "contract_errors":verification["contract_errors"],
             "counts":verification["counts"],
+            "audit_rows":audit_rows[:40],
         },
         "legacy_results_unchanged":True,
     }

@@ -9,7 +9,7 @@ from core.semantic_evidence_engine import (
 )
 from core.ai_continuation_ledger import queue_status_from_document
 from core.requirement_contracts import SCOPE_SITE, build_contract
-from core.semantic_continuation import _refresh_assignment_contracts
+from core.semantic_continuation import _refresh_assignment_contracts, continuation_pending
 
 
 def _support(packet_id: str, evidence_id: str) -> dict:
@@ -310,3 +310,44 @@ def test_snapshot_continuation_refreshes_stale_site_feature_contract():
     assert row["expected_sections"] == ["ПЗУ"]
     assert "REQ-FENCE-STORED" not in checkpoint["judge"]
     assert "REQ-FENCE-STORED" not in checkpoint["critic"]
+
+
+
+def test_completed_queue_reopens_cached_other_entity_for_site_feature():
+    packet_id = "REQ-FENCE-REOPEN"
+    row = {
+        "atom_id": packet_id,
+        "requirement_id": packet_id,
+        "atom_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "requirement_text": "Предусмотреть ограждение части площадки с расположенным технологическим оборудованием.",
+        "object_name": "Ограждение",
+        "scope_entity": "Ограждение",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "atomic_kind": "PRESENCE_REQUIREMENT",
+        "semantic_evidence_packet": {
+            "packet_id": packet_id,
+            "evidence_level": "L4",
+            "checker": {"consensus_eligible": True},
+        },
+    }
+    doc = {
+        "atomic_requirement_graph": {"atoms": [row]},
+        "assignment_atomic_compliance": [row],
+        "automatic_checklist_review": {"atomic_verification": {"atoms": []}},
+        "semantic_evidence_engine": {"assignment": {"judge_candidates": 1}},
+        "analysis_snapshot": {"snapshot_id": "SNAP-FENCE"},
+    }
+    checkpoint = {
+        "_project_fingerprint": "SNAP-FENCE",
+        "_semantic_engine_version": "18.5-evidence-quality-v1",
+        "assignment": {
+            "judge": {packet_id: {"verdict": "OTHER_ENTITY", "confidence": 0.95}},
+            "critic": {},
+        },
+        "checklist": {"judge": {}, "critic": {}},
+    }
+    status = continuation_pending(doc, checkpoint)
+    assert packet_id not in checkpoint["assignment"]["judge"]
+    assert status["judge_remaining"] == 1
+    assert status["packages_remaining"] == 1
+    assert status["contract_revalidation_reopened"] == 1

@@ -28,6 +28,14 @@ def _page(value: Any) -> int | None:
         return None
 
 
+def _list(value: Any) -> list[str]:
+    if value in (None, "", "—"):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [part.strip() for part in str(value).replace("|", ",").replace(";", ",").split(",") if part.strip()]
+
+
 def _float_or_text(value: Any) -> float | str | None:
     if value in (None, ''):
         return None
@@ -61,7 +69,7 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
         trusted=_bool(row.get('trusted_for_mismatch'), False) or _bool(row.get('trusted'), False),
         confidence=_float_or_text(row.get('confidence')) if isinstance(_float_or_text(row.get('confidence')), float) else None,
         confidence_kind=_text(row,'confidence_kind'),
-        metadata={'legacy':True},
+        metadata={'migrated_from':'18.x'},
     ))
     return evidence_id
 
@@ -114,7 +122,7 @@ class Legacy18Adapter:
                 included=included,
                 parent_object_id=_text(row,'parent_object_id') or None,
                 evidence_ids=evidence_ids,
-                metadata={'legacy_row':dict(row)},
+                metadata={'migrated_from':'18.x','source':'object_registry'},
             )
             project.add_object(obj)
             if name:object_by_name[name.casefold()]=object_id
@@ -146,7 +154,7 @@ class Legacy18Adapter:
                 semantic_level=_text(row,'semantic_level','engineering_semantic_level'),
                 binding_status=_text(row,'binding_status','project_understanding_binding','row_integrity_status'),
                 physical_row_key=_text(row,'physical_row_key','row_key'),
-                evidence_ids=evidence_ids,metadata={'legacy_row':dict(row)},
+                evidence_ids=evidence_ids,metadata={'migrated_from':'18.x','source':'finding'},
             ))
 
         for row in comparisons:
@@ -166,7 +174,11 @@ class Legacy18Adapter:
                 evidence_ids=evidence_ids,status=_text(row,'final_verification_state','verification_state','status'),
                 proof_kind=_text(row,'proof_kind'),conflict_confirmed=_bool(row.get('conflict_confirmed'),False),
                 correct_value_verified=_bool(row.get('correct_value_verified'),False),
-                evidence_level=_text(row,'evidence_level') or 'L0',metadata={'legacy_row':dict(row)},
+                evidence_level=_text(row,'evidence_level') or 'L0',metadata={
+                    'migrated_from':'18.x','source':'comparison',
+                    'verification_kind':_text(row,'final_verification_kind','verification_kind','finding_type'),
+                    'coverage_reason':_text(row,'coverage_reason','explanation'),
+                },
             ))
 
         plan=dict(first.get('project_review_plan') or {})
@@ -179,10 +191,10 @@ class Legacy18Adapter:
                 text=_text(item,'requirement_text','requirement','title','question'),
                 applicable=item.get('applicable') if isinstance(item.get('applicable'),bool) else None,
                 target_object_id=object_id,expected_parameter_code=_text(item,'parameter_code'),
-                expected_evidence_route=list(item.get('expected_evidence_route') or item.get('expected_sections') or []),
-                required_slots=list(item.get('required_slots') or item.get('missing_evidence_slots') or []),
+                expected_evidence_route=_list(item.get('expected_evidence_route') or item.get('expected_sections')),
+                required_slots=_list(item.get('required_slots') or item.get('missing_evidence_slots')),
                 verification_kind=_text(item,'verification_kind'),evidence_level=_text(item,'evidence_level') or 'L0',
-                metadata={'legacy_row':dict(item)},
+                metadata={'migrated_from':'18.x','source':'review_plan'},
             ))
             kind=_text(item,'verification_kind')
             if kind in {'PROJECT_FINDING','REVIEW_QUESTION','VERIFIED_OK','SYSTEM_LIMITATION'}:
@@ -192,20 +204,20 @@ class Legacy18Adapter:
                     object_id=object_id,parameter_code=_text(item,'parameter_code'),severity=_text(item,'priority','severity'),
                     state=_text(item,'verification_state'),evidence_level=_text(item,'evidence_level') or 'L0',
                     reason=_text(item,'coverage_reason','decision_basis','recommendation'),requirement_id=requirement_id,
-                    metadata={'legacy_row':dict(item)},
+                    metadata={'migrated_from':'18.x','source':'review_plan'},
                 ))
 
         for cmp in project.comparisons.values():
-            raw=cmp.metadata.get('legacy_row') or {}
-            kind=_text(raw,'final_verification_kind','verification_kind','finding_type')
+            raw=cmp.metadata
+            kind=_text(raw,'verification_kind')
             if kind not in {'PROJECT_FINDING','REVIEW_QUESTION','VERIFIED_OK','SYSTEM_LIMITATION'}:
                 continue
             finding_id=stable_id('FND',cmp.comparison_id,kind)
             project.add_finding(Finding(
                 finding_id=finding_id,kind=kind,title=f"{project.objects[cmp.object_id].name}: {cmp.parameter_name}",
                 object_id=cmp.object_id,parameter_code=cmp.parameter_code,state=cmp.status,evidence_level=cmp.evidence_level,
-                reason=_text(raw,'coverage_reason','explanation'),evidence_ids=list(cmp.evidence_ids),comparison_id=cmp.comparison_id,
-                metadata={'legacy_row':raw},
+                reason=_text(raw,'coverage_reason'),evidence_ids=list(cmp.evidence_ids),comparison_id=cmp.comparison_id,
+                metadata={'migrated_from':'18.x','source':'comparison'},
             ))
         return project
 

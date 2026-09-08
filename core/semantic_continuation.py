@@ -137,11 +137,6 @@ def _progress(callback: Callable[..., Any] | None, value: int, stage: str, detai
         pass
 
 
-_SITE_FEATURE_NAMES = {
-    "ограждение", "проезд", "ворота", "калитка", "благоустройство", "территория",
-}
-
-
 def _cached_verdict(value: Any) -> str:
     if not isinstance(value, dict):
         return ""
@@ -160,14 +155,37 @@ def _cached_verdict(value: Any) -> str:
     return ""
 
 
-def _invalidate_site_feature_other_entity_checkpoint(
+def _row_packet_id(row: dict[str, Any]) -> str:
+    packet = row.get("semantic_evidence_packet")
+    return str(
+        (packet or {}).get("packet_id")
+        or row.get("atom_id")
+        or row.get("requirement_id")
+        or ""
+    ).strip()
+
+
+def _row_owner_not_required(row: dict[str, Any]) -> bool:
+    packet = row.get("semantic_evidence_packet")
+    binding = dict((packet or {}).get("binding_contract") or {})
+    if "requires_same_owner" in binding:
+        return not bool(binding.get("requires_same_owner"))
+    contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
+    if contract:
+        return not bool(contract.get("requires_same_owner"))
+    fresh = build_contract(row)
+    return not bool(fresh.get("requires_same_owner"))
+
+
+def _invalidate_nonrequired_owner_other_entity_checkpoint(
     doc: dict[str, Any], checkpoint: dict[str, Any] | None,
 ) -> int:
-    """Reopen cached OTHER_ENTITY only for site-feature packets.
+    """Reopen cached OTHER_ENTITY when current contract does not require owner identity.
 
-    A restored checkpoint can otherwise stay 100% complete forever even after
-    18.5.1 changes the Judge payload so a feature label such as «Ограждение» is
-    no longer sent as a standalone expected object.
+    This is intentionally driven by the *current semantic packet/contract*, not
+    by a fragile feature name from the stored atomic graph.  It catches restored
+    packets such as site fencing whose payload contract changed while preserving
+    every unrelated completed Judge/Critic response.
     """
     if not isinstance(checkpoint, dict):
         return 0
@@ -183,22 +201,31 @@ def _invalidate_site_feature_other_entity_checkpoint(
         domain["critic"] = critic_lane
 
     graph = dict(doc.get("atomic_requirement_graph") or {})
-    rows = list(graph.get("atoms") or doc.get("assignment_atomic_compliance") or [])
-    reopened = 0
-    for row in rows:
+    graph_rows = list(graph.get("atoms") or [])
+    result_rows = list(doc.get("assignment_atomic_compliance") or [])
+    by_packet: dict[str, dict[str, Any]] = {}
+    for row in graph_rows + result_rows:
         if not isinstance(row, dict):
             continue
-        object_name = str(row.get("object_name") or row.get("scope_entity") or "").strip().lower().replace("ё", "е")
-        if object_name not in _SITE_FEATURE_NAMES:
-            continue
-        fresh = build_contract(row)
-        if str(fresh.get("scope") or "") != "SITE_SPECIFIC" or bool(fresh.get("requires_same_owner")):
-            continue
-        packet_id = str(row.get("atom_id") or row.get("requirement_id") or "")
-        if not packet_id:
-            continue
+        packet_id = _row_packet_id(row)
+        if packet_id:
+            # Prefer the later assignment_atomic_compliance row because it
+            # carries the current semantic_evidence_packet produced by 18.5.x.
+            by_packet[packet_id] = row
+
+    reopened = 0
+    for packet_id, row in by_packet.items():
         cached = judge_lane.get(packet_id)
         if _cached_verdict(cached) != "OTHER_ENTITY":
+            continue
+        packet = row.get("semantic_evidence_packet")
+        if isinstance(packet, dict):
+            if str(packet.get("evidence_level") or "").upper() != "L4":
+                continue
+            checker = packet.get("checker")
+            if isinstance(checker, dict) and not bool(checker.get("consensus_eligible")):
+                continue
+        if not _row_owner_not_required(row):
             continue
         judge_lane.pop(packet_id, None)
         critic_lane.pop(packet_id, None)
@@ -231,7 +258,7 @@ def continuation_pending(
     checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return cumulative package/role counters from the persisted checkpoint."""
-    reopened = _invalidate_site_feature_other_entity_checkpoint(doc, checkpoint)
+    reopened = _invalidate_nonrequired_owner_other_entity_checkpoint(doc, checkpoint)
     status = queue_status_from_document(doc, checkpoint)
     if reopened:
         status["contract_revalidation_reopened"] = reopened

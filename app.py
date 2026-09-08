@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 3 · Canonical Proof Reconstruction · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 4 · Requirement Proof Reconstruction · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -113,14 +113,14 @@ with st.sidebar:
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
-    status='Проверка выполнена' if st.session_state.result else 'Комплект не загружен'
+    status='Проект открыт' if st.session_state.result else 'Комплект не загружен'
     sidebar_project(st.session_state.project_name,status)
     if not has_result:
         st.info('Следующий шаг: загрузить комплект проектной документации.')
     elif not object_gate:
         st.info('Следующий шаг: проверить и подтвердить состав проектируемых объектов.')
     else:
-        st.info('Следующий шаг: разобрать подтверждённые замечания и вопросы, требующие инженерного решения.')
+        st.info('Следующий шаг: на странице «Проект» завершить AI-очередь, если она ещё не закрыта; затем разобрать подтверждённые замечания и инженерные вопросы.')
     sidebar_group('Режим интерфейса')
     st.session_state.expert_mode=st.toggle(
         'Режим разработчика',
@@ -140,8 +140,9 @@ if st.session_state.result and not st.session_state.object_assembly_rows:
 raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
-# 20.0 Alpha 1 runs canonically beside the accepted 18.7.3 result. It is
-# observational only: no verdict, report or user decision is changed here.
+# 20.0 Alpha 4 independently reconstructs cross-section and Assignment proof
+# beside the accepted 18.7.3 result. It is observational only: no legacy verdict,
+# report or user decision is changed here.
 canonical_manifest=None
 if st.session_state.result:
     try:
@@ -155,7 +156,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha3-dual-run',
+            'version':'20.0-alpha4-dual-run',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -190,7 +191,11 @@ if st.session_state.get('expert_mode'):
                     f"ошибки контрактов {verification.get('contract_errors',0)}"
                 )
                 st.caption(
-                    f"Канонически пересчитано: {verification.get('canonical_proofs_recomputed',0)} · "
+                    f"Межраздельно пересчитано: {verification.get('canonical_proofs_recomputed',0)} · "
+                    f"Задание пересчитано: {verification.get('assignment_proofs_recomputed',0)}"
+                )
+                st.caption(
+                    f"НТД fail-closed: {verification.get('normative_checks_guarded',0)} · "
                     f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
                 )
                 counts=verification.get('counts') or {}

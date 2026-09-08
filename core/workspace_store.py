@@ -104,6 +104,12 @@ def snapshot_signature(payload: dict[str,Any]) -> str:
         "risk_user_decisions":payload.get("risk_user_decisions") or {},
         "object_learning_examples":payload.get("object_learning_examples") or [],
         "semantic_checkpoint_packets":checkpoint_packets,
+        "project_knowledge_recovery": (
+            first_document.get("project_knowledge_recovery") or {}
+        ),
+        "project_knowledge_summary": (
+            (first_document.get("project_knowledge_model") or {}).get("summary") or {}
+        ) if isinstance(first_document.get("project_knowledge_model"), dict) else {},
     }
     raw=json.dumps(marker,ensure_ascii=False,default=str,sort_keys=True,separators=(",",":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()

@@ -6,6 +6,7 @@ from core.global_finding_gate import apply_finding_gate
 from core.expert_review_engine import build_expert_risks
 from core.verification_core import annotate_rows
 from core.review_queue import build_review_clusters
+from core.project_review_planner import build_review_plan
 
 
 def _first(docs):return docs.iloc[0].to_dict() if not docs.empty else {}
@@ -24,44 +25,65 @@ def render(ctx):
     assignment=annotate_rows(list(first.get('assignment_compliance') or []),'assignment')
     normative=annotate_rows(list(first.get('normative_compliance_audit') or []),'normative')
     checklist=annotate_rows(checklist,'checklist')
-    gated=apply_finding_gate(comparisons.to_dict('records') if not comparisons.empty else [])
+    comparison_rows=comparisons.to_dict('records') if not comparisons.empty else []
+    gated=apply_finding_gate(comparison_rows)
 
-    project=[r for r in gated if r.get('finding_type')=='PROJECT_FINDING']
-    review=[r for r in gated if r.get('finding_type')=='REVIEW_QUESTION']
-    for domain,rows in [('Задание',assignment),('НТД',normative),('Чек-листы',checklist)]:
-        for r in rows:
-            if r.get('verification_kind')=='PROJECT_FINDING':
-                project.append({
-                    'object':domain,
-                    'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),
-                    'status':r.get('verification_state'),
-                    'explanation':r.get('decision_basis') or r.get('evidence') or '',
-                })
-            elif r.get('verification_kind')=='REVIEW_QUESTION':
-                review.append({
-                    'id':r.get('requirement_id') or r.get('atom_id') or r.get('item_no') or r.get('position'),
-                    'object':domain,
-                    'entity':r.get('object_name') or r.get('entity') or r.get('scope_entity') or '—',
-                    'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),
-                    'global_finding_reason':r.get('coverage_reason') or r.get('decision_basis') or r.get('evidence') or '',
-                    'coverage_reason_code':r.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
-                    'expected_sections':r.get('expected_evidence_route') or r.get('expected_sections') or [],
-                    'evidence_level':r.get('evidence_level') or 'L0',
-                    'checker_family':r.get('checker_family') or '—',
-                })
-    verified=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='VERIFIED_OK')
-    limits=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='SYSTEM_LIMITATION')
-    review_clusters=build_review_clusters([{
-        'ID':r.get('id') or r.get('plan_id'),
-        'Контур':r.get('object') or 'Не определён',
-        'Объект':r.get('entity') or '—',
-        'Проверка':r.get('parameter_name') or r.get('parameter') or '—',
-        'Причина':r.get('global_finding_reason') or r.get('explanation') or 'Требуется предметное решение специалиста.',
-        'Код причины':r.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
-        'Семейство проверки':r.get('checker_family') or '—',
-        'Ожидаемые разделы':r.get('expected_sections') or r.get('sources') or '—',
-        'Уровень доказательства':r.get('evidence_level') or 'L0',
-    } for r in review])
+    plan=build_review_plan(
+        assignment_rows=list(first.get('assignment_compliance') or []),
+        normative_rows=list(first.get('normative_compliance_audit') or []),
+        checklist_review={'results': checklist},
+        comparisons=comparison_rows,
+    )
+    plan_items=list(plan.get('items') or [])
+
+    project=[{
+        'object':item.get('entity') or item.get('domain') or '—',
+        'parameter_name':item.get('title') or '—',
+        'status':item.get('verification_state') or 'Несоответствие',
+        'explanation':item.get('coverage_reason') or item.get('recommendation') or '',
+    } for item in plan_items if item.get('verification_kind')=='PROJECT_FINDING']
+
+    review_rows=[]
+    for item in plan_items:
+        if item.get('verification_kind')!='REVIEW_QUESTION':
+            continue
+        review_rows.append({
+            'ID':item.get('plan_id'),
+            'Контур':item.get('domain') or 'Не определён',
+            'Объект':item.get('entity') or '—',
+            'Проверка':item.get('title') or '—',
+            'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
+            'Код причины':item.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
+            'Семейство проверки':item.get('checker_family') or '—',
+            'Ожидаемые разделы':item.get('expected_evidence_route') or item.get('expected_sections') or '—',
+            'Уровень доказательства':item.get('evidence_level') or 'L0',
+        })
+    # Keep comparison findings produced by the global gate if they are not
+    # represented in the plan. This mirrors the technical-report queue.
+    for row in gated:
+        if row.get('finding_type')!='REVIEW_QUESTION':
+            continue
+        review_rows.append({
+            'ID':row.get('id') or row.get('check_code') or row.get('comparison_id'),
+            'Контур':'Межраздельная сверка',
+            'Объект':row.get('object') or '—',
+            'Проверка':row.get('parameter_name') or row.get('parameter') or '—',
+            'Причина':row.get('global_finding_reason') or row.get('explanation') or 'Требуется предметное решение специалиста.',
+            'Код причины':row.get('coverage_reason_code') or 'CROSS_SECTION_REVIEW',
+            'Семейство проверки':row.get('checker_family') or 'Детерминированная межраздельная сверка',
+            'Ожидаемые разделы':row.get('expected_sections') or row.get('sources') or '—',
+            'Уровень доказательства':row.get('evidence_level') or 'L0',
+        })
+    review=[]; seen=set()
+    for row in review_rows:
+        key=(str(row.get('Контур') or ''),str(row.get('ID') or ''),str(row.get('Проверка') or ''))
+        if key in seen:
+            continue
+        seen.add(key); review.append(row)
+
+    verified=sum(1 for item in plan_items if item.get('verification_kind')=='VERIFIED_OK')
+    limits=sum(1 for item in plan_items if item.get('verification_kind')=='SYSTEM_LIMITATION')
+    review_clusters=build_review_clusters(review)
     compression_pct=round(100*(1-len(review_clusters)/max(1,len(review))),1) if review else 0.0
     c1,c2,c3,c4=st.columns(4)
     with c1:card('Несоответствия',len(project),'Доказанные проблемы','bad' if project else 'ok')
@@ -87,12 +109,21 @@ def render(ctx):
             )
             st.dataframe(pd.DataFrame(review_clusters).head(40),hide_index=True,width='stretch')
             with st.expander(f'Все адресные вопросы ({len(review)})'):
-                st.dataframe(pd.DataFrame([{'Контур / объект':r.get('object') or '—','Вопрос':r.get('parameter_name') or r.get('parameter') or '—','Почему требуется проверка':r.get('global_finding_reason') or r.get('explanation') or ''} for r in review]).head(500),hide_index=True,width='stretch')
+                st.dataframe(pd.DataFrame([{
+                    'Контур':r.get('Контур') or '—',
+                    'Объект':r.get('Объект') or '—',
+                    'Вопрос':r.get('Проверка') or '—',
+                    'Код причины':r.get('Код причины') or '—',
+                    'Почему требуется проверка':r.get('Причина') or '',
+                } for r in review]).head(500),hide_index=True,width='stretch')
     with tabs[2]:
-        rows=[]
-        for domain,data in [('Задание',assignment),('НТД',normative),('Чек-листы',checklist)]:
-            for r in data:
-                if r.get('verification_kind')=='VERIFIED_OK':rows.append({'Контур':domain,'Проверка':r.get('requirement_text') or r.get('requirement') or r.get('question') or '—','Результат':'Соответствует'})
+        rows=[{
+            'Контур':item.get('domain') or '—',
+            'Объект':item.get('entity') or '—',
+            'Проверка':item.get('title') or '—',
+            'Уровень доказательства':item.get('evidence_level') or 'L0',
+            'Результат':'Соответствует',
+        } for item in plan_items if item.get('verification_kind')=='VERIFIED_OK']
         if not rows:empty('Автоматически подтверждённые проверки пока отсутствуют.')
         else:st.dataframe(pd.DataFrame(rows),hide_index=True,width='stretch')
 

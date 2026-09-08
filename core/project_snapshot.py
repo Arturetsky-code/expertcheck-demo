@@ -8,7 +8,7 @@ from typing import Any, Iterable
 from .project_data_contract import enforce_project_data_contract
 
 
-SNAPSHOT_VERSION = "18.4.1-portable-project-with-ai-checkpoint"
+SNAPSHOT_VERSION = "18.6-portable-project-knowledge-model"
 
 
 def _text(value: Any, limit: int = 12000) -> str:
@@ -123,6 +123,18 @@ def project_snapshot_bytes(
         "coverage_acceleration_budget": first.get("coverage_acceleration_budget") or {},
         "deep_evidence_review": first.get("deep_evidence_review") or {},
         "verified_core_gate": first.get("verified_core_gate") or {},
+        "composition_baseline": first.get("composition_baseline") or [],
+        "composition_baseline_audit": first.get("composition_baseline_audit") or {},
+        "consolidated_registry": first.get("consolidated_registry") or [],
+        "consolidated_candidates": first.get("consolidated_candidates") or [],
+        "object_passports": first.get("object_passports") or [],
+        "object_passport_summary": first.get("object_passport_summary") or {},
+        "project_understanding": first.get("project_understanding") or {},
+        "project_understanding_quality": first.get("project_understanding_quality") or {},
+        "object_registry_summary": first.get("object_registry_summary") or {},
+        "cross_section_verified_gate": first.get("cross_section_verified_gate") or {},
+        "technology_proof_summary": first.get("technology_proof_summary") or {},
+        "project_knowledge_model": first.get("project_knowledge_model") or {},
         "semantic_execution_checkpoint": dict(semantic_checkpoint or {}),
         "workspace_state": dict(workspace_state or {}),
     }
@@ -202,6 +214,18 @@ def snapshot_to_workspace_payload(
         "coverage_acceleration_budget",
         "deep_evidence_review",
         "verified_core_gate",
+        "composition_baseline",
+        "composition_baseline_audit",
+        "consolidated_registry",
+        "consolidated_candidates",
+        "object_passports",
+        "object_passport_summary",
+        "project_understanding",
+        "project_understanding_quality",
+        "object_registry_summary",
+        "cross_section_verified_gate",
+        "technology_proof_summary",
+        "project_knowledge_model",
     )
     for key in project_fields:
         if key in payload:
@@ -287,6 +311,12 @@ def snapshot_to_workspace_payload(
         checklist["atomic_verification"] = checklist_atomic
         first["automatic_checklist_review"] = checklist
 
+    # Lift the deterministic project model before rebuilding workspace state.
+    # Older snapshots are supported: the recovery layer falls back to
+    # analysis_snapshot.quality_gate_inputs without rereading source PDFs.
+    from .project_knowledge_recovery import recover_project_knowledge
+    recover_project_knowledge(documents, findings, comparisons, force=True)
+
     workspace = dict(payload.get("workspace_state") or {})
     restored_name = (
         str(project_name or "").strip()
@@ -311,6 +341,9 @@ def snapshot_to_workspace_payload(
             "snapshot_id": snapshot_id,
             "source_pdf_required": False,
             "ai_checkpoint_restored": portable_checkpoint,
+            "project_knowledge_recovered": bool((first.get("project_knowledge_recovery") or {}).get("objects")),
+            "objects_recovered": int((first.get("project_knowledge_recovery") or {}).get("objects") or 0),
+            "cross_section_checks_recovered": int((first.get("project_knowledge_recovery") or {}).get("cross_section_checks") or 0),
         },
     }
 

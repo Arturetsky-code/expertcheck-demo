@@ -8,10 +8,16 @@ from .model import (
     CanonicalProject, Comparison, Evidence, Finding, ProjectObject,
     PropertyValue, Requirement, ValidationIssue, stable_id,
 )
+from .verification import (
+    ENGINE_VERSION, EvidenceAssessment, VerificationDecision,
+    VerificationEngine20, VerificationRequest,
+)
 
 __all__ = [
     "CanonicalProject", "Comparison", "Evidence", "Finding", "ProjectObject",
     "PropertyValue", "Requirement", "ValidationIssue", "stable_id",
+    "ENGINE_VERSION", "EvidenceAssessment", "VerificationDecision",
+    "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha1-canonical-core"
+__version__ = "20.0-alpha2-verification-engine"

@@ -32,6 +32,16 @@ def render(ctx):
             comparisons=comparisons.to_dict('records') if not comparisons.empty else [],
         )
     domains=plan.get('domains') or {}
+    coverage187=dict(first.get('verification_coverage_187') or {})
+    if coverage187:
+        st.info(
+            f"18.7: детерминированно завершено межраздельных проверок "
+            f"{int(coverage187.get('comparison_completed') or 0)} из "
+            f"{int(coverage187.get('comparison_total') or 0)}; "
+            f"строгое покрытие контура — "
+            f"{float(coverage187.get('comparison_strict_coverage_pct') or 0):.1f}%. "
+            "PDF повторно не читаются, AI не вызывается."
+        )
     c1,c2,c3,c4=st.columns(4)
     with c1:_domain_card('Задание на проектирование',domains.get('assignment') or {})
     with c2:_domain_card('Нормативные требования',domains.get('normative') or {})

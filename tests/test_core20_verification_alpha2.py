@@ -14,16 +14,19 @@ def _trusted_evidence(project: CanonicalProject) -> None:
     project.add_evidence(Evidence(
         evidence_id="E-PZ", document_name="ПЗ.pdf", section="ПЗ", page=10,
         addressable=True, trusted=True,
+        metadata={"comparison_object_id":"OBJ-1","comparison_parameter_code":"AREA_BUILD","observed_value":54.3,"observed_unit":"м2"},
     ))
     project.add_evidence(Evidence(
         evidence_id="E-PZU", document_name="ПЗУ.pdf", section="ПЗУ", page=5,
         addressable=True, trusted=True,
+        metadata={"comparison_object_id":"OBJ-1","comparison_parameter_code":"AREA_BUILD","observed_value":54.3,"observed_unit":"м²"},
     ))
 
 
 def test_structured_agreement_needs_two_independent_trusted_sources():
     project = _project()
     _trusted_evidence(project)
+    project.evidence["E-PZU"].metadata["observed_value"] = 48.7
     project.add_comparison(Comparison(
         comparison_id="CMP-1",
         object_id="OBJ-1",
@@ -48,6 +51,7 @@ def test_agreement_with_one_source_does_not_become_verified_ok():
     project.add_evidence(Evidence(
         evidence_id="E-PZ", document_name="ПЗ.pdf", section="ПЗ", page=10,
         addressable=True, trusted=True,
+        metadata={"comparison_object_id":"OBJ-1","comparison_parameter_code":"AREA_BUILD","observed_value":54.3,"observed_unit":"м2"},
     ))
     project.add_comparison(Comparison(
         comparison_id="CMP-1",

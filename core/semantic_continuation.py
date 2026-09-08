@@ -165,16 +165,19 @@ def _row_packet_id(row: dict[str, Any]) -> str:
     ).strip()
 
 
-def _row_owner_not_required(row: dict[str, Any]) -> bool:
+def _row_site_owner_not_required(row: dict[str, Any]) -> bool:
     packet = row.get("semantic_evidence_packet")
     binding = dict((packet or {}).get("binding_contract") or {})
-    if "requires_same_owner" in binding:
+    if str(binding.get("scope") or "").upper() == "SITE_SPECIFIC":
         return not bool(binding.get("requires_same_owner"))
     contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
-    if contract:
+    if str(contract.get("scope") or "").upper() == "SITE_SPECIFIC":
         return not bool(contract.get("requires_same_owner"))
     fresh = build_contract(row)
-    return not bool(fresh.get("requires_same_owner"))
+    return bool(
+        str(fresh.get("scope") or "").upper() == "SITE_SPECIFIC"
+        and not bool(fresh.get("requires_same_owner"))
+    )
 
 
 def _invalidate_nonrequired_owner_other_entity_checkpoint(
@@ -225,7 +228,7 @@ def _invalidate_nonrequired_owner_other_entity_checkpoint(
             checker = packet.get("checker")
             if isinstance(checker, dict) and not bool(checker.get("consensus_eligible")):
                 continue
-        if not _row_owner_not_required(row):
+        if not _row_site_owner_not_required(row):
             continue
         judge_lane.pop(packet_id, None)
         critic_lane.pop(packet_id, None)

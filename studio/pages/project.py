@@ -15,6 +15,10 @@ from core.semantic_continuation import continue_semantic_analysis, continuation_
 from core.workspace_store import session_snapshot, snapshot_signature
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
+from core.project_completeness import (
+    PROFILE_CAPITAL, build_matrix as build_completeness_matrix,
+    summarize as summarize_completeness,
+)
 
 
 def _persist_completed_state(ctx) -> bool:
@@ -276,6 +280,23 @@ def _dashboard(ctx):
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
+    doc_types=[]
+    for column in ('Тип документа','Раздел','document_type','section','doc_type'):
+        if column in docs.columns:
+            doc_types=docs[column].fillna('').astype(str).tolist()
+            break
+    completeness_profile=st.session_state.get('completeness_profile', PROFILE_CAPITAL)
+    completeness_matrix=build_completeness_matrix(
+        doc_types,
+        completeness_profile,
+        st.session_state.get('completeness_decisions') or {},
+    )
+    completeness_state=summarize_completeness(
+        completeness_matrix,
+        confirmed,
+        bool(st.session_state.get('completeness_forming', True)),
+    )
+    completeness_has_warnings=bool(confirmed and int(completeness_state.get('missing') or 0))
     pending = _semantic_pending_from_result(
         st.session_state.get("result"),
         st.session_state.get('semantic_execution_checkpoint'),
@@ -313,7 +334,11 @@ def _dashboard(ctx):
     project_status_bar(
         st.session_state.project_name,
         'Проверка неполная' if pending['total'] else 'Проверка завершена',
-        f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}",
+        (
+            "Комплектность: подтверждена с предупреждениями"
+            if completeness_has_warnings
+            else f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}"
+        ),
         object_label,
         tep_label,
     )
@@ -454,11 +479,31 @@ def _dashboard(ctx):
     object_gate=bool(st.session_state.get('object_registry_confirmed'))
     cols = st.columns(4)
     with cols[0]:
-        card('Комплектность', 'Подтверждена' if confirmed else 'Требует решения', 'Состав проектной документации', 'ok' if confirmed else 'warn')
+        completeness_card = (
+            'Подтверждена с предупреждениями'
+            if completeness_has_warnings
+            else ('Подтверждена' if confirmed else 'Требует решения')
+        )
+        card(
+            'Комплектность',
+            completeness_card,
+            (
+                f"Отсутствуют базово обязательные разделы: {int(completeness_state.get('missing') or 0)}"
+                if completeness_has_warnings
+                else 'Состав проектной документации'
+            ),
+            'warn' if completeness_has_warnings else ('ok' if confirmed else 'warn')
+        )
     with cols[1]:
         card('Состав объектов', 'Подтверждён' if object_gate else 'Требует проверки', 'Quality Gate перед сверкой', 'ok' if object_gate else 'warn')
     with cols[2]:
-        card('Межраздельная сверка', summary['checks'] if object_gate else 'Заблокирована', f"Совпадает: {summary['confirmed']}" if object_gate else 'Сначала подтвердите объекты', 'ok' if object_gate else 'info')
+        card(
+            'Межраздельные сопоставления',
+            summary['checks'] if object_gate else 'Заблокированы',
+            'Всего сопоставлений; строгий контур показан в разделе «Проверка»'
+            if object_gate else 'Сначала подтвердите объекты',
+            'ok' if object_gate else 'info'
+        )
     with cols[3]:
         card('Требует внимания', summary['requires_attention'] if object_gate else '—', f"Высокий риск: {summary['high_priority']}" if object_gate else 'Выводы ещё не формируются', 'bad' if object_gate and summary['high_priority'] else 'warn')
     section('Quality Gate','ExpertCheck формирует выводы только после подтверждения состава проектируемых объектов.')

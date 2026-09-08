@@ -518,6 +518,7 @@ def build_evidence_packet(
         "required_modality": str(contract.get("required_modality") or recipe.get("required_modality") or "TEXT_OR_TABLE"),
         "critical_qualifiers": _qualifiers(row),
         "binding_contract": {
+            "scope": str(contract.get("scope") or ""),
             "requires_same_owner": bool(contract.get("requires_same_owner")),
             "requires_same_parameter": bool(contract.get("requires_same_parameter")),
             "expected_entity": str(row.get("object_name") or row.get("scope_entity") or ""),
@@ -628,6 +629,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "required_modality": str(packet.get("required_modality") or ""),
         "critical_qualifiers": [redact_text(str(value)) for value in packet.get("critical_qualifiers") or []],
         "binding_contract": {
+            "scope": str((packet.get("binding_contract") or {}).get("scope") or ""),
             "requires_same_owner": bool((packet.get("binding_contract") or {}).get("requires_same_owner")),
             "requires_same_parameter": bool((packet.get("binding_contract") or {}).get("requires_same_parameter")),
             "expected_entity": (redact_text(str((packet.get("binding_contract") or {}).get("expected_entity") or "")) if bool((packet.get("binding_contract") or {}).get("requires_same_owner")) else ""),

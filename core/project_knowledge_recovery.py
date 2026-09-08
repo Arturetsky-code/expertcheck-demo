@@ -9,6 +9,72 @@ from .project_understanding import build_project_object_model, understanding_qua
 RECOVERY_VERSION = "18.6-project-knowledge-recovery-v1"
 
 
+def build_project_knowledge_manifest(
+    *,
+    registry: list[dict[str, Any]],
+    passports: list[dict[str, Any]],
+    project_understanding: dict[str, Any],
+    comparisons: list[dict[str, Any]],
+    snapshot_id: str = "",
+    source: str = "pipeline",
+) -> dict[str, Any]:
+    """Compact index of the heavy project-model components.
+
+    The model deliberately references canonical fields instead of duplicating
+    their full payloads; this keeps PostgreSQL/Streamlit memory bounded.
+    """
+    objects = list((project_understanding or {}).get("objects") or [])
+    if objects:
+        object_index = [{
+            "object_id": row.get("object_id"),
+            "name": row.get("name"),
+            "position": row.get("position"),
+            "object_type": row.get("object_type"),
+            "property_count": int(row.get("property_count") or 0),
+            "conflict_count": int(row.get("conflict_count") or 0),
+        } for row in objects]
+    else:
+        object_index = [{
+            "object_id": "",
+            "name": row.get("Наименование объекта") or row.get("name"),
+            "position": row.get("Позиция по ГП") or row.get("position"),
+            "object_type": row.get("Тип объекта") or row.get("object_type_name"),
+            "property_count": 0,
+            "conflict_count": 0,
+        } for row in registry]
+
+    status_counts: dict[str, int] = {}
+    for row in comparisons:
+        status = str(row.get("status") or "НЕ ОПРЕДЕЛЕНО")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    characteristic_count = sum(
+        len(row.get("characteristics") or [])
+        for row in passports
+        if isinstance(row, dict)
+    )
+    return {
+        "version": RECOVERY_VERSION,
+        "source": source,
+        "snapshot_id": snapshot_id,
+        "components": {
+            "trusted_registry": {"field": "consolidated_registry", "count": len(registry)},
+            "passports": {"field": "object_passports", "count": len(passports)},
+            "project_understanding": {"field": "project_understanding", "count": len(objects)},
+            "cross_section": {"field": "result.comparisons", "count": len(comparisons)},
+        },
+        "object_index": object_index,
+        "summary": {
+            "objects": len(registry),
+            "passports": len(passports),
+            "characteristics": characteristic_count,
+            "cross_section_checks": len(comparisons),
+            "comparison_statuses": status_counts,
+            "source_pdf_required": False,
+        },
+    }
+
+
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in (value or []) if isinstance(row, dict)]
 
@@ -100,27 +166,14 @@ def recover_project_knowledge(
             "restored_from_snapshot": True,
         }
 
-    status_counts: dict[str, int] = {}
-    for row in comparison_rows:
-        status = str(row.get("status") or "НЕ ОПРЕДЕЛЕНО")
-        status_counts[status] = status_counts.get(status, 0) + 1
-
-    knowledge_model = {
-        "version": RECOVERY_VERSION,
-        "source": "analysis_snapshot.quality_gate_inputs",
-        "snapshot_id": str((first.get("analysis_snapshot") or {}).get("snapshot_id") or ""),
-        "registry": registry,
-        "passports": passports,
-        "project_understanding": first.get("project_understanding") or {},
-        "cross_section_comparisons": comparison_rows,
-        "summary": {
-            "objects": len(registry),
-            "passports": len(passports),
-            "cross_section_checks": len(comparison_rows),
-            "comparison_statuses": status_counts,
-            "source_pdf_required": False,
-        },
-    }
+    knowledge_model = build_project_knowledge_manifest(
+        registry=registry,
+        passports=passports,
+        project_understanding=first.get("project_understanding") or {},
+        comparisons=comparison_rows,
+        snapshot_id=str((first.get("analysis_snapshot") or {}).get("snapshot_id") or ""),
+        source="analysis_snapshot.quality_gate_inputs",
+    )
     first["project_knowledge_model"] = knowledge_model
     first["project_knowledge_recovery"] = {
         "version": RECOVERY_VERSION,

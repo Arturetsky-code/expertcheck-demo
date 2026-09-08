@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 1 · Canonical Engineering Core · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 2 · Verification Engine 2.0 · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -149,7 +149,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha1-dual-run',
+            'version':'20.0-alpha2-dual-run',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -175,6 +175,19 @@ if st.session_state.get('expert_mode'):
                 st.caption(
                     f"Golden cases: {'OK' if canonical_manifest.get('golden_passed') else 'НЕ ПРОЙДЕНЫ'} · "
                     f"ошибки ссылок: {canonical_manifest.get('validation_errors',0)}"
+                )
+                verification=canonical_manifest.get('verification_engine') or {}
+                st.caption(
+                    f"Verification 2.0: {verification.get('decisions',0)} решений · "
+                    f"авто {verification.get('automatic_verdict_eligible',0)} "
+                    f"({verification.get('automatic_coverage_pct',0)}%) · "
+                    f"ошибки контрактов {verification.get('contract_errors',0)}"
+                )
+                counts=verification.get('counts') or {}
+                st.caption(
+                    f"OK {counts.get('VERIFIED_OK',0)} · замечания {counts.get('PROJECT_FINDING',0)} · "
+                    f"на проверку {counts.get('REVIEW_QUESTION',0)} · "
+                    f"ограничения {counts.get('SYSTEM_LIMITATION',0)}"
                 )
                 st.caption('Legacy verdicts: без изменений')
 

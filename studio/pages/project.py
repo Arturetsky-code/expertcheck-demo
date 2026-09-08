@@ -294,13 +294,19 @@ def _dashboard(ctx):
         or ((first_doc.get('project_understanding') or {}).get('stats') or {}).get('properties_bound')
         or 0
     )
+    trusted_object_count = len(registry) if object_confirmed else 0
+    passport_characteristics = sum(
+        len(item.get('characteristics') or [])
+        for item in (passports or [])
+        if isinstance(item, dict)
+    )
     object_label = (
-        f"Объекты: {summary['objects']}"
+        f"Объекты: {trusted_object_count}"
         if object_confirmed
         else f"Объекты-кандидаты: {recovered_objects}"
     )
     tep_label = (
-        f"ТЭП: {summary['checks']}"
+        f"ТЭП: {passport_characteristics}"
         if object_confirmed
         else f"ТЭП-кандидаты: {recovered_teps}"
     )

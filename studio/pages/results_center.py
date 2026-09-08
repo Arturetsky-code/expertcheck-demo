@@ -30,8 +30,25 @@ def render(ctx):
     review=[r for r in gated if r.get('finding_type')=='REVIEW_QUESTION']
     for domain,rows in [('Задание',assignment),('НТД',normative),('Чек-листы',checklist)]:
         for r in rows:
-            if r.get('verification_kind')=='PROJECT_FINDING':project.append({'object':domain,'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),'status':r.get('verification_state'),'explanation':r.get('decision_basis') or r.get('evidence') or ''})
-            elif r.get('verification_kind')=='REVIEW_QUESTION':review.append({'object':domain,'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),'global_finding_reason':r.get('decision_basis') or r.get('evidence') or ''})
+            if r.get('verification_kind')=='PROJECT_FINDING':
+                project.append({
+                    'object':domain,
+                    'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),
+                    'status':r.get('verification_state'),
+                    'explanation':r.get('decision_basis') or r.get('evidence') or '',
+                })
+            elif r.get('verification_kind')=='REVIEW_QUESTION':
+                review.append({
+                    'id':r.get('requirement_id') or r.get('atom_id') or r.get('item_no') or r.get('position'),
+                    'object':domain,
+                    'entity':r.get('object_name') or r.get('entity') or r.get('scope_entity') or '—',
+                    'parameter_name':r.get('requirement_text') or r.get('requirement') or r.get('question'),
+                    'global_finding_reason':r.get('coverage_reason') or r.get('decision_basis') or r.get('evidence') or '',
+                    'coverage_reason_code':r.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
+                    'expected_sections':r.get('expected_evidence_route') or r.get('expected_sections') or [],
+                    'evidence_level':r.get('evidence_level') or 'L0',
+                    'checker_family':r.get('checker_family') or '—',
+                })
     verified=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='VERIFIED_OK')
     limits=sum(1 for rows in (assignment,normative,checklist) for r in rows if r.get('verification_kind')=='SYSTEM_LIMITATION')
     review_clusters=build_review_clusters([{
@@ -40,12 +57,20 @@ def render(ctx):
         'Объект':r.get('entity') or '—',
         'Проверка':r.get('parameter_name') or r.get('parameter') or '—',
         'Причина':r.get('global_finding_reason') or r.get('explanation') or 'Требуется предметное решение специалиста.',
+        'Код причины':r.get('coverage_reason_code') or 'SPECIALIST_JUDGEMENT',
+        'Семейство проверки':r.get('checker_family') or '—',
         'Ожидаемые разделы':r.get('expected_sections') or r.get('sources') or '—',
         'Уровень доказательства':r.get('evidence_level') or 'L0',
     } for r in review])
+    compression_pct=round(100*(1-len(review_clusters)/max(1,len(review))),1) if review else 0.0
     c1,c2,c3,c4=st.columns(4)
     with c1:card('Несоответствия',len(project),'Доказанные проблемы','bad' if project else 'ok')
-    with c2:card('Вопросы специалисту',len(review),f'{len(review_clusters)} рабочих групп','warn' if review else 'ok')
+    with c2:card(
+        'Вопросы специалисту',
+        len(review),
+        f'{len(review_clusters)} рабочих пакетов · сжатие {compression_pct:.0f}%',
+        'warn' if review else 'ok'
+    )
     with c3:card('Подтверждено',verified,'Проверки с доказательством','ok')
     with c4:card('Не проверено',limits,'Ограничения покрытия','info')
 
@@ -56,7 +81,10 @@ def render(ctx):
     with tabs[1]:
         if not review:empty('Обоснованные вопросы специалисту не сформированы.')
         else:
-            st.caption('Сначала показаны сгруппированные рабочие задачи. Все исходные вопросы сохранены ниже для трассировки.')
+            st.caption(
+                'Сначала показаны рабочие пакеты по общей инженерной причине и маршруту доказательства. '
+                'Один пакет может охватывать несколько объектов; все исходные вопросы сохранены ниже для трассировки.'
+            )
             st.dataframe(pd.DataFrame(review_clusters).head(40),hide_index=True,width='stretch')
             with st.expander(f'Все адресные вопросы ({len(review)})'):
                 st.dataframe(pd.DataFrame([{'Контур / объект':r.get('object') or '—','Вопрос':r.get('parameter_name') or r.get('parameter') or '—','Почему требуется проверка':r.get('global_finding_reason') or r.get('explanation') or ''} for r in review]).head(500),hide_index=True,width='stretch')

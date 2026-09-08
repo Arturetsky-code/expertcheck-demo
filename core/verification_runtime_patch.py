@@ -169,8 +169,6 @@ def _install_free_queue() -> None:
             and not bool(binding.get("requires_same_owner"))
         ):
             return False
-        if verdict == "OTHER_METRIC" and not bool(binding.get("requires_same_parameter")):
-            return False
         return True
 
     def runtime_call_batches(

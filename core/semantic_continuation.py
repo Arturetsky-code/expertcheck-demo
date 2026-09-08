@@ -180,6 +180,48 @@ def _row_site_owner_not_required(row: dict[str, Any]) -> bool:
     )
 
 
+def _recover_compatible_assignment_judges(
+    doc: dict[str, Any], checkpoint: dict[str, Any] | None,
+) -> int:
+    """Restore compatible current-result Judge decisions lost by an older migration.
+
+    rev.3 could remove valid GLOBAL/normative OTHER_ENTITY responses from the
+    persisted checkpoint.  The project result still contains their validated
+    semantic_judge payloads, so recover them unless the current contract marks
+    the packet as SITE_SPECIFIC with owner identity not required.
+    """
+    if not isinstance(checkpoint, dict):
+        return 0
+    domain = checkpoint.get("assignment")
+    if not isinstance(domain, dict):
+        return 0
+    judge_lane = domain.get("judge")
+    if not isinstance(judge_lane, dict):
+        judge_lane = {}
+        domain["judge"] = judge_lane
+
+    recovered = 0
+    for row in list(doc.get("assignment_atomic_compliance") or []):
+        if not isinstance(row, dict):
+            continue
+        packet_id = _row_packet_id(row)
+        if not packet_id or packet_id in judge_lane:
+            continue
+        judge = row.get("semantic_judge")
+        if not isinstance(judge, dict) or not bool(judge.get("response_received")):
+            continue
+        if judge.get("valid") is False:
+            continue
+        verdict = _cached_verdict(judge)
+        if not verdict:
+            continue
+        if verdict == "OTHER_ENTITY" and _row_site_owner_not_required(row):
+            continue
+        judge_lane[packet_id] = dict(judge)
+        recovered += 1
+    return recovered
+
+
 def _invalidate_nonrequired_owner_other_entity_checkpoint(
     doc: dict[str, Any], checkpoint: dict[str, Any] | None,
 ) -> int:
@@ -261,8 +303,11 @@ def continuation_pending(
     checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return cumulative package/role counters from the persisted checkpoint."""
+    recovered = _recover_compatible_assignment_judges(doc, checkpoint)
     reopened = _invalidate_nonrequired_owner_other_entity_checkpoint(doc, checkpoint)
     status = queue_status_from_document(doc, checkpoint)
+    if recovered:
+        status["checkpoint_responses_recovered"] = recovered
     if reopened:
         status["contract_revalidation_reopened"] = reopened
     return status

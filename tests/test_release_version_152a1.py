@@ -19,8 +19,8 @@ def _app_version() -> str:
 
 
 def test_ui_and_core_identify_release_160():
-    assert _app_version() == "ExpertCheck 18.7.2 Candidate · Verification Coverage & Review Compression"
-    assert core_version == "18.7.2-verification-coverage-review-compression"
+    assert _app_version() == "ExpertCheck 18.7.3 Candidate · Verification Coverage & Review Compression"
+    assert core_version == "18.7.3-verification-coverage-review-compression"
 
 
 # Backward-compatible names imported by cumulative release gates.

@@ -17,6 +17,7 @@ from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_co
 from core.review_queue import build_review_clusters
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
+from core.project_knowledge_recovery import recover_project_knowledge
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -43,6 +44,9 @@ def frames(result):
             if isinstance(result[2],list): result[2][:]=c
         except (TypeError, IndexError):
             pass
+    first = d[0] if isinstance(d,list) and d and isinstance(d[0],dict) else {}
+    if first.get('snapshot_restored'):
+        recover_project_knowledge(d, f, c)
     return pd.DataFrame(d),pd.DataFrame(f),pd.DataFrame(c)
 
 def status_group(value: str) -> str:

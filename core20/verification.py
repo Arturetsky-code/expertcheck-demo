@@ -6,9 +6,10 @@ import re
 from typing import Any, Iterable
 
 from .model import CanonicalProject, Comparison, Requirement, stable_id
+from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha3-canonical-proof"
+ENGINE_VERSION = "20.0-alpha4-requirement-proof"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",
@@ -124,9 +125,10 @@ def _unit(value: Any) -> str:
 class VerificationEngine20:
     """Fail-closed verification over CanonicalProject.
 
-    Alpha 3 reconstructs cross-section proof from canonical evidence facts.
-    Legacy proof flags are retained only as parity diagnostics and cannot by
-    themselves create an automatic 20.0 verdict.
+    Alpha 4 keeps Alpha 3 cross-section reconstruction and adds independent
+    requirement proof reconstruction for Assignment. Normative checks stay
+    fail-closed until a verified clause and a canonical semantic route exist.
+    Legacy proof flags are parity diagnostics only.
     """
 
     def __init__(self, project: CanonicalProject):
@@ -161,6 +163,22 @@ class VerificationEngine20:
             1 for decision in decisions
             if decision.metadata.get("legacy_disagreement")
         )
+        requirement_recomputed = sum(
+            1 for decision in decisions
+            if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
+            and decision.metadata.get("canonical_requirement_state") in {"COMPLIANT","NONCOMPLIANT"}
+        )
+        assignment_recomputed = sum(
+            1 for decision in decisions
+            if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
+            and str(decision.metadata.get("domain") or "").casefold() == "assignment"
+            and decision.metadata.get("canonical_requirement_state") in {"COMPLIANT","NONCOMPLIANT"}
+        )
+        normative_guarded = sum(
+            1 for decision in decisions
+            if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
+            and str(decision.metadata.get("domain") or "").casefold() == "normative"
+        )
         return {
             "version": ENGINE_VERSION,
             "mode": "OBSERVATIONAL_DUAL_RUN",
@@ -169,6 +187,9 @@ class VerificationEngine20:
             "automatic_verdict_eligible": automatic,
             "automatic_coverage_pct": round(100.0 * automatic / max(1, len(decisions)), 1),
             "canonical_proofs_recomputed": canonical_recomputed,
+            "canonical_requirement_proofs_recomputed": requirement_recomputed,
+            "assignment_proofs_recomputed": assignment_recomputed,
+            "normative_checks_guarded": normative_guarded,
             "legacy_disagreements": legacy_disagreements,
             "contract_errors": len(contract_errors),
             "counts": counts,
@@ -436,71 +457,64 @@ class VerificationEngine20:
         assessment: EvidenceAssessment,
     ) -> VerificationDecision:
         requirement = self.project.requirements[request.requirement_id or ""]
-        linked = [
-            finding
-            for finding in self.project.findings.values()
-            if finding.requirement_id == requirement.requirement_id
-        ]
-        linked_kinds = {finding.kind for finding in linked}
+        proof = reconstruct_requirement_proof(self.project, requirement)
+        state = str(proof.get("state") or "LIMITATION").upper()
         effective_level = _min_level(
             assessment.evidence_level,
             requirement.evidence_level or assessment.evidence_level,
         )
+        diagnostic = {
+            "proof_source": proof.get("proof_source") or "CANONICAL_REQUIREMENT_RECONSTRUCTION",
+            "canonical_requirement_state": state,
+            "canonical_reason_code": proof.get("reason_code") or "",
+            "domain": requirement.domain,
+            "trusted_requirement_evidence": int(proof.get("trusted_evidence_count") or 0),
+            "required_value": proof.get("required_value"),
+            "project_value": proof.get("project_value"),
+            "required_unit": proof.get("required_unit") or "",
+            "legacy_requirement_kind": requirement.verification_kind,
+        }
 
-        if not assessment.has_addressable_evidence:
+        if state == "COMPLIANT":
             return self._decision(
                 request,
-                "SYSTEM_LIMITATION",
-                "Требование не имеет адресного доказательства; вывод о проекте запрещён.",
+                "VERIFIED_OK",
+                str(proof.get("reason") or "Требование канонически подтверждено."),
                 assessment,
+                automatic=True,
                 evidence_level=effective_level,
+                decision_metadata=diagnostic,
             )
 
-        if "PROJECT_FINDING" in linked_kinds:
+        if state == "NONCOMPLIANT":
             return self._decision(
                 request,
                 "PROJECT_FINDING",
-                "Несоответствие связано с каноническим требованием и адресным доказательством.",
+                str(proof.get("reason") or "Канонически подтверждено несоответствие требованию."),
                 assessment,
-                evidence_level=effective_level,
                 automatic=True,
-                decision_metadata={"proof_source": "CANONICAL_REQUIREMENT_LINK"},
+                correct_value_verified=bool(proof.get("correct_value_verified")),
+                evidence_level=effective_level,
+                decision_metadata=diagnostic,
             )
 
-        if "VERIFIED_OK" in linked_kinds:
-            if _level_rank(effective_level) >= 3:
-                return self._decision(
-                    request,
-                    "VERIFIED_OK",
-                    "Соответствие связано с каноническим требованием и достаточным адресным доказательством.",
-                    assessment,
-                    evidence_level=effective_level,
-                    automatic=True,
-                    decision_metadata={"proof_source": "CANONICAL_REQUIREMENT_LINK"},
-                )
+        if state == "REVIEW":
             return self._decision(
                 request,
                 "REVIEW_QUESTION",
-                "Соответствие заявлено, но доказательный уровень ниже минимального автоматического порога L3.",
+                str(proof.get("reason") or "Требуется инженерная проверка."),
                 assessment,
                 evidence_level=effective_level,
-            )
-
-        if "REVIEW_QUESTION" in linked_kinds:
-            return self._decision(
-                request,
-                "REVIEW_QUESTION",
-                "Каноническая проверка требует инженерного решения специалиста.",
-                assessment,
-                evidence_level=effective_level,
+                decision_metadata=diagnostic,
             )
 
         return self._decision(
             request,
-            "REVIEW_QUESTION",
-            "Есть адресные доказательства, но отсутствует закрывающий канонический вывод.",
+            "SYSTEM_LIMITATION",
+            str(proof.get("reason") or "Автоматическая проверка требования пока недоступна."),
             assessment,
             evidence_level=effective_level,
+            decision_metadata=diagnostic,
         )
 
     def _validate_request(self, request: VerificationRequest) -> list[str]:

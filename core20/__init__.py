@@ -20,4 +20,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha4.1-canonical-audit"
+__version__ = "20.0-alpha4.2-parameter-binding"

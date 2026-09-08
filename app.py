@@ -13,6 +13,7 @@ try:
     from studio.pages import PAGES
     from studio.auth import auth_screen
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
+    from core20.dual_run import build_dual_run_manifest
     from core.free_ai_patch import install as install_free_ai_patch
     from core.gemini_runtime_preference import install as install_gemini_runtime_preference
     from core.quality_gates_patch import install as install_quality_gates
@@ -27,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.7.3 Candidate · Verification Coverage & Review Compression'
+VERSION='ExpertCheck 20.0 Alpha 1 · Canonical Engineering Core · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -132,6 +133,48 @@ if st.session_state.result and not st.session_state.object_assembly_rows:
     st.session_state.object_assembly_rows=assembly_rows(docs,findings)
 raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
+
+# 20.0 Alpha 1 runs canonically beside the accepted 18.7.3 result. It is
+# observational only: no verdict, report or user decision is changed here.
+canonical_manifest=None
+if st.session_state.result:
+    try:
+        canonical_manifest=build_dual_run_manifest(
+            project_name=st.session_state.get('project_name') or 'Проект',
+            documents=docs.to_dict('records'),
+            findings=findings.to_dict('records'),
+            comparisons=raw_comparisons.to_dict('records'),
+            assembly_rows=st.session_state.get('object_assembly_rows') or [],
+        )
+        st.session_state['canonical_core_20_manifest']=canonical_manifest
+    except Exception as canonical_error:
+        canonical_manifest={
+            'version':'20.0-alpha1-dual-run',
+            'legacy_results_unchanged':True,
+            'error':f'{type(canonical_error).__name__}: {canonical_error}',
+        }
+        st.session_state['canonical_core_20_manifest']=canonical_manifest
+        if st.session_state.get('expert_mode'):
+            st.warning(f'Canonical Core 20.0 не построен: {canonical_manifest["error"]}')
+
+if st.session_state.get('expert_mode') and canonical_manifest:
+    with st.sidebar:
+        with st.expander('20.0 · Canonical Core', expanded=False):
+            if canonical_manifest.get('error'):
+                st.error('Dual-run: ошибка миграции')
+                st.caption(canonical_manifest.get('error'))
+            else:
+                stats=canonical_manifest.get('stats') or {}
+                st.caption(
+                    f"Объекты {stats.get('objects',0)} / кандидаты {stats.get('object_candidates',0)} · "
+                    f"показатели {stats.get('properties',0)} · evidence {stats.get('evidence',0)}"
+                )
+                st.caption(
+                    f"Golden cases: {'OK' if canonical_manifest.get('golden_passed') else 'НЕ ПРОЙДЕНЫ'} · "
+                    f"ошибки ссылок: {canonical_manifest.get('validation_errors',0)}"
+                )
+                st.caption('Legacy verdicts: без изменений')
+
 data=(docs,findings,comparisons,filtered_registry,filtered_passports,metrics(comparisons),engineer_findings(findings))
 @dataclass
 class Context:

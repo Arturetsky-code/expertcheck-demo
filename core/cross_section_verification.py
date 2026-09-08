@@ -57,6 +57,15 @@ def _addressable_sources(row: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _source_value_key(item: dict[str, Any]) -> tuple[str, str]:
+    raw = item.get("value")
+    try:
+        value = f"{float(raw):.9g}"
+    except (TypeError, ValueError):
+        value = _text(raw or item.get("text")).casefold()
+    return value, _text(item.get("unit")).casefold()
+
+
 def _is_cross_section_row(row: dict[str, Any]) -> bool:
     return bool(
         _text(row.get("category")) == "Межраздельная сверка"
@@ -128,6 +137,15 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
         # complete; a missing owner mapping in the knowledge base is then not a
         # reason to keep a true agreement in the specialist queue.
         agreement_mode = target_kind == "VERIFIED_OK"
+        trusted_value_keys = {
+            _source_value_key(item)
+            for item in trusted_sources
+            if _source_value_key(item)[0]
+        }
+        independent_conflict_mode = bool(
+            target_kind == "PROJECT_FINDING"
+            and len(trusted_value_keys) >= 2
+        )
         trusted_count = max(
             len(trusted_sources),
             int(row.get("independent_trusted_sources") or 0),
@@ -150,7 +168,7 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
             reasons.append("Сопоставление не завершено категоричным статусом.")
         if not strong_independent_evidence:
             reasons.append("Нет двух адресных доверенных источников из независимых разделов.")
-        if not agreement_mode:
+        if not agreement_mode and not independent_conflict_mode:
             if not owner_present:
                 reasons.append("Не найден профильный раздел-владелец показателя.")
             if not control_present:
@@ -163,6 +181,8 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
         proof_route = (
             "INDEPENDENT_AGREEMENT"
             if agreement_mode and strong_independent_evidence and canonical_binding_complete
+            else "INDEPENDENT_CONFLICT"
+            if independent_conflict_mode and strong_independent_evidence and canonical_binding_complete
             else "OWNER_CONTROL"
         )
         row["cross_section_gate"] = {
@@ -181,14 +201,20 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
             "reasons": reasons,
         }
         row["cross_section_required"] = bool(
-            (agreement_mode and strong_independent_evidence and canonical_binding_complete)
+            (
+                (agreement_mode or independent_conflict_mode)
+                and strong_independent_evidence
+                and canonical_binding_complete
+            )
             or (owner_present and control_present)
         )
         row["applicability_proven"] = row["cross_section_required"]
         row["checker_family"] = "Детерминированная межраздельная сверка"
         row["checker_mode"] = (
-            "Объект → показатель → единица → 2 независимых источника"
+            "Объект → показатель → единица → 2 независимых совпадающих источника"
             if proof_route == "INDEPENDENT_AGREEMENT"
+            else "Объект → показатель → единица → 2 независимых противоречащих источника"
+            if proof_route == "INDEPENDENT_CONFLICT"
             else "Объект → показатель → единица → владелец → контроль"
         )
         row["verification_level"] = "L3_CROSS_CHECK"
@@ -200,16 +226,23 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
 
         state = "Соответствует" if target_kind == "VERIFIED_OK" else "Выявлено несоответствие"
         agreement_proof = target_kind == "VERIFIED_OK" and proof_route == "INDEPENDENT_AGREEMENT"
+        conflict_proof = target_kind == "PROJECT_FINDING" and proof_route == "INDEPENDENT_CONFLICT"
         row.update({
             "final_verification_kind": target_kind,
             "final_verification_state": state,
             "verification_kind": target_kind,
             "verification_state": state,
-            "proof_kind": "STRUCTURED_AGREEMENT" if agreement_proof else "STRUCTURED_COMPARISON",
+            "proof_kind": (
+                "STRUCTURED_AGREEMENT" if agreement_proof
+                else "STRUCTURED_CONFLICT" if conflict_proof
+                else "STRUCTURED_COMPARISON"
+            ),
             "evidence_level": "L5",
             "evidence_level_reason": (
                 "Совпадение подтверждено двумя независимыми доверенными источниками при завершённой канонической привязке."
                 if agreement_proof
+                else "Конфликт подтверждён двумя независимыми доверенными источниками; правильное значение требует owner-раздела."
+                if conflict_proof
                 else "Подтверждены объект, показатель, единица и независимый маршрут владелец→контроль."
             ),
             "adversarial_state": "PASSED",
@@ -219,13 +252,20 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
             "coverage_state": "AUTOMATED_COMPLETE" if target_kind == "VERIFIED_OK" else "PROJECT_FINDING_CONFIRMED",
             "coverage_reason_code": (
                 "CROSS_SECTION_INDEPENDENT_AGREEMENT"
-                if agreement_proof else "CROSS_SECTION_PROOF_GATE_PASSED"
+                if agreement_proof
+                else "CROSS_SECTION_INDEPENDENT_CONFLICT"
+                if conflict_proof
+                else "CROSS_SECTION_PROOF_GATE_PASSED"
             ),
             "coverage_reason": (
                 "Два независимых доверенных раздела подтверждают одно значение одного объекта и показателя."
                 if agreement_proof
+                else "Два независимых доверенных раздела подтверждают конфликт значений одного объекта и показателя."
+                if conflict_proof
                 else "Строгая детерминированная межраздельная проверка завершена."
             ),
+            "conflict_confirmed": bool(conflict_proof or target_kind == "PROJECT_FINDING"),
+            "correct_value_verified": bool(target_kind != "PROJECT_FINDING" or (owner_present and control_present)),
             "finding_type": "PROJECT_STATUS" if target_kind == "VERIFIED_OK" else "PROJECT_FINDING",
             "cross_section_gate_state": "PASSED",
             "cross_section_gate_reasons": [],

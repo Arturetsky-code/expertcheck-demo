@@ -73,6 +73,23 @@ def build_review_surface_rows(
     return deduped
 
 
+def _normalize_finding_parameter(object_name: Any, parameter: Any) -> str:
+    obj = str(object_name or "").strip().casefold()
+    text = str(parameter or "").strip().casefold()
+    # Review-plan titles may prepend the object name to an already object-scoped
+    # parameter, e.g. "Компрессорная: Площадь застройки". Continuity findings
+    # keep only "Площадь застройки". They are the same engineering problem.
+    if obj:
+        for sep in (":", "—", "-", "·"):
+            prefix = f"{obj}{sep}"
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip()
+                break
+        if text.startswith(obj + " "):
+            text = text[len(obj):].strip()
+    return " ".join(text.replace("ё", "е").split())
+
+
 def build_project_surface_rows(
     report_problems: Iterable[dict[str, Any]],
     review_plan: dict[str, Any],
@@ -103,15 +120,23 @@ def build_project_surface_rows(
             'sources': item.get('expected_evidence_route') or '',
         })
     deduped: list[dict[str, Any]] = []
-    seen: set[tuple[str, str, str]] = set()
+    by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for item in rows:
-        key = (
-            str(item.get('object') or '').casefold(),
-            str(item.get('parameter_name') or '').casefold(),
-            str(item.get('status') or '').casefold(),
-        )
-        if key in seen:
+        object_key = " ".join(str(item.get('object') or '').casefold().replace("ё", "е").split())
+        parameter_key = _normalize_finding_parameter(item.get('object'), item.get('parameter_name'))
+        key = (object_key, parameter_key)
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = item
+            deduped.append(item)
             continue
-        seen.add(key)
-        deduped.append(item)
+        # Prefer/merge the richer continuity payload rather than counting the
+        # same project defect twice.
+        for field in ("values", "sources", "explanation"):
+            current = str(existing.get(field) or "").strip()
+            candidate = str(item.get(field) or "").strip()
+            if len(candidate) > len(current):
+                existing[field] = item.get(field)
+        if str(existing.get("status") or "").strip() in {"", "Несоответствие"}:
+            existing["status"] = item.get("status") or existing.get("status")
     return deduped

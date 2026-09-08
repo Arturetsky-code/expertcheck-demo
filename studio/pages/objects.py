@@ -45,7 +45,15 @@ def _render_evidence(rows: list[dict]) -> None:
                 st.markdown(f"**Тип источника:** {ev.get('source_type_label') or '—'}")
                 st.markdown(f"**Статус проектирования:** {ev.get('lifecycle') or '—'}")
                 confidence = ev.get('confidence') if ev.get('confidence') not in ('', None) else '—'
-                st.markdown(f"**Уверенность:** {confidence}")
+                if ev.get('confidence_kind') == 'OBJECT_TRUST_SCORE':
+                    st.markdown(f"**Рейтинг доказательства:** {confidence}")
+                else:
+                    try:
+                        value=float(confidence)
+                        rendered=f"{value*100:.0f}%" if 0 <= value <= 1 else f"{value:.0f}%"
+                    except (TypeError, ValueError):
+                        rendered=str(confidence)
+                    st.markdown(f"**Уверенность:** {rendered}")
             quote = str(ev.get('quote') or '').strip()
             if quote:
                 st.markdown('**Фрагмент документа:**')
@@ -114,8 +122,9 @@ def _assembly_editor(ctx=None) -> None:
         column_config={
             'Включить':st.column_config.CheckboxColumn('Включить в состав проекта'),
             'Решение пользователя':st.column_config.SelectboxColumn('Причина решения',options=[
-                'Не задано','Подтверждённый объект','Имя файла или документ','Существующий объект',
-                'Перспективный объект','Оборудование внутри объекта','Дублирующая запись',
+                'Не задано','Подтверждённый объект','Составная часть / не отдельный объект',
+                'Имя файла или документ','Существующий объект','Перспективный объект',
+                'Оборудование внутри объекта','Дублирующая запись',
                 'Ошибочно распознанный текст','Другое'
             ]),
         }, key='object_assembly_editor',

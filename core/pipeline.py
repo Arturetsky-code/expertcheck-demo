@@ -80,9 +80,10 @@ from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .coverage_acceleration import coverage_budget
 from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
+from .project_knowledge_recovery import build_project_knowledge_manifest
 from .project_data_contract import enforce_project_data_contract
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
-from .semantic_evidence_engine import build_semantic_project_graph
+from .semantic_evidence_engine import build_semantic_project_graph, ENGINE_VERSION as SEMANTIC_ENGINE_VERSION
 try:
     from .universal_registry_extractor import UniversalRegistryExtractor
 except ModuleNotFoundError:
@@ -525,9 +526,13 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         pipeline_errors.append({"stage":"assignment_page_corpus","error":str(exc)})
     project_page_corpus = [page for page in assignment_page_corpus if not is_assignment_source(page)]
     semantic_project_fingerprint = corpus_fingerprint(assignment_page_corpus)
-    if semantic_checkpoint.get("_project_fingerprint") != semantic_project_fingerprint:
+    if (
+        semantic_checkpoint.get("_project_fingerprint") != semantic_project_fingerprint
+        or semantic_checkpoint.get("_semantic_engine_version") != SEMANTIC_ENGINE_VERSION
+    ):
         semantic_checkpoint.clear()
         semantic_checkpoint["_project_fingerprint"] = semantic_project_fingerprint
+        semantic_checkpoint["_semantic_engine_version"] = SEMANTIC_ENGINE_VERSION
     assignment_semantic_checkpoint = semantic_checkpoint.setdefault("assignment", {})
     checklist_semantic_checkpoint = semantic_checkpoint.setdefault("checklist", {})
     try:
@@ -872,6 +877,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         object_registry=object_registry,
         quality_gate_comparisons=contracted_cross_section_checks,
     )
+    project_knowledge_model = build_project_knowledge_manifest(
+        registry=object_registry,
+        passports=[passport.to_dict() for passport in object_passports],
+        project_understanding=project_understanding,
+        comparisons=contracted_cross_section_checks,
+        snapshot_id=str(analysis_snapshot.get("snapshot_id") or ""),
+        source="pipeline",
+    )
     analysis_snapshot["project_data_contract"] = {
         "version": project_data_contract["version"],
         "status": project_data_contract["status"],
@@ -903,6 +916,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["semantic_project_graph"] = semantic_project_graph
         doc["coverage_acceleration_budget"] = acceleration_budget.as_dict()
         doc["analysis_snapshot"] = analysis_snapshot
+        doc["project_knowledge_model"] = project_knowledge_model
         doc["project_data_contract"] = project_data_contract
         doc["knowledge_summary"] = summary
         doc["knowledge_engine_summary"] = default_knowledge_engine().summary()

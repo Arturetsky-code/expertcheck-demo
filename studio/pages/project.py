@@ -15,6 +15,10 @@ from core.semantic_continuation import continue_semantic_analysis, continuation_
 from core.workspace_store import session_snapshot, snapshot_signature
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
+from core.project_completeness import (
+    PROFILE_CAPITAL, build_matrix as build_completeness_matrix,
+    summarize as summarize_completeness,
+)
 
 
 def _persist_completed_state(ctx) -> bool:
@@ -36,17 +40,39 @@ def _persist_completed_state(ctx) -> bool:
         return False
 
 
-def _semantic_pending_from_result(result) -> dict:
-    """Read the resumable AI queue without depending on the rendered page."""
+def _semantic_pending_from_result(result, checkpoint=None) -> dict:
+    """Read cumulative resumable AI state and reconcile stale persisted counters."""
     try:
         docs = result[0]
         if hasattr(docs, 'iloc'):
             first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
+            mutable_source = False
         else:
-            first_doc = dict(docs[0]) if docs else {}
-        return continuation_pending(first_doc)
+            first_doc = docs[0] if docs and isinstance(docs[0], dict) else (dict(docs[0]) if docs else {})
+            mutable_source = bool(docs and isinstance(docs[0], dict))
+        semantic_before = dict(first_doc.get("semantic_evidence_engine") or {})
+        before_pending = sum(
+            int((semantic_before.get(code) or {}).get("judge_pending") or 0)
+            + int((semantic_before.get(code) or {}).get("not_selected") or 0)
+            + int((semantic_before.get(code) or {}).get("critic_pending") or 0)
+            for code in ("assignment", "checklist")
+        )
+        pending = continuation_pending(first_doc, checkpoint)
+        pending["_state_reconciled"] = bool(
+            mutable_source
+            and not pending.get("checkpoint_stale")
+            and before_pending != int(pending.get("operation_remaining") or 0)
+        )
+        return pending
     except (IndexError, TypeError, AttributeError):
-        return {'eligible': 0, 'responses': 0, 'total': 0}
+        return {
+            'eligible': 0, 'responses': 0, 'total': 0,
+            'judge_done': 0, 'judge_remaining': 0,
+            'critic_required': 0, 'critic_done': 0, 'critic_remaining': 0,
+            'packages_complete': 0, 'packages_remaining': 0,
+            'operation_remaining': 0, 'completion_pct': 100.0,
+            'quota_events': [],
+        }
 
 
 def _upload(ctx):
@@ -226,7 +252,10 @@ def _upload(ctx):
             st.session_state.checklist_run = None
             st.session_state.checklist_user_results = {}
             st.session_state.pop('analysis_failure', None)
-            pending_after_primary = _semantic_pending_from_result(st.session_state.result)
+            pending_after_primary = _semantic_pending_from_result(
+                st.session_state.result,
+                st.session_state.get('semantic_execution_checkpoint'),
+            )
             update_progress(
                 100,
                 'Первичный этап сохранён' if pending_after_primary['total'] else 'Проверка завершена',
@@ -251,14 +280,90 @@ def _dashboard(ctx):
     report = build_decision_report(docs.to_dict('records'), comparisons.to_dict('records'))
     summary = report['summary']
     confirmed = bool(st.session_state.get('completeness_user_confirmed'))
-    pending = continuation_pending(first_doc)
+    doc_types=[]
+    for column in ('Тип документа','Раздел','document_type','section','doc_type'):
+        if column in docs.columns:
+            doc_types=docs[column].fillna('').astype(str).tolist()
+            break
+    completeness_profile=st.session_state.get('completeness_profile', PROFILE_CAPITAL)
+    completeness_matrix=build_completeness_matrix(
+        doc_types,
+        completeness_profile,
+        st.session_state.get('completeness_decisions') or {},
+    )
+    completeness_state=summarize_completeness(
+        completeness_matrix,
+        confirmed,
+        bool(st.session_state.get('completeness_forming', True)),
+    )
+    completeness_has_warnings=bool(confirmed and int(completeness_state.get('missing') or 0))
+    pending = _semantic_pending_from_result(
+        st.session_state.get("result"),
+        st.session_state.get('semantic_execution_checkpoint'),
+    )
+    if pending.pop("_state_reconciled", False):
+        _persist_completed_state(ctx)
+    object_confirmed = bool(st.session_state.get('object_registry_confirmed'))
+    knowledge_summary = dict((first_doc.get('project_knowledge_model') or {}).get('summary') or {})
+    recovered_objects = int(
+        knowledge_summary.get('objects')
+        or (first_doc.get('object_registry_summary') or {}).get('registry_positions')
+        or 0
+    )
+    recovered_teps = int(
+        (first_doc.get('object_passport_summary') or {}).get('characteristic_count')
+        or ((first_doc.get('project_understanding') or {}).get('stats') or {}).get('properties_bound')
+        or 0
+    )
+    trusted_object_count = len(registry) if object_confirmed else 0
+    passport_characteristics = sum(
+        len(item.get('characteristics') or [])
+        for item in (passports or [])
+        if isinstance(item, dict)
+    )
+    object_label = (
+        f"Объекты: {trusted_object_count}"
+        if object_confirmed
+        else f"Объекты-кандидаты: {recovered_objects}"
+    )
+    tep_label = (
+        f"ТЭП: {passport_characteristics}"
+        if object_confirmed
+        else f"ТЭП-кандидаты: {recovered_teps}"
+    )
     project_status_bar(
         st.session_state.project_name,
         'Проверка неполная' if pending['total'] else 'Проверка завершена',
-        f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}",
-        f"Объекты: {summary['objects']}",
-        f"ТЭП: {summary['checks']}",
+        (
+            "Комплектность: подтверждена с предупреждениями"
+            if completeness_has_warnings
+            else f"Комплектность: {'подтверждена' if confirmed else 'не подтверждена'}"
+        ),
+        object_label,
+        tep_label,
     )
+    restore_notice = st.session_state.pop('snapshot_restore_notice', None)
+    if isinstance(restore_notice, dict):
+        if restore_notice.get('ai_checkpoint_restored'):
+            st.success(
+                f"Проект восстановлен из цифрового снимка {restore_notice.get('snapshot_id') or ''}. "
+                "Корпус страниц и AI-checkpoint восстановлены; исходные PDF не требуются."
+            )
+        else:
+            st.info(
+                f"Проект восстановлен из цифрового снимка {restore_notice.get('snapshot_id') or ''}. "
+                "Корпус страниц восстановлен без PDF. В этом снимке нет переносимого AI-checkpoint, "
+                "поэтому смысловая очередь будет выполнена заново по сохранённому корпусу."
+            )
+    recovery = dict(first_doc.get('project_knowledge_recovery') or {})
+    if recovery.get('objects') and not object_confirmed:
+        st.info(
+            f"Project Knowledge Model восстановлена без повторного чтения PDF: "
+            f"объектов {int(recovery.get('objects') or 0)}, "
+            f"межраздельных проверок {int(recovery.get('cross_section_checks') or 0)}. "
+            "Подтвердите состав объектов один раз, чтобы разблокировать ТЭП и межраздельную сверку."
+        )
+
     semantic_summary = dict(first_doc.get('semantic_evidence_engine') or {})
     has_semantic_snapshot = bool((first_doc.get('analysis_snapshot') or {}).get('page_corpus'))
     if has_semantic_snapshot and (pending['eligible'] or semantic_summary):
@@ -272,17 +377,54 @@ def _dashboard(ctx):
             else:
                 st.success('AI-очередь завершена. Итоговые метрики и Quality Gate пересчитаны.')
             st.caption(
-                f"Доступно адресных пакетов: {pending['eligible']} · "
-                f"ответов Judge/Critic: {pending['responses']} · "
-                f"в очереди или вне лимита: {pending['total']}. "
+                f"Уникальных адресных пакетов: {pending['eligible']} · "
+                f"завершено пакетов: {pending['packages_complete']} · "
+                f"осталось пакетов: {pending['packages_remaining']} · "
+                f"общая готовность: {pending['completion_pct']:.1f}%."
+            )
+            st.caption(
+                f"Judge: {pending['judge_done']} завершено / {pending['judge_remaining']} осталось · "
+                f"Critic: {pending['critic_done']} завершено из {pending['critic_required']} требуемых / "
+                f"{pending['critic_remaining']} осталось · "
+                f"AI-операций осталось: {pending['operation_remaining']}. "
                 'Исходные PDF повторно не обрабатываются.'
             )
-            if st.button(
-                'Продолжить AI-проверку' if pending['total'] else 'Пересчитать результаты из снимка',
-                type='primary',
-                key='continue_semantic_analysis',
-                help='Успешные ответы берутся из checkpoint; отправляются только незавершённые пакеты.',
-            ):
+            for event in pending.get('quota_events') or []:
+                role = str(event.get('role') or 'AI')
+                provider = str(event.get('provider') or 'провайдер')
+                model = str(event.get('model') or '')
+                state = str(event.get('state') or 'QUOTA_PAUSED')
+                st.info(
+                    f"{role}: {provider}{' / ' + model if model else ''} — "
+                    f"очередь сохранена, последнее состояние {state}. "
+                    "Уже полученные ответы остаются в checkpoint."
+                )
+            if pending.get('checkpoint_stale'):
+                st.info(
+                    "Evidence Quality engine обновлён. Старые Judge/Critic-ответы не переиспользуются, "
+                    "потому что окно доказательства и binding-контракт изменились. "
+                    "Исходные PDF повторно не читаются — перепроверяется только AI-слой по сохранённому корпусу."
+                )
+            run_semantic = False
+            if pending['total']:
+                run_semantic = st.button(
+                    'Продолжить AI-проверку',
+                    type='primary',
+                    key='continue_semantic_analysis',
+                    help='Совместимые ответы берутся из checkpoint; отправляются только незавершённые пакеты.',
+                )
+            else:
+                with st.expander('Дополнительные действия', expanded=False):
+                    st.caption(
+                        'Повторный пересчёт нужен только для диагностики после изменения локальных правил. '
+                        'В штатном завершённом проекте запускать его не требуется.'
+                    )
+                    run_semantic = st.button(
+                        'Пересчитать результаты из цифрового снимка',
+                        type='secondary',
+                        key='recalculate_snapshot_results',
+                    )
+            if run_semantic:
                 ai_level = str(st.session_state.get('ai_pipeline_level') or 'Отключён')
                 semantic_level = {
                     'Отключён': 'off', 'Умный автоматический': 'extended', 'Помощник': 'helper',
@@ -318,9 +460,15 @@ def _dashboard(ctx):
                     st.stop()
                 st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')
                 _persist_completed_state(ctx)
-                remaining = _semantic_pending_from_result(st.session_state.result)
+                remaining = _semantic_pending_from_result(
+                    st.session_state.result,
+                    st.session_state.get('semantic_execution_checkpoint'),
+                )
                 if remaining['total']:
-                    st.success(f"Пакет обработан. В очереди осталось: {remaining['total']}.")
+                    st.success(
+                        f"Порция завершена. Уникальных пакетов осталось: "
+                        f"{remaining['packages_remaining']}; AI-операций: {remaining['operation_remaining']}."
+                    )
                 else:
                     st.session_state['_navigate_to'] = (
                         'Подтверждение' if not st.session_state.get('expert_mode')
@@ -331,11 +479,31 @@ def _dashboard(ctx):
     object_gate=bool(st.session_state.get('object_registry_confirmed'))
     cols = st.columns(4)
     with cols[0]:
-        card('Комплектность', 'Подтверждена' if confirmed else 'Требует решения', 'Состав проектной документации', 'ok' if confirmed else 'warn')
+        completeness_card = (
+            'Подтверждена с предупреждениями'
+            if completeness_has_warnings
+            else ('Подтверждена' if confirmed else 'Требует решения')
+        )
+        card(
+            'Комплектность',
+            completeness_card,
+            (
+                f"Отсутствуют базово обязательные разделы: {int(completeness_state.get('missing') or 0)}"
+                if completeness_has_warnings
+                else 'Состав проектной документации'
+            ),
+            'warn' if completeness_has_warnings else ('ok' if confirmed else 'warn')
+        )
     with cols[1]:
         card('Состав объектов', 'Подтверждён' if object_gate else 'Требует проверки', 'Quality Gate перед сверкой', 'ok' if object_gate else 'warn')
     with cols[2]:
-        card('Межраздельная сверка', summary['checks'] if object_gate else 'Заблокирована', f"Совпадает: {summary['confirmed']}" if object_gate else 'Сначала подтвердите объекты', 'ok' if object_gate else 'info')
+        card(
+            'Межраздельные сопоставления',
+            summary['checks'] if object_gate else 'Заблокированы',
+            'Всего сопоставлений; строгий контур показан в разделе «Проверка»'
+            if object_gate else 'Сначала подтвердите объекты',
+            'ok' if object_gate else 'info'
+        )
     with cols[3]:
         card('Требует внимания', summary['requires_attention'] if object_gate else '—', f"Высокий риск: {summary['high_priority']}" if object_gate else 'Выводы ещё не формируются', 'bad' if object_gate and summary['high_priority'] else 'warn')
     section('Quality Gate','ExpertCheck формирует выводы только после подтверждения состава проектируемых объектов.')

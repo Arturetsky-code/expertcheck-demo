@@ -15,8 +15,11 @@ from core.object_intelligence import build_object_decisions
 from core.project_review_planner import build_review_plan
 from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
+from core.result_surface import build_review_surface_rows
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
+from core.project_knowledge_recovery import recover_project_knowledge
+from core.verification_coverage_187 import refresh_verification_coverage
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -43,6 +46,10 @@ def frames(result):
             if isinstance(result[2],list): result[2][:]=c
         except (TypeError, IndexError):
             pass
+    first = d[0] if isinstance(d,list) and d and isinstance(d[0],dict) else {}
+    if first.get('snapshot_restored'):
+        recover_project_knowledge(d, f, c)
+        refresh_verification_coverage(d, c)
     return pd.DataFrame(d),pd.DataFrame(f),pd.DataFrame(c)
 
 def status_group(value: str) -> str:
@@ -544,6 +551,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     ai_summary_rows=[]
     ai_execution_rows=[]
     ai_call_rows=[]
+    ai_evidence_quality_rows=[]
     for domain_key, domain_label in (('assignment','Задание на проектирование'),('checklist','Чек-листы')):
         audit=dict(semantic_engine_summary.get(domain_key) or {})
         if not audit:
@@ -622,6 +630,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                 'Основная модель':row.get('judge_model') or '—',
                 'Решение контрольной модели':ru_label(row.get('critic_state')),
                 'Ответ контрольной модели получен':'Да' if row.get('critic_response_received') else 'Нет',
+                'Достоверность контрольной модели':row.get('critic_confidence'),
+                'Причина решения контрольной модели':row.get('critic_reason') or '—',
+                'Блокирующие замечания контрольной модели':_safe_join(row.get('critic_blocking_concerns')) or '—',
                 'Фактический контрольный провайдер':row.get('critic_provider') or '—',
                 'Контрольная модель':row.get('critic_model') or '—',
                 'Итог консенсуса':ru_label(row.get('consensus_state')),
@@ -643,9 +654,64 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
                     'Ошибка':str(call.get('error') or '')[:1200],
                     'ID пакетов':_safe_join(call.get('packet_ids')),
                 })
+    checklist_atomic_rows=list(
+        ((first_record.get('automatic_checklist_review') or {}).get('atomic_verification') or {}).get('atoms') or []
+    )
+    for domain_label, rows in (
+        ('Задание на проектирование', assignment_atomic_rows),
+        ('Чек-листы', checklist_atomic_rows),
+    ):
+        for atomic in rows or []:
+            packet=dict(atomic.get('semantic_evidence_packet') or {})
+            if not packet:
+                continue
+            binding=dict(packet.get('binding_contract') or {})
+            evidence=list(packet.get('evidence') or [])
+            if not evidence:
+                ai_evidence_quality_rows.append({
+                    'Контур':domain_label,
+                    'ID пакета':packet.get('packet_id'),
+                    'Уровень evidence':packet.get('evidence_level'),
+                    'Требование':packet.get('requirement'),
+                    'Ожидаемый объект':binding.get('expected_entity') or packet.get('object'),
+                    'Ожидаемый показатель':binding.get('expected_property_code') or packet.get('property_code'),
+                    'Evidence ID':'—',
+                    'Источник':'—',
+                    'Retrieval score':0,
+                    'Окно Evidence Quality':'—',
+                    'Binding объекта':'—',
+                    'Binding показателя':'—',
+                    'Наблюдаемый объект':'—',
+                    'Наблюдаемый показатель':'—',
+                    'Готово для Judge':'Нет',
+                    'Критические квалификаторы отсутствуют':'—',
+                })
+                continue
+            for item in evidence[:6]:
+                ai_evidence_quality_rows.append({
+                    'Контур':domain_label,
+                    'ID пакета':packet.get('packet_id'),
+                    'Уровень evidence':packet.get('evidence_level'),
+                    'Требование':packet.get('requirement'),
+                    'Ожидаемый объект':binding.get('expected_entity') or packet.get('object'),
+                    'Ожидаемый показатель':binding.get('expected_property_code') or packet.get('property_code'),
+                    'Evidence ID':item.get('evidence_id'),
+                    'Источник':item.get('source_locator'),
+                    'Retrieval score':item.get('retrieval_score'),
+                    'Окно Evidence Quality':item.get('ai_evidence_text') or item.get('text'),
+                    'Версия окна':item.get('evidence_window_version'),
+                    'Binding объекта':item.get('entity_binding_state'),
+                    'Binding показателя':item.get('property_binding_state'),
+                    'Наблюдаемый объект':item.get('observed_owner'),
+                    'Наблюдаемый показатель':item.get('observed_property_code'),
+                    'Готово для Judge':'Да' if item.get('contract_ready_for_judgement') else 'Нет',
+                    'Критические квалификаторы отсутствуют':_safe_join(item.get('missing_critical_qualifiers'), ', ') or '—',
+                })
+
     ai_summary_df=_excel_safe_frame(pd.DataFrame(ai_summary_rows))
     ai_execution_df=_excel_safe_frame(pd.DataFrame(ai_execution_rows))
     ai_calls_df=_excel_safe_frame(pd.DataFrame(ai_call_rows))
+    ai_evidence_quality_df=_excel_safe_frame(pd.DataFrame(ai_evidence_quality_rows))
     normative_statuses={}
     for row in normative_rows:
         status=str(row.get('status') or 'Требует верификации')
@@ -686,7 +752,24 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         int((semantic_engine_summary.get(code) or {}).get('judge_responses') or 0)
         for code in ('assignment','checklist')
     )
-    semantic_completion_pct=round(100*semantic_responses/max(1,semantic_candidates),1)
+    semantic_critic_responses=sum(
+        int((semantic_engine_summary.get(code) or {}).get('critic_responses') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_packages_complete=sum(
+        int((semantic_engine_summary.get(code) or {}).get('unique_packages_complete') or 0)
+        for code in ('assignment','checklist')
+    )
+    semantic_packages_pending=sum(
+        int((semantic_engine_summary.get(code) or {}).get('unique_packages_pending') or 0)
+        for code in ('assignment','checklist')
+    )
+    # Older non-ledger audits may not carry package counters. Use the current
+    # operation-safe approximation only as a backward-compatible fallback.
+    if semantic_candidates and not semantic_packages_complete and not semantic_packages_pending:
+        semantic_packages_pending=min(semantic_candidates, semantic_pending)
+        semantic_packages_complete=max(0, semantic_candidates-semantic_packages_pending)
+    semantic_completion_pct=round(100*semantic_packages_complete/max(1,semantic_candidates),1)
     readiness_reasons=[]
     if total_review_questions:
         readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
@@ -738,8 +821,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Проверок с независимым AI-консенсусом', coverage_matrix_payload.get('semantic_consensus_completed',0)],
         ['Консультативных AI-оценок без L5', semantic_advisory_total],
         ['AI-пакетов подготовлено', semantic_candidates],
-        ['AI-пакетов обработано', semantic_responses],
-        ['Выполнение AI-очереди, %', semantic_completion_pct],
+        ['AI-пакетов полностью завершено', semantic_packages_complete],
+        ['AI-пакетов осталось', semantic_packages_pending],
+        ['Ответов Judge получено', semantic_responses],
+        ['Ответов Critic получено', semantic_critic_responses],
+        ['AI-операций осталось', semantic_pending],
+        ['Выполнение AI-очереди по завершённым пакетам, %', semantic_completion_pct],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
         ['Задание: покрытие найденными кандидатами L3–L5, %', assignment_plan.get('evidence_coverage_pct',0)],
         ['Задание: подтверждено', assignment_plan.get('confirmed',0)],
@@ -833,36 +920,29 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'id':'ID', 'object':'Объект', 'parameter':'Показатель', 'status':'Результат',
         'priority':'Приоритет', 'values':'Значения по разделам', 'explanation':'Пояснение', 'sources':'Источники',
     })
-    question_rows=[]
-    for item in all_problems:
-        if str(item.get('finding_type') or '').upper()!='REVIEW_QUESTION':
-            continue
-        question_rows.append({
-            'ID':item.get('id'),'Контур':'Межраздельная сверка','Объект':item.get('object') or '—',
-            'Проверка':item.get('parameter'),'Причина':item.get('explanation') or '',
-            'Недостающие доказательства':'Уточнить доверенные источники и актуальность разделов',
-            'Ожидаемые разделы':item.get('sources') or '—','Уровень доказательства':'—',
-        })
-    for item in review_plan.get('items') or []:
-        if str(item.get('verification_kind') or '').upper()!='REVIEW_QUESTION':
-            continue
-        question_rows.append({
-            'ID':_stable_report_id('Q',item),'Контур':item.get('domain'),'Объект':item.get('entity') or '—',
-            'Проверка':item.get('title'),'Причина':item.get('coverage_reason') or 'Требуется предметное решение специалиста.',
-            'Недостающие доказательства':', '.join(ru_label(v) for v in (item.get('missing_evidence_slots') or [])) or '—',
-            'Ожидаемые разделы':_safe_join(item.get('expected_evidence_route') or item.get('expected_sections'), ', ') or '—',
-            'Уровень доказательства':ru_label(item.get('evidence_level') or 'L0'),
-        })
-    deduped_questions=[]; seen_questions=set()
-    for item in question_rows:
-        key=(str(item.get('Контур') or ''),str(item.get('ID') or ''),str(item.get('Проверка') or ''))
-        if key in seen_questions:
-            continue
-        seen_questions.add(key); deduped_questions.append(item)
+    deduped_questions=build_review_surface_rows(
+        report.get('problems') or [],
+        review_plan,
+    )
     # The headline must reconcile to the rows the report can actually show.
     # Comparison diagnostics may contain many raw classifications which are
     # deliberately de-duplicated in the specialist queue.
     exact_question_count=len(deduped_questions)
+    # The exported de-duplicated queue is authoritative for all report-facing
+    # question counts. Rebuild readiness text from that same number so the
+    # Quality Gate cannot say 344 while the visible report contains 345 rows.
+    total_review_questions=exact_question_count
+    readiness_reasons=[]
+    if total_review_questions:
+        readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
+    if total_system_limitations:
+        readiness_reasons.append(f'вне автоматического покрытия: {total_system_limitations}')
+    if semantic_pending:
+        readiness_reasons.append(f'AI-пакетов в очереди: {semantic_packages_pending}')
+    verification_readiness='Неполная' if readiness_reasons else 'Завершена'
+    for summary_row in summary_rows:
+        if summary_row[0]=='Готовность проверки':
+            summary_row[1]=verification_readiness
     reconcile_question_headline(
         summary_rows, exact_question_count=exact_question_count,
         project_findings=total_project_findings,
@@ -873,9 +953,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     questions_df=pd.DataFrame(selected_questions)
     review_clusters=build_review_clusters(deduped_questions)
     review_clusters_df=pd.DataFrame(review_clusters[:20] if report_kind=='manager' else review_clusters)
+    compression_pct=round(100*(1-len(review_clusters)/max(1,len(deduped_questions))),1) if deduped_questions else 0.0
     summary_rows.extend([
-        ['Рабочих групп вопросов специалисту', len(review_clusters)],
-        ['Групп высокого приоритета', sum(1 for row in review_clusters if row.get('Приоритет')=='Высокий')],
+        ['Рабочих пакетов проверки', len(review_clusters)],
+        ['Сжатие очереди специалиста, %', compression_pct],
+        ['Пакетов высокого приоритета', sum(1 for row in review_clusters if row.get('Приоритет')=='Высокий')],
     ])
     object_df = pd.DataFrame(report['confirmed_objects']).rename(columns={
         'position':'Поз.', 'name':'Наименование объекта', 'status':'Статус', 'source':'Основной источник',
@@ -1312,6 +1394,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
         if not ai_execution_df.empty: sheets.append(('AI — решения',ai_execution_df))
         if not ai_calls_df.empty: sheets.append(('AI — вызовы',ai_calls_df))
+        if not ai_evidence_quality_df.empty: sheets.append(('AI — качество evidence',ai_evidence_quality_df))
         if not recommendations_df.empty: sheets.append(('План действий', recommendations_df))
         if normative_reference_details:
             detailed_normative_df=pd.DataFrame(normative_reference_details)

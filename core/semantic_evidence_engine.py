@@ -18,7 +18,7 @@ from .coverage_acceleration import diversified_candidate_order
 from .ai_gateway import _extract_json as _recover_json
 
 
-ENGINE_VERSION = "17.0-verified-core-consensus"
+ENGINE_VERSION = "18.5-evidence-quality-v1"
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4", "L5")
 JUDGE_VERDICTS = {"SUPPORTS", "CONTRADICTS", "INSUFFICIENT", "OTHER_ENTITY", "OTHER_METRIC"}
 _STOPWORDS = {
@@ -51,6 +51,26 @@ def _all_token_stems(value: Any) -> set[str]:
         for token in re.findall(r"[a-zа-я0-9-]{4,}", _norm(value), re.I)
         if token not in _STOPWORDS and not token.isdigit()
     }
+
+
+_ENTITY_GENERIC_STEMS = {
+    "объект", "здание", "сооружен", "станция", "площадк", "систем",
+    "установк", "корпус", "комплекс", "участок", "отделени", "территор",
+}
+
+
+def _entity_tokens(value: Any) -> list[str]:
+    """Keep short project identifiers (ДСК, ККВ, ПС) while dropping generic nouns."""
+    result: list[str] = []
+    for token in re.findall(r"[a-zа-я0-9-]{2,}", _norm(value), re.I):
+        if token.isdigit():
+            continue
+        stem = token[:8] if len(token) > 8 else token
+        if stem in _ENTITY_GENERIC_STEMS:
+            continue
+        if stem not in result:
+            result.append(stem)
+    return result[:12]
 
 
 def _token_hits(text: str, tokens: Iterable[str]) -> list[str]:
@@ -118,23 +138,115 @@ def _owner_match(atom: dict[str, Any], row: dict[str, Any], text: str) -> bool |
     owner = str(atom.get("object_name") or atom.get("scope_entity") or "").strip()
     if not owner:
         return None
-    observed = " ".join(str(row.get(key) or "") for key in ("owner", "entity_name", "object_name")) + " " + text
+    observed = " ".join(
+        str(row.get(key) or "")
+        for key in ("owner", "entity_name", "object_name", "object_hint")
+    ) + " " + text
+
+    expected_position = re.sub(
+        r"\s+", "", str(atom.get("genplan_position") or atom.get("position") or "")
+    ).casefold()
+    observed_position = re.sub(
+        r"\s+", "", str(row.get("genplan_position") or row.get("position") or "")
+    ).casefold()
+    if expected_position and observed_position and expected_position != observed_position:
+        return False
+
     if _norm(owner) and _norm(owner) in _norm(observed):
         return True
-    generic = {
-        "объект", "здание", "сооружен", "станция", "площадка", "система",
-        "установк", "корпус", "комплекс", "участок", "отделени",
-    }
-    expected = {token for token in _tokens(owner) if token not in generic}
+    expected = set(_entity_tokens(owner))
     if not expected:
-        expected = set(_tokens(owner))
-    hits = set(_token_hits(observed, expected))
-    return bool(expected and len(hits) / len(expected) >= 0.6)
+        # A purely generic owner such as «здание» is not enough to prove
+        # identity; fail closed rather than matching every building on a page.
+        return None
+    observed_tokens = set(_entity_tokens(observed))
+    hits = expected.intersection(observed_tokens)
+    threshold = 1.0 if len(expected) == 1 else 0.67
+    return len(hits) / len(expected) >= threshold
 
 
 def _qualifiers(atom: dict[str, Any]) -> list[str]:
     contract = atom.get("evidence_contract_v2") or atom.get("evidence_contract") or {}
     return [str(x) for x in contract.get("critical_qualifiers") or [] if str(x).strip()]
+
+
+def _focus_anchors(atom: dict[str, Any], raw: dict[str, Any]) -> list[str]:
+    """Build privacy-safe lexical anchors for the evidence window."""
+    anchors: list[str] = []
+    for token in _tokens(atom.get("atom_text") or atom.get("requirement_text")):
+        if token and token not in anchors:
+            anchors.append(token)
+    # Entity tokens use a separate tokenizer so short identifiers such as ДСК
+    # remain available to the window selector.
+    for token in _entity_tokens(atom.get("object_name") or atom.get("scope_entity")):
+        if token and token not in anchors:
+            anchors.append(token)
+    for source in (
+        raw.get("property_name") or raw.get("parameter_name"),
+        " ".join(_qualifiers(atom)),
+    ):
+        for token in _tokens(source):
+            if token and token not in anchors:
+                anchors.append(token)
+    return anchors[:28]
+
+
+def _focused_evidence_text(text: Any, anchors: Iterable[str], max_chars: int = 960) -> str:
+    """Return the densest bounded window around requirement/entity anchors.
+
+    Earlier builds correctly found a relevant clause and then sent only the
+    first 720 characters to Judge.  On long table/narrative fragments this
+    could cut off the actual project decision.  The window below is selected by
+    anchor density, then bounded for free-tier token safety.
+    """
+    clean = re.sub(r"(?<=[A-Za-zА-Яа-яЁё])[-‐]\s+(?=[A-Za-zА-Яа-яЁё])", "", str(text or ""))
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if not clean or len(clean) <= max_chars:
+        return clean
+
+    low = clean.lower().replace("ё", "е")
+    unique_anchors = [str(value).lower().replace("ё", "е") for value in anchors if str(value).strip()]
+    occurrences: list[tuple[int, str]] = []
+    for anchor in unique_anchors:
+        occurrences.extend((match.start(), anchor) for match in re.finditer(re.escape(anchor), low))
+    if not occurrences:
+        return clean[:max_chars].rstrip() + " …"
+
+    candidates: list[tuple[tuple[int, int, int], int, int]] = []
+    for position, _ in occurrences[:80]:
+        start = max(0, min(position - max_chars // 3, len(clean) - max_chars))
+        end = min(len(clean), start + max_chars)
+        window = low[start:end]
+        distinct = sum(1 for anchor in unique_anchors if anchor in window)
+        total = sum(window.count(anchor) for anchor in unique_anchors)
+        center_distance = abs((start + end) // 2 - position)
+        candidates.append(((distinct, total, -center_distance), start, end))
+    _, start, end = max(candidates, key=lambda item: item[0])
+
+    # Prefer human-readable clause boundaries when they are close enough.
+    if start > 0:
+        boundary = max(clean.rfind(". ", max(0, start - 120), start + 1),
+                       clean.rfind("; ", max(0, start - 120), start + 1))
+        if boundary >= 0:
+            start = boundary + 2
+    if end < len(clean):
+        candidates_end = [
+            value for value in (
+                clean.find(". ", end, min(len(clean), end + 120)),
+                clean.find("; ", end, min(len(clean), end + 120)),
+            ) if value >= 0
+        ]
+        if candidates_end:
+            end = min(candidates_end) + 1
+    if end - start > max_chars:
+        end = start + max_chars
+
+    rendered = clean[start:end].strip()
+    if start > 0:
+        rendered = "… " + rendered
+    if end < len(clean):
+        rendered = rendered + " …"
+    return rendered
 
 
 def _normalise_candidate(
@@ -167,20 +279,50 @@ def _normalise_candidate(
         raw.get("property_code") or raw.get("parameter_code") or raw.get("metric")
     )
     property_match: bool | None = None if not property_code else property_code == observed_code
+    requires_owner = bool(contract.get("requires_same_owner"))
+    requires_parameter = bool(contract.get("requires_same_parameter"))
+    # A mismatch matters only when the evidence contract requires that
+    # dimension to be bound. Site/global presence requirements may legitimately
+    # describe a feature through its parent site/system rather than a standalone
+    # object named exactly like the feature.
+    owner_ready = (not requires_owner) or owner_match is True
+    property_ready = (not requires_parameter) or property_match is True
+    observed_owner = str(
+        raw.get("owner") or raw.get("entity_name") or raw.get("object_name") or ""
+    ).strip()
+    entity_binding_state = (
+        "NOT_REQUIRED" if not requires_owner
+        else "MATCHED" if owner_match is True
+        else "MISMATCH" if owner_match is False
+        else "UNPROVEN"
+    )
+    property_binding_state = (
+        "NOT_REQUIRED" if not requires_parameter
+        else "MATCHED" if property_match is True
+        else "MISMATCH" if property_match is False
+        else "UNPROVEN"
+    )
+    ai_evidence_text = _focused_evidence_text(text, _focus_anchors(atom, raw), max_chars=960)
     design_marker = bool(raw.get("design_marker")) or any(marker in _norm(text) for marker in DESIGN_MARKERS)
     coverage = len(hits) / max(1, min(len(query_tokens), 8))
     calculated = 20 + min(35, len(hits) * 7)
     calculated += 15 if expected else 5
     calculated += 15 if design_marker else 0
     calculated += 10 if modality_ok else -25
-    calculated += 15 if owner_match is True else (-25 if owner_match is False else 0)
-    calculated += 30 if property_match is True else (-30 if property_match is False else 0)
+    if requires_owner:
+        calculated += 15 if owner_match is True else (-25 if owner_match is False else 0)
+    elif owner_match is True:
+        calculated += 5
+    if requires_parameter:
+        calculated += 30 if property_match is True else (-30 if property_match is False else 0)
+    elif property_match is True:
+        calculated += 5
     calculated += 15 if not missing_qualifiers else -25
     calculated += 10 if str(raw.get("contract_state") or "").upper() == "SATISFIED" else 0
     final_score = max(0, min(100, int(score if score is not None else raw.get("retrieval_score") or raw.get("score") or calculated)))
     contract_ready = bool(
         _addressable({"document": document, "page": page, "section": section})
-        and modality_ok and not missing_qualifiers and owner_match is not False
+        and modality_ok and not missing_qualifiers and owner_ready and property_ready
         and (
             str(raw.get("contract_state") or "").upper() == "SATISFIED"
             or (property_match is True and final_score >= 72)
@@ -193,13 +335,21 @@ def _normalise_candidate(
         "document": document,
         "page": page,
         "section": section,
-        "text": text[:1200],
+        "text": text[:1600],
+        "ai_evidence_text": ai_evidence_text,
+        "evidence_window_version": "18.5-anchor-density-v1",
         "source_locator": f"{document}, стр. {page}",
         "retrieval_score": final_score,
         "semantic_token_hits": hits,
         "semantic_token_coverage": round(coverage, 3),
         "owner_match": owner_match,
         "property_match": property_match,
+        "observed_owner": observed_owner,
+        "observed_property_code": observed_code,
+        "entity_binding_state": entity_binding_state,
+        "property_binding_state": property_binding_state,
+        "requires_same_owner": requires_owner,
+        "requires_same_parameter": requires_parameter,
         "required_modality": required_modality,
         "source_modality": actual_modality,
         "modality_gate_state": "PASSED" if modality_ok else "BLOCKED",
@@ -292,6 +442,13 @@ def _passage_candidates(
     return output
 
 
+def _candidate_binding_ready(row: dict[str, Any]) -> bool:
+    return bool(
+        (not bool(row.get("requires_same_owner")) or row.get("owner_match") is True)
+        and (not bool(row.get("requires_same_parameter")) or row.get("property_match") is True)
+    )
+
+
 def _evidence_level(candidates: list[dict[str, Any]]) -> tuple[str, str]:
     if not candidates:
         return "L0", "В проектных источниках не найден кандидат."
@@ -306,8 +463,7 @@ def _evidence_level(candidates: list[dict[str, Any]]) -> tuple[str, str]:
         and int(row.get("retrieval_score") or 0) >= 72
         and str(row.get("modality_gate_state") or "").upper() == "PASSED"
         and not list(row.get("missing_critical_qualifiers") or [])
-        and row.get("owner_match") is not False
-        and row.get("property_match") is not False
+        and _candidate_binding_ready(row)
     ]
     if not contract_ready:
         return "L3", "Сущность/показатель сопоставлены частично; доказательственный контракт ещё не завершён."
@@ -343,8 +499,7 @@ def build_evidence_packet(
         and int(item.get("retrieval_score") or 0) >= 72
         and str(item.get("modality_gate_state") or "").upper() == "PASSED"
         and not list(item.get("missing_critical_qualifiers") or [])
-        and item.get("owner_match") is not False
-        and item.get("property_match") is not False
+        and _candidate_binding_ready(item)
     ]
     contract = dict(row.get("evidence_contract_v2") or row.get("evidence_contract") or {})
     packet_id = str(row.get("atom_id") or row.get("requirement_id") or row.get("checklist_parent_id") or "")
@@ -362,6 +517,13 @@ def build_evidence_packet(
         "expected_sections": list(recipe.get("expected_sections") or contract.get("expected_sections") or []),
         "required_modality": str(contract.get("required_modality") or recipe.get("required_modality") or "TEXT_OR_TABLE"),
         "critical_qualifiers": _qualifiers(row),
+        "binding_contract": {
+            "scope": str(contract.get("scope") or ""),
+            "requires_same_owner": bool(contract.get("requires_same_owner")),
+            "requires_same_parameter": bool(contract.get("requires_same_parameter")),
+            "expected_entity": str(row.get("object_name") or row.get("scope_entity") or ""),
+            "expected_property_code": canonical_parameter_code(row.get("parameter_code")),
+        },
         "checker": profile,
         "evidence_level": level,
         "evidence_level_reason": reason,
@@ -433,12 +595,17 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
             "document": alias,
             "page": page,
             "section": redact_text(str(row.get("section") or "")),
-            "text": redact_text(str(row.get("text") or ""))[:720],
+            "text": redact_text(str(row.get("ai_evidence_text") or row.get("text") or ""))[:1000],
+            "evidence_window_version": str(row.get("evidence_window_version") or ""),
             "source_locator": f"{alias}, стр. {page}",
             "kind": str(row.get("kind") or ""),
             "retrieval_score": int(row.get("retrieval_score") or 0),
             "owner_match": row.get("owner_match"),
             "property_match": row.get("property_match"),
+            "entity_binding_state": str(row.get("entity_binding_state") or ""),
+            "property_binding_state": str(row.get("property_binding_state") or ""),
+            "observed_entity": redact_text(str(row.get("observed_owner") or "")),
+            "observed_property_code": str(row.get("observed_property_code") or ""),
             "required_modality": str(row.get("required_modality") or ""),
             "source_modality": str(row.get("source_modality") or ""),
             "modality_gate_state": str(row.get("modality_gate_state") or ""),
@@ -453,7 +620,7 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "domain": redact_text(str(packet.get("domain") or "")),
         "requirement": redact_text(str(packet.get("requirement") or ""))[:900],
         "atomic_kind": str(packet.get("atomic_kind") or ""),
-        "object": redact_text(str(packet.get("object") or "")),
+        "object": (redact_text(str(packet.get("object") or "")) if bool((packet.get("binding_contract") or {}).get("requires_same_owner")) else ""),
         "property_code": str(packet.get("property_code") or ""),
         "required_value": packet.get("required_value"),
         "unit": str(packet.get("unit") or ""),
@@ -461,6 +628,13 @@ def _public_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "expected_sections": [redact_text(str(value)) for value in packet.get("expected_sections") or []],
         "required_modality": str(packet.get("required_modality") or ""),
         "critical_qualifiers": [redact_text(str(value)) for value in packet.get("critical_qualifiers") or []],
+        "binding_contract": {
+            "scope": str((packet.get("binding_contract") or {}).get("scope") or ""),
+            "requires_same_owner": bool((packet.get("binding_contract") or {}).get("requires_same_owner")),
+            "requires_same_parameter": bool((packet.get("binding_contract") or {}).get("requires_same_parameter")),
+            "expected_entity": (redact_text(str((packet.get("binding_contract") or {}).get("expected_entity") or "")) if bool((packet.get("binding_contract") or {}).get("requires_same_owner")) else ""),
+            "expected_property_code": str((packet.get("binding_contract") or {}).get("expected_property_code") or ""),
+        },
         "checker": {
             key: value for key, value in dict(packet.get("checker") or {}).items()
             if key in {"checker_family", "checker_mode", "consensus_eligible"}
@@ -477,6 +651,8 @@ def _compact_packet(packet: dict[str, Any]) -> dict[str, Any]:
         "retrieval_score", "owner_match", "property_match", "source_modality",
         "required_modality", "modality_gate_state", "missing_critical_qualifiers",
         "contract_ready_for_judgement", "semantic_token_coverage",
+        "ai_evidence_text", "evidence_window_version", "entity_binding_state",
+        "property_binding_state", "observed_owner", "observed_property_code",
     }
     return {
         **{key: value for key, value in packet.items() if key != "evidence"},
@@ -493,6 +669,10 @@ JUDGE_SYSTEM = """Вы — независимый Evidence Judge системы 
 Для каждого packet_id верните один verdict: SUPPORTS, CONTRADICTS, INSUFFICIENT, OTHER_ENTITY или OTHER_METRIC.
 SUPPORTS допустим только когда цитируемый фрагмент прямо подтверждает всё атомарное требование для той же сущности, того же свойства, нужной модальности и всех квалификаторов.
 CONTRADICTS допустим только при прямом содержательном противоречии, а не при отсутствии находки.
+Поля binding_contract и entity_binding_state/property_binding_state являются детерминированными сигналами ExpertCheck и имеют приоритет над смысловым сходством:
+- если requires_same_owner=true, для категоричного вывода cited evidence должен иметь owner_match=true / entity_binding_state=MATCHED; MISMATCH означает OTHER_ENTITY, UNPROVEN означает INSUFFICIENT;
+- если requires_same_parameter=true, для категоричного вывода cited evidence должен иметь property_match=true / property_binding_state=MATCHED; MISMATCH означает OTHER_METRIC, UNPROVEN означает INSUFFICIENT;
+- одинаковое число, единица или похожая формулировка не доказывают тождество показателя.
 evidence_ids могут содержать только ID из соответствующего пакета. Верните только JSON:
 {"decisions":[{"packet_id":"...","verdict":"SUPPORTS|CONTRADICTS|INSUFFICIENT|OTHER_ENTITY|OTHER_METRIC","evidence_ids":["..."],"same_entity":true|false,"same_property":true|false,"qualifiers_satisfied":true|false,"modality_satisfied":true|false,"confidence":0.0,"reason":"кратко по-русски"}]}"""
 
@@ -963,6 +1143,28 @@ def _confidence(value: Any) -> float:
         return 0.0
 
 
+def _deterministic_binding_reasons(
+    packet: dict[str, Any], evidence_ids: Iterable[str],
+) -> list[str]:
+    """Fail closed when AI categorical claims outrun local entity/property binding."""
+    cited = _evidence_by_id(packet, evidence_ids)
+    contract = dict(packet.get("binding_contract") or {})
+    reasons: list[str] = []
+    if contract.get("requires_same_owner"):
+        states = [row.get("owner_match") for row in cited]
+        if any(value is False for value in states):
+            reasons.append("Детерминированный binding gate выявил доказательство другого объекта.")
+        elif not any(value is True for value in states):
+            reasons.append("Детерминированный binding gate не подтвердил тождество объекта.")
+    if contract.get("requires_same_parameter"):
+        states = [row.get("property_match") for row in cited]
+        if any(value is False for value in states):
+            reasons.append("Детерминированный binding gate выявил доказательство другого показателя.")
+        elif not any(value is True for value in states):
+            reasons.append("Детерминированный binding gate не подтвердил тот же инженерный показатель.")
+    return reasons
+
+
 def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[str, Any]:
     raw = dict(raw or {})
     received = bool(raw)
@@ -991,6 +1193,7 @@ def _validate_judge(packet: dict[str, Any], raw: dict[str, Any] | None) -> dict[
             reasons.append("Judge не подтвердил все критические квалификаторы.")
         if raw.get("modality_satisfied") is not True:
             reasons.append("Judge не подтвердил требуемую модальность.")
+        reasons.extend(_deterministic_binding_reasons(packet, cited))
     valid = received and verdict in JUDGE_VERDICTS and not reasons
     return {
         **raw,
@@ -1069,6 +1272,11 @@ def _apply_consensus(row: dict[str, Any], packet: dict[str, Any], judge: dict[st
         reasons = list(judge.get("validation_reasons") or [])
         if judge.get("valid") and verdict in {"SUPPORTS", "CONTRADICTS"}:
             reasons.extend(critic.get("validation_reasons") or [])
+            if critic.get("response_received") and not critic.get("valid"):
+                reasons.extend(str(value) for value in critic.get("blocking_concerns") or [] if str(value).strip())
+                critic_reason = str(critic.get("reason") or "").strip()
+                if critic_reason:
+                    reasons.append(f"Critic: {critic_reason}")
         if judge.get("response_received") and verdict not in {"SUPPORTS", "CONTRADICTS"}:
             reasons.append(str(judge.get("reason") or "Judge классифицировал доказательство как недостаточное."))
         judge_provider = str(judge.get("provider") or "")
@@ -1457,6 +1665,9 @@ def run_semantic_evidence_engine(
             "judge_model": judge.get("model"),
             "critic_state": "ACCEPTED" if critic.get("valid") else "BLOCKED" if critic.get("response_received") else "NOT_RUN",
             "critic_response_received": bool(critic.get("response_received")),
+            "critic_confidence": critic.get("confidence"),
+            "critic_reason": str(critic.get("reason") or ""),
+            "critic_blocking_concerns": list(critic.get("blocking_concerns") or []),
             "critic_provider": critic.get("provider"),
             "critic_model": critic.get("model"),
             "consensus_state": row.get("semantic_consensus_state") or "BLOCKED",

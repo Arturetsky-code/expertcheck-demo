@@ -111,9 +111,32 @@ def build_structured_report(
         })
     # Finding Continuity Gate: a verified internal conflict in Project Understanding
     # cannot silently disappear merely because a downstream comparison row was lost.
+    # When the user confirmed object composition, however, excluded GP positions
+    # must not be reintroduced by the unfiltered candidate Project Understanding.
+    allowed_object_names: set[str] = set()
+    allowed_object_positions: set[str] = set()
+    if assembly_rows:
+        for assembly in assembly_rows:
+            include = bool(assembly.get("Включить", assembly.get("Включить в состав проекта", assembly.get("include", False))))
+            if not include:
+                continue
+            name = _text(assembly, "Наименование объекта", "Наименование", "Объект", "name", "value_text")
+            position = _text(assembly, "Позиция по ГП", "Позиция", "position", "position_gp")
+            if name:
+                allowed_object_names.add(name.casefold())
+            if position:
+                allowed_object_positions.add(position)
     pu=(first.get('project_understanding') or {}) if isinstance(first,dict) else {}
     existing_keys={(str(x.get('object') or '').lower(),str(x.get('parameter') or '').lower()) for x in problems}
     for obj in pu.get('objects') or []:
+        if assembly_rows:
+            obj_name=str(obj.get('name') or '').strip().casefold()
+            obj_position=str(obj.get('position') or '').strip()
+            if not (
+                (obj_position and obj_position in allowed_object_positions)
+                or (obj_name and obj_name in allowed_object_names)
+            ):
+                continue
         for prop in obj.get('property_summary') or []:
             if not prop.get('value_conflict'): continue
             sections=list(prop.get('sections') or [])
@@ -165,11 +188,11 @@ def build_structured_report(
     unresolved_objects = []
     if assembly_rows:
         for row in assembly_rows:
-            name = _text(row, "Наименование", "Объект", "name", "value_text")
-            include = bool(row.get("Включить в состав проекта", row.get("include", False)))
+            name = _text(row, "Наименование объекта", "Наименование", "Объект", "name", "value_text")
+            include = bool(row.get("Включить", row.get("Включить в состав проекта", row.get("include", False))))
             decision = _text(row, "Решение Object Intelligence", "decision", "object_intelligence_decision").lower()
             compact = {
-                "position": _text(row, "Позиция", "position", "position_gp"),
+                "position": _text(row, "Позиция по ГП", "Позиция", "position", "position_gp"),
                 "name": name,
                 "status": _text(row, "Статус проектирования", "design_status", "status") or "Не определён",
                 "source": _text(row, "Основной источник", "Канонический источник", "Основание включения", "canonical_source"),

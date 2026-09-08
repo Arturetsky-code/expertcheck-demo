@@ -61,7 +61,9 @@ def apply_learning_examples(findings: Iterable[dict[str, Any]], examples: list[d
         if ex.get('kind')=='object_decision' and not ex.get('included'):
             name=normalize_text(ex.get('name') or '')
             reason=normalize_text(ex.get('reason') or '')
-            if name and any(x in reason for x in ('файл','ошибочно','дублиру','оборудование')):
+            if name and any(x in reason for x in (
+                'файл','ошибочно','дублиру','оборудование','составн','не отдельн'
+            )):
                 excluded[name]+=1
     applied=0
     for item in findings:

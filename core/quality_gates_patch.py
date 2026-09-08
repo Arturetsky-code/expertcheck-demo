@@ -26,6 +26,10 @@ QUALITY_JUDGE_SYSTEM = """Вы — независимый Evidence Judge сис�
 4. CONTRADICTS допустим только при прямом содержательном противоречии тому же объекту и тому же показателю.
 5. SUPPORTS допустим ТОЛЬКО если одновременно same_entity=true, same_property=true, qualifiers_satisfied=true, modality_satisfied=true и доказательство прямо подтверждает всё требование.
 
+Детерминированные поля ExpertCheck имеют приоритет над смысловым сходством:
+- binding_contract.requires_same_owner=true требует owner_match=true / entity_binding_state=MATCHED в цитируемом evidence; MISMATCH => OTHER_ENTITY, UNPROVEN => INSUFFICIENT;
+- если binding_contract.requires_same_owner=false, не сравнивайте название элемента/функции требования с названием родительского объекта и не выбирайте OTHER_ENTITY только потому, что проектное решение описано через площадку, территорию или систему;
+- binding_contract.requires_same_parameter=true требует property_match=true / property_binding_state=MATCHED; MISMATCH => OTHER_METRIC, UNPROVEN => INSUFFICIENT.
 Никогда не подтверждайте требование только из-за одинакового числа, единицы измерения или похожих слов. Различайте тип показателя прежде значения показателя.
 evidence_ids могут содержать только ID из соответствующего пакета.
 Верните только JSON:
@@ -225,7 +229,7 @@ def _install_model_specific_qualification() -> None:
 
 def _install_benchmark_contract() -> None:
     from core import provider_benchmark
-    provider_benchmark.BENCHMARK_VERSION = '18.3-provider-qualification-v4'
+    provider_benchmark.BENCHMARK_VERSION = '18.5-provider-qualification-v5'
     provider_benchmark.JUDGE_SYSTEM = QUALITY_JUDGE_SYSTEM
 
 

@@ -66,6 +66,10 @@ def evidence_record(item: dict[str, Any]) -> dict[str, Any]:
         'source_type': source_type,
         'source_type_label': SOURCE_TYPE_LABELS.get(source_type, source_type),
         'confidence': item.get('object_trust_score', item.get('core2_confidence', '')),
+        'confidence_kind': (
+            'OBJECT_TRUST_SCORE' if item.get('object_trust_score') not in (None, '')
+            else 'CONFIDENCE'
+        ),
         'lifecycle': item.get('object_lifecycle_status') or 'Не определён',
         'forbidden': forbidden,
         'forbidden_reason': reason,

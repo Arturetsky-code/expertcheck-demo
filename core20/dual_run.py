@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha4.1-audit"
+DUAL_RUN_VERSION = "20.0-alpha4.2-parameter-binding"
 
 
 def build_dual_run_manifest(
@@ -42,10 +42,15 @@ def build_dual_run_manifest(
         comparison=project.comparisons.get(comparison_id) if comparison_id else None
         obj=project.objects.get(object_id) if object_id else None
         evidence_addresses=[]
+        evidence_fragments=[]
         for evidence_id in decision.get("evidence_ids") or []:
             evidence=project.evidence.get(evidence_id)
             if evidence and evidence.address:
                 evidence_addresses.append(evidence.address)
+            if evidence and evidence.fragment:
+                fragment=" ".join(str(evidence.fragment).split())
+                if fragment and fragment not in evidence_fragments:
+                    evidence_fragments.append(fragment[:360])
         audit_rows.append({
             "domain":meta.get("domain") or "",
             "kind":decision.get("kind") or "",
@@ -63,6 +68,7 @@ def build_dual_run_manifest(
             "proof_source":meta.get("proof_source") or "",
             "legacy_disagreement":bool(meta.get("legacy_disagreement")),
             "evidence":" | ".join(dict.fromkeys(evidence_addresses)),
+            "evidence_fragment":" || ".join(evidence_fragments[:2]),
             "trace_id":requirement_id or comparison_id or decision.get("verification_id") or "",
         })
     manifest={

@@ -29,7 +29,7 @@ from core import table_row_integrity as tri
 from core import table_semantic_scope as tss
 
 
-VERSION = "18.4.1-verification-runtime-v3"
+VERSION = "18.5.1-evidence-binding-runtime-r3"
 _FREE_NAMES = {"groq", "gemini"}
 _PREFLIGHT_CACHE_TTL = 300.0
 _PREFLIGHT_CACHE: dict[tuple[str, ...], tuple[float, dict[str, Any]]] = {}
@@ -157,6 +157,17 @@ def _install_free_queue() -> None:
     if getattr(original, "_expertcheck_184_free_queue", False):
         return
 
+    def checkpoint_response_compatible(packet: dict[str, Any], cached: dict[str, Any], *, critic: bool) -> bool:
+        if critic:
+            return True
+        verdict = str(cached.get("verdict") or "").upper()
+        binding = dict(packet.get("binding_contract") or {})
+        if verdict == "OTHER_ENTITY" and not bool(binding.get("requires_same_owner")):
+            return False
+        if verdict == "OTHER_METRIC" and not bool(binding.get("requires_same_parameter")):
+            return False
+        return True
+
     def runtime_call_batches(
         provider: Any,
         packets: list[dict[str, Any]],
@@ -183,12 +194,26 @@ def _install_free_queue() -> None:
             )
 
         checkpoint = checkpoint if isinstance(checkpoint, dict) else {}
-        requested_ids = [str(packet.get("packet_id") or "") for packet in packets]
-        collected: dict[str, dict[str, Any]] = {
-            packet_id: dict(checkpoint[packet_id])
-            for packet_id in requested_ids
-            if packet_id in checkpoint and isinstance(checkpoint.get(packet_id), dict)
+        packet_by_id = {
+            str(packet.get("packet_id") or ""): packet
+            for packet in packets
+            if str(packet.get("packet_id") or "")
         }
+        requested_ids = list(packet_by_id)
+        collected: dict[str, dict[str, Any]] = {}
+        for packet_id in requested_ids:
+            cached = checkpoint.get(packet_id)
+            if not isinstance(cached, dict):
+                continue
+            packet = packet_by_id[packet_id]
+            if checkpoint_response_compatible(packet, cached, critic=critic):
+                collected[packet_id] = dict(cached)
+            else:
+                # The current deterministic contract outranks an old semantic
+                # label.  Remove it here, at the final reuse boundary, so even
+                # a checkpoint restored by PostgreSQL cannot keep the package
+                # from being sent to the provider again.
+                checkpoint.pop(packet_id, None)
         errors: list[str] = []
         calls: list[dict[str, Any]] = []
         network_calls = 0

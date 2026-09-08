@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha2-dual-run"
+DUAL_RUN_VERSION = "20.0-alpha3-dual-run"
 
 
 def build_dual_run_manifest(
@@ -41,6 +41,8 @@ def build_dual_run_manifest(
             "decisions":verification["decisions"],
             "automatic_verdict_eligible":verification["automatic_verdict_eligible"],
             "automatic_coverage_pct":verification["automatic_coverage_pct"],
+            "canonical_proofs_recomputed":verification.get("canonical_proofs_recomputed",0),
+            "legacy_disagreements":verification.get("legacy_disagreements",0),
             "contract_errors":verification["contract_errors"],
             "counts":verification["counts"],
         },

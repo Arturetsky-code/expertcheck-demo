@@ -82,6 +82,15 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
             'observed_unit':_text(row,'unit','Единица измерения','Ед. изм.'),
             'observed_object_id':_text(row,'object_id'),
             'observed_parameter_code':_text(row,'parameter_code'),
+            'evidence_kind':_text(row,'evidence_kind'),
+            'evidence_state':_text(row,'evidence_state'),
+            'concept':_text(row,'concept'),
+            'project_value':row.get('project_value'),
+            'project_quantity':row.get('project_quantity'),
+            'task_quantity':row.get('task_quantity'),
+            'project_unit':_text(row,'project_unit'),
+            'difference':_text(row,'difference'),
+            'structured':bool(row.get('structured')),
         },
     ))
     return evidence_id

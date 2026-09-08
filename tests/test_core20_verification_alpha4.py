@@ -138,3 +138,54 @@ def test_normative_verified_clause_still_needs_semantic_route():
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["automatic_verdict_eligible"] is False
     assert row["metadata"]["canonical_reason_code"]=="NORMATIVE_SEMANTIC_ADJUDICATION_PENDING"
+
+
+def test_equipment_project_quantity_cannot_be_used_as_volume():
+    project=_project()
+    _evidence(
+        project,"E1",section="ТХ",
+        fragment="Погрузчик — 4 шт.",
+        meta={
+            "evidence_kind":"EQUIPMENT_REGISTER_COMPARISON",
+            "project_quantity":4,
+        },
+    )
+    project.add_requirement(Requirement(
+        requirement_id="R1",domain="assignment",
+        text="Объём ковша должен составлять 4,5 м3",
+        target_object_id="OBJ-1",
+        expected_parameter_code="BUCKET_VOLUME",
+        expected_evidence_route=["ТХ"],
+        evidence_ids=["E1"],
+        evidence_level="L4",
+        metadata={"requirement_type":"VALUE_COMPARISON","required_value":4.5,"unit":"м3"},
+    ))
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["automatic_verdict_eligible"] is False
+    assert row["metadata"]["canonical_reason_code"]=="ASSIGNMENT_PROOF_ROUTE_PENDING"
+
+
+def test_equipment_project_quantity_can_close_count_requirement_in_pieces():
+    project=_project()
+    _evidence(
+        project,"E1",section="ТХ",
+        fragment="Погрузчик — 4 шт.",
+        meta={
+            "evidence_kind":"EQUIPMENT_REGISTER_COMPARISON",
+            "project_quantity":4,
+        },
+    )
+    project.add_requirement(Requirement(
+        requirement_id="R1",domain="assignment",
+        text="Количество погрузчиков должно составлять 4 шт.",
+        target_object_id="OBJ-1",
+        expected_parameter_code="EQUIPMENT_COUNT",
+        expected_evidence_route=["ТХ"],
+        evidence_ids=["E1"],
+        evidence_level="L4",
+        metadata={"requirement_type":"VALUE_COMPARISON","required_value":4,"unit":"шт"},
+    ))
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["automatic_verdict_eligible"] is True

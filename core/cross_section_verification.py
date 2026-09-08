@@ -57,6 +57,40 @@ def _addressable_sources(row: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _conflict_evidence(row: dict[str, Any], sources: list[dict[str, Any]]) -> dict[str, Any]:
+    row_code = _text(row.get("parameter_code"))
+    row_object = _text(row.get("object_id"))
+    valid = [
+        item for item in sources
+        if (not row_code or _text(item.get("parameter_code") or row_code) == row_code)
+        and (not row_object or _text(item.get("object_id") or row_object) == row_object)
+        and _float(item.get("value")) is not None
+    ]
+    sections = {_text(item.get("section")) for item in valid if _text(item.get("section"))}
+    trusted = [item for item in valid if item.get("trusted_for_mismatch")]
+    trusted_count = max(len(trusted), int(row.get("independent_trusted_sources") or 0))
+    distinct_values = {round(float(item.get("value")), 8) for item in valid}
+    return {
+        "valid_records": valid,
+        "sections": sections,
+        "trusted_count": trusted_count,
+        "distinct_values": distinct_values,
+        "confirmed": bool(
+            len(valid) >= 2
+            and len(sections) >= 2
+            and trusted_count >= 2
+            and len(distinct_values) >= 2
+        ),
+    }
+
+
 def _source_value_key(item: dict[str, Any]) -> tuple[str, str]:
     raw = item.get("value")
     try:
@@ -137,14 +171,10 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
         # complete; a missing owner mapping in the knowledge base is then not a
         # reason to keep a true agreement in the specialist queue.
         agreement_mode = target_kind == "VERIFIED_OK"
-        trusted_value_keys = {
-            _source_value_key(item)
-            for item in trusted_sources
-            if _source_value_key(item)[0]
-        }
+        conflict_evidence = _conflict_evidence(row, sources)
         independent_conflict_mode = bool(
             target_kind == "PROJECT_FINDING"
-            and len(trusted_value_keys) >= 2
+            and conflict_evidence.get("confirmed")
         )
         trusted_count = max(
             len(trusted_sources),
@@ -164,6 +194,8 @@ def qualify_cross_section_verdicts(rows: Iterable[dict[str, Any]]) -> dict[str, 
             and trusted_count >= 2
             and trusted_family_count >= 2
         )
+        if independent_conflict_mode:
+            strong_independent_evidence = True
 
         reasons: list[str] = []
         if not target_kind:

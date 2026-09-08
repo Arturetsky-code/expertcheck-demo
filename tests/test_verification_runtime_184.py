@@ -157,3 +157,52 @@ def test_free_queue_sends_single_packet_calls(monkeypatch):
     assert set(collected) == {"P-1", "P-2", "P-3"}
     assert provider.calls == [["P-1"], ["P-2"], ["P-3"]]
     assert all(call.get("requested") == 1 for call in calls if call.get("attempt"))
+
+
+
+def test_runtime_does_not_reuse_other_entity_when_owner_binding_not_required():
+    from core import semantic_evidence_engine as see
+    from core.verification_runtime_patch import install
+
+    install()
+
+    class Provider:
+        name = "Groq"
+        model = "openai/gpt-oss-120b"
+        def generate_validated(self, prompt, system, validator, json_schema=None):
+            class Result:
+                ok = True
+                text = '{"decisions":[{"packet_id":"P-SITE","verdict":"SUPPORTS","evidence_ids":["E-1"],"same_entity":true,"same_property":true,"qualifiers_satisfied":true,"modality_satisfied":true,"confidence":0.95,"reason":"подтверждено"}]}'
+                provider = "Groq"
+                model = "openai/gpt-oss-120b"
+                status_code = 200
+                error = ""
+            return Result()
+
+    packet = {
+        "packet_id": "P-SITE",
+        "binding_contract": {
+            "requires_same_owner": False,
+            "requires_same_parameter": False,
+        },
+        "evidence": [{"evidence_id": "E-1"}],
+    }
+    checkpoint = {
+        "P-SITE": {
+            "packet_id": "P-SITE",
+            "verdict": "OTHER_ENTITY",
+            "evidence_ids": ["E-1"],
+            "confidence": 0.95,
+        }
+    }
+    collected, errors, calls = see._call_batches(
+        Provider(),
+        [packet],
+        checkpoint=checkpoint,
+        batch_size=1,
+        max_calls=1,
+    )
+    assert not errors
+    assert collected["P-SITE"]["verdict"] == "SUPPORTS"
+    assert checkpoint["P-SITE"]["verdict"] == "SUPPORTS"
+    assert any(call.get("attempt") == 1 for call in calls)

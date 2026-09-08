@@ -29,7 +29,7 @@ from core import table_row_integrity as tri
 from core import table_semantic_scope as tss
 
 
-VERSION = "18.5.1-evidence-binding-runtime-r3"
+VERSION = "18.5.1-evidence-binding-runtime-r4"
 _FREE_NAMES = {"groq", "gemini"}
 _PREFLIGHT_CACHE_TTL = 300.0
 _PREFLIGHT_CACHE: dict[tuple[str, ...], tuple[float, dict[str, Any]]] = {}
@@ -162,7 +162,12 @@ def _install_free_queue() -> None:
             return True
         verdict = str(cached.get("verdict") or "").upper()
         binding = dict(packet.get("binding_contract") or {})
-        if verdict == "OTHER_ENTITY" and not bool(binding.get("requires_same_owner")):
+        scope = str(binding.get("scope") or "").upper()
+        if (
+            verdict == "OTHER_ENTITY"
+            and scope == "SITE_SPECIFIC"
+            and not bool(binding.get("requires_same_owner"))
+        ):
             return False
         if verdict == "OTHER_METRIC" and not bool(binding.get("requires_same_parameter")):
             return False

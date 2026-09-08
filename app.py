@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 2 · Verification Engine 2.0 · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 3 · Canonical Proof Reconstruction · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -115,6 +115,12 @@ with st.sidebar:
         st.rerun()
     status='Проверка выполнена' if st.session_state.result else 'Комплект не загружен'
     sidebar_project(st.session_state.project_name,status)
+    if not has_result:
+        st.info('Следующий шаг: загрузить комплект проектной документации.')
+    elif not object_gate:
+        st.info('Следующий шаг: проверить и подтвердить состав проектируемых объектов.')
+    else:
+        st.info('Следующий шаг: разобрать подтверждённые замечания и вопросы, требующие инженерного решения.')
     sidebar_group('Режим интерфейса')
     st.session_state.expert_mode=st.toggle(
         'Режим разработчика',
@@ -149,7 +155,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha2-dual-run',
+            'version':'20.0-alpha3-dual-run',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -182,6 +188,10 @@ if st.session_state.get('expert_mode'):
                     f"авто {verification.get('automatic_verdict_eligible',0)} "
                     f"({verification.get('automatic_coverage_pct',0)}%) · "
                     f"ошибки контрактов {verification.get('contract_errors',0)}"
+                )
+                st.caption(
+                    f"Канонически пересчитано: {verification.get('canonical_proofs_recomputed',0)} · "
+                    f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
                 )
                 counts=verification.get('counts') or {}
                 st.caption(

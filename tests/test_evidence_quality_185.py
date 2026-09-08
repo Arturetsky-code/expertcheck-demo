@@ -351,3 +351,59 @@ def test_completed_queue_reopens_cached_other_entity_for_site_feature():
     assert status["judge_remaining"] == 1
     assert status["packages_remaining"] == 1
     assert status["contract_revalidation_reopened"] == 1
+
+
+
+def test_completed_queue_reopens_from_assignment_result_when_atomic_graph_is_stale():
+    packet_id = "REQ-FENCE-RESULT-ONLY"
+    stored_graph_row = {
+        "atom_id": packet_id,
+        "requirement_id": packet_id,
+        "requirement_text": "Предусмотреть ограждение части площадки.",
+        "object_name": "Ограждение",
+        "evidence_contract_v2": {
+            "scope": "OBJECT_SPECIFIC",
+            "requires_same_owner": True,
+            "requires_same_parameter": False,
+        },
+    }
+    current_result_row = {
+        "atom_id": packet_id,
+        "requirement_id": packet_id,
+        "requirement_text": "Предусмотреть ограждение части площадки.",
+        "semantic_evidence_packet": {
+            "packet_id": packet_id,
+            "evidence_level": "L4",
+            "checker": {"consensus_eligible": True},
+            "binding_contract": {
+                "requires_same_owner": False,
+                "requires_same_parameter": False,
+            },
+        },
+        "semantic_judge": {
+            "verdict": "OTHER_ENTITY",
+            "response_received": True,
+            "valid": True,
+        },
+    }
+    doc = {
+        "atomic_requirement_graph": {"atoms": [stored_graph_row]},
+        "assignment_atomic_compliance": [current_result_row],
+        "automatic_checklist_review": {"atomic_verification": {"atoms": []}},
+        "semantic_evidence_engine": {"assignment": {"judge_candidates": 1}},
+        "analysis_snapshot": {"snapshot_id": "SNAP-FENCE-RESULT"},
+    }
+    checkpoint = {
+        "_project_fingerprint": "SNAP-FENCE-RESULT",
+        "_semantic_engine_version": "18.5-evidence-quality-v1",
+        "assignment": {
+            "judge": {packet_id: {"verdict": "OTHER_ENTITY", "confidence": 0.95}},
+            "critic": {},
+        },
+        "checklist": {"judge": {}, "critic": {}},
+    }
+    status = continuation_pending(doc, checkpoint)
+    assert packet_id not in checkpoint["assignment"]["judge"]
+    assert status["judge_remaining"] == 1
+    assert status["packages_remaining"] == 1
+    assert status["contract_revalidation_reopened"] == 1

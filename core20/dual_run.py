@@ -6,9 +6,10 @@ from .legacy_adapter import Legacy18Adapter
 from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 from .normative_foundation import default_foundation
+from .normative_execution import NormativeExecutionEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha7-normative-knowledge-foundation"
+DUAL_RUN_VERSION = "20.0-alpha8-normative-execution"
 
 
 def build_dual_run_manifest(
@@ -29,6 +30,8 @@ def build_dual_run_manifest(
     foundation=default_foundation()
     knowledge_summary=foundation.summary()
     knowledge_routes=foundation.project_routes(documents)
+    page_corpus=list(((documents[0] if documents else {}).get("analysis_snapshot") or {}).get("page_corpus") or [])
+    normative_execution=NormativeExecutionEngine20(foundation).run(documents,page_corpus)
     audit_rows=[]
     for decision in verification.get("decision_rows") or []:
         meta=dict(decision.get("metadata") or {})
@@ -158,6 +161,7 @@ def build_dual_run_manifest(
             "counts":verification["counts"],
             "audit_rows":audit_rows[:40],
         },
+        "normative_execution":normative_execution,
         "knowledge_foundation":{
             **knowledge_summary,
             "project_sections":knowledge_routes.get("project_sections") or [],

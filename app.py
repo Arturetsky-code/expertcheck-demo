@@ -179,8 +179,13 @@ if st.session_state.get('expert_mode'):
                     f"Объекты {stats.get('objects',0)} / кандидаты {stats.get('object_candidates',0)} · "
                     f"показатели {stats.get('properties',0)} · evidence {stats.get('evidence',0)}"
                 )
+                golden_label=(
+                    'N/A'
+                    if canonical_manifest.get('golden_skipped')
+                    else ('OK' if canonical_manifest.get('golden_passed') else 'НЕ ПРОЙДЕНЫ')
+                )
                 st.caption(
-                    f"Golden cases: {'OK' if canonical_manifest.get('golden_passed') else 'НЕ ПРОЙДЕНЫ'} · "
+                    f"Golden cases: {golden_label} · "
                     f"ошибки ссылок: {canonical_manifest.get('validation_errors',0)}"
                 )
                 verification=canonical_manifest.get('verification_engine') or {}

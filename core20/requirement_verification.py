@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from .model import CanonicalProject, Requirement
+from .normative_verification import reconstruct_normative_proof
 from .parameter_contracts import (
     canonical_contract,
     compare_values,
@@ -292,26 +293,12 @@ def reconstruct_requirement_proof(
     }
 
     if domain in {"normative","нтд"}:
-        if not bool(requirement.metadata.get("verified_clause")):
-            return {
-                **base,
-                "state":"LIMITATION",
-                "reason_code":"NORMATIVE_CLAUSE_NOT_VERIFIED",
-                "reason":"Пункт НТД не имеет канонически подтверждённого verified-clause; автоматический нормативный вывод запрещён.",
-            }
-        if not addressable:
-            return {
-                **base,
-                "state":"LIMITATION",
-                "reason_code":"NO_ADDRESSABLE_PROJECT_EVIDENCE",
-                "reason":"Пункт НТД верифицирован, но в проекте нет адресного доказательства для проверки его выполнения.",
-            }
-        return {
-            **base,
-            "state":"REVIEW",
-            "reason_code":"NORMATIVE_SEMANTIC_ADJUDICATION_PENDING",
-            "reason":"Есть verified-clause и адресное evidence проекта, но семантическая проверка выполнения пункта НТД ещё не реализована канонически.",
-        }
+        return reconstruct_normative_proof(
+            project,
+            requirement,
+            addressable_evidence=addressable,
+            trusted_evidence=trusted,
+        )
 
     if domain not in {"assignment","задание на проектирование"}:
         if not addressable:

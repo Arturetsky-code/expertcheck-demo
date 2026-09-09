@@ -127,6 +127,7 @@ def _structural_proof(project: CanonicalProject, requirement: Requirement) -> di
         "observed_document_roles":sorted(roles),
         "missing_document_roles":missing,
         "document_inventory_matches":documents,
+        "evidence_level":"L4",
     }
     if not missing:
         return {

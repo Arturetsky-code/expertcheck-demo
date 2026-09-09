@@ -653,7 +653,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         normative_engine = NormativeComplianceEngine(root / "knowledge")
         normative_compliance_audit = normative_engine.review(
             findings,
-            project_type=str(pp87_project_profile.get("project_type") or "") if isinstance(pp87_project_profile,dict) else "",
+            project_type=str(
+                pp87_project_profile.get("project_type")
+                or pp87_project_profile.get("profile")
+                or ""
+            ) if isinstance(pp87_project_profile,dict) else "",
             page_corpus=project_page_corpus,
         )
         normative_compliance_summary = NormativeComplianceEngine.summary(normative_compliance_audit)

@@ -46,6 +46,47 @@ def _fragment(text:str, hits:list[str], radius:int=240)->str:
     return raw[start:end][:700]
 
 
+def _project_profile(documents:list[dict[str,Any]]|None)->str:
+    first=(documents or [{}])[0] if documents else {}
+    profile=first.get("pp87_project_profile") or {}
+    if isinstance(profile,dict):
+        return str(profile.get("project_type") or profile.get("profile") or "").strip()
+    return ""
+
+
+def _conditional_applicability(contract:dict[str,Any],documents:list[dict[str,Any]]|None)->tuple[bool,str]:
+    ec=dict(contract.get("evidence_contract") or {})
+    if str(ec.get("applicability") or "").upper()!="CONDITIONAL":
+        return True,"SECTION_PRESENT"
+    requirement=_norm(contract.get("requirement") or "")
+    profile=_norm(_project_profile(documents))
+    if "производственного назначения" in requirement:
+        if "объект производственного назначения" in profile:
+            return True,"PROJECT_PROFILE_PRODUCTION"
+        return False,"PROJECT_PROFILE_PRODUCTION_NOT_PROVEN"
+    # Energy-efficiency and other conditional clauses require an explicit
+    # project-specific applicability proof. Presence of AR/PZU alone is not enough.
+    return False,"CONDITIONAL_APPLICABILITY_NOT_PROVEN"
+
+
+def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
+    roles=set()
+    for row in documents or []:
+        if not isinstance(row,dict):
+            continue
+        section=_section_key(row.get("Тип документа") or row.get("document_type") or row.get("Раздел") or row.get("section") or "")
+        if section!=target:
+            continue
+        name=_norm(row.get("Файл") or row.get("document") or row.get("filename") or "").replace(" ","")
+        if target=="пзу":
+            if any(x in name for x in ("пзу1","пзу_1","текстов")): roles.add("TEXT_PART")
+            if any(x in name for x in ("пзу2","пзу_2","графическ","чертеж")): roles.add("GRAPHIC_PART")
+        elif target=="ар":
+            if any(x in name for x in ("ар1","ар_1","текстов")): roles.add("TEXT_PART")
+            if any(x in name for x in ("ар2","ар_2","графическ","чертеж")): roles.add("GRAPHIC_PART")
+    return roles
+
+
 class NormativeExecutionEngine20:
     """Execute only curated, current, verified-clause contracts.
 
@@ -63,7 +104,7 @@ class NormativeExecutionEngine20:
         for contract in routes.get("rows") or []:
             if not contract.get("project_relevant") or not contract.get("automatic_contract_ready"):
                 continue
-            rows.append(self._execute(contract,pages))
+            rows.append(self._execute(contract,pages,documents))
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
         addressed=sum(1 for row in rows if row.get("evidence_document") and row.get("evidence_page") not in (None,""))
         return {
@@ -80,7 +121,7 @@ class NormativeExecutionEngine20:
             "guardrail":"Ненайденный текст не является доказательством нарушения; отрицательный нормативный вывод без отдельного доказательного контракта запрещён.",
         }
 
-    def _execute(self,contract:dict[str,Any],pages:list[dict[str,Any]])->dict[str,Any]:
+    def _execute(self,contract:dict[str,Any],pages:list[dict[str,Any]],documents:list[dict[str,Any]]|None)->dict[str,Any]:
         expected={_section_key(x) for x in (contract.get("sections") or []) if _section_key(x)}
         expected.discard("all")
         candidates=[
@@ -102,6 +143,40 @@ class NormativeExecutionEngine20:
             "history_projects":int(contract.get("expert_project_count") or 0),
             "priority_score":int(contract.get("priority_score") or 0),
         }
+        applicable,applicability_reason=_conditional_applicability(contract,documents)
+        base["applicability_reason_code"]=applicability_reason
+        if not applicable:
+            return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
+                "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",
+                "reason_code":"NORMATIVE_APPLICABILITY_NOT_PROVEN",
+                "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
+
+        rid=str(contract.get("requirement_id") or "").upper()
+        if rid in {"PP87-CLAUSE-12-PZU","PP87-CLAUSE-13-AR"}:
+            target="пзу" if rid=="PP87-CLAUSE-12-PZU" else "ар"
+            roles=_inventory_roles(documents,target)
+            if {"TEXT_PART","GRAPHIC_PART"} <= roles:
+                return {**base,"kind":"VERIFIED_OK","state":KIND_LABELS["VERIFIED_OK"],
+                    "reason":"По каноническому инвентарю подтверждены отдельные текстовая и графическая части профильного раздела.",
+                    "reason_code":"NORMATIVE_STRUCTURE_VERIFIED",
+                    "evidence_document":"","evidence_page":None,
+                    "evidence_fragment":"Инвентарь документов: TEXT_PART + GRAPHIC_PART",
+                    "matched_keywords":[]}
+            return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
+                "reason":"Пункт НТД верифицирован, но по именам загруженных документов нельзя надёжно подтвердить полный состав текстовой и графической частей. Отсутствие отдельного файла не считается нарушением.",
+                "reason_code":"NORMATIVE_STRUCTURE_PART_NOT_PROVEN",
+                "evidence_document":"","evidence_page":None,
+                "evidence_fragment":"Распознано ролей: "+", ".join(sorted(roles)),
+                "matched_keywords":[]}
+
+        if rid=="PP87-CLAUSE-15-IOS":
+            # The verified root clause establishes the subsection family, but the
+            # applicability of each engineering subsystem is project-specific.
+            return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
+                "reason":"Состав раздела ИОС маршрутизирован по верифицированному пункту 15, но полнота применимых подразделов требует проектно-специфической проверки.",
+                "reason_code":"NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING",
+                "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
+
         if not candidates:
             return {**base,"kind":"SYSTEM_LIMITATION","state":KIND_LABELS["SYSTEM_LIMITATION"],
                 "reason":"Верифицированный пункт применим по маршруту, но в цифровом корпусе нет адресных страниц ожидаемого раздела.",

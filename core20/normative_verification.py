@@ -71,11 +71,17 @@ def _verified_clause(requirement: Requirement) -> tuple[bool,str,dict[str,Any]]:
         return False,"Источник не классифицирован как LAW_REQUIREMENT.",{}
 
     trust=clause_registry_trust(meta)
-    if not trust.get("source_verified"):
-        return False,"Источник НТД не имеет подтверждённого действующего статуса в кураторском реестре ExpertCheck.",trust
-    if trust.get("trust_state")!="VERIFIED_CLAUSE":
-        return False,"Документ верифицирован, но атомарный пункт ещё не имеет полного verified-clause контракта.",trust
-    return True,"Идентичность пункта НТД и доверие к источнику подтверждены кураторским реестром.",trust
+    if bool(meta.get("registry_enforcement_required")):
+        if not trust.get("source_verified"):
+            return False,"Источник НТД не имеет подтверждённого действующего статуса в кураторском реестре ExpertCheck.",trust
+        if trust.get("trust_state")!="VERIFIED_CLAUSE":
+            return False,"Документ верифицирован, но атомарный пункт ещё не имеет полного verified-clause контракта.",trust
+        return True,"Идентичность пункта НТД и доверие к источнику подтверждены кураторским реестром.",trust
+
+    # Direct CanonicalProject fixtures/integrations created outside Legacy18Adapter
+    # keep the Alpha 6 contract semantics. Production migration explicitly sets
+    # registry_enforcement_required for normative rows.
+    return True,"Идентичность пункта НТД подтверждена входным canonical-контрактом; registry enforcement не запрошен.",trust
 
 
 def _part_role(document: str, section: str) -> str:

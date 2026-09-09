@@ -5,9 +5,10 @@ from typing import Any
 from .legacy_adapter import Legacy18Adapter
 from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
+from .normative_foundation import default_foundation
 
 
-DUAL_RUN_VERSION = "20.0-alpha6.2-results-report-integrity"
+DUAL_RUN_VERSION = "20.0-alpha7-normative-knowledge-foundation"
 
 
 def build_dual_run_manifest(
@@ -25,6 +26,9 @@ def build_dual_run_manifest(
     issues=project.validate()
     golden=evaluate_golden_cases(project)
     verification=VerificationEngine20(project).run()
+    foundation=default_foundation()
+    knowledge_summary=foundation.summary()
+    knowledge_routes=foundation.project_routes(documents)
     audit_rows=[]
     for decision in verification.get("decision_rows") or []:
         meta=dict(decision.get("metadata") or {})
@@ -101,6 +105,11 @@ def build_dual_run_manifest(
             "normative_check_kind":meta.get("check_kind") or "",
             "applicability_state":meta.get("applicability_state") or "",
             "normative_contract":meta.get("normative_contract") or "",
+            "normative_registry_trust":meta.get("normative_registry_trust") or "",
+            "normative_source_status":meta.get("normative_source_status") or "",
+            "normative_history_occurrences":int(meta.get("normative_history_occurrences") or 0),
+            "normative_history_projects":int(meta.get("normative_history_projects") or 0),
+            "normative_history_policy":meta.get("normative_history_policy") or "",
             "required_document_roles":" + ".join(meta.get("required_document_roles") or []),
             "observed_document_roles":" + ".join(meta.get("observed_document_roles") or []),
             "missing_document_roles":" + ".join(meta.get("missing_document_roles") or []),
@@ -148,6 +157,15 @@ def build_dual_run_manifest(
             "contract_errors":verification["contract_errors"],
             "counts":verification["counts"],
             "audit_rows":audit_rows[:40],
+        },
+        "knowledge_foundation":{
+            **knowledge_summary,
+            "project_sections":knowledge_routes.get("project_sections") or [],
+            "project_relevant":knowledge_routes.get("project_relevant",0),
+            "project_verified_clause_routes":knowledge_routes.get("verified_clause_routes",0),
+            "project_automatic_contract_ready":knowledge_routes.get("automatic_contract_ready",0),
+            "project_history_prioritized":knowledge_routes.get("history_prioritized",0),
+            "priority_routes":list(knowledge_routes.get("rows") or [])[:40],
         },
         "legacy_results_unchanged":True,
     }

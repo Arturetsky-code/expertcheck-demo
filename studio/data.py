@@ -16,6 +16,7 @@ from core.project_review_planner import build_review_plan
 from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
 from core.result_surface import build_review_surface_rows
+from core.report_quality_gate import validate_review_plan
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
 from core.project_knowledge_recovery import recover_project_knowledge
@@ -535,16 +536,16 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
-    # Prefer the plan produced after Deep Evidence adjudication.  Rebuilding it
-    # from legacy statuses would discard adversarial downgrades.
-    review_plan=dict(first_record.get('project_review_plan') or {})
-    if not review_plan:
-        review_plan=build_review_plan(
-            assignment_rows=assignment_for_report,
-            normative_rows=normative_for_report,
-            checklist_review=checklist_for_report,
-            comparisons=engineering_comparisons,
-        )
+    # Reports are a trust boundary. Rebuild the plan from the already adjudicated
+    # private report copies so comparison metrics cannot remain stale after the
+    # report-boundary cross-section gate. final_verification_kind preserves all
+    # accepted adversarial / semantic downgrades.
+    review_plan=build_review_plan(
+        assignment_rows=assignment_for_report,
+        normative_rows=normative_for_report,
+        checklist_review=checklist_for_report,
+        comparisons=engineering_comparisons,
+    )
     review_domains=review_plan.get('domains') or {}
     coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
     semantic_engine_summary=dict(first_record.get('semantic_evidence_engine') or {})
@@ -723,7 +724,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_plan=review_domains.get('НТД',{})
     checklist_plan=review_domains.get('Чек-листы',{})
     comparison_plan=review_domains.get('Межраздельная сверка',{})
-    report_quality_gate=dict(first_record.get('report_quality_gate') or {})
+    report_quality_gate=validate_review_plan(
+        review_plan,
+        object_registry=list(first_record.get('consolidated_registry') or []),
+        checklist_rows=checklist_results,
+        comparisons=engineering_comparisons,
+    )
+    if first_record:
+        first_record['report_quality_gate']=report_quality_gate
     normative_registry_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру')
     normative_registry_unverified=sum(1 for x in normative_rows if x.get('registry_match_state')=='MATCHED_UNVERIFIED')
     normative_registry_missing=sum(1 for x in normative_rows if x.get('registry_match_state')=='NOT_IN_REGISTRY')

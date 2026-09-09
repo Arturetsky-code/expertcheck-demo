@@ -9,7 +9,7 @@ from .model import CanonicalProject, Comparison, Requirement, stable_id
 from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha6.2-results-report-integrity"
+ENGINE_VERSION = "20.0-alpha7-normative-knowledge-foundation"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",
@@ -551,6 +551,11 @@ class VerificationEngine20:
             "applicability_state": proof.get("applicability_state") or "",
             "normative_contract": proof.get("normative_contract") or "",
             "normative_requirement_id": proof.get("normative_requirement_id") or "",
+            "normative_registry_trust": proof.get("normative_registry_trust") or "",
+            "normative_source_status": proof.get("normative_source_status") or "",
+            "normative_history_occurrences": int(proof.get("normative_history_occurrences") or 0),
+            "normative_history_projects": int(proof.get("normative_history_projects") or 0),
+            "normative_history_policy": proof.get("normative_history_policy") or "",
             "required_document_roles": proof.get("required_document_roles") or [],
             "observed_document_roles": proof.get("observed_document_roles") or [],
             "missing_document_roles": proof.get("missing_document_roles") or [],

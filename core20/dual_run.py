@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha5-assignment-expansion"
+DUAL_RUN_VERSION = "20.0-alpha6-normative-verification"
 
 
 def build_dual_run_manifest(
@@ -38,6 +38,10 @@ def build_dual_run_manifest(
                 "RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
                 "PROJECT_EVIDENCE_VALUE_CONFLICT",
             }
+            or (
+                str(meta.get("domain") or "").casefold() == "normative"
+                and bool(meta.get("canonical_reason_code"))
+            )
         ):
             continue
         trace_ids=list(decision.get("trace_ids") or [])
@@ -91,6 +95,15 @@ def build_dual_run_manifest(
             "evidence_bindings":" | ".join(evidence_bindings[:4]),
             "required_topology":meta.get("required_topology"),
             "project_topology":meta.get("project_topology"),
+            "verified_clause":bool(meta.get("verified_clause")),
+            "normative_source":meta.get("source_reference") or "",
+            "normative_paragraph":meta.get("paragraph") or "",
+            "normative_check_kind":meta.get("check_kind") or "",
+            "applicability_state":meta.get("applicability_state") or "",
+            "normative_contract":meta.get("normative_contract") or "",
+            "required_document_roles":" + ".join(meta.get("required_document_roles") or []),
+            "observed_document_roles":" + ".join(meta.get("observed_document_roles") or []),
+            "missing_document_roles":" + ".join(meta.get("missing_document_roles") or []),
             "reason":decision.get("reason") or "",
             "proof_source":meta.get("proof_source") or "",
             "legacy_disagreement":bool(meta.get("legacy_disagreement")),
@@ -118,6 +131,12 @@ def build_dual_run_manifest(
             "canonical_requirement_proofs_recomputed":verification.get("canonical_requirement_proofs_recomputed",0),
             "assignment_proofs_recomputed":verification.get("assignment_proofs_recomputed",0),
             "normative_checks_guarded":verification.get("normative_checks_guarded",0),
+            "normative_verified_clauses":verification.get("normative_verified_clauses",0),
+            "normative_auto":verification.get("normative_auto",0),
+            "normative_structure_auto":verification.get("normative_structure_auto",0),
+            "normative_review":verification.get("normative_review",0),
+            "normative_unverified":verification.get("normative_unverified",0),
+            "normative_applicability_blocked":verification.get("normative_applicability_blocked",0),
             "typed_assignment_auto":verification.get("typed_assignment_auto",0),
             "reserve_topology_auto":verification.get("reserve_topology_auto",0),
             "parameter_binding_blocked":verification.get("parameter_binding_blocked",0),

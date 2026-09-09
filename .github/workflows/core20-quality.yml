@@ -55,6 +55,7 @@ jobs:
         run: |
           python -m pytest -q \
             test_results_integrity_alpha62.py \
+            test_results_report_parity_alpha63.py \
             test_report_engine_resilience.py \
             test_result_surface_1872.py \
             --rootdir=.

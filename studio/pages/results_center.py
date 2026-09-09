@@ -23,6 +23,9 @@ def render(ctx):
     hero('Результаты','Только квалифицированные результаты проверки проекта.','Несоответствия · вопросы специалисту · подтверждённое соответствие')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     first=_first(docs); checklist=_checklist(first)
+    canonical=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
+    normative20=dict(canonical.get('normative_execution') or {})
+    normative20_rows=list(normative20.get('rows') or [])
     raw_comparisons=comparisons.to_dict('records') if not comparisons.empty else []
     ledger=build_qualified_result_ledger(
         assignment_rows=list(first.get('assignment_compliance') or []),
@@ -59,6 +62,27 @@ def render(ctx):
     )
     with c3:card('Подтверждено',verified,'Проверки с доказательством','ok')
     with c4:card('Не проверено',limits,'Ограничения покрытия','info')
+
+    if normative20_rows:
+        section('НТД 20.0 — доказательная проверка','Исполняются только верифицированные атомарные пункты. Ненайденный текст не считается нарушением.')
+        n1,n2,n3,n4=st.columns(4)
+        with n1:card('Контрактов',normative20.get('contracts',0),'Применимые verified-clause')
+        with n2:card('Подтверждено',normative20.get('verified_ok',0),'Есть адресное положительное evidence','ok')
+        with n3:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
+        with n4:card('Не проверено',normative20.get('system_limitations',0),f"Адресное покрытие {normative20.get('evidence_coverage_pct',0)}%",'info')
+        st.dataframe(pd.DataFrame([{
+            'Результат':row.get('state') or '—',
+            'НТД':row.get('source') or row.get('document_id') or '—',
+            'Пункт':row.get('paragraph') or '—',
+            'Требование':row.get('requirement') or '—',
+            'Evidence':(
+                f"{row.get('evidence_document')}, стр. {row.get('evidence_page')}"
+                if row.get('evidence_document') and row.get('evidence_page') not in (None,'')
+                else 'Не сформировано'
+            ),
+            'Фрагмент':row.get('evidence_fragment') or '',
+            'Обоснование':row.get('reason') or '',
+        } for row in normative20_rows]).head(120),hide_index=True,width='stretch')
 
     tabs=st.tabs(['Несоответствия','Вопросы специалисту','Подтверждено'])
     with tabs[0]:

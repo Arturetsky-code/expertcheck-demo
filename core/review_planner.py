@@ -27,7 +27,12 @@ def _normative_plan(rows:list[dict[str,Any]])->list[dict[str,Any]]:
             "plan_id":r.get("requirement_id") or f"NORM-{len(out)+1:03d}","domain":"normative",
             "check":f"{r.get('source') or r.get('reference') or 'НТД'} {r.get('paragraph') or r.get('clause') or ''}".strip(),
             "scope":r.get("topic") or "Проект","method":r.get("check_kind") or "SEMANTIC",
-            "expected_sections":(r.get("evidence_contract") or {}).get("sections") or [],
+            "expected_sections":(
+                r.get("expected_evidence_route")
+                or (r.get("evidence_contract") or {}).get("expected_sections")
+                or (r.get("evidence_contract") or {}).get("sections")
+                or []
+            ),
             "verification_kind":r.get("verification_kind"),"verification_state":r.get("verification_state"),
             "source_id":r.get("requirement_id"),
         })

@@ -484,14 +484,16 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         assignment_rows=assignment_for_report,
         normative_rows=normative_for_report,
         checklist_rows=checklist_results,
-        comparisons=engineering_comparisons,
+        comparisons=comparison_records,
         clone_inputs=False,
     )
     assignment_for_report=ledger['assignment_rows']
     normative_for_report=ledger['normative_rows']
     checklist_results=ledger['checklist_rows']
     checklist_for_report={'results': checklist_results}
-    engineering_comparisons=ledger['comparisons']
+    comparison_records=ledger['comparisons']
+    engineering_comparisons=ledger['engineering_comparisons']
+    register_comparisons=ledger['register_comparisons']
     report_verified_gate=ledger['verified_gate']
     if first_record:
         first_record['assignment_compliance']=assignment_for_report

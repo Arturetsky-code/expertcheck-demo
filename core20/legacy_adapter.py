@@ -376,6 +376,7 @@ class Legacy18Adapter:
                     'verification_kernel':_text(raw,'verification_kernel'),
                     'expected_evidence':_text(raw,'expected_evidence') or _text(item,'expected_evidence'),
                     'coverage_reason_code':_text(raw,'coverage_reason_code') or _text(item,'coverage_reason_code'),
+                    'registry_enforcement_required':_text(item,'domain_code','domain').casefold() in {'normative','нтд'},
                 },
             ))
             kind=_text(item,'verification_kind')

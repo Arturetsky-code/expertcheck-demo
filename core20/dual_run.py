@@ -32,6 +32,12 @@ def build_dual_run_manifest(
             decision.get("automatic_verdict_eligible")
             or decision.get("kind")=="PROJECT_FINDING"
             or meta.get("legacy_disagreement")
+            or meta.get("canonical_reason_code") in {
+                "PARAMETER_BINDING_NOT_PROVEN",
+                "RESERVE_TOPOLOGY_NOT_PROVEN",
+                "RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
+                "PROJECT_EVIDENCE_VALUE_CONFLICT",
+            }
         ):
             continue
         trace_ids=list(decision.get("trace_ids") or [])
@@ -43,6 +49,8 @@ def build_dual_run_manifest(
         obj=project.objects.get(object_id) if object_id else None
         evidence_addresses=[]
         evidence_fragments=[]
+        evidence_bindings=[]
+        routed_evidence_count=0
         for evidence_id in decision.get("evidence_ids") or []:
             evidence=project.evidence.get(evidence_id)
             if evidence and evidence.address:
@@ -51,6 +59,19 @@ def build_dual_run_manifest(
                 fragment=" ".join(str(evidence.fragment).split())
                 if fragment and fragment not in evidence_fragments:
                     evidence_fragments.append(fragment[:360])
+            if evidence:
+                emeta=dict(evidence.metadata or {})
+                if emeta.get("canonical_routed"):
+                    routed_evidence_count+=1
+                binding=" / ".join(
+                    str(value) for value in (
+                        emeta.get("typed_parameter_code") or emeta.get("project_parameter_code") or emeta.get("observed_parameter_code") or "",
+                        emeta.get("project_value") if emeta.get("project_value") is not None else emeta.get("observed_value"),
+                        emeta.get("project_unit") or emeta.get("observed_unit") or "",
+                    ) if str(value or "").strip()
+                )
+                if binding and binding not in evidence_bindings:
+                    evidence_bindings.append(binding)
         audit_rows.append({
             "domain":meta.get("domain") or "",
             "kind":decision.get("kind") or "",
@@ -66,6 +87,8 @@ def build_dual_run_manifest(
             "unit":meta.get("required_unit") or meta.get("canonical_unit") or "",
             "reason_code":meta.get("canonical_reason_code") or meta.get("canonical_reason_code") or "",
             "typed_fact_count":meta.get("typed_fact_count") or 0,
+            "routed_evidence_count":routed_evidence_count,
+            "evidence_bindings":" | ".join(evidence_bindings[:4]),
             "required_topology":meta.get("required_topology"),
             "project_topology":meta.get("project_topology"),
             "reason":decision.get("reason") or "",

@@ -9,7 +9,7 @@ from .model import CanonicalProject, Comparison, Requirement, stable_id
 from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha6.1-normative-routing"
+ENGINE_VERSION = "20.0-alpha6.2-results-report-integrity"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",

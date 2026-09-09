@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+import json
+from pathlib import Path
 from typing import Any
 
 
@@ -23,53 +25,74 @@ class GoldenCase:
     notes: str = ""
 
 
-BASELINE_18_7_3: dict[str, BaselineMetric] = {
-    "objects_confirmed": BaselineMetric("objects_confirmed", 36, "EXACT", "Подтверждённый Trusted Object Registry"),
-    "passport_characteristics": BaselineMetric("passport_characteristics", 137, "AT_LEAST", "Характеристики подтверждённых паспортов"),
-    "cross_section_comparisons": BaselineMetric("cross_section_comparisons", 99, "EXACT", "Сформированные межраздельные сопоставления"),
-    "cross_section_l5": BaselineMetric("cross_section_l5", 45, "AT_LEAST", "Строго завершённые межраздельные проверки"),
-    "project_findings": BaselineMetric("project_findings", 1, "EXACT", "Доказанные проблемы проекта на Test 77"),
-    "specialist_questions": BaselineMetric("specialist_questions", 346, "AT_MOST", "Адресные вопросы специалисту"),
-    "review_packages": BaselineMetric("review_packages", 26, "AT_MOST", "Рабочие пакеты после compression"),
-    "verified_checks": BaselineMetric("verified_checks", 49, "AT_LEAST", "Проверки с доказательством"),
-    "system_limitations": BaselineMetric("system_limitations", 319, "AT_MOST", "Ограничения автоматического покрытия"),
-}
+def _load_profile() -> dict[str,Any]:
+    root=Path(__file__).resolve().parents[1]
+    path=root/"knowledge"/"control_baseline_18_7_3.json"
+    try:
+        data=json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data,dict) else {}
+    except Exception:
+        return {}
 
 
-GOLDEN_CASES_18_7_3: tuple[GoldenCase, ...] = (
-    GoldenCase(
-        "GOLD-COMPRESSOR-AREA-CONFLICT", "Компрессорная", "AREA_BUILD", "PROJECT_FINDING",
-        (54.3, 48.7), "4.5",
-        "Факт конфликта должен быть доказан; правильное значение без owner-раздела не утверждается.",
-    ),
-    GoldenCase(
-        "GOLD-DEDUSTING-AREA", "Модуль обеспыливания", "AREA_BUILD", "VERIFIED_OK",
-        (23.5,), "4.12",
-        "23,5 м² не должно мигрировать к зданию проборазделки.",
-    ),
-    GoldenCase(
-        "GOLD-SAMPLE-PREP-AREA", "Здание проборазделки", "AREA_BUILD", "VERIFIED_OK",
-        (89.9,), "4.13",
-        "89,9 м² остаётся физически и семантически привязано к строке здания проборазделки.",
-    ),
+_PROFILE=_load_profile()
+BASELINE_ID=str(_PROFILE.get("baseline_id") or "18.7.3-control")
+BASELINE_MIN_GOLDEN_MATCHES=int(
+    ((_PROFILE.get("applicability") or {}).get("minimum_golden_object_matches") or 1)
 )
 
+BASELINE_18_7_3: dict[str,BaselineMetric] = {}
+for key,row in (_PROFILE.get("metrics") or {}).items():
+    if not isinstance(row,dict):
+        continue
+    try:
+        expected=float(row.get("expected"))
+    except (TypeError,ValueError):
+        continue
+    BASELINE_18_7_3[str(key)]=BaselineMetric(
+        str(key),
+        expected,
+        str(row.get("policy") or "AT_LEAST"),
+        str(row.get("description") or ""),
+    )
 
-def evaluate_baseline(observed: dict[str, Any]) -> dict[str, Any]:
+_cases=[]
+for row in _PROFILE.get("golden_cases") or []:
+    if not isinstance(row,dict):
+        continue
+    values=[]
+    for value in row.get("expected_values") or []:
+        try:
+            values.append(float(value))
+        except (TypeError,ValueError):
+            pass
+    _cases.append(GoldenCase(
+        case_id=str(row.get("case_id") or ""),
+        object_name=str(row.get("object_name") or ""),
+        parameter_code=str(row.get("parameter_code") or ""),
+        expected_kind=str(row.get("expected_kind") or ""),
+        expected_values=tuple(values),
+        expected_position=str(row.get("expected_position") or ""),
+        notes=str(row.get("notes") or ""),
+    ))
+GOLDEN_CASES_18_7_3: tuple[GoldenCase,...]=tuple(_cases)
+
+
+def evaluate_baseline(observed: dict[str,Any]) -> dict[str,Any]:
     checks=[]
-    for key, metric in BASELINE_18_7_3.items():
+    for key,metric in BASELINE_18_7_3.items():
         raw=observed.get(key)
         try:
             value=float(raw)
-        except (TypeError, ValueError):
+        except (TypeError,ValueError):
             checks.append({
                 "key":key,"passed":False,"expected":metric.expected,"observed":raw,
                 "policy":metric.policy,"description":metric.description,"reason":"MISSING_OR_NON_NUMERIC",
             })
             continue
-        if metric.policy=='EXACT':
+        if metric.policy=="EXACT":
             passed=value==metric.expected
-        elif metric.policy=='AT_MOST':
+        elif metric.policy=="AT_MOST":
             passed=value<=metric.expected
         else:
             passed=value>=metric.expected
@@ -78,7 +101,7 @@ def evaluate_baseline(observed: dict[str, Any]) -> dict[str, Any]:
             "policy":metric.policy,"description":metric.description,
         })
     return {
-        "baseline":"18.7.3-Test77",
+        "baseline":BASELINE_ID,
         "passed":all(item["passed"] for item in checks),
         "failed":[item["key"] for item in checks if not item["passed"]],
         "checks":checks,

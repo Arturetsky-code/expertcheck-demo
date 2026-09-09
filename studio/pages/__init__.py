@@ -1,4 +1,4 @@
-from . import project, objects, checks, checklists, issues, reports, settings, advisor, risks, workspace, review_center, results_center, confirmation
+from . import project, objects, checks, checklists, issues, reports, settings, advisor, risks, workspace, review_center, results_center, confirmation, knowledge_base
 
 PAGES={
     'Мои проекты': workspace.render,
@@ -8,6 +8,7 @@ PAGES={
     'Межраздельная сверка': checks.render,
     'Риски экспертизы': risks.render,
     'Чек-листы': checklists.render,
+    'НТД и практика': knowledge_base.render,
     'Отчёт': reports.render,
     'Центр проверки': review_center.render,
     'Проверка': review_center.render,

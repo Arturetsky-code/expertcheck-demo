@@ -100,8 +100,6 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
             'line_count':row.get('line_count'),
             'task_models':list(row.get('task_models') or []),
             'project_models':list(row.get('project_models') or []),
-            'task_quantity':row.get('task_quantity'),
-            'project_quantity':row.get('project_quantity'),
             'difference':_text(row,'difference'),
             'structured':bool(row.get('structured')),
         },

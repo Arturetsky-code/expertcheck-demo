@@ -185,3 +185,97 @@ def test_router_does_not_turn_bucket_volume_into_body_volume():
         page_corpus=pages,
     )
     assert rows==[]
+
+
+def test_annual_project_capacity_variants_are_normalized_and_closed():
+    project=_project()
+    _evidence(
+        project,"E1",
+        "Производственная мощность предприятия составляет 1600 тыс. тонн в год.",
+        section="ПЗ",
+    )
+    project.add_requirement(Requirement(
+        requirement_id="R1",
+        domain="assignment",
+        text="Производственная мощность 1 600 тыс. тонн в год",
+        target_object_id="OBJ-1",
+        expected_parameter_code="CAPACITY",
+        expected_evidence_route=["ПЗ"],
+        evidence_ids=["E1"],
+        evidence_level="L4",
+        metadata={
+            "requirement_type":"VALUE_COMPARISON",
+            "required_value":1600,
+            "unit":"тыс. т/год",
+        },
+    ))
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["metadata"]["canonical_reason_code"]=="ASSIGNMENT_TYPED_VALUE_MATCH"
+    assert row["metadata"]["required_unit"]=="kt/y"
+
+
+def test_dump_truck_synonyms_share_one_entity_class():
+    project=_project()
+    _evidence(
+        project,"E1",
+        "Карьерный самосвал SINOTRUK HOWO: объем кузова 32 м3.",
+    )
+    _requirement(
+        project,
+        text="Подвоз руды осуществляется автосамосвалами SinoTrack, объем кузова 32 м3",
+        code="BODY_VOLUME",value=32,unit="м3",evidence_ids=["E1"],
+    )
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["metadata"]["canonical_reason_code"]=="ASSIGNMENT_TYPED_VALUE_MATCH"
+
+
+def test_generic_volume_is_scoped_to_hopper_entity():
+    project=_project()
+    _evidence(project,"E1","Резервуар воды имеет объем 100 м3.")
+    _evidence(project,"E2","Бункер извести принят объемом 1 м3.")
+    _requirement(
+        project,
+        text="Известь подается в бункер объемом 1 м3",
+        code="VOLUME",value=1,unit="м3",evidence_ids=["E1","E2"],
+    )
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["metadata"]["project_value"]==1.0
+    assert row["metadata"]["typed_fact_count"]==1
+
+
+def test_generic_volume_router_does_not_collect_unrelated_reservoirs():
+    pages=[
+        {"document":"ТХ1.pdf","document_type":"ТХ","page":12,"text":"Резервуар воды объемом 100 м3."},
+        {"document":"ТХ2.pdf","document_type":"ТХ","page":15,"text":"Бункер извести принят объемом 1 м3."},
+        {"document":"ТХ2.pdf","document_type":"ТХ","page":16,"text":"Емкость реагента объемом 0,2 м3."},
+    ]
+    rows=route_typed_requirement_evidence(
+        requirement_text="Известь подается в бункер объемом 1 м3",
+        parameter_code="VOLUME",
+        required_unit="м3",
+        expected_sections=["ТХ"],
+        page_corpus=pages,
+    )
+    assert rows
+    assert all(float(row["project_value"])==1.0 for row in rows)
+    assert all("бункер" in row["context"].casefold() for row in rows)
+
+
+def test_generic_reservation_of_asu_is_not_equipment_topology():
+    project=_project()
+    _evidence(
+        project,"E1",
+        "АСУ предусматривает резервирование каналов связи.",
+        trusted=True,
+    )
+    _requirement(
+        project,
+        text="Система автоматизации должна предусматривать резервирование каналов связи",
+        code="",value=None,unit="",evidence_ids=["E1"],rtype="SEMANTIC_ENGINEERING",
+    )
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["metadata"]["canonical_reason_code"]!="RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED"
+    assert row["metadata"]["canonical_reason_code"]!="RESERVE_TOPOLOGY_NOT_PROVEN"

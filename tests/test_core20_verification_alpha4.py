@@ -148,15 +148,22 @@ def test_normative_verified_clause_still_needs_semantic_route():
     _evidence(project,"E1",section="ПОС",fragment="Проектом предусматривается организация строительной площадки.")
     project.add_requirement(Requirement(
         requirement_id="N1",domain="normative",
-        text="СП 48.13330.2019, пункт 1",
+        text="Организация строительной площадки должна быть предусмотрена проектом.",
+        applicable=True,
         evidence_ids=["E1"],
         evidence_level="L4",
-        metadata={"verified_clause":True},
+        metadata={
+            "verified_clause":True,
+            "source_reference":"СП 48.13330.2019",
+            "paragraph":"п. 1",
+            "knowledge_kind":"LAW_REQUIREMENT",
+            "check_kind":"SEMANTIC",
+        },
     ))
     row=VerificationEngine20(project).run()["decision_rows"][0]
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["automatic_verdict_eligible"] is False
-    assert row["metadata"]["canonical_reason_code"]=="NORMATIVE_SEMANTIC_ADJUDICATION_PENDING"
+    assert row["metadata"]["canonical_reason_code"]=="NORMATIVE_SEMANTIC_PROOF_PENDING"
 
 
 def test_equipment_project_quantity_cannot_be_used_as_volume():

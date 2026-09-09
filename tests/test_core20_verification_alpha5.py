@@ -279,3 +279,24 @@ def test_generic_reservation_of_asu_is_not_equipment_topology():
     row=VerificationEngine20(project).run()["decision_rows"][0]
     assert row["metadata"]["canonical_reason_code"]!="RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED"
     assert row["metadata"]["canonical_reason_code"]!="RESERVE_TOPOLOGY_NOT_PROVEN"
+
+
+def test_asu_working_and_backup_channels_are_not_equipment_topology():
+    project=_project()
+    _evidence(
+        project,"E1",
+        "АСУ предусматривает рабочий и резервный каналы связи; установка системы выполняется комплектно.",
+        trusted=True,
+    )
+    _requirement(
+        project,
+        text="Для АСУ предусмотреть рабочий и резервный каналы связи",
+        code="",value=None,unit="",evidence_ids=["E1"],rtype="SEMANTIC_ENGINEERING",
+    )
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["metadata"]["canonical_reason_code"] not in {
+        "RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
+        "RESERVE_TOPOLOGY_NOT_PROVEN",
+        "RESERVE_TOPOLOGY_MATCH",
+        "RESERVE_TOPOLOGY_MISMATCH",
+    }

@@ -51,3 +51,38 @@ def test_alpha8_missing_text_never_becomes_normative_finding():
     assert result["project_findings"]==0
     assert all(row["kind"]!="PROJECT_FINDING" for row in result["rows"])
     assert any(row["kind"] in {"REVIEW_QUESTION","SYSTEM_LIMITATION"} for row in result["rows"])
+
+
+def test_alpha8_conditional_clause_requires_applicability_proof():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":8,
+        "text":"Приведено обоснование соответствия архитектурных решений требованиям энергетической эффективности.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+
+
+def test_alpha8_production_conditional_clause_can_use_confirmed_project_profile():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{
+        "Файл":"Раздел ПД №2_ПЗУ1.pdf",
+        "Тип документа":"ПЗУ",
+        "pp87_project_profile":{"profile":"Объект производственного назначения"},
+    }]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ1.pdf",
+        "document_type":"ПЗУ",
+        "page":11,
+        "text":"Выполнено зонирование территории объекта производственного назначения. "
+               "Показана принципиальная схема размещения территориальных зон.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-H-ZONING")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["evidence_page"]==11

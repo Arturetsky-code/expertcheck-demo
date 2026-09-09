@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 7 · Normative Knowledge Foundation · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 7.1 · Normative Workspace Hotfix · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -83,6 +83,11 @@ with st.sidebar:
         st.session_state.semantic_execution_checkpoint={}
         st.session_state.page='Проект'
         st.rerun()
+    # Streamlit updates widget-state before the script reruns. Synchronise the
+    # developer-mode mirror before building the navigation, otherwise the
+    # sidebar can show the old page set for one rerun after the toggle.
+    if 'interface_mode_toggle' in st.session_state:
+        st.session_state.expert_mode=bool(st.session_state.get('interface_mode_toggle'))
     sidebar_group('Этапы проверки')
     has_result = bool(st.session_state.result)
     object_gate = bool(st.session_state.get('object_registry_confirmed'))

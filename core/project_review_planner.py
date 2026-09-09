@@ -1,4 +1,6 @@
 from __future__ import annotations
+import math
+from numbers import Real
 from typing import Any
 from .verification_core import classify_verification, domain_summary
 
@@ -10,7 +12,37 @@ DOMAIN_LABELS={
 }
 
 
-def _txt(v:Any)->str:return str(v or '').strip()
+def _missing(v:Any)->bool:
+    if v is None:
+        return True
+    if isinstance(v,Real) and not isinstance(v,bool):
+        try:
+            return math.isnan(float(v))
+        except (TypeError,ValueError):
+            return False
+    return False
+
+
+def _txt(v:Any)->str:
+    return '' if _missing(v) else str(v or '').strip()
+
+
+def _as_list(v:Any)->list[Any]:
+    if _missing(v):
+        return []
+    if isinstance(v,list):
+        return v
+    if isinstance(v,(tuple,set)):
+        return list(v)
+    if isinstance(v,dict):
+        return [v]
+    if isinstance(v,str):
+        return [v] if v.strip() else []
+    return [v]
+
+
+def _as_dict(v:Any)->dict[str,Any]:
+    return dict(v) if isinstance(v,dict) else {}
 
 
 def _legacy_status(kind:str)->str:
@@ -165,8 +197,8 @@ def build_review_plan(
     comparison_rows=list(comparisons or [])
     for i,row in enumerate(comparison_rows,1):
         q=classify_verification(row,'comparison')
-        evidence=list(row.get('verification_evidence') or row.get('source_records') or [])
-        diagnostics=dict(row.get('dependency_diagnostics') or {})
+        evidence=_as_list(row.get('verification_evidence') or row.get('source_records'))
+        diagnostics=_as_dict(row.get('dependency_diagnostics'))
         items.append({
             'plan_id':_txt(row.get('check_code') or row.get('comparison_id') or f'XSEC-{i:04d}'),
             'domain':'Межраздельная сверка','domain_code':'comparison',
@@ -179,10 +211,10 @@ def build_review_plan(
             'proof_kind':_txt(row.get('proof_kind')),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
             'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
-            'deep_evidence_reasons':list(row.get('cross_section_gate_reasons') or row.get('deep_evidence_reasons') or []),
-            'adversarial_reasons':list(row.get('cross_section_gate_reasons') or row.get('adversarial_reasons') or []),
+            'deep_evidence_reasons':_as_list(row.get('cross_section_gate_reasons') or row.get('deep_evidence_reasons')),
+            'adversarial_reasons':_as_list(row.get('cross_section_gate_reasons') or row.get('adversarial_reasons')),
             'evidence_candidate_count':len(evidence),
-            'expected_sections':list(row.get('data_owner_sections') or [])+list(row.get('dependent_sections') or []),
+            'expected_sections':_as_list(row.get('data_owner_sections'))+_as_list(row.get('dependent_sections')),
             'status':_legacy_status(q['verification_kind']),**q,
             'source_id':_txt(row.get('check_code') or row.get('comparison_id')),
             'recommendation':_txt(row.get('comment') or row.get('recommendation')),
@@ -191,9 +223,9 @@ def build_review_plan(
             'coverage_reason_code':_txt(row.get('coverage_reason_code')),
             'coverage_reason':_txt(row.get('coverage_reason')),
             'missing_evidence_slots':list(dict.fromkeys(
-                list(diagnostics.get('owner_missing') or [])+list(diagnostics.get('control_missing') or [])
+                _as_list(diagnostics.get('owner_missing'))+_as_list(diagnostics.get('control_missing'))
             )),
-            'expected_evidence_route':list(row.get('data_owner_sections') or [])+list(row.get('dependent_sections') or []),
+            'expected_evidence_route':_as_list(row.get('data_owner_sections'))+_as_list(row.get('dependent_sections')),
             'recipe_status':'EXECUTABLE',
             'evidence_level':_txt(row.get('evidence_level') or 'L0'),
             'evidence_level_reason':_txt(row.get('evidence_level_reason')),
@@ -203,7 +235,7 @@ def build_review_plan(
             'checker_family':_txt(row.get('checker_family')),
             'checker_mode':_txt(row.get('checker_mode')),
             'verified_core_gate_state':_txt(row.get('verified_core_gate_state') or row.get('cross_section_gate_state')),
-            'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or row.get('cross_section_gate_reasons') or []),
+            'verified_core_gate_reasons':_as_list(row.get('verified_core_gate_reasons') or row.get('cross_section_gate_reasons')),
         })
 
     raw_summaries={

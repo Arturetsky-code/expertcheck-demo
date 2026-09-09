@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 5 · Assignment Verification Expansion · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 6 · Normative Verification Engine · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -140,9 +140,9 @@ if st.session_state.result and not st.session_state.object_assembly_rows:
 raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
-# 20.0 Alpha 5 expands typed Assignment verification and canonical evidence routing
-# beside the accepted 18.7.3 result. It is observational only: no legacy verdict,
-# report or user decision is changed here.
+# 20.0 Alpha 6 adds independent verified-clause normative reconstruction
+# beside the accepted Assignment and cross-section foundations. It remains
+# observational: no legacy verdict, report or user decision is changed here.
 canonical_manifest=None
 if st.session_state.result:
     try:
@@ -156,7 +156,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha5-assignment-expansion',
+            'version':'20.0-alpha6-normative-verification',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -200,8 +200,18 @@ if st.session_state.get('expert_mode'):
                     f"router evidence: {verification.get('canonical_routed_evidence',0)}"
                 )
                 st.caption(
+                    f"НТД: verified clauses {verification.get('normative_verified_clauses',0)} · "
+                    f"авто {verification.get('normative_auto',0)} · "
+                    f"структура {verification.get('normative_structure_auto',0)}"
+                )
+                st.caption(
+                    f"НТД review {verification.get('normative_review',0)} · "
+                    f"неверифиц. {verification.get('normative_unverified',0)} · "
+                    f"applicability blocked {verification.get('normative_applicability_blocked',0)}"
+                )
+                st.caption(
                     f"Binding blocked: {verification.get('parameter_binding_blocked',0)} · "
-                    f"НТД fail-closed: {verification.get('normative_checks_guarded',0)} · "
+                    f"НТД всего: {verification.get('normative_checks_guarded',0)} · "
                     f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
                 )
                 counts=verification.get('counts') or {}
@@ -220,7 +230,7 @@ if st.session_state.get('expert_mode') and canonical_manifest and not canonical_
             st.caption('Автоматические канонические решения пока отсутствуют.')
         else:
             st.caption(
-                'Показываются только автоматические канонические решения, PROJECT_FINDING и расхождения с legacy. '
+                'Показываются автоматические канонические решения, нормативные quality-gates, PROJECT_FINDING и расхождения с legacy. '
                 'Это диагностический слой; пользовательские legacy-вердикты пока не меняются.'
             )
             display_rows=[]
@@ -240,6 +250,15 @@ if st.session_state.get('expert_mode') and canonical_manifest and not canonical_
                     'Binding evidence': row.get('evidence_bindings') or '',
                     'Требуемая схема': str(row.get('required_topology') or ''),
                     'Схема в ПД': str(row.get('project_topology') or ''),
+                    'Пункт НТД verified': 'Да' if row.get('verified_clause') else '',
+                    'Источник НТД': row.get('normative_source') or '',
+                    'Пункт': row.get('normative_paragraph') or '',
+                    'Тип НТД-проверки': row.get('normative_check_kind') or '',
+                    'Применимость': row.get('applicability_state') or '',
+                    'НТД contract': row.get('normative_contract') or '',
+                    'Требуемый состав': row.get('required_document_roles') or '',
+                    'Найденный состав': row.get('observed_document_roles') or '',
+                    'Не найдено': row.get('missing_document_roles') or '',
                     'Основание': row.get('reason') or '',
                     'Evidence': row.get('evidence') or '',
                     'Фрагмент evidence': row.get('evidence_fragment') or '',

@@ -255,6 +255,18 @@ class Legacy18Adapter:
         raw_assignment=list(first.get('assignment_compliance') or [])
         raw_normative=list(first.get('normative_compliance_audit') or [])
         page_corpus=list((first.get('analysis_snapshot') or {}).get('page_corpus') or [])
+        normative_project_type=''
+        for raw in raw_normative:
+            if not isinstance(raw,dict):
+                continue
+            packet=raw.get('evidence_packet') or {}
+            candidate=_text(packet,'project_type') if isinstance(packet,dict) else ''
+            if candidate:
+                normative_project_type=candidate
+                break
+        if normative_project_type:
+            project.metadata['normative_project_type']=normative_project_type
+
         raw_requirement_by_id={}
         for raw in raw_assignment + raw_normative:
             if not isinstance(raw,dict):
@@ -287,8 +299,12 @@ class Legacy18Adapter:
             requirement_text=_text(raw,'requirement_text','requirement') or _text(item,'requirement_text','requirement','title','question')
             parameter_code=_text(raw,'parameter_code') or _text(item,'parameter_code','metric')
             expected_route=_list(
-                raw.get('expected_evidence_route') or raw_contract.get('expected_sections')
-                or item.get('expected_evidence_route') or item.get('expected_sections')
+                raw.get('expected_evidence_route')
+                or raw_contract.get('expected_sections')
+                or raw_contract.get('sections')
+                or raw.get('sections')
+                or item.get('expected_evidence_route')
+                or item.get('expected_sections')
             )
             if (
                 _text(item,'domain_code','domain').casefold() in {'assignment','задание на проектирование'}
@@ -346,6 +362,8 @@ class Legacy18Adapter:
                     'topic':_text(raw,'topic'),
                     'check_kind':_text(raw,'check_kind','check_type'),
                     'coverage_state':_text(raw,'coverage_state'),
+                    'expected_evidence_route':expected_route,
+                    'project_type':_text(raw.get('evidence_packet') or {},'project_type') if isinstance(raw.get('evidence_packet'),dict) else '',
                     'categorical_conclusion_allowed':_bool(raw.get('categorical_conclusion_allowed'),False),
                     'evidence_contract':dict(raw.get('evidence_contract') or raw_contract),
                     'structural_check':dict(raw.get('structural_check') or {}),

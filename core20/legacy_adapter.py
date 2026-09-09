@@ -342,6 +342,8 @@ class Legacy18Adapter:
                     'official_source':_text(raw,'official_source'),
                     'verification_status':_text(raw,'verification_status','status'),
                     'knowledge_kind':_text(raw,'knowledge_kind'),
+                    'normative_requirement_id':_text(raw,'requirement_id','id'),
+                    'topic':_text(raw,'topic'),
                     'check_kind':_text(raw,'check_kind','check_type'),
                     'coverage_state':_text(raw,'coverage_state'),
                     'categorical_conclusion_allowed':_bool(raw.get('categorical_conclusion_allowed'),False),

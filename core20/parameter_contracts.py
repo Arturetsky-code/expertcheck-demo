@@ -264,18 +264,29 @@ def structured_values(
         or ""
     ).upper()
     if explicit_code and explicit_code==code:
-        for key in ("project_value","observed_value","value"):
-            val=numeric(evidence_meta.get(key))
-            if val is None:
-                continue
-            eu=unit(
-                evidence_meta.get("project_unit")
-                or evidence_meta.get("observed_unit")
-                or evidence_meta.get("unit")
-            )
-            if ru and eu!=ru:
-                continue
-            results.append({"value":val,"unit":eu,"source":key,"binding":"EXPLICIT_PARAMETER_CODE"})
+        semantic_ok=True
+        semantic_level=""
+        if contract and contract.semantic_level_required:
+            required_level=capacity_semantic_level(requirement_text)
+            semantic_level=str(evidence_meta.get("capacity_observed_level") or "") or capacity_semantic_level(fragment)
+            if required_level:
+                semantic_ok=bool(semantic_level and semantic_level==required_level)
+        if semantic_ok:
+            for key in ("project_value","observed_value","value"):
+                val=numeric(evidence_meta.get(key))
+                if val is None:
+                    continue
+                eu=unit(
+                    evidence_meta.get("project_unit")
+                    or evidence_meta.get("observed_unit")
+                    or evidence_meta.get("unit")
+                )
+                if ru and eu!=ru:
+                    continue
+                row={"value":val,"unit":eu,"source":key,"binding":"EXPLICIT_PARAMETER_CODE"}
+                if semantic_level:
+                    row["semantic_level"]=semantic_level
+                results.append(row)
 
     kind=str(evidence_meta.get("evidence_kind") or "").upper()
     if contract and kind in contract.evidence_kinds:

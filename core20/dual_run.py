@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha4.2-parameter-binding"
+DUAL_RUN_VERSION = "20.0-alpha5-assignment-expansion"
 
 
 def build_dual_run_manifest(
@@ -64,6 +64,10 @@ def build_dual_run_manifest(
             "required_value":meta.get("required_value"),
             "project_value":meta.get("project_value"),
             "unit":meta.get("required_unit") or meta.get("canonical_unit") or "",
+            "reason_code":meta.get("canonical_reason_code") or meta.get("canonical_reason_code") or "",
+            "typed_fact_count":meta.get("typed_fact_count") or 0,
+            "required_topology":meta.get("required_topology"),
+            "project_topology":meta.get("project_topology"),
             "reason":decision.get("reason") or "",
             "proof_source":meta.get("proof_source") or "",
             "legacy_disagreement":bool(meta.get("legacy_disagreement")),
@@ -91,6 +95,10 @@ def build_dual_run_manifest(
             "canonical_requirement_proofs_recomputed":verification.get("canonical_requirement_proofs_recomputed",0),
             "assignment_proofs_recomputed":verification.get("assignment_proofs_recomputed",0),
             "normative_checks_guarded":verification.get("normative_checks_guarded",0),
+            "typed_assignment_auto":verification.get("typed_assignment_auto",0),
+            "reserve_topology_auto":verification.get("reserve_topology_auto",0),
+            "parameter_binding_blocked":verification.get("parameter_binding_blocked",0),
+            "canonical_routed_evidence":verification.get("canonical_routed_evidence",0),
             "legacy_disagreements":verification.get("legacy_disagreements",0),
             "contract_errors":verification["contract_errors"],
             "counts":verification["counts"],

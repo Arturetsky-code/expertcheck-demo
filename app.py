@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 4.2 · Parameter Binding Guard · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 5 · Assignment Verification Expansion · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -140,7 +140,7 @@ if st.session_state.result and not st.session_state.object_assembly_rows:
 raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
-# 20.0 Alpha 4 independently reconstructs cross-section and Assignment proof
+# 20.0 Alpha 5 expands typed Assignment verification and canonical evidence routing
 # beside the accepted 18.7.3 result. It is observational only: no legacy verdict,
 # report or user decision is changed here.
 canonical_manifest=None
@@ -156,7 +156,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha4.2-parameter-binding',
+            'version':'20.0-alpha5-assignment-expansion',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -195,6 +195,12 @@ if st.session_state.get('expert_mode'):
                     f"Задание пересчитано: {verification.get('assignment_proofs_recomputed',0)}"
                 )
                 st.caption(
+                    f"Typed Assignment: {verification.get('typed_assignment_auto',0)} · "
+                    f"резервирование: {verification.get('reserve_topology_auto',0)} · "
+                    f"router evidence: {verification.get('canonical_routed_evidence',0)}"
+                )
+                st.caption(
+                    f"Binding blocked: {verification.get('parameter_binding_blocked',0)} · "
                     f"НТД fail-closed: {verification.get('normative_checks_guarded',0)} · "
                     f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
                 )
@@ -228,6 +234,10 @@ if st.session_state.get('expert_mode') and canonical_manifest and not canonical_
                     'Требуется': row.get('required_value'),
                     'В проекте': row.get('project_value'),
                     'Ед.': row.get('unit') or '',
+                    'Код основания': row.get('reason_code') or '',
+                    'Typed facts': row.get('typed_fact_count') or 0,
+                    'Требуемая схема': str(row.get('required_topology') or ''),
+                    'Схема в ПД': str(row.get('project_topology') or ''),
                     'Основание': row.get('reason') or '',
                     'Evidence': row.get('evidence') or '',
                     'Фрагмент evidence': row.get('evidence_fragment') or '',

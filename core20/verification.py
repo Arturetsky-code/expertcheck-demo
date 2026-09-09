@@ -9,7 +9,7 @@ from .model import CanonicalProject, Comparison, Requirement, stable_id
 from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha5-assignment-expansion"
+ENGINE_VERSION = "20.0-alpha6-normative-verification"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",
@@ -125,10 +125,11 @@ def _unit(value: Any) -> str:
 class VerificationEngine20:
     """Fail-closed verification over CanonicalProject.
 
-    Alpha 5 expands independent Assignment verification with typed parameter
-    contracts, parameter-local evidence routing, entity binding, semantic-level
-    guards and working/reserve topology checks. Normative checks remain fail-closed.
-    Legacy proof flags are parity diagnostics only.
+    Alpha 6 keeps the accepted Assignment contracts and adds independent
+    normative verification over verified clauses, applicability and canonical
+    project evidence. Normative checks remain fail-closed whenever clause,
+    applicability or evidence contracts are incomplete. Legacy proof flags are
+    parity diagnostics only.
     """
 
     def __init__(self, project: CanonicalProject):
@@ -165,7 +166,10 @@ class VerificationEngine20:
         )
         requirement_recomputed = sum(
             1 for decision in decisions
-            if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
+            if decision.metadata.get("proof_source") in {
+                "CANONICAL_REQUIREMENT_RECONSTRUCTION",
+                "CANONICAL_NORMATIVE_RECONSTRUCTION",
+            }
             and decision.metadata.get("canonical_requirement_state") in {"COMPLIANT","NONCOMPLIANT"}
         )
         assignment_recomputed = sum(
@@ -176,8 +180,35 @@ class VerificationEngine20:
         )
         normative_guarded = sum(
             1 for decision in decisions
-            if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
-            and str(decision.metadata.get("domain") or "").casefold() == "normative"
+            if str(decision.metadata.get("domain") or "").casefold() == "normative"
+        )
+        normative_verified_clauses = sum(
+            1 for decision in decisions
+            if str(decision.metadata.get("domain") or "").casefold() == "normative"
+            and bool(decision.metadata.get("verified_clause"))
+        )
+        normative_auto = sum(
+            1 for decision in decisions
+            if str(decision.metadata.get("domain") or "").casefold() == "normative"
+            and decision.automatic_verdict_eligible
+        )
+        normative_structure_auto = sum(
+            1 for decision in decisions
+            if decision.automatic_verdict_eligible
+            and decision.metadata.get("canonical_reason_code") == "NORMATIVE_STRUCTURE_VERIFIED"
+        )
+        normative_review = sum(
+            1 for decision in decisions
+            if str(decision.metadata.get("domain") or "").casefold() == "normative"
+            and decision.kind == "REVIEW_QUESTION"
+        )
+        normative_unverified = sum(
+            1 for decision in decisions
+            if decision.metadata.get("canonical_reason_code") == "NORMATIVE_CLAUSE_NOT_VERIFIED"
+        )
+        normative_applicability_blocked = sum(
+            1 for decision in decisions
+            if decision.metadata.get("canonical_reason_code") == "NORMATIVE_APPLICABILITY_NOT_PROVEN"
         )
         typed_assignment_auto = sum(
             1 for decision in decisions
@@ -212,6 +243,12 @@ class VerificationEngine20:
             "canonical_requirement_proofs_recomputed": requirement_recomputed,
             "assignment_proofs_recomputed": assignment_recomputed,
             "normative_checks_guarded": normative_guarded,
+            "normative_verified_clauses": normative_verified_clauses,
+            "normative_auto": normative_auto,
+            "normative_structure_auto": normative_structure_auto,
+            "normative_review": normative_review,
+            "normative_unverified": normative_unverified,
+            "normative_applicability_blocked": normative_applicability_blocked,
             "typed_assignment_auto": typed_assignment_auto,
             "reserve_topology_auto": reserve_topology_auto,
             "parameter_binding_blocked": parameter_binding_blocked,
@@ -485,7 +522,7 @@ class VerificationEngine20:
         requirement = self.project.requirements[request.requirement_id or ""]
         proof = reconstruct_requirement_proof(self.project, requirement)
         state = str(proof.get("state") or "LIMITATION").upper()
-        effective_level = _min_level(
+        effective_level = str(proof.get("evidence_level") or "") or _min_level(
             assessment.evidence_level,
             requirement.evidence_level or assessment.evidence_level,
         )
@@ -507,6 +544,16 @@ class VerificationEngine20:
             "required_unit": proof.get("required_unit") or "",
             "required_topology": proof.get("required_topology"),
             "project_topology": proof.get("project_topology"),
+            "verified_clause": bool(proof.get("verified_clause")),
+            "source_reference": proof.get("source_reference") or "",
+            "paragraph": proof.get("paragraph") or "",
+            "check_kind": proof.get("check_kind") or "",
+            "applicability_state": proof.get("applicability_state") or "",
+            "normative_contract": proof.get("normative_contract") or "",
+            "normative_requirement_id": proof.get("normative_requirement_id") or "",
+            "required_document_roles": proof.get("required_document_roles") or [],
+            "observed_document_roles": proof.get("observed_document_roles") or [],
+            "missing_document_roles": proof.get("missing_document_roles") or [],
             "legacy_requirement_kind": requirement.verification_kind,
             "legacy_disagreement": legacy_disagreement,
         }
@@ -530,6 +577,16 @@ class VerificationEngine20:
                 assessment,
                 automatic=True,
                 correct_value_verified=bool(proof.get("correct_value_verified")),
+                evidence_level=effective_level,
+                decision_metadata=diagnostic,
+            )
+
+        if state == "NOT_APPLICABLE":
+            return self._decision(
+                request,
+                "INFORMATIONAL",
+                str(proof.get("reason") or "Требование НТД неприменимо к данному проекту."),
+                assessment,
                 evidence_level=effective_level,
                 decision_metadata=diagnostic,
             )

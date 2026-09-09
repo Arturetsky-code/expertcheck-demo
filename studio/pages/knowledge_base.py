@@ -26,8 +26,8 @@ def render(ctx):
     c1.metric("Документов в каталоге",summary.get("document_catalog_total",0))
     c2.metric("Статусов в реестре",summary.get("validity_registry_total",0))
     c3.metric("Атомарных требований",summary.get("atomic_requirements_total",0))
-    c4.metric("Verified clauses",summary.get("verified_clauses",0))
-    c5.metric("Проектов в истории",summary.get("history_projects",0))
+    c4.metric("Верифицированных пунктов",summary.get("verified_clauses",0))
+    c5.metric("Проектов, связанных с НТД",summary.get("history_projects",0))
 
     st.info(
         "История замечаний экспертизы используется только для приоритизации и поиска аналогов. "
@@ -42,6 +42,10 @@ def render(ctx):
     h2.metric("Замечаний в корпусе",hs.get("records",0))
     h3.metric("С ответом",hs.get("records_with_response",0))
     h4.metric("Повторных/уточняющих",hs.get("repeat_records",0))
+    st.caption(
+        "«Проектов, связанных с НТД» — уникальные проекты, упомянутые в реестре нормативной практики; "
+        "«Исторических проектов» — фактически загруженные проектные корпуса замечаний и ответов."
+    )
 
     manifest=st.session_state.get("canonical_core_20_manifest") or {}
     knowledge=manifest.get("knowledge_foundation") or {}
@@ -49,7 +53,7 @@ def render(ctx):
         st.subheader("Маршрут текущего проекта")
         a,b,c,d=st.columns(4)
         a.metric("Применимых маршрутов",knowledge.get("project_relevant",0))
-        b.metric("Verified clause routes",knowledge.get("project_verified_clause_routes",0))
+        b.metric("Маршрутов по verified-clause",knowledge.get("project_verified_clause_routes",0))
         c.metric("Готовых контрактов",knowledge.get("project_automatic_contract_ready",0))
         d.metric("Приоритет по истории",knowledge.get("project_history_prioritized",0))
         sections=knowledge.get("project_sections") or []

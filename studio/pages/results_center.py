@@ -4,9 +4,8 @@ import streamlit as st
 from studio.components import hero,card,empty,section
 from core.global_finding_gate import apply_finding_gate
 from core.expert_review_engine import build_expert_risks
-from core.verification_core import annotate_rows
 from core.review_queue import build_review_clusters
-from core.project_review_planner import build_review_plan
+from core.result_ledger import build_qualified_result_ledger
 from core.report_engine import build_structured_report
 from core.result_surface import build_project_surface_rows, build_review_surface_rows
 
@@ -24,16 +23,18 @@ def render(ctx):
     hero('Результаты','Только квалифицированные результаты проверки проекта.','Несоответствия · вопросы специалисту · подтверждённое соответствие')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     first=_first(docs); checklist=_checklist(first)
-    assignment=annotate_rows(list(first.get('assignment_compliance') or []),'assignment')
-    normative=annotate_rows(list(first.get('normative_compliance_audit') or []),'normative')
-    checklist=annotate_rows(checklist,'checklist')
-    comparison_rows=comparisons.to_dict('records') if not comparisons.empty else []
-    plan=build_review_plan(
+    raw_comparisons=comparisons.to_dict('records') if not comparisons.empty else []
+    ledger=build_qualified_result_ledger(
         assignment_rows=list(first.get('assignment_compliance') or []),
         normative_rows=list(first.get('normative_compliance_audit') or []),
-        checklist_review={'results': checklist},
-        comparisons=comparison_rows,
+        checklist_rows=checklist,
+        comparisons=raw_comparisons,
     )
+    assignment=ledger['assignment_rows']
+    normative=ledger['normative_rows']
+    checklist=ledger['checklist_rows']
+    comparison_rows=ledger['comparisons']
+    plan=ledger['review_plan']
     plan_items=list(plan.get('items') or [])
     report=build_structured_report(
         st.session_state.get('project_name') or 'Проект',

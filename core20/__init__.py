@@ -20,4 +20,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha5-assignment-expansion"
+__version__ = "20.0-alpha6-normative-verification"

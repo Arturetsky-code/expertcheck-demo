@@ -51,7 +51,7 @@ def _section_key(value:Any)->str:
         ("пз","пз"),
     )
     for token,key in filename_tokens:
-        if re.search(rf"(?:^|[_.№-]){token}(?:\\d+(?:\\.\\d+)*)?(?:$|[_.-])",text):
+        if re.search(rf"(?:^|[_.№-]){token}(?:\d+(?:\.\d+)*)?(?:$|[_.-])",text):
             return key
 
     for token,key in (

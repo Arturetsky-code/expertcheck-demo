@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -36,10 +37,27 @@ def _section_key(value:Any)->str:
     }
     if text in aliases:
         return aliases[text]
+
+    # Real project files usually arrive as names such as
+    # "Раздел ПД №2_ПЗУ1.pdf", "Раздел ПД №3_АР.pdf" and
+    # "Раздел ПД №5_подраздел ПД №1_ИОС1.1.pdf".  Routing must recognise the
+    # section code inside the filename rather than treating the whole filename
+    # as an unknown section.  Broad PP87 IОС clauses intentionally route to
+    # any IОС subsection.
+    filename_tokens=(
+        ("пзу","пзу"),("иос","иос"),("спозу","пзу"),
+        ("ар","ар"),("кр","кр"),("тх","тх"),("пб","пб"),
+        ("оди","оди"),("пос","пос"),("пмоос","пмоос"),("ээ","ээ"),
+        ("пз","пз"),
+    )
+    for token,key in filename_tokens:
+        if re.search(rf"(?:^|[_\\-.№]){token}(?:\\d+(?:\\.\\d+)*)?(?:$|[_\\-.])",text):
+            return key
+
     for token,key in (
         ("пояснительн","пз"),("планировочн","пзу"),("архитектур","ар"),
         ("конструктив","кр"),("технологическ","тх"),("пожар","пб"),
-        ("водоснабж","иос2"),("водоотвед","иос3"),("электроснабж","иос1"),
+        ("водоснабж","иос"),("водоотвед","иос"),("электроснабж","иос"),
     ):
         if token in text:
             return key

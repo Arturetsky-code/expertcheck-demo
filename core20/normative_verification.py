@@ -4,6 +4,7 @@ from typing import Any
 
 from .model import CanonicalProject, Requirement
 from .parameter_contracts import numeric, structured_values, unit
+from .normative_foundation import clause_registry_trust
 
 
 def _norm(value: Any) -> str:
@@ -37,26 +38,44 @@ def _applicability(project: CanonicalProject, requirement: Requirement) -> tuple
     if requirement.applicable is True:
         return "APPLICABLE","Применимость требования явно подтверждена."
 
+    meta=requirement.metadata or {}
+    contract=meta.get("applicability") or {}
+    project_types={_norm(x) for x in (contract.get("project_types") or []) if _norm(x)}
+    current_project_type=_norm(project.metadata.get("normative_project_type") or meta.get("project_type"))
+    if project_types:
+        if not current_project_type:
+            return "UNKNOWN","Для требования задан тип проекта, но тип текущего проекта канонически не подтверждён."
+        if current_project_type not in project_types:
+            return "NOT_APPLICABLE","Тип текущего проекта не входит в область применимости требования."
+
     routes=list(requirement.expected_evidence_route or [])
     inventory=_inventory(project)
     for route in routes:
         if any(_section_matches(row.get("section") or row.get("document"),route) for row in inventory):
             return "APPLICABLE_BY_SECTION",f"Применимость подтверждена наличием профильного раздела {route}."
+    if not routes and (not project_types or current_project_type in project_types):
+        return "APPLICABLE_BY_CONTRACT","Область применимости подтверждена контрактом требования; обязательный профильный раздел не задан."
     return "UNKNOWN","Применимость требования не подтверждена каноническими данными проекта."
 
 
-def _verified_clause(requirement: Requirement) -> tuple[bool,str]:
+def _verified_clause(requirement: Requirement) -> tuple[bool,str,dict[str,Any]]:
     meta=requirement.metadata or {}
     if not bool(meta.get("verified_clause")):
-        return False,"Пункт НТД не имеет признака verified_clause."
+        return False,"Пункт НТД не имеет признака verified_clause.",{}
     source=str(meta.get("source_reference") or "").strip()
     paragraph=str(meta.get("paragraph") or "").strip()
     if not source or not paragraph:
-        return False,"Для verified-clause отсутствует адрес нормы: документ и/или пункт."
+        return False,"Для verified-clause отсутствует адрес нормы: документ и/или пункт.",{}
     knowledge=str(meta.get("knowledge_kind") or "").upper()
     if knowledge and knowledge!="LAW_REQUIREMENT":
-        return False,"Источник не классифицирован как LAW_REQUIREMENT."
-    return True,"Идентичность пункта НТД подтверждена."
+        return False,"Источник не классифицирован как LAW_REQUIREMENT.",{}
+
+    trust=clause_registry_trust(meta)
+    if not trust.get("source_verified"):
+        return False,"Источник НТД не имеет подтверждённого действующего статуса в кураторском реестре ExpertCheck.",trust
+    if trust.get("trust_state")!="VERIFIED_CLAUSE":
+        return False,"Документ верифицирован, но атомарный пункт ещё не имеет полного verified-clause контракта.",trust
+    return True,"Идентичность пункта НТД и доверие к источнику подтверждены кураторским реестром.",trust
 
 
 def _part_role(document: str, section: str) -> str:
@@ -245,7 +264,15 @@ def reconstruct_normative_proof(
         "evidence_ids":[row.evidence_id for row in addressable_evidence],
     }
 
-    verified,verified_reason=_verified_clause(requirement)
+    verified,verified_reason,registry_trust=_verified_clause(requirement)
+    if registry_trust:
+        base.update({
+            "normative_registry_trust":registry_trust.get("trust_state") or "",
+            "normative_source_status":registry_trust.get("source_status") or "",
+            "normative_history_occurrences":registry_trust.get("expert_occurrences") or 0,
+            "normative_history_projects":registry_trust.get("expert_project_count") or 0,
+            "normative_history_policy":registry_trust.get("history_policy") or "",
+        })
     if not verified:
         return {
             **base,

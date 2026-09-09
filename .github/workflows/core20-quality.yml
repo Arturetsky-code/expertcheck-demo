@@ -1,0 +1,30 @@
+name: Core20 quality gates
+
+on:
+  push:
+    branches:
+      - codex/expertcheck-20.0
+  pull_request:
+    paths:
+      - "core20/**"
+      - "tests/test_core20_*.py"
+      - ".github/workflows/core20-quality.yml"
+
+jobs:
+  core20-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test runner
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Run Core20 regression suite
+        run: pytest -q tests/test_core20_*.py

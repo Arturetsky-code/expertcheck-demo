@@ -38,6 +38,23 @@ def _conflict():
     }
 
 
+
+
+def _register_ok():
+    return {
+        "check_code":"GP-DOC-1",
+        "parameter_code":"GP_DOCUMENT_COVERAGE",
+        "parameter_name":"Сверка реестра и чертежей",
+        "status":"СОВПАДАЕТ",
+        "final_verification_kind":"VERIFIED_OK",
+        "verification_kind":"VERIFIED_OK",
+        "evidence_level":"L5",
+        "proof_kind":"STRUCTURED_COMPLETENESS",
+        "adversarial_state":"PASSED",
+        "verification_evidence":[{"document":"ПЗУ2.pdf","page":1}],
+    }
+
+
 def _assignment_review():
     return {
         "requirement_id":"ASSIGN-REVIEW-1",
@@ -57,7 +74,7 @@ def test_alpha63_unified_ledger_drives_results_and_report_surfaces():
         assignment_rows=[_assignment_review()],
         normative_rows=[],
         checklist_rows=[],
-        comparisons=[_conflict()],
+        comparisons=[_conflict(),_register_ok()],
     )
     plan=ledger["review_plan"]
     report=build_structured_report(
@@ -79,6 +96,9 @@ def test_alpha63_unified_ledger_drives_results_and_report_surfaces():
     plan_items=list(plan.get("items") or [])
     assert sum(x.get("verification_kind")=="PROJECT_FINDING" for x in plan_items)==1
     assert sum(x.get("verification_kind")=="REVIEW_QUESTION" for x in plan_items)==1
+    assert sum(x.get("verification_kind")=="VERIFIED_OK" for x in plan_items)==0
+    assert len(ledger["register_comparisons"])==1
+    assert len(ledger["engineering_comparisons"])==1
     assert ledger["verified_gate"]["blocked"]==0
 
 

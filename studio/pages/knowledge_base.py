@@ -5,6 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 from core20.normative_foundation import NormativeKnowledgeFoundation20
+from core20.expert_history import ExpertHistoryCorpus20
 
 
 def _foundation():
@@ -33,6 +34,14 @@ def render(ctx):
         "Она не превращает повторяющееся замечание в автоматический нормативный вердикт. "
         "Категорический вывод разрешается только при подтверждённом источнике, verified-clause и доказательстве в проекте."
     )
+
+    history=ExpertHistoryCorpus20(Path(__file__).resolve().parents[2]/"knowledge")
+    hs=history.summary()
+    h1,h2,h3,h4=st.columns(4)
+    h1.metric("Исторических проектов",hs.get("projects",0))
+    h2.metric("Замечаний в корпусе",hs.get("records",0))
+    h3.metric("С ответом",hs.get("records_with_response",0))
+    h4.metric("Повторных/уточняющих",hs.get("repeat_records",0))
 
     manifest=st.session_state.get("canonical_core_20_manifest") or {}
     knowledge=manifest.get("knowledge_foundation") or {}
@@ -74,6 +83,26 @@ def render(ctx):
         st.dataframe(display,hide_index=True,width="stretch")
     else:
         st.caption("Маршруты пока не сформированы.")
+
+    with st.expander("Повторяющиеся паттерны экспертной практики",expanded=False):
+        patterns=history.top_patterns(limit=20)
+        if patterns:
+            st.dataframe([
+                {
+                    "Раздел":x.get("section") or "",
+                    "Паттерн":x.get("pattern") or "",
+                    "Случаев":x.get("occurrences") or 0,
+                    "Устранено":x.get("resolved") or 0,
+                    "Повтор":x.get("repeated") or 0,
+                    "Параметры":", ".join(x.get("parameter_codes") or []),
+                    "Пример":x.get("example") or "",
+                }
+                for x in patterns
+            ],hide_index=True,width="stretch")
+        st.caption(
+            "Эти данные — экспертная практика и обучающий корпус. Они повышают приоритет проверки и помогают искать аналоги, "
+            "но сами по себе не являются нормативным основанием."
+        )
 
     with st.expander("Состояние базы и backlog верификации",expanded=False):
         st.write({

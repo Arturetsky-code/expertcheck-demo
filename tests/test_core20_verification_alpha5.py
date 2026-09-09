@@ -300,3 +300,24 @@ def test_asu_working_and_backup_channels_are_not_equipment_topology():
         "RESERVE_TOPOLOGY_MATCH",
         "RESERVE_TOPOLOGY_MISMATCH",
     }
+
+
+def test_asu_working_and_backup_lines_are_not_equipment_topology():
+    project=_project()
+    _evidence(
+        project,"E1",
+        "АСУ предусматривает рабочую и резервную линии передачи данных.",
+        trusted=True,
+    )
+    _requirement(
+        project,
+        text="Система автоматизации должна иметь рабочую и резервную линии связи",
+        code="CAPACITY",value=None,unit="",evidence_ids=["E1"],rtype="SEMANTIC_ENGINEERING",
+    )
+    row=VerificationEngine20(project).run()["decision_rows"][0]
+    assert row["metadata"]["canonical_reason_code"] not in {
+        "RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
+        "RESERVE_TOPOLOGY_NOT_PROVEN",
+        "RESERVE_TOPOLOGY_MATCH",
+        "RESERVE_TOPOLOGY_MISMATCH",
+    }

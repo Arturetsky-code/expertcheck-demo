@@ -61,6 +61,32 @@ def render(ctx):
             st.caption("Распознанные разделы проекта: "+", ".join(sections))
 
         rows=list(knowledge.get("priority_routes") or [])
+        execution=dict(manifest.get("normative_execution") or {})
+        execution_rows=list(execution.get("rows") or [])
+        if execution_rows:
+            st.subheader("Исполнение verified-clause")
+            e1,e2,e3,e4=st.columns(4)
+            e1.metric("Исполняемых контрактов",execution.get("contracts",0))
+            e2.metric("Подтверждено",execution.get("verified_ok",0))
+            e3.metric("Вопросов специалисту",execution.get("review_questions",0))
+            e4.metric("Не проверено системой",execution.get("system_limitations",0))
+            st.caption(
+                f"Адресное покрытие evidence: {execution.get('evidence_coverage_pct',0)}%. "
+                "Ненайденный текст не превращается в нормативное несоответствие."
+            )
+            st.dataframe([{
+                "Результат":x.get("state") or "",
+                "НТД":x.get("source") or x.get("document_id") or "",
+                "Пункт":x.get("paragraph") or "",
+                "Требование":x.get("requirement") or "",
+                "Evidence":(
+                    f"{x.get('evidence_document')}, стр. {x.get('evidence_page')}"
+                    if x.get("evidence_document") and x.get("evidence_page") not in (None,"")
+                    else ""
+                ),
+                "Фрагмент":x.get("evidence_fragment") or "",
+                "Причина":x.get("reason") or "",
+            } for x in execution_rows],hide_index=True,width="stretch")
     else:
         docs,_,_,_,_,_,_=ctx.data
         rows=foundation.project_routes(docs.to_dict("records") if hasattr(docs,"to_dict") else []).get("rows") or []
@@ -118,6 +144,6 @@ def render(ctx):
             "Всего исторических упоминаний":summary.get("history_expert_occurrences",0),
         })
         st.caption(
-            "Цель Alpha 7 — отделить размер корпуса НТД от реального автоматического покрытия. "
+            "Цель Alpha 8 — отделить размер корпуса НТД от реально исполняемого доказательного покрытия. "
             "Наличие документа в базе само по себе не означает, что его требования уже исполняются автоматически."
         )

@@ -16,6 +16,7 @@ from core.project_review_planner import build_review_plan
 from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
 from core.result_surface import build_review_surface_rows
+from core.result_ledger import build_qualified_result_ledger
 from core.report_quality_gate import validate_review_plan
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
@@ -474,21 +475,24 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
     checklist_results=deepcopy(list(checklist_results or []))
-    # Reports are a final trust boundary.  Re-run the same fail-closed gate on
-    # private copies so a stale cached plan or direct report call cannot export
-    # an unsupported L5 conclusion.
-    from core.verified_verdict_gate import enforce_project_verdicts
+    # Reports and the Results page share one final qualified ledger.  The
+    # report boundary already works on private copies, so keep clone_inputs=False
+    # to preserve mutations in comparison_records for downstream report context.
     assignment_for_report=list(first_record.get('assignment_compliance') or [])
     normative_for_report=list(first_record.get('normative_compliance_audit') or [])
-    checklist_for_report={'results': checklist_results}
-    from core.cross_section_verification import qualify_cross_section_verdicts
-    qualify_cross_section_verdicts(engineering_comparisons)
-    report_verified_gate=enforce_project_verdicts(
+    ledger=build_qualified_result_ledger(
         assignment_rows=assignment_for_report,
         normative_rows=normative_for_report,
-        checklist_review=checklist_for_report,
+        checklist_rows=checklist_results,
         comparisons=engineering_comparisons,
+        clone_inputs=False,
     )
+    assignment_for_report=ledger['assignment_rows']
+    normative_for_report=ledger['normative_rows']
+    checklist_results=ledger['checklist_rows']
+    checklist_for_report={'results': checklist_results}
+    engineering_comparisons=ledger['comparisons']
+    report_verified_gate=ledger['verified_gate']
     if first_record:
         first_record['assignment_compliance']=assignment_for_report
         first_record['normative_compliance_audit']=normative_for_report
@@ -536,16 +540,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
-    # Reports are a trust boundary. Rebuild the plan from the already adjudicated
-    # private report copies so comparison metrics cannot remain stale after the
-    # report-boundary cross-section gate. final_verification_kind preserves all
-    # accepted adversarial / semantic downgrades.
-    review_plan=build_review_plan(
-        assignment_rows=assignment_for_report,
-        normative_rows=normative_for_report,
-        checklist_review=checklist_for_report,
-        comparisons=engineering_comparisons,
-    )
+    # Reuse the same adjudicated ledger used by the Results surface.
+    review_plan=ledger['review_plan']
     review_domains=review_plan.get('domains') or {}
     coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
     semantic_engine_summary=dict(first_record.get('semantic_evidence_engine') or {})

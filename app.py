@@ -236,6 +236,8 @@ if st.session_state.get('expert_mode') and canonical_manifest and not canonical_
                     'Ед.': row.get('unit') or '',
                     'Код основания': row.get('reason_code') or '',
                     'Typed facts': row.get('typed_fact_count') or 0,
+                    'Routed evidence': row.get('routed_evidence_count') or 0,
+                    'Binding evidence': row.get('evidence_bindings') or '',
                     'Требуемая схема': str(row.get('required_topology') or ''),
                     'Схема в ПД': str(row.get('project_topology') or ''),
                     'Основание': row.get('reason') or '',

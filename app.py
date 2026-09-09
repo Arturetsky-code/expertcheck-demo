@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 6.3 · Unified Result Ledger · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 7 · Normative Knowledge Foundation · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -89,7 +89,7 @@ with st.sidebar:
     if st.session_state.get('expert_mode'):
         guided_pages = ['Мои проекты', 'Проект']
         if has_result:
-            guided_pages.extend(['Состав объектов', 'Чек-листы'])
+            guided_pages.extend(['Состав объектов', 'Чек-листы', 'НТД и практика'])
         if object_gate:
             guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
@@ -156,7 +156,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha6.2-results-report-integrity',
+            'version':'20.0-alpha7-normative-knowledge-foundation',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }
@@ -219,6 +219,18 @@ if st.session_state.get('expert_mode'):
                     f"НТД всего: {verification.get('normative_checks_guarded',0)} · "
                     f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
                 )
+                knowledge=canonical_manifest.get('knowledge_foundation') or {}
+                st.caption(
+                    f"Knowledge: документов {knowledge.get('document_catalog_total',0)} · "
+                    f"реестр статусов {knowledge.get('validity_registry_total',0)} · "
+                    f"атомарных требований {knowledge.get('atomic_requirements_total',0)} · "
+                    f"verified clauses {knowledge.get('verified_clauses',0)}"
+                )
+                st.caption(
+                    f"Текущий проект: нормативных маршрутов {knowledge.get('project_relevant',0)} · "
+                    f"готовых контрактов {knowledge.get('project_automatic_contract_ready',0)} · "
+                    f"исторически приоритетных {knowledge.get('project_history_prioritized',0)}"
+                )
                 counts=verification.get('counts') or {}
                 st.caption(
                     f"OK {counts.get('VERIFIED_OK',0)} · замечания {counts.get('PROJECT_FINDING',0)} · "
@@ -261,6 +273,11 @@ if st.session_state.get('expert_mode') and canonical_manifest and not canonical_
                     'Тип НТД-проверки': row.get('normative_check_kind') or '',
                     'Применимость': row.get('applicability_state') or '',
                     'НТД contract': row.get('normative_contract') or '',
+                    'Доверие реестра': row.get('normative_registry_trust') or '',
+                    'Статус источника': row.get('normative_source_status') or '',
+                    'История замечаний': row.get('normative_history_occurrences') or 0,
+                    'Проектов в истории': row.get('normative_history_projects') or 0,
+                    'Политика истории': row.get('normative_history_policy') or '',
                     'Требуемый состав': row.get('required_document_roles') or '',
                     'Найденный состав': row.get('observed_document_roles') or '',
                     'Не найдено': row.get('missing_document_roles') or '',

@@ -7,7 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 
 
-DUAL_RUN_VERSION = "20.0-alpha6.1-normative-routing"
+DUAL_RUN_VERSION = "20.0-alpha6.2-results-report-integrity"
 
 
 def build_dual_run_manifest(

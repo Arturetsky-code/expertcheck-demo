@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .expert_history import ExpertHistoryCorpus20
+
 
 ACTIVE_STATUSES={"Действует","Действует с изменениями"}
 VERIFIED_POLICIES={"VERIFIED_ONLY"}
@@ -179,6 +181,7 @@ class NormativeKnowledgeFoundation20:
                 history_occurrences+=count
             projects.update(str(x) for x in (row.get("expert_projects") or []) if str(x).strip())
         verified_status=sum(1 for row in self.documents if self._source_verified(row,self._validity_for_document(row)))
+        history=ExpertHistoryCorpus20(self.root).summary()
         return {
             "document_catalog_total":len(self.documents),
             "verified_document_statuses":verified_status,
@@ -190,6 +193,12 @@ class NormativeKnowledgeFoundation20:
             "history_linked_normative_records":history_records,
             "history_expert_occurrences":history_occurrences,
             "history_projects":len(projects),
+            "history_evidence_projects":history.get("projects",0),
+            "history_records":history.get("records",0),
+            "history_records_with_response":history.get("records_with_response",0),
+            "history_resolved_records":history.get("resolved_records",0),
+            "history_repeat_records":history.get("repeat_records",0),
+            "history_records_with_normative_basis":history.get("records_with_normative_basis",0),
             "history_policy":HISTORY_POLICY,
         }
 

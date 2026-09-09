@@ -102,6 +102,13 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
             'project_models':list(row.get('project_models') or []),
             'difference':_text(row,'difference'),
             'structured':bool(row.get('structured')),
+            'part_role':_text(row,'part_role'),
+            'clause_verified':_bool(row.get('clause_verified'),False),
+            'set_complete':_bool(row.get('set_complete'),False),
+            'completeness_verified':_bool(row.get('completeness_verified'),False),
+            'semantic_gate_state':_text(row,'semantic_gate_state'),
+            'contract_state':_text(row,'contract_state'),
+            'semantic_verdict':_text(row,'semantic_verdict'),
         },
     ))
     return evidence_id
@@ -125,6 +132,23 @@ class Legacy18Adapter:
         assembly_rows: list[dict[str, Any]] | None = None,
     ) -> CanonicalProject:
         first=documents[0] if documents else {}
+        document_inventory=[]
+        seen_documents=set()
+        for doc in documents or []:
+            if not isinstance(doc,dict):
+                continue
+            name=_text(doc,'document','Файл','file','name','filename')
+            section=_text(doc,'document_type','Тип документа','section','Раздел')
+            page_count=doc.get('page_count')
+            key=(name.casefold(),section.casefold())
+            if not name or key in seen_documents:
+                continue
+            seen_documents.add(key)
+            document_inventory.append({
+                'document':name,
+                'section':section,
+                'page_count':page_count,
+            })
         project=CanonicalProject(
             project_id=_text(first,'project_id') or stable_id('PRJ',project_name),
             name=project_name,
@@ -132,6 +156,8 @@ class Legacy18Adapter:
                 'migrated_from':'18.x',
                 'snapshot_id':_text(first.get('analysis_snapshot') or {},'snapshot_id'),
                 'legacy_version':_text(first,'version'),
+                'document_inventory':document_inventory,
+                'document_inventory_complete':bool(document_inventory),
             },
         )
         assembly_rows=list(assembly_rows or [])
@@ -310,8 +336,17 @@ class Legacy18Adapter:
                     'legacy_status':_text(raw,'status','result'),
                     'canonical_id':_text(raw,'canonical_id'),
                     'verified_clause':_bool(raw.get('verified_clause'),False),
+                    'verified_clause_text':_text(raw,'verified_clause_text') or _text(raw.get('evidence_packet') or {},'normative_text'),
                     'source_reference':_text(raw,'source','reference'),
                     'paragraph':_text(raw,'paragraph','clause'),
+                    'official_source':_text(raw,'official_source'),
+                    'verification_status':_text(raw,'verification_status','status'),
+                    'knowledge_kind':_text(raw,'knowledge_kind'),
+                    'check_kind':_text(raw,'check_kind','check_type'),
+                    'coverage_state':_text(raw,'coverage_state'),
+                    'categorical_conclusion_allowed':_bool(raw.get('categorical_conclusion_allowed'),False),
+                    'evidence_contract':dict(raw.get('evidence_contract') or raw_contract),
+                    'structural_check':dict(raw.get('structural_check') or {}),
                     'decision_basis':_text(raw,'decision_basis'),
                     'object_name':_text(raw,'object_name') or _text(item,'entity'),
                     'source_row_title':_text(raw,'source_row_title'),

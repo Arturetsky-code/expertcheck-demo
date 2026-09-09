@@ -123,7 +123,6 @@ EQUIPMENT_CLASSES: dict[str,tuple[str,...]] = {
     "reservoir":("резервуар",),
     "hopper":("бункер",),
     "line":("линия",),
-    "unit":("агрегат","установка"),
 }
 
 

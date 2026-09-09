@@ -23,6 +23,11 @@ DESIGN_MARKERS = (
     "осуществляется", "обеспечивается",
 )
 
+TOPOLOGY_EQUIPMENT_CLASSES = {
+    "pump","fan","compressor","transformer","crusher","screen","conveyor",
+    "loader","excavator","dump_truck",
+}
+
 STOP_WORDS = {
     "проект", "проектом", "проектной", "документации", "требование",
     "предусмотреть", "обеспечить", "выполнить", "принять", "разработать",
@@ -156,12 +161,12 @@ def _numeric_assignment_proof(
 
 def _reserve_topology_proof(requirement: Requirement, evidence_rows) -> dict[str,Any] | None:
     low_req=norm(requirement.text)
-    req_entities=equipment_terms(requirement.text)
+    req_entities=equipment_terms(requirement.text) & TOPOLOGY_EQUIPMENT_CLASSES
     req=reserve_topology(requirement.text)
 
-    # This checker is deliberately limited to equipment topology. Generic
-    # "резервирование" of ASU, security channels, communications, etc. must not
-    # be interpreted as "working + standby equipment".
+    # This checker is deliberately limited to physical equipment topology.
+    # Lines/channels/networks/reservation of ASU or communications are not
+    # "working + standby equipment" even if they contain those words.
     if not req_entities:
         return None
     if req is None:
@@ -178,7 +183,7 @@ def _reserve_topology_proof(requirement: Requirement, evidence_rows) -> dict[str
     candidates=[]
     for item in evidence_rows:
         fragment=item.fragment or ""
-        ev_entities=equipment_terms(fragment)
+        ev_entities=equipment_terms(fragment) & TOPOLOGY_EQUIPMENT_CLASSES
         if req_entities and not (req_entities & ev_entities):
             continue
         topology=reserve_topology(fragment)

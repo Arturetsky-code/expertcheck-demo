@@ -9,7 +9,7 @@ from .model import CanonicalProject, Comparison, Requirement, stable_id
 from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha4-requirement-proof"
+ENGINE_VERSION = "20.0-alpha5-assignment-expansion"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",
@@ -125,9 +125,9 @@ def _unit(value: Any) -> str:
 class VerificationEngine20:
     """Fail-closed verification over CanonicalProject.
 
-    Alpha 4 keeps Alpha 3 cross-section reconstruction and adds independent
-    requirement proof reconstruction for Assignment. Normative checks stay
-    fail-closed until a verified clause and a canonical semantic route exist.
+    Alpha 5 expands independent Assignment verification with typed parameter
+    contracts, parameter-local evidence routing, entity binding, semantic-level
+    guards and working/reserve topology checks. Normative checks remain fail-closed.
     Legacy proof flags are parity diagnostics only.
     """
 
@@ -179,6 +179,28 @@ class VerificationEngine20:
             if decision.metadata.get("proof_source") == "CANONICAL_REQUIREMENT_RECONSTRUCTION"
             and str(decision.metadata.get("domain") or "").casefold() == "normative"
         )
+        typed_assignment_auto = sum(
+            1 for decision in decisions
+            if decision.automatic_verdict_eligible
+            and decision.metadata.get("canonical_reason_code") in {
+                "ASSIGNMENT_TYPED_VALUE_MATCH","ASSIGNMENT_TYPED_VALUE_MISMATCH"
+            }
+        )
+        reserve_topology_auto = sum(
+            1 for decision in decisions
+            if decision.automatic_verdict_eligible
+            and decision.metadata.get("canonical_reason_code") in {
+                "RESERVE_TOPOLOGY_MATCH","RESERVE_TOPOLOGY_MISMATCH"
+            }
+        )
+        parameter_binding_blocked = sum(
+            1 for decision in decisions
+            if decision.metadata.get("canonical_reason_code") == "PARAMETER_BINDING_NOT_PROVEN"
+        )
+        canonical_routed_evidence = sum(
+            1 for evidence in self.project.evidence.values()
+            if bool((evidence.metadata or {}).get("canonical_routed"))
+        )
         return {
             "version": ENGINE_VERSION,
             "mode": "OBSERVATIONAL_DUAL_RUN",
@@ -190,6 +212,10 @@ class VerificationEngine20:
             "canonical_requirement_proofs_recomputed": requirement_recomputed,
             "assignment_proofs_recomputed": assignment_recomputed,
             "normative_checks_guarded": normative_guarded,
+            "typed_assignment_auto": typed_assignment_auto,
+            "reserve_topology_auto": reserve_topology_auto,
+            "parameter_binding_blocked": parameter_binding_blocked,
+            "canonical_routed_evidence": canonical_routed_evidence,
             "legacy_disagreements": legacy_disagreements,
             "contract_errors": len(contract_errors),
             "counts": counts,
@@ -463,16 +489,26 @@ class VerificationEngine20:
             assessment.evidence_level,
             requirement.evidence_level or assessment.evidence_level,
         )
+        legacy_kind = str(requirement.verification_kind or "").upper()
+        legacy_disagreement = bool(
+            (state == "COMPLIANT" and legacy_kind == "PROJECT_FINDING")
+            or (state == "NONCOMPLIANT" and legacy_kind == "VERIFIED_OK")
+        )
         diagnostic = {
             "proof_source": proof.get("proof_source") or "CANONICAL_REQUIREMENT_RECONSTRUCTION",
             "canonical_requirement_state": state,
             "canonical_reason_code": proof.get("reason_code") or "",
             "domain": requirement.domain,
             "trusted_requirement_evidence": int(proof.get("trusted_evidence_count") or 0),
+            "addressable_requirement_evidence": int(proof.get("addressable_evidence_count") or 0),
+            "typed_fact_count": int(proof.get("typed_fact_count") or 0),
             "required_value": proof.get("required_value"),
             "project_value": proof.get("project_value"),
             "required_unit": proof.get("required_unit") or "",
+            "required_topology": proof.get("required_topology"),
+            "project_topology": proof.get("project_topology"),
             "legacy_requirement_kind": requirement.verification_kind,
+            "legacy_disagreement": legacy_disagreement,
         }
 
         if state == "COMPLIANT":

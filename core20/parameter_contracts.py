@@ -12,15 +12,22 @@ def norm(value: Any) -> str:
 
 def unit(value: Any) -> str:
     text=norm(value).replace(" ","").replace("²","2").replace("^2","2").replace("³","3")
+    annual=text.replace("тонны","тонн").replace("тонна","тонн")
+    if re.fullmatch(r"тыс\.?т(?:онн)?(?:/|в)?год",annual):
+        return "kt/y"
+    if re.fullmatch(r"млн\.?т(?:онн)?(?:/|в)?год",annual):
+        return "mt/y"
+    if re.fullmatch(r"т(?:онн)?(?:/|в)?год",annual):
+        return "t/y"
     aliases={
-        "м2":"m2","m²":"m2","m.кв.":"m2","кв.м":"m2","m2":"m2",
-        "м3":"m3","м³":"m3","m3":"m3",
+        "м2":"m2","м.кв.":"m2","кв.м":"m2","m2":"m2",
+        "м3":"m3","m3":"m3",
         "мм":"mm","mm":"mm","см":"cm","cm":"cm","м":"m","m":"m","км":"km","km":"km",
         "квт":"kw","kw":"kw","мвт":"mw","mw":"mw","ква":"kva","kva":"kva",
         "па":"pa","кпа":"kpa","мпа":"mpa","mpa":"mpa","bar":"bar","бар":"bar",
         "в":"v","v":"v","кв":"kv","kv":"kv",
         "т/ч":"t/h","тч":"t/h","t/h":"t/h",
-        "м3/ч":"m3/h","м³/ч":"m3/h","m3/h":"m3/h","л/с":"l/s",
+        "м3/ч":"m3/h","m3/h":"m3/h","л/с":"l/s",
         "шт":"pcs","шт.":"pcs","pcs":"pcs",
         "чел":"person","чел.":"person",
         "ч":"h","час":"h","часа":"h","часов":"h",
@@ -48,7 +55,7 @@ CONTRACTS: dict[str,ParameterContract] = {
         entity_terms=("погрузчик","экскаватор","ковш"),
     ),
     "CAPACITY":ParameterContract(
-        "CAPACITY",("производительность","проектная мощность","производственная мощность"),("t/h","m3/h"),
+        "CAPACITY",("производительность","проектная мощность","производственная мощность","мощность"),("t/h","m3/h","t/y","kt/y","mt/y"),
         evidence_kinds=("TECHNOLOGY_CAPACITY_TOPOLOGY",),semantic_level_required=True,
     ),
     "POWER_INSTALLED":ParameterContract(
@@ -102,11 +109,32 @@ CONTRACTS: dict[str,ParameterContract] = {
 }
 
 
-EQUIPMENT_TERMS=(
-    "автосамосвал","самосвал","погрузчик","экскаватор","насос","вентилятор",
-    "компрессор","трансформатор","ктп","дробилка","грохот","конвейер",
-    "резервуар","линия","агрегат","установка",
-)
+EQUIPMENT_CLASSES: dict[str,tuple[str,...]] = {
+    "dump_truck":("автосамосвал","самосвал","карьерный самосвал","dump truck"),
+    "loader":("погрузчик","фронтальный погрузчик","loader"),
+    "excavator":("экскаватор","excavator"),
+    "pump":("насос","насосный агрегат"),
+    "fan":("вентилятор",),
+    "compressor":("компрессор",),
+    "transformer":("трансформатор","ктп"),
+    "crusher":("дробилка","дробильный"),
+    "screen":("грохот",),
+    "conveyor":("конвейер",),
+    "reservoir":("резервуар",),
+    "hopper":("бункер",),
+    "line":("линия",),
+    "unit":("агрегат","установка"),
+}
+
+
+def equipment_terms(text: str) -> set[str]:
+    low=norm(text)
+    classes=set()
+    for canonical,aliases in EQUIPMENT_CLASSES.items():
+        if any(alias in low for alias in aliases):
+            classes.add(canonical)
+    return classes
+
 
 
 def canonical_contract(code: str) -> ParameterContract | None:
@@ -137,24 +165,22 @@ def numeric(value: Any) -> float | None:
         return None
 
 
-def equipment_terms(text: str) -> set[str]:
-    low=norm(text)
-    return {term for term in EQUIPMENT_TERMS if term in low}
-
-
 def entity_binding_ok(requirement_text: str, evidence_text: str, contract: ParameterContract | None) -> bool:
     req=equipment_terms(requirement_text)
     ev=equipment_terms(evidence_text)
+    if req:
+        return bool(req & ev)
     if contract and contract.entity_terms:
         wanted={term for term in contract.entity_terms if term in norm(requirement_text)}
         if wanted and not any(term in norm(evidence_text) for term in wanted):
             return False
-    if req:
-        return bool(req & ev)
     return True
 
 
 _UNIT_PATTERN = (
+    r"тыс\.?\s*(?:т|тонн)\s*(?:/\s*|в\s+)?год|"
+    r"млн\.?\s*(?:т|тонн)\s*(?:/\s*|в\s+)?год|"
+    r"(?:т|тонн)\s*(?:/\s*|в\s+)?год|"
     r"м\s*[²2]|м\s*[³3]|квт|мвт|ква|мпа|кпа|па|бар|bar|кв|в|"
     r"т\s*/\s*ч|м\s*[³3]\s*/\s*ч|л\s*/\s*с|км|мм|см|м|шт\.?"
 )
@@ -204,7 +230,11 @@ def capacity_semantic_level(*values: Any) -> str:
     if any(x in text for x in (
         "проектная производительность","проектная мощность","производительность проекта",
         "производственная мощность","годовая производительность","годовая мощность",
-    )) or any(x in compact for x in ("тыс.т/год","млн.т/год")):
+    )) or any(x in compact for x in (
+        "тыс.т/год","тыс.тонн/год","тыс.тоннвгод","тыс.твгод",
+        "млн.т/год","млн.тонн/год","млн.тоннвгод","млн.твгод",
+        "т/год","тонн/год","тоннвгод",
+    )):
         return "PROJECT_DESIGN_CAPACITY"
     return ""
 

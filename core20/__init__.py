@@ -20,4 +20,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha6.1-normative-routing"
+__version__ = "20.0-alpha6.2-results-report-integrity"

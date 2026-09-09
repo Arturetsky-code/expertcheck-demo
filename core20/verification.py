@@ -9,7 +9,7 @@ from .model import CanonicalProject, Comparison, Requirement, stable_id
 from .requirement_verification import reconstruct_requirement_proof
 
 
-ENGINE_VERSION = "20.0-alpha7-normative-knowledge-foundation"
+ENGINE_VERSION = "20.0-alpha8-normative-execution"
 
 VERIFICATION_KINDS = {
     "VERIFIED_OK",

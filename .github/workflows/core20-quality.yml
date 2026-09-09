@@ -35,13 +35,25 @@ jobs:
 
   results-integrity:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install report-test dependencies
-        run: python -m pip install pytest "pandas>=2.2,<3" "openpyxl>=3.1,<4" "XlsxWriter>=3.2,<4"
+        run: python -m pip install pytest "pandas>=2.2,<3" "openpyxl>=3.1,<4" "XlsxWriter>=3.2,<4" "PyMuPDF>=1.24,<2"
+
       - name: Results and report integrity
+        env:
+          PYTHONPATH: .
         run: |
-          pytest -q             tests/test_results_integrity_alpha62.py             tests/test_report_engine_resilience.py             test_structured_report_center_62.py             tests/test_result_surface_1872.py
+          python -m pytest -q \
+            tests/test_results_integrity_alpha62.py \
+            tests/test_report_engine_resilience.py \
+            test_structured_report_center_62.py \
+            tests/test_result_surface_1872.py

@@ -119,6 +119,9 @@ def build_dual_run_manifest(
         "validation_errors":len([item for item in issues if item.severity=="ERROR"]),
         "validation_warnings":len([item for item in issues if item.severity!="ERROR"]),
         "golden_passed":golden["passed"],
+        "golden_skipped":bool(golden.get("skipped")),
+        "golden_applicable":bool(golden.get("applicable",True)),
+        "golden_profile_matches":golden.get("profile_matches",0),
         "golden_failed":golden["failed"],
         "verification_engine":{
             "version":verification["version"],

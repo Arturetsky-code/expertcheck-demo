@@ -48,6 +48,8 @@ def render(ctx):
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     docs=_report_documents(docs)
     first=docs.iloc[0].to_dict(); checklist=_checklist_results(first)
+    canonical20=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
+    normative20=dict(canonical20.get('normative_execution') or {})
     data_contract=dict(first.get('project_data_contract') or {})
     if data_contract.get('status')=='FAILED':
         st.error('Контракт данных 18.0 обнаружил критическое нарушение структуры результата. Экспорт заблокирован, чтобы не сформировать недостоверный отчёт.')
@@ -68,6 +70,12 @@ def render(ctx):
     with c3:card('Доказательства',f"{coverage.get('evidence_coverage_pct',0)}%",'Адресные уровни L3–L5')
     with c4:card('Готово для Judge',int((coverage.get('evidence_levels') or {}).get('L4',0)),'Пакеты L4')
     with c5:card('AI-консенсус',coverage.get('semantic_consensus_completed',0),'Независимые Judge + Critic')
+    if normative20.get('contracts'):
+        n1,n2,n3,n4=st.columns(4)
+        with n1:card('НТД 20.0 — контрактов',normative20.get('contracts',0),'Исполняемые verified-clause')
+        with n2:card('НТД — подтверждено',normative20.get('verified_ok',0),'Адресное evidence','ok')
+        with n3:card('НТД — вопросы',normative20.get('review_questions',0),'Нужна проверка специалиста','warn' if normative20.get('review_questions') else 'ok')
+        with n4:card('НТД — не проверено',normative20.get('system_limitations',0),f"Evidence {normative20.get('evidence_coverage_pct',0)}%",'info')
     st.info(report['conclusion'])
 
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')

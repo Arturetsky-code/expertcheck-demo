@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from core20.normative_foundation import _section_key, NormativeKnowledgeFoundation20
 
 
@@ -11,7 +13,7 @@ def test_alpha72_recognises_real_project_section_filenames():
 
 
 def test_alpha72_verified_pp87_routes_are_selected_from_real_filenames():
-    foundation=NormativeKnowledgeFoundation20("knowledge")
+    foundation=NormativeKnowledgeFoundation20(Path(__file__).resolve().parents[1]/"knowledge")
     docs=[
         {"document":"Раздел ПД №2_ПЗУ1.pdf"},
         {"document":"Раздел ПД №3_АР.pdf"},

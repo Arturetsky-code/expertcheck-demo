@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from core20.normative_foundation import HISTORY_POLICY, NormativeKnowledgeFoundation20
+from core20.legacy_adapter import Legacy18Adapter
+from core20.verification import VerificationEngine20
 
 
 ROOT=Path(__file__).resolve().parents[1]/"knowledge"
@@ -54,3 +56,40 @@ def test_alpha7_project_routing_uses_sections_and_history_only_for_priority():
         assert row["history_policy"] == "PRIORITIZATION_ONLY"
         if row["trust_state"] != "VERIFIED_CLAUSE":
             assert row["automatic_contract_ready"] is False
+
+
+
+def test_alpha7_production_adapter_blocks_uncurated_verified_clause():
+    row={
+        "requirement_id":"LAW-UNKNOWN-1",
+        "knowledge_kind":"LAW_REQUIREMENT",
+        "source":"СП 999.99999",
+        "paragraph":"п. 1.1",
+        "topic":"Синтетическая норма",
+        "requirement":"Проверяемое требование.",
+        "check_kind":"SEMANTIC",
+        "verified_clause":True,
+        "categorical_conclusion_allowed":True,
+        "expected_evidence_route":["ТХ"],
+        "evidence_contract":{"sections":["ТХ"],"minimum_sources":1},
+        "verification_kind":"SYSTEM_LIMITATION",
+        "verification_state":"Не проверено автоматически",
+    }
+    plan={"items":[{
+        "plan_id":"LAW-UNKNOWN-1","source_id":"LAW-UNKNOWN-1",
+        "domain":"НТД","domain_code":"normative","title":"СП 999.99999 п. 1.1",
+        "expected_sections":["ТХ"],"verification_kind":"SYSTEM_LIMITATION",
+        "verification_state":"Не проверено автоматически",
+    }]}
+    documents=[{
+        "document":"ТХ.pdf","document_type":"ТХ","page_count":10,
+        "normative_compliance_audit":[row],"project_review_plan":plan,
+    }]
+    project=Legacy18Adapter().build(
+        project_name="Контрольный проект",
+        documents=documents,findings=[],comparisons=[],assembly_rows=[],
+    )
+    out=VerificationEngine20(project).run()["decision_rows"][0]
+    assert out["kind"]=="SYSTEM_LIMITATION"
+    assert out["metadata"]["canonical_reason_code"]=="NORMATIVE_CLAUSE_NOT_VERIFIED"
+    assert out["metadata"]["normative_registry_trust"]=="SOURCE_NOT_CURATED"

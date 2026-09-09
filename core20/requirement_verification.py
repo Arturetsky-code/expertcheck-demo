@@ -8,6 +8,7 @@ from .model import CanonicalProject, Requirement
 from .parameter_contracts import (
     canonical_contract,
     compare_values,
+    equipment_terms,
     norm,
     numeric,
     reserve_topology,
@@ -154,21 +155,32 @@ def _numeric_assignment_proof(
 
 
 def _reserve_topology_proof(requirement: Requirement, evidence_rows) -> dict[str,Any] | None:
+    low_req=norm(requirement.text)
+    req_entities=equipment_terms(requirement.text)
     req=reserve_topology(requirement.text)
-    if req is None and "резерв" not in norm(requirement.text):
+
+    # This checker is deliberately limited to equipment topology. Generic
+    # "резервирование" of ASU, security channels, communications, etc. must not
+    # be interpreted as "working + standby equipment".
+    if not req_entities:
         return None
     if req is None:
+        if not ("рабоч" in low_req and "резерв" in low_req):
+            return None
         return {
             "proof_source":"CANONICAL_REQUIREMENT_RECONSTRUCTION",
             "domain":requirement.domain,
             "state":"REVIEW",
             "reason_code":"RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
-            "reason":"В требовании указано резервирование, но схема рабочий/резервный не структурирована однозначно.",
+            "reason":"Требование относится к рабочему/резервному оборудованию, но количественная схема не структурирована однозначно.",
         }
 
     candidates=[]
     for item in evidence_rows:
         fragment=item.fragment or ""
+        ev_entities=equipment_terms(fragment)
+        if req_entities and not (req_entities & ev_entities):
+            continue
         topology=reserve_topology(fragment)
         if topology is None:
             continue
@@ -182,13 +194,14 @@ def _reserve_topology_proof(requirement: Requirement, evidence_rows) -> dict[str
         "proof_source":"CANONICAL_REQUIREMENT_RECONSTRUCTION",
         "domain":requirement.domain,
         "required_topology":{"working":req[0],"reserve":req[1]},
+        "topology_entities":sorted(req_entities),
     }
     if not candidates:
         return {
             **base,
             "state":"REVIEW",
             "reason_code":"RESERVE_TOPOLOGY_NOT_PROVEN",
-            "reason":"Требование резервирования распознано, но в ПД не найдено адресное доказательство схемы рабочий/резервный.",
+            "reason":"Требование резервирования оборудования распознано, но в ПД не найдено адресное доказательство той же схемы рабочий/резервный.",
         }
 
     unique={top for _,top in candidates}
@@ -197,7 +210,7 @@ def _reserve_topology_proof(requirement: Requirement, evidence_rows) -> dict[str
             **base,
             "state":"REVIEW",
             "reason_code":"RESERVE_TOPOLOGY_PROJECT_CONFLICT",
-            "reason":"В ПД найдены противоречивые схемы рабочего и резервного оборудования.",
+            "reason":"В ПД найдены противоречивые схемы рабочего и резервного оборудования одного типа.",
             "project_topologies":[{"working":x[0],"reserve":x[1]} for x in sorted(unique)],
         }
 

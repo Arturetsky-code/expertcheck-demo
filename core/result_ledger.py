@@ -8,6 +8,9 @@ from .project_review_planner import build_review_plan
 from .verified_verdict_gate import enforce_project_verdicts
 
 
+REGISTER_COMPARISON_CODES={"GP_EXPLICATION_FIELD","GP_DOCUMENT_COVERAGE"}
+
+
 def build_qualified_result_ledger(
     *,
     assignment_rows: list[dict[str,Any]] | None = None,
@@ -34,24 +37,38 @@ def build_qualified_result_ledger(
         checklist=list(checklist_rows or [])
         cross=list(comparisons or [])
 
-    qualify_cross_section_verdicts(cross)
+    register=[
+        row for row in cross
+        if str(row.get("parameter_code") or "").upper() in REGISTER_COMPARISON_CODES
+    ]
+    engineering=[
+        row for row in cross
+        if str(row.get("parameter_code") or "").upper() not in REGISTER_COMPARISON_CODES
+    ]
+
+    # Register/drawing coverage is a separate completeness contour. It must not
+    # inflate the user-facing verified/review/limitation totals for engineering
+    # requirements.
+    qualify_cross_section_verdicts(engineering)
     verified_gate=enforce_project_verdicts(
         assignment_rows=assignment,
         normative_rows=normative,
         checklist_review={"results":checklist},
-        comparisons=cross,
+        comparisons=engineering,
     )
     plan=build_review_plan(
         assignment_rows=assignment,
         normative_rows=normative,
         checklist_review={"results":checklist},
-        comparisons=cross,
+        comparisons=engineering,
     )
     return {
         "assignment_rows":assignment,
         "normative_rows":normative,
         "checklist_rows":checklist,
         "comparisons":cross,
+        "engineering_comparisons":engineering,
+        "register_comparisons":register,
         "review_plan":plan,
         "verified_gate":verified_gate,
     }

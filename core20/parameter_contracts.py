@@ -156,6 +156,7 @@ def numeric(value: Any) -> float | None:
     if isinstance(value,(int,float)):
         return float(value)
     text=str(value or "").replace("\xa0"," ").replace(",",".")
+    text=re.sub(r"(?<=\d)\s+(?=\d)","",text)
     match=re.search(r"[-+]?\d+(?:\.\d+)?",text)
     if not match:
         return None

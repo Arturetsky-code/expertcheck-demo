@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from core20.model import CanonicalProject, Requirement
+from core20.parity import evaluate_golden_cases
 from core20.verification import VerificationEngine20
 
 
@@ -91,3 +92,12 @@ def test_unknown_industry_specific_norm_never_becomes_auto_from_project_name():
         assert row["kind"]=="SYSTEM_LIMITATION"
         assert row["automatic_verdict_eligible"] is False
         assert row["metadata"]["canonical_reason_code"]=="NORMATIVE_CLAUSE_NOT_VERIFIED"
+
+
+def test_control_golden_suite_is_skipped_for_unrelated_project():
+    project=CanonicalProject(project_id="PRJ-GENERIC",name="Независимый проект")
+    result=evaluate_golden_cases(project)
+    assert result["passed"] is True
+    assert result["skipped"] is True
+    assert result["applicable"] is False
+    assert result["failed"]==[]

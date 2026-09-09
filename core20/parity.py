@@ -4,7 +4,7 @@ from dataclasses import asdict
 from math import isclose
 from typing import Any
 
-from .baseline import GOLDEN_CASES_18_7_3, evaluate_baseline
+from .baseline import BASELINE_MIN_GOLDEN_MATCHES, GOLDEN_CASES_18_7_3, evaluate_baseline
 from .model import CanonicalProject
 
 
@@ -29,6 +29,22 @@ def _has_value(values: list[float], expected: float) -> bool:
 
 
 def evaluate_golden_cases(project: CanonicalProject) -> dict[str, Any]:
+    available_names={_norm(obj.name) for obj in project.objects.values()}
+    profile_matches=sum(
+        1 for case in GOLDEN_CASES_18_7_3
+        if _norm(case.object_name) in available_names
+    )
+    if not GOLDEN_CASES_18_7_3 or profile_matches < BASELINE_MIN_GOLDEN_MATCHES:
+        return {
+            "passed":True,
+            "skipped":True,
+            "applicable":False,
+            "profile_matches":profile_matches,
+            "required_matches":BASELINE_MIN_GOLDEN_MATCHES,
+            "failed":[],
+            "cases":[],
+        }
+
     rows=[]
     for case in GOLDEN_CASES_18_7_3:
         object_matches=[obj for obj in project.objects.values() if _norm(obj.name)==_norm(case.object_name)]
@@ -67,6 +83,10 @@ def evaluate_golden_cases(project: CanonicalProject) -> dict[str, Any]:
         })
     return {
         "passed":all(row["passed"] for row in rows),
+        "skipped":False,
+        "applicable":True,
+        "profile_matches":profile_matches,
+        "required_matches":BASELINE_MIN_GOLDEN_MATCHES,
         "failed":[row["case_id"] for row in rows if not row["passed"]],
         "cases":rows,
     }

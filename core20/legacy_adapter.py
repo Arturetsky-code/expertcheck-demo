@@ -1,15 +1,41 @@
 from __future__ import annotations
 
+import math
 from typing import Any, Iterable
 
 from .model import CanonicalProject, Comparison, Evidence, Finding, ProjectObject, PropertyValue, Requirement, stable_id
 from .requirement_router import route_typed_requirement_evidence
 
 
+def _missing(value: Any) -> bool:
+    if value in (None, '', 'nan', 'None', '—'):
+        return True
+    if isinstance(value, float):
+        try:
+            return math.isnan(value)
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _sequence(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (tuple, set)):
+        return list(value)
+    return []
+
+
 def _text(row: dict[str, Any], *keys: str) -> str:
+    if not isinstance(row, dict):
+        return ''
     for key in keys:
         value=row.get(key)
-        if value not in (None, '', 'nan', 'None', '—'):
+        if not _missing(value):
             return str(value).strip()
     return ''
 
@@ -30,10 +56,10 @@ def _page(value: Any) -> int | None:
 
 
 def _list(value: Any) -> list[str]:
-    if value in (None, "", "—"):
+    if _missing(value):
         return []
     if isinstance(value, (list, tuple, set)):
-        return [str(item).strip() for item in value if str(item).strip()]
+        return [str(item).strip() for item in value if not _missing(item) and str(item).strip()]
     return [part.strip() for part in str(value).replace("|", ",").replace(";", ",").split(",") if part.strip()]
 
 
@@ -92,14 +118,14 @@ def _evidence_from_row(project: CanonicalProject, row: dict[str, Any], *, fallba
             'project_unit':_text(row,'project_unit'),
             'project_parameter_code':_text(row,'project_parameter_code','typed_parameter_code'),
             'typed_parameter_code':_text(row,'typed_parameter_code'),
-            'candidate_values':list(row.get('candidate_values') or []),
-            'summary_hourly_values':list(row.get('summary_hourly_values') or []),
+            'candidate_values':_sequence(row.get('candidate_values')),
+            'summary_hourly_values':_sequence(row.get('summary_hourly_values')),
             'capacity_required_level':_text(row,'capacity_required_level'),
             'capacity_observed_level':_text(row,'capacity_observed_level'),
             'capacity_level_compatible':row.get('capacity_level_compatible'),
             'line_count':row.get('line_count'),
-            'task_models':list(row.get('task_models') or []),
-            'project_models':list(row.get('project_models') or []),
+            'task_models':_sequence(row.get('task_models')),
+            'project_models':_sequence(row.get('project_models')),
             'difference':_text(row,'difference'),
             'structured':bool(row.get('structured')),
             'part_role':_text(row,'part_role'),
@@ -154,7 +180,7 @@ class Legacy18Adapter:
             name=project_name,
             metadata={
                 'migrated_from':'18.x',
-                'snapshot_id':_text(first.get('analysis_snapshot') or {},'snapshot_id'),
+                'snapshot_id':_text(_mapping(first.get('analysis_snapshot')),'snapshot_id'),
                 'legacy_version':_text(first,'version'),
                 'document_inventory':document_inventory,
                 'document_inventory_complete':bool(document_inventory),
@@ -162,7 +188,7 @@ class Legacy18Adapter:
         )
         assembly_rows=list(assembly_rows or [])
         included_by_identity=self._included_map(assembly_rows)
-        registry=list(first.get('consolidated_registry') or first.get('composition_baseline') or first.get('restored_trusted_registry') or [])
+        registry=(_sequence(first.get('consolidated_registry')) or _sequence(first.get('composition_baseline')) or _sequence(first.get('restored_trusted_registry')))
         object_by_name: dict[str,str]={}
         object_by_position: dict[str,str]={}
         for row in registry:
@@ -222,7 +248,7 @@ class Legacy18Adapter:
             if not object_id or not code:
                 continue
             evidence_ids=[]
-            for source in (row.get('verification_evidence') or []):
+            for source in _sequence(row.get('verification_evidence')):
                 if not isinstance(source,dict):continue
                 ev=_evidence_from_row(project,source)
                 if ev:
@@ -251,10 +277,10 @@ class Legacy18Adapter:
                 },
             ))
 
-        plan=dict(first.get('project_review_plan') or {})
-        raw_assignment=list(first.get('assignment_compliance') or [])
-        raw_normative=list(first.get('normative_compliance_audit') or [])
-        page_corpus=list((first.get('analysis_snapshot') or {}).get('page_corpus') or [])
+        plan=_mapping(first.get('project_review_plan'))
+        raw_assignment=_sequence(first.get('assignment_compliance'))
+        raw_normative=_sequence(first.get('normative_compliance_audit'))
+        page_corpus=_sequence(_mapping(first.get('analysis_snapshot')).get('page_corpus'))
         normative_project_type=''
         for raw in raw_normative:
             if not isinstance(raw,dict):
@@ -281,7 +307,7 @@ class Legacy18Adapter:
             source_id=_text(item,'source_id','requirement_id','atom_id','plan_id','id')
             raw=raw_requirement_by_id.get(source_id) or raw_requirement_by_id.get(requirement_id) or {}
             requirement_evidence_ids=[]
-            for source in list(raw.get('verification_evidence') or raw.get('evidence_candidates') or []):
+            for source in (_sequence(raw.get('verification_evidence')) or _sequence(raw.get('evidence_candidates'))):
                 if not isinstance(source,dict):
                     continue
                 ev=_evidence_from_row(project,source)
@@ -295,7 +321,7 @@ class Legacy18Adapter:
                     })
                     if ev not in requirement_evidence_ids:
                         requirement_evidence_ids.append(ev)
-            raw_contract=dict(raw.get('evidence_contract_v2') or raw.get('evidence_contract') or {})
+            raw_contract=(_mapping(raw.get('evidence_contract_v2')) or _mapping(raw.get('evidence_contract')))
             requirement_text=_text(raw,'requirement_text','requirement') or _text(item,'requirement_text','requirement','title','question')
             parameter_code=_text(raw,'parameter_code') or _text(item,'parameter_code','metric')
             expected_route=_list(
@@ -359,7 +385,7 @@ class Legacy18Adapter:
                     'official_source':_text(raw,'official_source'),
                     'verification_status':_text(raw,'verification_status','status'),
                     'knowledge_kind':_text(raw,'knowledge_kind'),
-                    'applicability':dict(raw.get('applicability') or {}),
+                    'applicability':_mapping(raw.get('applicability')),
                     'normative_requirement_id':_text(raw,'requirement_id','id'),
                     'topic':_text(raw,'topic'),
                     'check_kind':_text(raw,'check_kind','check_type'),
@@ -367,8 +393,8 @@ class Legacy18Adapter:
                     'expected_evidence_route':expected_route,
                     'project_type':_text(raw.get('evidence_packet') or {},'project_type') if isinstance(raw.get('evidence_packet'),dict) else '',
                     'categorical_conclusion_allowed':_bool(raw.get('categorical_conclusion_allowed'),False),
-                    'evidence_contract':dict(raw.get('evidence_contract') or raw_contract),
-                    'structural_check':dict(raw.get('structural_check') or {}),
+                    'evidence_contract':(_mapping(raw.get('evidence_contract')) or raw_contract),
+                    'structural_check':_mapping(raw.get('structural_check')),
                     'decision_basis':_text(raw,'decision_basis'),
                     'object_name':_text(raw,'object_name') or _text(item,'entity'),
                     'source_row_title':_text(raw,'source_row_title'),

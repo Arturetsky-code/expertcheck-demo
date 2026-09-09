@@ -175,6 +175,8 @@ class NormativeKnowledgeFoundation20:
             "sections":sections,
             "check_kind":str(row.get("check_kind") or ""),
             "automation":str(row.get("automation") or ""),
+            "keywords":[str(x) for x in (row.get("keywords") or []) if str(x).strip()],
+            "evidence_contract":dict(row.get("evidence_contract") or {}),
             "conclusion_policy":conclusion_policy,
             "clause_verified":clause_verified,
             "trust_state":trust_state,

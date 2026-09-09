@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .model import CanonicalProject, Comparison, Evidence, Finding, ProjectObject, PropertyValue, Requirement, stable_id
+from .requirement_router import route_typed_requirement_evidence
 
 
 def _text(row: dict[str, Any], *keys: str) -> str:
@@ -229,6 +230,7 @@ class Legacy18Adapter:
         plan=dict(first.get('project_review_plan') or {})
         raw_assignment=list(first.get('assignment_compliance') or [])
         raw_normative=list(first.get('normative_compliance_audit') or [])
+        page_corpus=list((first.get('analysis_snapshot') or {}).get('page_corpus') or [])
         raw_requirement_by_id={}
         for raw in raw_assignment + raw_normative:
             if not isinstance(raw,dict):
@@ -258,15 +260,45 @@ class Legacy18Adapter:
                     if ev not in requirement_evidence_ids:
                         requirement_evidence_ids.append(ev)
             raw_contract=dict(raw.get('evidence_contract_v2') or raw.get('evidence_contract') or {})
+            requirement_text=_text(raw,'requirement_text','requirement') or _text(item,'requirement_text','requirement','title','question')
+            parameter_code=_text(raw,'parameter_code') or _text(item,'parameter_code','metric')
+            expected_route=_list(
+                raw.get('expected_evidence_route') or raw_contract.get('expected_sections')
+                or item.get('expected_evidence_route') or item.get('expected_sections')
+            )
+            if (
+                _text(item,'domain_code','domain').casefold() in {'assignment','задание на проектирование'}
+                and parameter_code
+                and raw.get('required_value', item.get('required_value')) not in (None,'')
+                and page_corpus
+            ):
+                routed=route_typed_requirement_evidence(
+                    requirement_text=requirement_text,
+                    parameter_code=parameter_code,
+                    required_unit=_text(raw,'unit') or _text(item,'unit'),
+                    expected_sections=expected_route,
+                    page_corpus=page_corpus,
+                )
+                for source in routed:
+                    ev=_evidence_from_row(project,source)
+                    if not ev:
+                        continue
+                    evidence=project.evidence[ev]
+                    evidence.metadata.update({
+                        'requirement_id':requirement_id,
+                        'requirement_domain':'assignment',
+                        'requirement_object_id':object_id or '',
+                        'requirement_parameter_code':parameter_code,
+                        'canonical_routed':True,
+                    })
+                    if ev not in requirement_evidence_ids:
+                        requirement_evidence_ids.append(ev)
             project.add_requirement(Requirement(
                 requirement_id=requirement_id,domain=_text(item,'domain_code','domain') or 'UNKNOWN',
-                text=_text(raw,'requirement_text','requirement') or _text(item,'requirement_text','requirement','title','question'),
+                text=requirement_text,
                 applicable=item.get('applicable') if isinstance(item.get('applicable'),bool) else None,
-                target_object_id=object_id,expected_parameter_code=_text(raw,'parameter_code') or _text(item,'parameter_code','metric'),
-                expected_evidence_route=_list(
-                    raw.get('expected_evidence_route') or raw_contract.get('expected_sections')
-                    or item.get('expected_evidence_route') or item.get('expected_sections')
-                ),
+                target_object_id=object_id,expected_parameter_code=parameter_code,
+                expected_evidence_route=expected_route,
                 required_slots=_list(item.get('required_slots') or item.get('missing_evidence_slots')),
                 evidence_ids=requirement_evidence_ids,
                 verification_kind=_text(item,'verification_kind'),evidence_level=_text(item,'evidence_level') or 'L0',

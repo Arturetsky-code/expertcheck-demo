@@ -457,6 +457,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     docs=doc_records
     findings=finding_records
     first_record=(doc_records[0] or {}) if doc_records else {}
+    canonical20=dict(first_record.get('canonical_core_20_manifest') or {})
+    normative_execution20=dict(canonical20.get('normative_execution') or {})
+    normative_execution_rows20=list(normative_execution20.get('rows') or [])
     if first_record:
         first_record["report_data_contract"] = report_data_contract
     register_comparison_codes={'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}
@@ -840,6 +843,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
         ['НТД: подтверждено требований', normative_plan.get('confirmed',0)],
         ['НТД: выявлено несоответствий', normative_plan.get('issue',0)],
+        ['20.0 НТД: исполняемых verified-clause', normative_execution20.get('contracts',0)],
+        ['20.0 НТД: подтверждено', normative_execution20.get('verified_ok',0)],
+        ['20.0 НТД: вопросов специалисту', normative_execution20.get('review_questions',0)],
+        ['20.0 НТД: не проверено системой', normative_execution20.get('system_limitations',0)],
+        ['20.0 НТД: адресное evidence, %', normative_execution20.get('evidence_coverage_pct',0)],
         ['НТД: обнаружено уникальных ссылок', len(normative_rows)],
         ['НТД: проверено по реестру актуальности', normative_registry_verified],
         ['НТД: распознано, но статус не верифицирован', normative_registry_unverified],
@@ -870,6 +878,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'AI-пакетов подготовлено','AI-пакетов обработано','Выполнение AI-очереди, %',
             'Задание: покрытие найденными кандидатами L3–L5, %','Чек-листы: покрытие найденными кандидатами L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
+            '20.0 НТД: исполняемых verified-clause','20.0 НТД: подтверждено',
+            '20.0 НТД: вопросов специалисту','20.0 НТД: не проверено системой','20.0 НТД: адресное evidence, %',
             'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
             'Межраздельная сверка: строгое покрытие L5, %','Межраздельная сверка: завершено','Межраздельная сверка: несоответствий',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
@@ -1299,6 +1309,23 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     } for index,issue in enumerate(report_data_contract.get('fatal_issues') or [],1))
     data_contract_df = _excel_safe_frame(pd.DataFrame(data_contract_rows))
 
+    normative_execution20_df = pd.DataFrame([{
+        'ID требования':x.get('requirement_id'),
+        'НТД':x.get('source') or x.get('document_id') or '—',
+        'Пункт / статья':x.get('paragraph') or '—',
+        'Тема':x.get('topic') or '—',
+        'Требование':x.get('requirement') or '—',
+        'Результат':x.get('state') or '—',
+        'Код причины':x.get('reason_code') or '—',
+        'Документ evidence':x.get('evidence_document') or '—',
+        'Страница':x.get('evidence_page') if x.get('evidence_page') not in (None,'') else '—',
+        'Фрагмент evidence':x.get('evidence_fragment') or '',
+        'Совпавшие признаки':' | '.join(str(v) for v in (x.get('matched_keywords') or [])),
+        'Обоснование':x.get('reason') or '',
+        'Упоминаний в истории':x.get('history_occurrences') or 0,
+        'Проектов в истории':x.get('history_projects') or 0,
+    } for x in normative_execution_rows20])
+
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
         'Тип знания':ru_label(x.get('knowledge_kind') or 'LAW_REQUIREMENT'),
@@ -1321,6 +1348,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     understanding_df = _excel_safe_frame(understanding_df)
     normative_requirement_df = _excel_safe_frame(normative_requirement_df)
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
+    normative_execution20_df = _excel_safe_frame(normative_execution20_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     # Подтверждённые расхождения и адресные вопросы имеют разный доказательный
@@ -1379,6 +1407,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
+        if not normative_execution20_df.empty: sheets.append(('НТД 20.0 — исполнение', normative_execution20_df))
         if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
         if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
@@ -1393,6 +1422,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not normative_df.empty: sheets.append(('Актуальность НТД', normative_df))
         if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not normative_compliance_df.empty: sheets.append(('Проверка требований НТД', normative_compliance_df))
+        if not normative_execution20_df.empty: sheets.append(('НТД 20.0 — исполнение', normative_execution20_df))
         if not normative_requirement_df.empty: sheets.append(('Контекст ссылок НТД', normative_requirement_df))
         if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))
         if not assignment_df.empty: sheets.append(('Задание — диагностика', assignment_df))

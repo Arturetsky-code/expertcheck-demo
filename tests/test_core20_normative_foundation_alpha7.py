@@ -5,6 +5,7 @@ from pathlib import Path
 from core20.normative_foundation import HISTORY_POLICY, NormativeKnowledgeFoundation20
 from core20.legacy_adapter import Legacy18Adapter
 from core20.verification import VerificationEngine20
+from core20.expert_history import ExpertHistoryCorpus20
 
 
 ROOT=Path(__file__).resolve().parents[1]/"knowledge"
@@ -93,3 +94,16 @@ def test_alpha7_production_adapter_blocks_uncurated_verified_clause():
     assert out["kind"]=="SYSTEM_LIMITATION"
     assert out["metadata"]["canonical_reason_code"]=="NORMATIVE_CLAUSE_NOT_VERIFIED"
     assert out["metadata"]["normative_registry_trust"]=="SOURCE_NOT_CURATED"
+
+
+
+def test_alpha7_real_expert_history_is_read_only_training_signal():
+    history=ExpertHistoryCorpus20(ROOT)
+    summary=history.summary()
+    assert summary["projects"] >= 1
+    assert summary["records"] >= 1
+    assert summary["records_with_response"] >= 1
+    assert summary["usage_policy"]=="PRIORITIZATION_AND_ANALOGS_ONLY"
+    patterns=history.top_patterns(limit=5)
+    assert patterns
+    assert all(x["history_policy"]=="PRIORITIZATION_AND_ANALOGS_ONLY" for x in patterns)

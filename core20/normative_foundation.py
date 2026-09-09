@@ -70,8 +70,9 @@ def _sections_from_documents(documents:list[dict[str,Any]]|None)->set[str]:
         if not isinstance(row,dict):
             continue
         for value in (
+            row.get("Тип документа"),row.get("Файл"),
             row.get("document_type"),row.get("section"),row.get("Раздел"),
-            row.get("document"),row.get("document_name"),
+            row.get("document"),row.get("document_name"),row.get("filename"),
         ):
             key=_section_key(value)
             if key:

@@ -25,7 +25,16 @@ def _evidence(project: CanonicalProject, eid: str, *, section="ТХ", fragment="
 
 def test_assignment_numeric_value_is_recomputed_without_legacy_verdict():
     project=_project()
-    _evidence(project,"E1",meta={"project_value":120.0,"observed_unit":"т/ч"})
+    _evidence(
+        project,"E1",
+        fragment="Производительность одной линии составляет 120 т/ч.",
+        meta={
+            "project_value":120.0,
+            "observed_unit":"т/ч",
+            "observed_parameter_code":"CAPACITY",
+            "capacity_observed_level":"SINGLE_LINE_CAPACITY",
+        },
+    )
     project.add_requirement(Requirement(
         requirement_id="R1",domain="assignment",
         text="Производительность линии должна составлять 120 т/ч",
@@ -47,11 +56,21 @@ def test_assignment_numeric_value_is_recomputed_without_legacy_verdict():
 
 def test_assignment_numeric_mismatch_becomes_project_finding():
     project=_project()
-    _evidence(project,"E1",meta={"project_value":100.0,"observed_unit":"т/ч"})
+    _evidence(
+        project,"E1",
+        fragment="Производительность одной линии составляет 100 т/ч.",
+        meta={
+            "project_value":100.0,
+            "observed_unit":"т/ч",
+            "observed_parameter_code":"CAPACITY",
+            "capacity_observed_level":"SINGLE_LINE_CAPACITY",
+        },
+    )
     project.add_requirement(Requirement(
         requirement_id="R1",domain="assignment",
         text="Производительность линии должна составлять 120 т/ч",
         target_object_id="OBJ-1",
+        expected_parameter_code="CAPACITY",
         expected_evidence_route=["ТХ"],
         evidence_ids=["E1"],
         verification_kind="VERIFIED_OK",
@@ -163,7 +182,7 @@ def test_equipment_project_quantity_cannot_be_used_as_volume():
     row=VerificationEngine20(project).run()["decision_rows"][0]
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["automatic_verdict_eligible"] is False
-    assert row["metadata"]["canonical_reason_code"]=="ASSIGNMENT_PROOF_ROUTE_PENDING"
+    assert row["metadata"]["canonical_reason_code"]=="PARAMETER_BINDING_NOT_PROVEN"
 
 
 def test_equipment_project_quantity_can_close_count_requirement_in_pieces():

@@ -48,16 +48,16 @@ def test_alpha9_export_appends_proof_and_judge_critic_trace():
     wb=load_workbook(BytesIO(enriched),data_only=True)
     ws=wb["НТД 20.0 — исполнение"]
     headers={cell.value:cell.column for cell in ws[1]}
-    assert "Тип proof" in headers
-    assert "Состояние proof-gate" in headers
-    assert "Verdict Judge" in headers
-    assert "Critic принял" in headers
-    assert "Выбранные evidence" in headers
-    assert ws.cell(2,headers["Тип proof"]).value=="SEMANTIC_REQUIREMENT"
-    assert ws.cell(2,headers["Semantic proof применён"]).value=="Да"
-    assert ws.cell(2,headers["Verdict Judge"]).value=="SUPPORTS"
-    assert ws.cell(2,headers["Critic принял"]).value=="Да"
-    trace=ws.cell(2,headers["Выбранные evidence"]).value
+    assert "Тип доказательства" in headers
+    assert "Состояние доказательства" in headers
+    assert "Решение проверяющей модели" in headers
+    assert "Контрольная модель приняла" in headers
+    assert "Выбранные доказательства" in headers
+    assert ws.cell(2,headers["Тип доказательства"]).value=="Смысловое выполнение требования"
+    assert ws.cell(2,headers["Смысловое доказательство применено"]).value=="Да"
+    assert ws.cell(2,headers["Решение проверяющей модели"]).value=="Подтверждает"
+    assert ws.cell(2,headers["Контрольная модель приняла"]).value=="Да"
+    trace=ws.cell(2,headers["Выбранные доказательства"]).value
     assert "ПЗУ.pdf, стр. 10" in trace
     assert "ПЗУ.pdf, стр. 11" in trace
 

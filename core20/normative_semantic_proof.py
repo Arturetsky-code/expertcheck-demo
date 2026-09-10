@@ -13,7 +13,7 @@ from core.semantic_evidence_engine import (
 )
 
 
-ENGINE_VERSION = "20.0-alpha9-normative-semantic-proof"
+ENGINE_VERSION = "20.0-alpha9-normative-semantic-proof-multi-evidence"
 
 
 def _fingerprint(queue: list[dict[str, Any]]) -> str:
@@ -24,7 +24,9 @@ def _fingerprint(queue: list[dict[str, Any]]) -> str:
             "packet_id":packet.get("packet_id"),
             "requirement_id":packet.get("requirement_id"),
             "requirement":packet.get("requirement"),
+            "proof_type":packet.get("proof_type"),
             "evidence":[{
+                "evidence_id":row.get("evidence_id"),
                 "document":row.get("document"),
                 "page":row.get("page"),
                 "text":str(row.get("text") or "")[:1200],
@@ -36,6 +38,29 @@ def _fingerprint(queue: list[dict[str, Any]]) -> str:
 
 def queue_fingerprint(queue:list[dict[str,Any]]|None)->str:
     return _fingerprint(list(queue or []))
+
+
+def _norm_identity(value:Any)->str:
+    return " ".join(str(value or "").strip().casefold().split())
+
+
+def _independent(
+    judge_provider:str,
+    critic_provider:str,
+    judge_model:str="",
+    critic_model:str="",
+)->tuple[bool,str]:
+    jp=_norm_identity(judge_provider)
+    cp=_norm_identity(critic_provider)
+    jm=_norm_identity(judge_model)
+    cm=_norm_identity(critic_model)
+    if not jp or not cp:
+        return False,"Фактические провайдеры Judge/Critic не подтверждены."
+    if jp==cp:
+        return False,"Judge и Critic фактически обслужены одним AI-провайдером."
+    if jm and cm and jm==cm:
+        return False,"Judge и Critic используют одну и ту же фактическую модель; независимый proof удержан."
+    return True,"Провайдеры независимы; при доступных идентификаторах модели также различаются."
 
 
 def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
@@ -50,7 +75,7 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
             "ai_evidence_text":str(row.get("text") or "")[:1200],
             "source_locator":str(row.get("source_locator") or ""),
             "kind":"NORMATIVE_EVIDENCE",
-            "retrieval_score":100,
+            "retrieval_score":int(row.get("retrieval_keyword_score") or 100),
             "owner_match":None,
             "property_match":None,
             "entity_binding_state":"NOT_REQUIRED",
@@ -60,7 +85,7 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
             "modality_gate_state":"PASSED",
             "missing_critical_qualifiers":[],
             "contract_ready_for_judgement":True,
-            "semantic_token_coverage":1.0,
+            "semantic_token_coverage":float(row.get("retrieval_keyword_coverage") or 1.0),
         })
     return {
         "packet_id":str(packet.get("packet_id") or ""),
@@ -92,10 +117,26 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
         "contract_ready_evidence_ids":[row["evidence_id"] for row in evidence if row.get("evidence_id")],
         "evidence":evidence,
         "policy":(
-            "Retrieval is not proof. SUPPORTS is allowed only when the cited fragment directly proves the whole verified normative requirement. "
-            "CONTRADICTS or missing evidence is not an automatic project non-compliance in Alpha 9."
+            "Retrieval is not proof. SUPPORTS is allowed only when cited addressable evidence directly proves the whole verified normative requirement. "
+            "The Judge may cite one or several candidates. CONTRADICTS or missing evidence is not an automatic project non-compliance in Alpha 9."
         ),
     }
+
+
+def _selected_evidence(packet:dict[str,Any],ids:list[str])->list[dict[str,Any]]:
+    wanted={str(value) for value in ids}
+    result=[]
+    for row in packet.get("evidence") or []:
+        if str(row.get("evidence_id") or "") not in wanted:
+            continue
+        result.append({
+            "evidence_id":row.get("evidence_id") or "",
+            "document":row.get("document") or "",
+            "page":row.get("page"),
+            "source_locator":row.get("source_locator") or "",
+            "fragment":str(row.get("text") or "")[:500],
+        })
+    return result
 
 
 def run_normative_semantic_proof(
@@ -105,11 +146,12 @@ def run_normative_semantic_proof(
     critic_provider:Any=None,
     limit:int=24,
 )->dict[str,Any]:
-    """Run a bounded independent semantic proof over Alpha 9 normative packets.
+    """Run bounded independent semantic proof over normative packets.
 
-    Only SUPPORTS accepted by an actually independent Critic can promote a
-    normative contract to VERIFIED_OK. CONTRADICTS remains a specialist review
-    question until a dedicated negative normative conflict contract is added.
+    Only SUPPORTS accepted by an independent Critic can promote a semantic
+    normative contract to VERIFIED_OK. Negative semantic outcomes remain review
+    questions until a dedicated machine-readable negative conflict contract is
+    available.
     """
     source=[dict(x) for x in (queue or []) if isinstance(x,dict)]
     fp=_fingerprint(source)
@@ -120,6 +162,7 @@ def run_normative_semantic_proof(
         "fingerprint":fp,
         "queue_total":len(source),
         "selected":len(packets),
+        "evidence_candidates":sum(len(packet.get("evidence") or []) for packet in packets),
         "decisions":{},
         "verified_ok":0,
         "review_questions":len(source),
@@ -144,15 +187,24 @@ def run_normative_semantic_proof(
 
     configured_judge=str(judge_preflight.get("actual_provider") or judge_preflight.get("configured_provider") or "")
     configured_critic=str(critic_preflight.get("actual_provider") or critic_preflight.get("configured_provider") or "")
-    if configured_judge and configured_critic and configured_judge==configured_critic:
-        base["provider_errors"]=["Judge и Critic фактически обслужены одним провайдером; независимый нормативный proof запрещён."]
+    configured_judge_model=str(judge_preflight.get("model") or "")
+    configured_critic_model=str(critic_preflight.get("model") or "")
+    preflight_independent,preflight_reason=_independent(
+        configured_judge,configured_critic,configured_judge_model,configured_critic_model,
+    )
+    # Missing model IDs do not block preflight; actual generation responses are
+    # checked again. Same provider is always a hard stop before project calls.
+    if _norm_identity(configured_judge)==_norm_identity(configured_critic):
+        base["provider_errors"]=[preflight_reason]
+        return base
+    if configured_judge_model and configured_critic_model and not preflight_independent:
+        base["provider_errors"]=[preflight_reason]
         return base
 
     public=[_public_packet(packet) for packet in packets]
     raw_judges,judge_errors,_=_call_batches(judge_provider,public,critic=False,batch_size=4,max_calls=24)
     critic_packets=[]
     validated_judges={}
-    by_id={packet["packet_id"]:packet for packet in packets}
     for packet in packets:
         pid=packet["packet_id"]
         judge=_validate_judge(packet,raw_judges.get(pid))
@@ -184,7 +236,9 @@ def run_normative_semantic_proof(
         critic=_validate_critic(packet,judge,raw_critics.get(pid))
         actual_judge=str(judge.get("provider") or configured_judge)
         actual_critic=str(critic.get("provider") or configured_critic)
-        independent=bool(actual_judge and actual_critic and actual_judge!=actual_critic)
+        judge_model=str(judge.get("model") or configured_judge_model)
+        critic_model=str(critic.get("model") or configured_critic_model)
+        independent,independence_reason=_independent(actual_judge,actual_critic,judge_model,critic_model)
         supports=bool(
             judge.get("valid")
             and str(judge.get("verdict") or "").upper()=="SUPPORTS"
@@ -200,11 +254,13 @@ def run_normative_semantic_proof(
             )
         else:
             state="REVIEW_QUESTION"
-            reason=(
-                str(judge.get("reason") or "Недостаточно доказательств для смыслового подтверждения.")
-                if str(judge.get("verdict") or "").upper()!="SUPPORTS"
-                else str(critic.get("reason") or "Независимый Critic не подтвердил смысловое доказательство.")
-            )
+            if not independent and judge.get("valid") and str(judge.get("verdict") or "").upper()=="SUPPORTS":
+                reason=independence_reason
+            elif str(judge.get("verdict") or "").upper()!="SUPPORTS":
+                reason=str(judge.get("reason") or "Недостаточно доказательств для смыслового подтверждения.")
+            else:
+                reason=str(critic.get("reason") or "Независимый Critic не подтвердил смысловое доказательство.")
+        selected_ids=list(judge.get("evidence_ids") or [])
         decisions[requirement_id]={
             "requirement_id":requirement_id,
             "packet_id":pid,
@@ -213,13 +269,15 @@ def run_normative_semantic_proof(
             "judge_verdict":str(judge.get("verdict") or "INSUFFICIENT"),
             "judge_confidence":judge.get("confidence") or 0,
             "judge_provider":actual_judge,
-            "judge_model":judge.get("model") or "",
+            "judge_model":judge_model,
             "critic_accept":bool(critic.get("valid")),
             "critic_confidence":critic.get("confidence") or 0,
             "critic_provider":actual_critic,
-            "critic_model":critic.get("model") or "",
+            "critic_model":critic_model,
             "independent":independent,
-            "evidence_ids":list(judge.get("evidence_ids") or []),
+            "independence_reason":independence_reason,
+            "evidence_ids":selected_ids,
+            "selected_evidence":_selected_evidence(packet,selected_ids),
             "blocking_concerns":list(critic.get("blocking_concerns") or []),
         }
     base["decisions"]=decisions
@@ -251,6 +309,7 @@ def apply_normative_semantic_proof(
         if not isinstance(decision,dict):
             continue
         row["semantic_proof"]={k:v for k,v in decision.items() if k!="requirement_id"}
+        row["semantic_selected_evidence"]=list(decision.get("selected_evidence") or [])
         if decision.get("state")=="VERIFIED_OK" and row.get("proof_state")=="SEMANTIC_PROOF_REQUIRED":
             row["kind"]="VERIFIED_OK"
             row["state"]="Подтверждено"

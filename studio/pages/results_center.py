@@ -8,6 +8,7 @@ from core.review_queue import build_review_clusters
 from core.result_ledger import build_qualified_result_ledger
 from core.report_engine import build_structured_report
 from core.result_surface import build_project_surface_rows, build_review_surface_rows
+from core20.proof_labels import judge_label, proof_state_label, proof_type_label
 
 
 def _first(docs):return docs.iloc[0].to_dict() if not docs.empty else {}
@@ -81,47 +82,47 @@ def render(ctx):
     if normative20_rows:
         section(
             'НТД 20.0 — доказательная проверка',
-            'Verified-clause проходит отдельный proof-gate: найденный текст ещё не означает выполненное нормативное требование.'
+            'Верифицированный пункт проходит отдельный доказательный контроль: найденный текст ещё не означает выполненное нормативное требование.'
         )
         retrieval=dict(normative20.get('retrieval') or {})
         n1,n2,n3,n4,n5=st.columns(5)
-        with n1:card('Контрактов',normative20.get('contracts',0),'Verified-clause')
-        with n2:card('Retrieval evidence',retrieval.get('candidate_evidence',0),'Адресные кандидаты по страницам','info')
-        with n3:card('Доказано',normative20.get('verified_ok',0),'Прошло proof-gate','ok')
-        with n4:card('Удержано',normative20.get('demoted_keyword_only',0),'Retrieval ≠ proof','warn' if normative20.get('demoted_keyword_only') else 'ok')
-        with n5:card('Semantic proof очередь',normative20.get('semantic_queue_total',0),'Нужна смысловая проверка','warn' if normative20.get('semantic_queue_total') else 'ok')
+        with n1:card('Контрактов',normative20.get('contracts',0),'Верифицированные пункты')
+        with n2:card('Кандидатов доказательства',retrieval.get('candidate_evidence',0),'Адресные фрагменты по страницам','info')
+        with n3:card('Доказано',normative20.get('verified_ok',0),'Прошло доказательный контроль','ok')
+        with n4:card('Удержано',normative20.get('demoted_keyword_only',0),'Поиск ≠ доказательство','warn' if normative20.get('demoted_keyword_only') else 'ok')
+        with n5:card('Очередь смысловой проверки',normative20.get('semantic_queue_total',0),'Нужна смысловая проверка','warn' if normative20.get('semantic_queue_total') else 'ok')
         m1,m2,m3,m4=st.columns(4)
-        with m1:card('Semantic proof принят',normative20.get('semantic_proof_applied',0),'Judge + Critic + code gate','ok' if normative20.get('semantic_proof_applied') else 'info')
+        with m1:card('Смысл подтверждён',normative20.get('semantic_proof_applied',0),'Проверяющая + контрольная модель + программный контроль','ok' if normative20.get('semantic_proof_applied') else 'info')
         with m2:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
-        with m3:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего proof-механизма','info')
-        with m4:card('Адресное evidence',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
+        with m3:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего доказательного механизма','info')
+        with m4:card('Адресное доказательство',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
         st.caption(
-            'PRESENCE/STRUCTURE могут подтверждаться детерминированно. SEMANTIC_REQUIREMENT, GRAPHIC_CONTENT, '
-            'SET_COMPLETENESS, TYPED_VALUE и CROSS_SECTION требуют своего доказательного контракта. '
-            'Для semantic proof Judge получает до четырёх адресных кандидатов и обязан сослаться на конкретные evidence_id. '
+            'Наличие сведений и структура могут подтверждаться детерминированно. Смысловое выполнение, содержание графической части, '
+            'полнота обязательного набора, структурированное значение и межраздельная согласованность требуют своего доказательного контракта. '
+            'Для смысловой проверки проверяющая модель получает до четырёх адресных кандидатов и обязана сослаться на конкретные ID доказательств. '
             'Недостаточность доказательства не является несоответствием.'
         )
         st.dataframe(pd.DataFrame([{
             'Результат':row.get('state') or '—',
-            'Тип proof':row.get('proof_type') or '—',
-            'Proof state':row.get('proof_state') or '—',
-            'Retrieval кандидатов':row.get('retrieval_candidate_count') or 0,
+            'Тип доказательства':proof_type_label(row.get('proof_type')),
+            'Состояние доказательства':proof_state_label(row.get('proof_state')),
+            'Кандидатов доказательства':row.get('retrieval_candidate_count') or 0,
             'НТД':row.get('source') or row.get('document_id') or '—',
             'Пункт':row.get('paragraph') or '—',
             'Требование':row.get('requirement') or '—',
-            'Evidence':(
+            'Основное доказательство':(
                 f"{row.get('evidence_document')}, стр. {row.get('evidence_page')}"
                 if row.get('evidence_document') and row.get('evidence_page') not in (None,'')
                 else 'Не сформировано'
             ),
-            'Выбранные Judge evidence':_semantic_trace(row) or '—',
-            'Judge':(row.get('semantic_proof') or {}).get('judge_verdict') or '—',
-            'Judge confidence':(row.get('semantic_proof') or {}).get('judge_confidence') if row.get('semantic_proof') else '—',
-            'Judge provider':(row.get('semantic_proof') or {}).get('judge_provider') or '—',
-            'Critic':('Принял' if (row.get('semantic_proof') or {}).get('critic_accept') is True else 'Не принял') if row.get('semantic_proof') else '—',
-            'Critic confidence':(row.get('semantic_proof') or {}).get('critic_confidence') if row.get('semantic_proof') else '—',
-            'Critic provider':(row.get('semantic_proof') or {}).get('critic_provider') or '—',
-            'Независимость AI':('Да' if (row.get('semantic_proof') or {}).get('independent') is True else 'Нет') if row.get('semantic_proof') else '—',
+            'Выбранные доказательства':_semantic_trace(row) or '—',
+            'Решение проверяющей модели':judge_label((row.get('semantic_proof') or {}).get('judge_verdict')) if row.get('semantic_proof') else '—',
+            'Достоверность проверяющей модели':(row.get('semantic_proof') or {}).get('judge_confidence') if row.get('semantic_proof') else '—',
+            'Провайдер проверяющей модели':(row.get('semantic_proof') or {}).get('judge_provider') or '—',
+            'Контрольная модель':('Приняла' if (row.get('semantic_proof') or {}).get('critic_accept') is True else 'Не приняла') if row.get('semantic_proof') else '—',
+            'Достоверность контрольной модели':(row.get('semantic_proof') or {}).get('critic_confidence') if row.get('semantic_proof') else '—',
+            'Провайдер контрольной модели':(row.get('semantic_proof') or {}).get('critic_provider') or '—',
+            'Независимость моделей':('Да' if (row.get('semantic_proof') or {}).get('independent') is True else 'Нет') if row.get('semantic_proof') else '—',
             'Фрагмент':row.get('evidence_fragment') or '',
             'Обоснование':row.get('reason') or '',
         } for row in normative20_rows]).head(160),hide_index=True,width='stretch')

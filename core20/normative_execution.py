@@ -8,7 +8,7 @@ from .normative_proof import NormativeProofEngine20
 from .normative_semantic_proof import apply_normative_semantic_proof
 
 
-ENGINE_VERSION="20.0-alpha9-normative-proof"
+ENGINE_VERSION="20.0-alpha9-normative-proof-multi-evidence"
 KIND_LABELS={
     "VERIFIED_OK":"Подтверждено",
     "PROJECT_FINDING":"Выявлено несоответствие",
@@ -36,16 +36,21 @@ def _keywords(contract:dict[str,Any])->list[str]:
     return list(dict.fromkeys(words[:8]))
 
 
-def _fragment(text:str, hits:list[str], radius:int=240)->str:
-    low=_norm(text)
-    pos=min((low.find(hit) for hit in hits if hit and low.find(hit)>=0),default=-1)
-    if pos<0:
-        return " ".join(str(text or "").split())[:700]
+def _fragment(text:str,hits:list[str],radius:int=240)->str:
     raw=" ".join(str(text or "").split())
-    # Normalized and raw offsets are close enough for a diagnostic excerpt; do
-    # not use the excerpt position as a legal/addressing fact.
-    start=max(0,pos-radius); end=min(len(raw),pos+radius)
-    return raw[start:end][:700]
+    low=raw.casefold().replace("ё","е")
+    positions=[low.find(hit) for hit in hits if hit and low.find(hit)>=0]
+    pos=min(positions,default=-1)
+    if pos<0:
+        return raw[:700]
+    start=max(0,pos-radius)
+    end=min(len(raw),pos+radius)
+    rendered=raw[start:end].strip()
+    if start>0:
+        rendered="… "+rendered
+    if end<len(raw):
+        rendered=rendered+" …"
+    return rendered[:760]
 
 
 def _project_profile(documents:list[dict[str,Any]]|None)->str:
@@ -66,8 +71,6 @@ def _conditional_applicability(contract:dict[str,Any],documents:list[dict[str,An
         if "объект производственного назначения" in profile:
             return True,"PROJECT_PROFILE_PRODUCTION"
         return False,"PROJECT_PROFILE_PRODUCTION_NOT_PROVEN"
-    # Energy-efficiency and other conditional clauses require an explicit
-    # project-specific applicability proof. Presence of AR/PZU alone is not enough.
     return False,"CONDITIONAL_APPLICABILITY_NOT_PROVEN"
 
 
@@ -89,17 +92,66 @@ def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
     return roles
 
 
+def _rank_candidates(
+    contract:dict[str,Any],
+    candidates:list[dict[str,Any]],
+)->list[tuple[int,float,int,dict[str,Any],list[str]]]:
+    words=_keywords(contract)
+    ranked=[]
+    for page in candidates:
+        raw_text=str(page.get("text") or page.get("content") or "")
+        text=_norm(raw_text)
+        hits=[kw for kw in words if kw and kw in text]
+        if not hits:
+            continue
+        coverage=len(hits)/max(1,len(words))
+        ranked.append((len(hits),coverage,len(text),page,hits))
+    ranked.sort(key=lambda x:(x[0],x[1],x[2]),reverse=True)
+    return ranked
+
+
+def _candidate_payloads(
+    ranked:list[tuple[int,float,int,dict[str,Any],list[str]]],
+    requirement_id:str,
+    *,
+    limit:int=4,
+)->list[dict[str,Any]]:
+    output=[]
+    seen=set()
+    for score,coverage,_,page,hits in ranked:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        fragment=_fragment(str(page.get("text") or page.get("content") or ""),hits)
+        key=(document,str(page_no),fragment[:240])
+        if key in seen:
+            continue
+        seen.add(key)
+        index=len(output)+1
+        output.append({
+            "evidence_id":f"NORM-E-{requirement_id}-{index:02d}",
+            "document":document,
+            "page":page_no,
+            "section":str(page.get("document_type") or page.get("section") or ""),
+            "fragment":fragment,
+            "matched_keywords":list(hits),
+            "retrieval_keyword_score":score,
+            "retrieval_keyword_coverage":round(coverage,3),
+        })
+        if len(output)>=limit:
+            break
+    return output
+
+
 class NormativeExecutionEngine20:
     """Retrieve evidence for curated, current, verified-clause contracts.
 
-    Alpha 9 explicitly separates retrieval from proof. This module still finds
-    and addresses candidate evidence, but NormativeProofEngine20 decides whether
-    the evidence type is strong enough for VERIFIED_OK. A persisted semantic
-    checkpoint may promote only the exact current semantic queue after an
-    independent Judge/Critic proof.
+    Alpha 9 separates retrieval from proof. Retrieval now preserves several
+    addressable candidates instead of collapsing the search to one lexical hit.
+    The proof engine decides whether those candidates are strong enough for a
+    categorical result. Missing proof never becomes a normative finding.
     """
 
-    def __init__(self, foundation:NormativeKnowledgeFoundation20|None=None):
+    def __init__(self,foundation:NormativeKnowledgeFoundation20|None=None):
         self.foundation=foundation or default_foundation()
 
     def run(self,documents:list[dict[str,Any]]|None,page_corpus:list[dict[str,Any]]|None)->dict[str,Any]:
@@ -116,6 +168,7 @@ class NormativeExecutionEngine20:
             1 for row in retrieval_rows
             if row.get("evidence_document") and row.get("evidence_page") not in (None,"")
         )
+        retrieval_candidates=sum(int(row.get("retrieval_candidate_count") or 0) for row in retrieval_rows)
 
         proof=NormativeProofEngine20().run(retrieval_rows)
         semantic_checkpoint={}
@@ -138,19 +191,19 @@ class NormativeExecutionEngine20:
             "review_questions":counts["REVIEW_QUESTION"],
             "system_limitations":counts["SYSTEM_LIMITATION"],
             "evidence_coverage_pct":round(100.0*addressed/max(1,len(rows)),1),
+            "retrieval_candidate_count":sum(int(row.get("retrieval_candidate_count") or 0) for row in rows),
             "rows":rows,
             "retrieval":{
                 "contracts":len(retrieval_rows),
                 "addressed":retrieval_addressed,
+                "candidate_evidence":retrieval_candidates,
                 "counts":retrieval_counts,
                 "verified_ok":retrieval_counts["VERIFIED_OK"],
                 "review_questions":retrieval_counts["REVIEW_QUESTION"],
                 "system_limitations":retrieval_counts["SYSTEM_LIMITATION"],
                 "evidence_coverage_pct":round(100.0*retrieval_addressed/max(1,len(retrieval_rows)),1),
             },
-            "proof_engine":{
-                key:value for key,value in proof.items() if key!="rows"
-            },
+            "proof_engine":{key:value for key,value in proof.items() if key!="rows"},
             "semantic_queue":list(proof.get("semantic_queue") or []),
             "semantic_queue_total":int(proof.get("semantic_queue_total") or 0),
             "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
@@ -167,12 +220,10 @@ class NormativeExecutionEngine20:
     def _execute(self,contract:dict[str,Any],pages:list[dict[str,Any]],documents:list[dict[str,Any]]|None)->dict[str,Any]:
         expected={_section_key(x) for x in (contract.get("sections") or []) if _section_key(x)}
         expected.discard("all")
-        candidates=[
-            p for p in pages
-            if not expected or _page_section(p) in expected
-        ]
+        candidates=[p for p in pages if not expected or _page_section(p) in expected]
+        rid=str(contract.get("requirement_id") or "")
         base={
-            "requirement_id":contract.get("requirement_id") or "",
+            "requirement_id":rid,
             "document_id":contract.get("document_id") or "",
             "source":contract.get("document_title") or "",
             "paragraph":contract.get("paragraph") or "",
@@ -185,6 +236,8 @@ class NormativeExecutionEngine20:
             "history_occurrences":int(contract.get("expert_occurrences") or 0),
             "history_projects":int(contract.get("expert_project_count") or 0),
             "priority_score":int(contract.get("priority_score") or 0),
+            "retrieval_candidate_count":0,
+            "evidence_candidates":[],
         }
         applicable,applicability_reason=_conditional_applicability(contract,documents)
         base["applicability_reason_code"]=applicability_reason
@@ -194,9 +247,9 @@ class NormativeExecutionEngine20:
                 "reason_code":"NORMATIVE_APPLICABILITY_NOT_PROVEN",
                 "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
 
-        rid=str(contract.get("requirement_id") or "").upper()
-        if rid in {"PP87-CLAUSE-12-PZU","PP87-CLAUSE-13-AR"}:
-            target="пзу" if rid=="PP87-CLAUSE-12-PZU" else "ар"
+        rid_upper=rid.upper()
+        if rid_upper in {"PP87-CLAUSE-12-PZU","PP87-CLAUSE-13-AR"}:
+            target="пзу" if rid_upper=="PP87-CLAUSE-12-PZU" else "ар"
             roles=_inventory_roles(documents,target)
             if {"TEXT_PART","GRAPHIC_PART"} <= roles:
                 return {**base,"kind":"VERIFIED_OK","state":KIND_LABELS["VERIFIED_OK"],
@@ -212,7 +265,7 @@ class NormativeExecutionEngine20:
                 "evidence_fragment":"Распознано ролей: "+", ".join(sorted(roles)),
                 "matched_keywords":[]}
 
-        if rid=="PP87-CLAUSE-15-IOS":
+        if rid_upper=="PP87-CLAUSE-15-IOS":
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Состав раздела ИОС маршрутизирован по верифицированному пункту 15, но полнота применимых подразделов требует проектно-специфической проверки.",
                 "reason_code":"NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING",
@@ -224,36 +277,34 @@ class NormativeExecutionEngine20:
                 "reason_code":"NORMATIVE_SECTION_EVIDENCE_MISSING",
                 "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
 
-        words=_keywords(contract)
         ec=dict(contract.get("evidence_contract") or {})
         minimum=max(1,int(ec.get("min_keyword_hits") or 2))
-        ranked=[]
-        for page in candidates:
-            text=_norm(page.get("text") or page.get("content") or "")
-            hits=[kw for kw in words if kw and kw in text]
-            if hits:
-                ranked.append((len(hits),len(text),page,hits))
-        ranked.sort(key=lambda x:(x[0],x[1]),reverse=True)
-        if not ranked:
+        ranked=_rank_candidates(contract,candidates)
+        evidence_candidates=_candidate_payloads(ranked,rid,limit=4)
+        base["evidence_candidates"]=evidence_candidates
+        base["retrieval_candidate_count"]=len(evidence_candidates)
+        if not ranked or not evidence_candidates:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД и профильный раздел подтверждены, но адресное положительное доказательство выполнения требования не найдено. Отсутствие совпадения не трактуется как нарушение.",
                 "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
                 "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
 
-        score,_,page,hits=ranked[0]
+        primary=evidence_candidates[0]
         evidence={
-            "evidence_document":str(page.get("document") or ""),
-            "evidence_page":page.get("page"),
-            "evidence_fragment":_fragment(str(page.get("text") or page.get("content") or ""),hits),
-            "matched_keywords":hits,
-            "retrieval_keyword_score":score,
+            "evidence_id":primary.get("evidence_id") or "",
+            "evidence_document":primary.get("document") or "",
+            "evidence_page":primary.get("page"),
+            "evidence_fragment":primary.get("fragment") or "",
+            "matched_keywords":list(primary.get("matched_keywords") or []),
+            "retrieval_keyword_score":int(primary.get("retrieval_keyword_score") or 0),
+            "retrieval_keyword_coverage":primary.get("retrieval_keyword_coverage") or 0,
             "retrieval_minimum":minimum,
         }
-        if score < minimum:
+        if int(primary.get("retrieval_keyword_score") or 0) < minimum:
             return {**base,**evidence,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Найден адресный кандидат доказательства, но совпадение недостаточно сильное для автоматического подтверждения.",
                 "reason_code":"NORMATIVE_EVIDENCE_WEAK"}
 
         return {**base,**evidence,"kind":"VERIFIED_OK","state":KIND_LABELS["VERIFIED_OK"],
-            "reason":"Retrieval-контур нашёл адресный положительный кандидат. Окончательный статус определяется proof-контрактом Alpha 9.",
+            "reason":"Retrieval-контур нашёл адресные положительные кандидаты. Окончательный статус определяется proof-контрактом Alpha 9.",
             "reason_code":"NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED"}

@@ -2,7 +2,10 @@ from io import BytesIO
 
 from openpyxl import Workbook, load_workbook
 
-from core20.report_proof_export import enrich_normative_proof_workbook
+from core20.report_proof_export import (
+    enrich_normative_proof_workbook,
+    reconcile_project_data_contract_workbook,
+)
 
 
 def _workbook_bytes():
@@ -68,3 +71,44 @@ def test_alpha9_export_is_noop_when_execution_sheet_absent():
     original=out.getvalue()
     enriched=enrich_normative_proof_workbook(original,_manifest())
     assert enriched==original
+
+
+def test_alpha9_report_contract_summary_uses_project_checkpoint_not_export_repairs():
+    wb=Workbook()
+    summary=wb.active; summary.title="Резюме"
+    summary.append(["Показатель","Значение"])
+    summary.append(["Контракт данных 18.0","REPAIRED"])
+    summary.append(["Исправлено значений контрактом",146346])
+    summary.append(["Отпечаток результата","export-fingerprint"])
+    control=wb.create_sheet("Контроль данных")
+    control.append(["Показатель","Значение"])
+    control.append(["Версия контракта","18.0-project-data-contract-v1"])
+    control.append(["Статус","REPAIRED"])
+    control.append(["Исправлено значений",146346])
+    control.append(["Документов",12])
+    control.append(["Находок",1409])
+    control.append(["Сверок",99])
+    control.append(["Отпечаток результата","export-fingerprint"])
+    control.append(["Исправление: non_finite_number",146346])
+    out=BytesIO(); wb.save(out)
+
+    contract={
+        "version":"18.0-project-data-contract-v1",
+        "status":"REPAIRED",
+        "repairs":680,
+        "counts":{"documents":12,"findings":1409,"comparisons":99},
+        "result_identity_fingerprint":"project-fingerprint",
+    }
+    reconciled=reconcile_project_data_contract_workbook(out.getvalue(),contract)
+    wb=load_workbook(BytesIO(reconciled),data_only=True)
+    summary=wb["Резюме"]
+    values={summary.cell(row=i,column=1).value:summary.cell(row=i,column=2).value for i in range(2,summary.max_row+1)}
+    assert values["Исправлено значений контрактом"]==680
+    assert values["Отпечаток результата"]=="project-fingerprint"
+
+    control=wb["Контроль данных"]
+    values={control.cell(row=i,column=1).value:control.cell(row=i,column=2).value for i in range(2,control.max_row+1)}
+    assert values["Исправлено значений"]==680
+    assert values["Экспортный контроль: исправлено значений"]==146346
+    assert values["Экспортный контроль: отпечаток результата"]=="export-fingerprint"
+    assert "Экспортное исправление: non_finite_number" in values

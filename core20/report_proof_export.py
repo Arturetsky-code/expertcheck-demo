@@ -6,6 +6,8 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from .proof_labels import judge_label, proof_state_label, proof_type_label
+
 
 SHEET_NAME = "НТД 20.0 — исполнение"
 PROOF_COLUMNS = (
@@ -25,49 +27,6 @@ PROOF_COLUMNS = (
     "Основание независимости",
     "Выбранные доказательства",
 )
-
-PROOF_TYPE_LABELS={
-    "PRESENCE":"Наличие сведений",
-    "STRUCTURE":"Структура раздела",
-    "SET_COMPLETENESS":"Полнота обязательного набора",
-    "SEMANTIC_REQUIREMENT":"Смысловое выполнение требования",
-    "GRAPHIC_CONTENT":"Содержание графической части",
-    "TYPED_VALUE":"Структурированное значение",
-    "CROSS_SECTION":"Межраздельная согласованность",
-}
-PROOF_STATE_LABELS={
-    "RETAINED_FAIL_CLOSED":"Удержано исходное неопределённое состояние",
-    "DETERMINISTIC_STRUCTURE_PROOF":"Структура подтверждена детерминированно",
-    "ADDRESSABLE_PRESENCE_PROOF":"Наличие подтверждено адресным фрагментом",
-    "PRESENCE_PROOF_NOT_ADDRESSABLE":"Адресное доказательство наличия не сформировано",
-    "VISUAL_PROOF_REQUIRED":"Требуется визуальная проверка графической части",
-    "SET_PROOF_CONTRACT_REQUIRED":"Требуется контракт полноты обязательного набора",
-    "STRUCTURED_PROOF_REQUIRED":"Требуется структурированный доказательный контракт",
-    "SEMANTIC_PROOF_REQUIRED":"Требуется независимая смысловая проверка",
-    "SEMANTIC_CONSENSUS_PROOF":"Смысл подтверждён независимым консенсусом",
-}
-JUDGE_LABELS={
-    "SUPPORTS":"Подтверждает",
-    "CONTRADICTS":"Противоречит",
-    "INSUFFICIENT":"Недостаточно доказательств",
-    "OTHER_ENTITY":"Другой объект",
-    "OTHER_METRIC":"Другой показатель",
-}
-
-
-def proof_type_label(value:Any)->str:
-    code=str(value or "").strip().upper()
-    return PROOF_TYPE_LABELS.get(code,code or "—")
-
-
-def proof_state_label(value:Any)->str:
-    code=str(value or "").strip().upper()
-    return PROOF_STATE_LABELS.get(code,code or "—")
-
-
-def judge_label(value:Any)->str:
-    code=str(value or "").strip().upper()
-    return JUDGE_LABELS.get(code,code or "—")
 
 
 def _execution_rows(canonical_manifest: dict[str, Any] | None) -> list[dict[str, Any]]:

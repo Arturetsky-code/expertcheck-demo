@@ -4,13 +4,27 @@ from pathlib import Path
 
 import streamlit as st
 
+from core.ai_gateway import provider_for_role
 from core20.normative_foundation import NormativeKnowledgeFoundation20
 from core20.expert_history import ExpertHistoryCorpus20
+from core20.normative_semantic_proof import run_normative_semantic_proof
 
 
 def _foundation():
     root=Path(__file__).resolve().parents[2]/"knowledge"
     return NormativeKnowledgeFoundation20(root)
+
+
+def _persist_normative_semantic_proof(value:dict) -> bool:
+    """Persist Alpha 9 proof beside the project result so normal workspace save keeps it."""
+    result=st.session_state.get("result")
+    if not isinstance(result,(list,tuple)) or not result:
+        return False
+    documents=result[0]
+    if isinstance(documents,list) and documents and isinstance(documents[0],dict):
+        documents[0]["normative_semantic_proof"]=dict(value or {})
+        return True
+    return False
 
 
 def render(ctx):
@@ -85,6 +99,52 @@ def render(ctx):
                 "Alpha 9 разделяет поиск кандидата и доказательство. Совпадение терминов — это retrieval, а не нормативное подтверждение. "
                 "Ненайденный текст и недоказанный смысл не превращаются в несоответствие."
             )
+
+            semantic_queue=list(execution.get("semantic_queue") or [])
+            semantic_summary=dict(execution.get("semantic_proof_summary") or {})
+            if execution.get("semantic_proof_applied"):
+                st.success(
+                    f"Независимый semantic proof подтвердил требований: {execution.get('semantic_proof_applied',0)}. "
+                    "Эти строки прошли адресное evidence → Judge → независимый Critic → программный gate."
+                )
+            if execution.get("semantic_proof_stale"):
+                st.warning("Сохранённый semantic proof относится к другой версии evidence-очереди и не применён.")
+            if semantic_summary.get("provider_errors"):
+                st.warning("Последний semantic proof завершён с ограничениями: "+" | ".join(semantic_summary.get("provider_errors") or []))
+
+            if semantic_queue:
+                st.info(
+                    f"В очереди смыслового доказательства: {len(semantic_queue)}. "
+                    "Запуск отправляет только ограниченные адресные evidence packets настроенным Judge и Critic; полные PDF не передаются."
+                )
+                if st.button(
+                    "Проверить смысловые требования: Judge → Critic",
+                    type="primary",
+                    key="alpha9_normative_semantic_proof",
+                ):
+                    judge=provider_for_role("judge",st.session_state,st.secrets)
+                    critic=provider_for_role("critic",st.session_state,st.secrets)
+                    if judge is None or critic is None:
+                        st.error("Для semantic proof настройте независимые провайдеры Judge и Critic в разделе «Настройки → AI-модули».")
+                    else:
+                        with st.spinner("Проверяем нормативные evidence packets независимыми Judge и Critic..."):
+                            proof=run_normative_semantic_proof(
+                                semantic_queue,
+                                judge_provider=judge,
+                                critic_provider=critic,
+                                limit=24,
+                            )
+                        if not _persist_normative_semantic_proof(proof):
+                            st.error("Не удалось сохранить normative proof в цифровой снимок проекта.")
+                        else:
+                            if proof.get("provider_errors"):
+                                st.warning("Semantic proof сохранён fail-closed: "+" | ".join(proof.get("provider_errors") or []))
+                            else:
+                                st.success(
+                                    f"Semantic proof завершён: подтверждено {proof.get('verified_ok',0)} из {proof.get('selected',0)} выбранных пакетов."
+                                )
+                            st.rerun()
+
             st.dataframe([{
                 "Результат":x.get("state") or "",
                 "Тип proof":x.get("proof_type") or "",

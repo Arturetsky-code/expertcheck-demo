@@ -4,9 +4,10 @@ import re
 from typing import Any
 
 from .normative_foundation import NormativeKnowledgeFoundation20, _section_key, default_foundation
+from .normative_proof import NormativeProofEngine20
 
 
-ENGINE_VERSION="20.0-alpha8-normative-execution"
+ENGINE_VERSION="20.0-alpha9-normative-proof"
 KIND_LABELS={
     "VERIFIED_OK":"Подтверждено",
     "PROJECT_FINDING":"Выявлено несоответствие",
@@ -88,10 +89,11 @@ def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
 
 
 class NormativeExecutionEngine20:
-    """Execute only curated, current, verified-clause contracts.
+    """Retrieve evidence for curated, current, verified-clause contracts.
 
-    Alpha 8 is intentionally positive-evidence-first. A missing text hit never
-    becomes a PROJECT_FINDING. It becomes REVIEW_QUESTION or SYSTEM_LIMITATION.
+    Alpha 9 explicitly separates retrieval from proof. This module still finds
+    and addresses candidate evidence, but NormativeProofEngine20 decides whether
+    the evidence type is strong enough for VERIFIED_OK.
     """
 
     def __init__(self, foundation:NormativeKnowledgeFoundation20|None=None):
@@ -100,13 +102,25 @@ class NormativeExecutionEngine20:
     def run(self,documents:list[dict[str,Any]]|None,page_corpus:list[dict[str,Any]]|None)->dict[str,Any]:
         routes=self.foundation.project_routes(documents)
         pages=[dict(x) for x in (page_corpus or []) if isinstance(x,dict)]
-        rows=[]
+        retrieval_rows=[]
         for contract in routes.get("rows") or []:
             if not contract.get("project_relevant") or not contract.get("automatic_contract_ready"):
                 continue
-            rows.append(self._execute(contract,pages,documents))
+            retrieval_rows.append(self._execute(contract,pages,documents))
+
+        retrieval_counts={kind:sum(1 for row in retrieval_rows if row.get("kind")==kind) for kind in KIND_LABELS}
+        retrieval_addressed=sum(
+            1 for row in retrieval_rows
+            if row.get("evidence_document") and row.get("evidence_page") not in (None,"")
+        )
+
+        proof=NormativeProofEngine20().run(retrieval_rows)
+        rows=list(proof.get("rows") or [])
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
-        addressed=sum(1 for row in rows if row.get("evidence_document") and row.get("evidence_page") not in (None,""))
+        addressed=sum(
+            1 for row in rows
+            if row.get("evidence_document") and row.get("evidence_page") not in (None,"")
+        )
         return {
             "version":ENGINE_VERSION,
             "contracts":len(rows),
@@ -118,7 +132,26 @@ class NormativeExecutionEngine20:
             "system_limitations":counts["SYSTEM_LIMITATION"],
             "evidence_coverage_pct":round(100.0*addressed/max(1,len(rows)),1),
             "rows":rows,
-            "guardrail":"Ненайденный текст не является доказательством нарушения; отрицательный нормативный вывод без отдельного доказательного контракта запрещён.",
+            "retrieval":{
+                "contracts":len(retrieval_rows),
+                "addressed":retrieval_addressed,
+                "counts":retrieval_counts,
+                "verified_ok":retrieval_counts["VERIFIED_OK"],
+                "review_questions":retrieval_counts["REVIEW_QUESTION"],
+                "system_limitations":retrieval_counts["SYSTEM_LIMITATION"],
+                "evidence_coverage_pct":round(100.0*retrieval_addressed/max(1,len(retrieval_rows)),1),
+            },
+            "proof_engine":{
+                key:value for key,value in proof.items() if key!="rows"
+            },
+            "semantic_queue":list(proof.get("semantic_queue") or []),
+            "semantic_queue_total":int(proof.get("semantic_queue_total") or 0),
+            "demoted_keyword_only":int(proof.get("demoted_keyword_only") or 0),
+            "proof_type_counts":dict(proof.get("proof_type_counts") or {}),
+            "guardrail":(
+                "Retrieval is not proof. Ненайденный текст не является доказательством нарушения, а лексическое совпадение "
+                "не подтверждает содержательное нормативное требование без подходящего proof-контракта."
+            ),
         }
 
     def _execute(self,contract:dict[str,Any],pages:list[dict[str,Any]],documents:list[dict[str,Any]]|None)->dict[str,Any]:
@@ -205,6 +238,8 @@ class NormativeExecutionEngine20:
             "evidence_page":page.get("page"),
             "evidence_fragment":_fragment(str(page.get("text") or page.get("content") or ""),hits),
             "matched_keywords":hits,
+            "retrieval_keyword_score":score,
+            "retrieval_minimum":minimum,
         }
         if score < minimum:
             return {**base,**evidence,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
@@ -212,5 +247,5 @@ class NormativeExecutionEngine20:
                 "reason_code":"NORMATIVE_EVIDENCE_WEAK"}
 
         return {**base,**evidence,"kind":"VERIFIED_OK","state":KIND_LABELS["VERIFIED_OK"],
-            "reason":"Верифицированный пункт НТД, применимый раздел и адресное положительное evidence связаны единым исполняемым контрактом.",
-            "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_CONFIRMED"}
+            "reason":"Retrieval-контур нашёл адресный положительный кандидат. Окончательный статус определяется proof-контрактом Alpha 9.",
+            "reason_code":"NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED"}

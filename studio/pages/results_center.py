@@ -64,14 +64,30 @@ def render(ctx):
     with c4:card('Не проверено',limits,'Ограничения покрытия','info')
 
     if normative20_rows:
-        section('НТД 20.0 — доказательная проверка','Исполняются только верифицированные атомарные пункты. Ненайденный текст не считается нарушением.')
-        n1,n2,n3,n4=st.columns(4)
-        with n1:card('Контрактов',normative20.get('contracts',0),'Применимые verified-clause')
-        with n2:card('Подтверждено',normative20.get('verified_ok',0),'Есть адресное положительное evidence','ok')
-        with n3:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
-        with n4:card('Не проверено',normative20.get('system_limitations',0),f"Адресное покрытие {normative20.get('evidence_coverage_pct',0)}%",'info')
+        section(
+            'НТД 20.0 — доказательная проверка',
+            'Verified-clause проходит отдельный proof-gate: найденный текст ещё не означает выполненное нормативное требование.'
+        )
+        retrieval=dict(normative20.get('retrieval') or {})
+        n1,n2,n3,n4,n5=st.columns(5)
+        with n1:card('Контрактов',normative20.get('contracts',0),'Verified-clause')
+        with n2:card('Retrieval-кандидатов',retrieval.get('verified_ok',normative20.get('verified_ok',0)),'Найдено адресное содержание','info')
+        with n3:card('Доказано',normative20.get('verified_ok',0),'Прошло proof-gate','ok')
+        with n4:card('Удержано',normative20.get('demoted_keyword_only',0),'Retrieval ≠ proof','warn' if normative20.get('demoted_keyword_only') else 'ok')
+        with n5:card('Semantic proof очередь',normative20.get('semantic_queue_total',0),'Нужна смысловая проверка','warn' if normative20.get('semantic_queue_total') else 'ok')
+        m1,m2,m3=st.columns(3)
+        with m1:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
+        with m2:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего proof-механизма','info')
+        with m3:card('Адресное evidence',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
+        st.caption(
+            'PRESENCE/STRUCTURE могут подтверждаться детерминированно. SEMANTIC_REQUIREMENT, GRAPHIC_CONTENT, '
+            'SET_COMPLETENESS, TYPED_VALUE и CROSS_SECTION требуют своего доказательного контракта. '
+            'Недостаточность доказательства не является несоответствием.'
+        )
         st.dataframe(pd.DataFrame([{
             'Результат':row.get('state') or '—',
+            'Тип proof':row.get('proof_type') or '—',
+            'Proof state':row.get('proof_state') or '—',
             'НТД':row.get('source') or row.get('document_id') or '—',
             'Пункт':row.get('paragraph') or '—',
             'Требование':row.get('requirement') or '—',
@@ -82,7 +98,7 @@ def render(ctx):
             ),
             'Фрагмент':row.get('evidence_fragment') or '',
             'Обоснование':row.get('reason') or '',
-        } for row in normative20_rows]).head(120),hide_index=True,width='stretch')
+        } for row in normative20_rows]).head(160),hide_index=True,width='stretch')
 
     tabs=st.tabs(['Несоответствия','Вопросы специалисту','Подтверждено'])
     with tabs[0]:

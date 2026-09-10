@@ -4,7 +4,7 @@ from collections import Counter
 from typing import Any
 
 
-ENGINE_VERSION = "20.0-alpha9-normative-proof"
+ENGINE_VERSION = "20.0-alpha9-normative-proof-multi-evidence"
 
 PROOF_TYPES = (
     "PRESENCE",
@@ -24,15 +24,12 @@ def _norm(value: Any) -> str:
 def _proof_type(row: dict[str, Any]) -> str:
     """Classify how a verified clause must actually be proven.
 
-    Alpha 8 treated a strong lexical hit as positive evidence for every semantic
-    clause. Alpha 9 separates retrieval from proof. The taxonomy is deliberately
-    conservative: any requirement that asks to justify, substantiate, coordinate
-    or demonstrate a multi-part engineering decision is never auto-confirmed by
-    keywords alone.
+    Retrieval and proof are intentionally separate. Requirements that ask for an
+    engineering justification, consistency or multi-part content are never
+    confirmed by lexical overlap alone.
     """
     check_kind = str(row.get("check_kind") or "").strip().upper()
     requirement = _norm(row.get("requirement") or "")
-    topic = _norm(row.get("topic") or "")
     rid = str(row.get("requirement_id") or "").upper()
 
     if check_kind == "STRUCTURE" or rid.startswith("PP87-CLAUSE-"):
@@ -42,8 +39,6 @@ def _proof_type(row: dict[str, Any]) -> str:
     if check_kind == "CROSS_SECTION":
         return "CROSS_SECTION"
 
-    # Text extraction is not proof of graphical content. Drawings require a
-    # dedicated Drawing Intelligence / visual contract.
     if "графическ" in requirement or "схема отображ" in requirement or "план земляных масс" in requirement:
         return "GRAPHIC_CONTENT"
 
@@ -61,9 +56,6 @@ def _proof_type(row: dict[str, Any]) -> str:
     if any(marker in requirement for marker in set_markers):
         return "SET_COMPLETENESS"
 
-    # Direct positive-presence clauses: the normative obligation is satisfied by
-    # an addressable statement/description itself, without a separate engineering
-    # judgement about adequacy or consistency.
     presence_markers = (
         "должна быть приведена", "должны быть приведены сведения", "должно быть приведено описание",
         "должны быть описаны", "должно содержаться", "должна содержаться",
@@ -71,16 +63,55 @@ def _proof_type(row: dict[str, Any]) -> str:
     if any(marker in requirement for marker in presence_markers):
         return "PRESENCE"
 
-    # Unknown semantic shapes fail closed instead of inheriting Alpha 8 keyword
-    # confirmation.
     return "SEMANTIC_REQUIREMENT"
 
 
+def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return up to four addressable retrieval candidates for semantic proof."""
+    rid = str(row.get("requirement_id") or "")
+    source = list(row.get("evidence_candidates") or [])
+    if not source and row.get("evidence_document") and row.get("evidence_page") not in (None, ""):
+        source = [{
+            "evidence_id": row.get("evidence_id") or f"NORM-E-{rid}-01",
+            "document": row.get("evidence_document"),
+            "page": row.get("evidence_page"),
+            "section": (row.get("sections") or [""])[0] if row.get("sections") else "",
+            "fragment": row.get("evidence_fragment"),
+            "matched_keywords": row.get("matched_keywords") or [],
+            "retrieval_keyword_score": row.get("retrieval_keyword_score") or 0,
+            "retrieval_keyword_coverage": row.get("retrieval_keyword_coverage") or 0,
+        }]
+
+    output=[]
+    seen=set()
+    for index,candidate in enumerate(source[:4],1):
+        document=str(candidate.get("document") or candidate.get("evidence_document") or "").strip()
+        page=candidate.get("page") if candidate.get("page") not in (None,"") else candidate.get("evidence_page")
+        fragment=str(candidate.get("fragment") or candidate.get("evidence_fragment") or "").strip()
+        if not document or page in (None,"") or not fragment:
+            continue
+        key=(document,str(page),fragment[:240])
+        if key in seen:
+            continue
+        seen.add(key)
+        evidence_id=str(candidate.get("evidence_id") or f"NORM-E-{rid}-{index:02d}")
+        output.append({
+            "evidence_id":evidence_id,
+            "document":document,
+            "page":page,
+            "section":str(candidate.get("section") or ((row.get("sections") or [""])[0] if row.get("sections") else "")),
+            "text":fragment[:1200],
+            "source_locator":f"{document}, стр. {page}",
+            "matched_keywords":list(candidate.get("matched_keywords") or []),
+            "retrieval_keyword_score":candidate.get("retrieval_keyword_score") or 0,
+            "retrieval_keyword_coverage":candidate.get("retrieval_keyword_coverage") or 0,
+        })
+    return output
+
+
 def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | None:
-    document = str(row.get("evidence_document") or "").strip()
-    page = row.get("evidence_page")
-    fragment = str(row.get("evidence_fragment") or "").strip()
-    if not document or page in (None, "") or not fragment:
+    evidence=_semantic_evidence(row)
+    if not evidence:
         return None
     rid = str(row.get("requirement_id") or "")
     return {
@@ -92,18 +123,10 @@ def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | N
         "topic": row.get("topic") or "",
         "requirement": row.get("requirement") or "",
         "sections": list(row.get("sections") or []),
-        "evidence": [{
-            "evidence_id": f"NORM-E-{rid}",
-            "document": document,
-            "page": page,
-            "section": (row.get("sections") or [""])[0] if row.get("sections") else "",
-            "text": fragment[:1200],
-            "source_locator": f"{document}, стр. {page}",
-            "matched_keywords": list(row.get("matched_keywords") or []),
-        }],
+        "evidence": evidence,
         "policy": (
             "Retrieval is not proof. VERIFIED_OK requires a proof contract appropriate to proof_type. "
-            "Absence of proof is never a normative PROJECT_FINDING."
+            "Judge must cite addressable evidence that proves the whole verified requirement; absence of proof is never a normative PROJECT_FINDING."
         ),
     }
 
@@ -116,8 +139,6 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     result["retrieval_state"] = str(result.get("state") or "")
     result["proof_engine_version"] = ENGINE_VERSION
 
-    # Existing uncertainty remains uncertainty. Alpha 9 never upgrades a row
-    # merely because a proof type was classified.
     if str(result.get("kind") or "").upper() != "VERIFIED_OK":
         result["proof_state"] = "RETAINED_FAIL_CLOSED"
         return result
@@ -161,7 +182,7 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         result["reason_code"] = "NORMATIVE_SET_COMPLETENESS_NOT_PROVEN"
         result["reason"] = (
             "Найден адресный кандидат, но требование содержит набор обязательных сведений. "
-            "Пока набор не разложен на обязательные элементы, совпадение ключевых слов не является доказательством полноты."
+            "Пока набор не разложен на верифицированные обязательные элементы, совпадение ключевых слов не является доказательством полноты."
         )
         return result
 
@@ -176,25 +197,22 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         )
         return result
 
-    # The main Alpha 9 precision guard: engineering meaning must be judged, not
-    # inferred from lexical overlap.
     result["kind"] = "REVIEW_QUESTION"
     result["state"] = "Вопрос специалисту"
     result["proof_state"] = "SEMANTIC_PROOF_REQUIRED"
     result["reason_code"] = "NORMATIVE_SEMANTIC_PROOF_REQUIRED"
     result["reason"] = (
-        "Найден адресный кандидат evidence, но требование требует содержательного инженерного доказательства. "
+        "Найдены адресные кандидаты evidence, но требование требует содержательного инженерного доказательства. "
         "Ключевые слова подтверждают только retrieval; до независимого semantic proof автоматическое VERIFIED_OK запрещено."
     )
     return result
 
 
 class NormativeProofEngine20:
-    """Turn Alpha 8 retrieval results into proof-appropriate verdicts.
+    """Turn retrieval results into proof-appropriate verdicts.
 
-    This engine deliberately improves precision before recall. It may demote an
-    Alpha 8 VERIFIED_OK to REVIEW_QUESTION/SYSTEM_LIMITATION when the evidence
-    proves only lexical relevance, not the actual normative obligation.
+    Precision has priority over recall: lexical evidence may be demoted when its
+    proof type requires semantic, graphical, typed or cross-section verification.
     """
 
     def run(self, rows: list[dict[str, Any]] | None) -> dict[str, Any]:
@@ -231,6 +249,7 @@ class NormativeProofEngine20:
             "proof_type_counts": {key: proof_types.get(key, 0) for key in PROOF_TYPES},
             "semantic_queue": semantic_queue,
             "semantic_queue_total": len(semantic_queue),
+            "semantic_queue_evidence": sum(len(packet.get("evidence") or []) for packet in semantic_queue),
             "set_completeness_queue": set_queue,
             "set_completeness_queue_total": len(set_queue),
             "principle": (

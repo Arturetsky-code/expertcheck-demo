@@ -128,3 +128,97 @@ def enrich_normative_proof_workbook(
     output=BytesIO()
     workbook.save(output)
     return output.getvalue()
+
+
+def reconcile_project_data_contract_workbook(
+    payload: bytes | bytearray | None,
+    project_data_contract: dict[str, Any] | None,
+) -> bytes | None:
+    """Keep report-facing data-contract metrics equal to the pipeline checkpoint.
+
+    The report builder performs a second serialization-safety normalization. Its
+    repair count may be much larger because nested NaN values are sanitized for
+    XLSX. That boundary audit is useful diagnostics, but it must not replace the
+    project contract metric shown in the UI.
+    """
+    if payload is None:
+        return None
+    raw=bytes(payload)
+    contract=dict(project_data_contract or {})
+    if not raw or not contract:
+        return raw
+
+    workbook=load_workbook(BytesIO(raw))
+    changed=False
+
+    if "Резюме" in workbook.sheetnames:
+        sheet=workbook["Резюме"]
+        summary_values={
+            "Контракт данных 18.0":contract.get("status") or "Не выполнен",
+            "Исправлено значений контрактом":int(contract.get("repairs") or 0),
+            "Отпечаток результата":contract.get("result_identity_fingerprint") or "—",
+        }
+        for row_index in range(2,sheet.max_row+1):
+            label=str(sheet.cell(row=row_index,column=1).value or "").strip()
+            if label in summary_values:
+                sheet.cell(row=row_index,column=2,value=summary_values[label])
+                changed=True
+
+    if "Контроль данных" in workbook.sheetnames:
+        sheet=workbook["Контроль данных"]
+        existing={}
+        for row_index in range(2,sheet.max_row+1):
+            label=str(sheet.cell(row=row_index,column=1).value or "").strip()
+            if label:
+                existing[label]=sheet.cell(row=row_index,column=2).value
+
+        project_values={
+            "Версия контракта":contract.get("version"),
+            "Статус":contract.get("status"),
+            "Исправлено значений":int(contract.get("repairs") or 0),
+            "Документов":(contract.get("counts") or {}).get("documents",0),
+            "Находок":(contract.get("counts") or {}).get("findings",0),
+            "Сверок":(contract.get("counts") or {}).get("comparisons",0),
+            "Отпечаток результата":contract.get("result_identity_fingerprint"),
+        }
+        for row_index in range(2,sheet.max_row+1):
+            label=str(sheet.cell(row=row_index,column=1).value or "").strip()
+            if label in project_values:
+                sheet.cell(row=row_index,column=2,value=project_values[label])
+                changed=True
+            elif label.startswith("Исправление:"):
+                sheet.cell(row=row_index,column=1,value="Экспортное "+label.casefold())
+                changed=True
+
+        export_rows=[
+            ("Экспортный контроль: статус",existing.get("Статус")),
+            ("Экспортный контроль: исправлено значений",existing.get("Исправлено значений")),
+            ("Экспортный контроль: отпечаток результата",existing.get("Отпечаток результата")),
+        ]
+        template_row=2 if sheet.max_row>=2 else 1
+        for label,value in export_rows:
+            if value in (None,""):
+                continue
+            target=sheet.max_row+1
+            sheet.cell(row=target,column=1,value=label)
+            sheet.cell(row=target,column=2,value=value)
+            for col in (1,2):
+                src=sheet.cell(row=template_row,column=col)
+                dst=sheet.cell(row=target,column=col)
+                if src.has_style:
+                    dst._style=copy(src._style)
+                if src.font:
+                    dst.font=copy(src.font)
+                if src.fill:
+                    dst.fill=copy(src.fill)
+                if src.border:
+                    dst.border=copy(src.border)
+                if src.alignment:
+                    dst.alignment=copy(src.alignment)
+            changed=True
+
+    if not changed:
+        return raw
+    output=BytesIO()
+    workbook.save(output)
+    return output.getvalue()

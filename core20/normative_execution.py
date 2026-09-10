@@ -5,6 +5,7 @@ from typing import Any
 
 from .normative_foundation import NormativeKnowledgeFoundation20, _section_key, default_foundation
 from .normative_proof import NormativeProofEngine20
+from .normative_semantic_proof import apply_normative_semantic_proof
 
 
 ENGINE_VERSION="20.0-alpha9-normative-proof"
@@ -93,7 +94,9 @@ class NormativeExecutionEngine20:
 
     Alpha 9 explicitly separates retrieval from proof. This module still finds
     and addresses candidate evidence, but NormativeProofEngine20 decides whether
-    the evidence type is strong enough for VERIFIED_OK.
+    the evidence type is strong enough for VERIFIED_OK. A persisted semantic
+    checkpoint may promote only the exact current semantic queue after an
+    independent Judge/Critic proof.
     """
 
     def __init__(self, foundation:NormativeKnowledgeFoundation20|None=None):
@@ -115,6 +118,10 @@ class NormativeExecutionEngine20:
         )
 
         proof=NormativeProofEngine20().run(retrieval_rows)
+        semantic_checkpoint={}
+        if documents and isinstance(documents[0],dict):
+            semantic_checkpoint=dict(documents[0].get("normative_semantic_proof") or {})
+        proof=apply_normative_semantic_proof(proof,semantic_checkpoint)
         rows=list(proof.get("rows") or [])
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
         addressed=sum(
@@ -146,6 +153,9 @@ class NormativeExecutionEngine20:
             },
             "semantic_queue":list(proof.get("semantic_queue") or []),
             "semantic_queue_total":int(proof.get("semantic_queue_total") or 0),
+            "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
+            "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
+            "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),
             "demoted_keyword_only":int(proof.get("demoted_keyword_only") or 0),
             "proof_type_counts":dict(proof.get("proof_type_counts") or {}),
             "guardrail":(
@@ -203,8 +213,6 @@ class NormativeExecutionEngine20:
                 "matched_keywords":[]}
 
         if rid=="PP87-CLAUSE-15-IOS":
-            # The verified root clause establishes the subsection family, but the
-            # applicability of each engineering subsystem is project-specific.
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Состав раздела ИОС маршрутизирован по верифицированному пункту 15, но полнота применимых подразделов требует проектно-специфической проверки.",
                 "reason_code":"NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING",

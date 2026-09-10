@@ -6,7 +6,10 @@ from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
 from studio.report_resilience import build_report_isolated
 from core.project_snapshot import project_snapshot_bytes
-from core20.report_proof_export import enrich_normative_proof_workbook
+from core20.report_proof_export import (
+    enrich_normative_proof_workbook,
+    reconcile_project_data_contract_workbook,
+)
 
 
 def _report_documents(docs):
@@ -39,7 +42,8 @@ def _build_report_bytes(ctx, docs, findings, comparisons, kind, risks, checklist
         )
         first=docs.iloc[0].to_dict() if hasattr(docs,'empty') and not docs.empty else {}
         canonical=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
-        return enrich_normative_proof_workbook(payload,canonical)
+        payload=enrich_normative_proof_workbook(payload,canonical)
+        return reconcile_project_data_contract_workbook(payload,dict(first.get('project_data_contract') or {}))
 
     def show_error(exc):
         st.error('Не удалось сформировать этот файл. Остальные отчёты и проект сохранены.')

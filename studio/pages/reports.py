@@ -6,16 +6,20 @@ from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
 from studio.report_resilience import build_report_isolated
 from core.project_snapshot import project_snapshot_bytes
+from core20.report_proof_export import enrich_normative_proof_workbook
 
 
 def _report_documents(docs):
-    """Inject user decisions kept in session state into exported snapshots."""
+    """Inject user decisions and current Canonical Core state into exports."""
     report_docs = docs.copy()
     if report_docs.empty:
         return report_docs
     report_docs['completeness_user_confirmed'] = bool(st.session_state.get('completeness_user_confirmed'))
     report_docs['object_registry_confirmed'] = bool(st.session_state.get('object_registry_confirmed'))
     report_docs['completeness_decisions'] = [dict(st.session_state.get('completeness_decisions') or {}) for _ in range(len(report_docs))]
+    canonical=dict(st.session_state.get('canonical_core_20_manifest') or {})
+    if canonical:
+        report_docs['canonical_core_20_manifest'] = [dict(canonical) for _ in range(len(report_docs))]
     return report_docs
 
 
@@ -28,11 +32,14 @@ def _checklist_results(first:dict)->list[dict]:
 
 def _build_report_bytes(ctx, docs, findings, comparisons, kind, risks, checklist, assembly):
     def build():
-        return structured_excel_report(
+        payload=structured_excel_report(
             st.session_state.project_name,ctx.version,docs,findings,comparisons,
             report_kind=kind,risks=risks,checklist_results=checklist,
             assembly_rows_data=assembly,
         )
+        first=docs.iloc[0].to_dict() if hasattr(docs,'empty') and not docs.empty else {}
+        canonical=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
+        return enrich_normative_proof_workbook(payload,canonical)
 
     def show_error(exc):
         st.error('Не удалось сформировать этот файл. Остальные отчёты и проект сохранены.')
@@ -73,9 +80,15 @@ def render(ctx):
     if normative20.get('contracts'):
         n1,n2,n3,n4=st.columns(4)
         with n1:card('НТД 20.0 — контрактов',normative20.get('contracts',0),'Исполняемые verified-clause')
-        with n2:card('НТД — подтверждено',normative20.get('verified_ok',0),'Адресное evidence','ok')
+        with n2:card('НТД — доказано',normative20.get('verified_ok',0),'Прошло proof-gate','ok')
         with n3:card('НТД — вопросы',normative20.get('review_questions',0),'Нужна проверка специалиста','warn' if normative20.get('review_questions') else 'ok')
         with n4:card('НТД — не проверено',normative20.get('system_limitations',0),f"Evidence {normative20.get('evidence_coverage_pct',0)}%",'info')
+        retrieval=dict(normative20.get('retrieval') or {})
+        st.caption(
+            f"Retrieval-кандидатов evidence: {retrieval.get('candidate_evidence',0)}; "
+            f"semantic proof применён: {normative20.get('semantic_proof_applied',0)}. "
+            "В выгружаемом листе «НТД 20.0 — исполнение» сохраняются proof type/state и трассировка Judge/Critic."
+        )
     st.info(report['conclusion'])
 
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')

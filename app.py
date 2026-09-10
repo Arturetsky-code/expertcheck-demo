@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 8 · Normative Execution Engine · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 9 · Normative Proof Engine · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -145,9 +145,9 @@ if st.session_state.result and not st.session_state.object_assembly_rows:
 raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
-# 20.0 Alpha 6 adds independent verified-clause normative reconstruction
-# beside the accepted Assignment and cross-section foundations. It remains
-# observational: no legacy verdict, report or user decision is changed here.
+# Canonical Core 20.0 runs independently beside the accepted legacy result.
+# Alpha 9 adds proof-appropriate normative execution: retrieval, deterministic
+# gates and independent semantic proof without changing legacy verdicts.
 canonical_manifest=None
 if st.session_state.result:
     try:
@@ -161,7 +161,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha7-normative-knowledge-foundation',
+            'version':'20.0-alpha9-normative-proof',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }

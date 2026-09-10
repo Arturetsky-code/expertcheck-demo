@@ -17,7 +17,7 @@ def render(ctx):
     st.title("НТД и экспертная практика")
     st.caption(
         "Фундамент нормативной базы ExpertCheck: каталог документов, верифицированные атомарные пункты, "
-        "маршрутизация применимых требований и историческая практика экспертизы."
+        "маршрутизация требований, доказательная проверка и историческая практика экспертизы."
     )
 
     foundation=_foundation()
@@ -52,30 +52,43 @@ def render(ctx):
     if knowledge:
         st.subheader("Маршрут текущего проекта")
         a,b,c,d=st.columns(4)
-        a.metric("Применимых маршрутов",knowledge.get("project_relevant",0))
+        a.metric("Маршрутов по распознанным разделам",knowledge.get("project_relevant",0))
         b.metric("Маршрутов по verified-clause",knowledge.get("project_verified_clause_routes",0))
         c.metric("Готовых контрактов",knowledge.get("project_automatic_contract_ready",0))
         d.metric("Приоритет по истории",knowledge.get("project_history_prioritized",0))
         sections=knowledge.get("project_sections") or []
         if sections:
             st.caption("Распознанные разделы проекта: "+", ".join(sections))
+        st.caption(
+            "Маршрут по разделу означает релевантность для проверки, но сам по себе не доказывает юридическую применимость "
+            "условного требования и не является результатом проверки."
+        )
 
         rows=list(knowledge.get("priority_routes") or [])
         execution=dict(manifest.get("normative_execution") or {})
         execution_rows=list(execution.get("rows") or [])
         if execution_rows:
             st.subheader("Исполнение verified-clause")
-            e1,e2,e3,e4=st.columns(4)
-            e1.metric("Исполняемых контрактов",execution.get("contracts",0))
-            e2.metric("Подтверждено",execution.get("verified_ok",0))
-            e3.metric("Вопросов специалисту",execution.get("review_questions",0))
-            e4.metric("Не проверено системой",execution.get("system_limitations",0))
+            retrieval=dict(execution.get("retrieval") or {})
+            p1,p2,p3,p4,p5=st.columns(5)
+            p1.metric("Исполняемых контрактов",execution.get("contracts",0))
+            p2.metric("Retrieval-кандидатов",retrieval.get("verified_ok",execution.get("verified_ok",0)))
+            p3.metric("Доказано proof-gate",execution.get("verified_ok",0))
+            p4.metric("Удержано proof-gate",execution.get("demoted_keyword_only",0))
+            p5.metric("Semantic proof очередь",execution.get("semantic_queue_total",0))
+
+            e1,e2,e3=st.columns(3)
+            e1.metric("Вопросов специалисту",execution.get("review_questions",0))
+            e2.metric("Не проверено системой",execution.get("system_limitations",0))
+            e3.metric("Адресное evidence",f"{execution.get('evidence_coverage_pct',0)}%")
             st.caption(
-                f"Адресное покрытие evidence: {execution.get('evidence_coverage_pct',0)}%. "
-                "Ненайденный текст не превращается в нормативное несоответствие."
+                "Alpha 9 разделяет поиск кандидата и доказательство. Совпадение терминов — это retrieval, а не нормативное подтверждение. "
+                "Ненайденный текст и недоказанный смысл не превращаются в несоответствие."
             )
             st.dataframe([{
                 "Результат":x.get("state") or "",
+                "Тип proof":x.get("proof_type") or "",
+                "Proof state":x.get("proof_state") or "",
                 "НТД":x.get("source") or x.get("document_id") or "",
                 "Пункт":x.get("paragraph") or "",
                 "Требование":x.get("requirement") or "",
@@ -87,6 +100,19 @@ def render(ctx):
                 "Фрагмент":x.get("evidence_fragment") or "",
                 "Причина":x.get("reason") or "",
             } for x in execution_rows],hide_index=True,width="stretch")
+
+            proof_counts=dict(execution.get("proof_type_counts") or {})
+            if proof_counts:
+                with st.expander("Профиль доказательных контрактов",expanded=False):
+                    st.dataframe([
+                        {"Тип proof":key,"Контрактов":value}
+                        for key,value in proof_counts.items() if value
+                    ],hide_index=True,width="stretch")
+                    st.caption(
+                        "PRESENCE/STRUCTURE допускают детерминированное подтверждение при выполненном контракте. "
+                        "SEMANTIC_REQUIREMENT требует смыслового доказательства; GRAPHIC_CONTENT — отдельного визуального proof; "
+                        "SET_COMPLETENESS — проверки полного обязательного набора."
+                    )
     else:
         docs,_,_,_,_,_,_=ctx.data
         rows=foundation.project_routes(docs.to_dict("records") if hasattr(docs,"to_dict") else []).get("rows") or []
@@ -144,6 +170,6 @@ def render(ctx):
             "Всего исторических упоминаний":summary.get("history_expert_occurrences",0),
         })
         st.caption(
-            "Цель Alpha 8 — отделить размер корпуса НТД от реально исполняемого доказательного покрытия. "
-            "Наличие документа в базе само по себе не означает, что его требования уже исполняются автоматически."
+            "Цель Alpha 9 — отделить релевантный retrieval от доказательства нормативного требования. "
+            "Наличие документа или совпадение ключевых слов само по себе не означает VERIFIED_OK."
         )

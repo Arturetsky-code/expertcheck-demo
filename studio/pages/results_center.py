@@ -18,6 +18,21 @@ def _checklist(first):
     return list((first.get('automatic_checklist_review') or {}).get('results') or [])
 
 
+def _semantic_trace(row):
+    proof=dict(row.get('semantic_proof') or {})
+    selected=list(proof.get('selected_evidence') or row.get('semantic_selected_evidence') or [])
+    rendered=[]
+    for item in selected:
+        if not isinstance(item,dict):
+            continue
+        locator=item.get('source_locator')
+        if not locator and item.get('document'):
+            locator=f"{item.get('document')}, стр. {item.get('page')}"
+        if locator and locator not in rendered:
+            rendered.append(str(locator))
+    return ' | '.join(rendered)
+
+
 def render(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
     hero('Результаты','Только квалифицированные результаты проверки проекта.','Несоответствия · вопросы специалисту · подтверждённое соответствие')
@@ -71,23 +86,26 @@ def render(ctx):
         retrieval=dict(normative20.get('retrieval') or {})
         n1,n2,n3,n4,n5=st.columns(5)
         with n1:card('Контрактов',normative20.get('contracts',0),'Verified-clause')
-        with n2:card('Retrieval-кандидатов',retrieval.get('verified_ok',normative20.get('verified_ok',0)),'Найдено адресное содержание','info')
+        with n2:card('Retrieval evidence',retrieval.get('candidate_evidence',0),'Адресные кандидаты по страницам','info')
         with n3:card('Доказано',normative20.get('verified_ok',0),'Прошло proof-gate','ok')
         with n4:card('Удержано',normative20.get('demoted_keyword_only',0),'Retrieval ≠ proof','warn' if normative20.get('demoted_keyword_only') else 'ok')
         with n5:card('Semantic proof очередь',normative20.get('semantic_queue_total',0),'Нужна смысловая проверка','warn' if normative20.get('semantic_queue_total') else 'ok')
-        m1,m2,m3=st.columns(3)
-        with m1:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
-        with m2:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего proof-механизма','info')
-        with m3:card('Адресное evidence',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
+        m1,m2,m3,m4=st.columns(4)
+        with m1:card('Semantic proof принят',normative20.get('semantic_proof_applied',0),'Judge + Critic + code gate','ok' if normative20.get('semantic_proof_applied') else 'info')
+        with m2:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
+        with m3:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего proof-механизма','info')
+        with m4:card('Адресное evidence',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
         st.caption(
             'PRESENCE/STRUCTURE могут подтверждаться детерминированно. SEMANTIC_REQUIREMENT, GRAPHIC_CONTENT, '
             'SET_COMPLETENESS, TYPED_VALUE и CROSS_SECTION требуют своего доказательного контракта. '
+            'Для semantic proof Judge получает до четырёх адресных кандидатов и обязан сослаться на конкретные evidence_id. '
             'Недостаточность доказательства не является несоответствием.'
         )
         st.dataframe(pd.DataFrame([{
             'Результат':row.get('state') or '—',
             'Тип proof':row.get('proof_type') or '—',
             'Proof state':row.get('proof_state') or '—',
+            'Retrieval кандидатов':row.get('retrieval_candidate_count') or 0,
             'НТД':row.get('source') or row.get('document_id') or '—',
             'Пункт':row.get('paragraph') or '—',
             'Требование':row.get('requirement') or '—',
@@ -96,6 +114,14 @@ def render(ctx):
                 if row.get('evidence_document') and row.get('evidence_page') not in (None,'')
                 else 'Не сформировано'
             ),
+            'Выбранные Judge evidence':_semantic_trace(row) or '—',
+            'Judge':(row.get('semantic_proof') or {}).get('judge_verdict') or '—',
+            'Judge confidence':(row.get('semantic_proof') or {}).get('judge_confidence') if row.get('semantic_proof') else '—',
+            'Judge provider':(row.get('semantic_proof') or {}).get('judge_provider') or '—',
+            'Critic':('Принял' if (row.get('semantic_proof') or {}).get('critic_accept') is True else 'Не принял') if row.get('semantic_proof') else '—',
+            'Critic confidence':(row.get('semantic_proof') or {}).get('critic_confidence') if row.get('semantic_proof') else '—',
+            'Critic provider':(row.get('semantic_proof') or {}).get('critic_provider') or '—',
+            'Независимость AI':('Да' if (row.get('semantic_proof') or {}).get('independent') is True else 'Нет') if row.get('semantic_proof') else '—',
             'Фрагмент':row.get('evidence_fragment') or '',
             'Обоснование':row.get('reason') or '',
         } for row in normative20_rows]).head(160),hide_index=True,width='stretch')

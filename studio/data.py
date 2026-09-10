@@ -16,6 +16,8 @@ from core.project_review_planner import build_review_plan
 from core.project_data_contract import CONTRACT_VERSION, enforce_project_data_contract
 from core.review_queue import build_review_clusters
 from core.result_surface import build_review_surface_rows
+from core.result_ledger import build_qualified_result_ledger
+from core.report_quality_gate import validate_review_plan
 from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
 from core.project_knowledge_recovery import recover_project_knowledge
@@ -455,6 +457,9 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     docs=doc_records
     findings=finding_records
     first_record=(doc_records[0] or {}) if doc_records else {}
+    canonical20=dict(first_record.get('canonical_core_20_manifest') or {})
+    normative_execution20=dict(canonical20.get('normative_execution') or {})
+    normative_execution_rows20=list(normative_execution20.get('rows') or [])
     if first_record:
         first_record["report_data_contract"] = report_data_contract
     register_comparison_codes={'GP_EXPLICATION_FIELD','GP_DOCUMENT_COVERAGE'}
@@ -473,21 +478,26 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if not checklist_results:
         checklist_results=list((first_record.get('automatic_checklist_review') or {}).get('results') or [])
     checklist_results=deepcopy(list(checklist_results or []))
-    # Reports are a final trust boundary.  Re-run the same fail-closed gate on
-    # private copies so a stale cached plan or direct report call cannot export
-    # an unsupported L5 conclusion.
-    from core.verified_verdict_gate import enforce_project_verdicts
+    # Reports and the Results page share one final qualified ledger.  The
+    # report boundary already works on private copies, so keep clone_inputs=False
+    # to preserve mutations in comparison_records for downstream report context.
     assignment_for_report=list(first_record.get('assignment_compliance') or [])
     normative_for_report=list(first_record.get('normative_compliance_audit') or [])
-    checklist_for_report={'results': checklist_results}
-    from core.cross_section_verification import qualify_cross_section_verdicts
-    qualify_cross_section_verdicts(engineering_comparisons)
-    report_verified_gate=enforce_project_verdicts(
+    ledger=build_qualified_result_ledger(
         assignment_rows=assignment_for_report,
         normative_rows=normative_for_report,
-        checklist_review=checklist_for_report,
-        comparisons=engineering_comparisons,
+        checklist_rows=checklist_results,
+        comparisons=comparison_records,
+        clone_inputs=False,
     )
+    assignment_for_report=ledger['assignment_rows']
+    normative_for_report=ledger['normative_rows']
+    checklist_results=ledger['checklist_rows']
+    checklist_for_report={'results': checklist_results}
+    comparison_records=ledger['comparisons']
+    engineering_comparisons=ledger['engineering_comparisons']
+    register_comparisons=ledger['register_comparisons']
+    report_verified_gate=ledger['verified_gate']
     if first_record:
         first_record['assignment_compliance']=assignment_for_report
         first_record['normative_compliance_audit']=normative_for_report
@@ -535,16 +545,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})
         project_understanding=dict((docs[0] or {}).get('project_understanding') or {})
         project_understanding_quality=dict((docs[0] or {}).get('project_understanding_quality') or {})
-    # Prefer the plan produced after Deep Evidence adjudication.  Rebuilding it
-    # from legacy statuses would discard adversarial downgrades.
-    review_plan=dict(first_record.get('project_review_plan') or {})
-    if not review_plan:
-        review_plan=build_review_plan(
-            assignment_rows=assignment_for_report,
-            normative_rows=normative_for_report,
-            checklist_review=checklist_for_report,
-            comparisons=engineering_comparisons,
-        )
+    # Reuse the same adjudicated ledger used by the Results surface.
+    review_plan=ledger['review_plan']
     review_domains=review_plan.get('domains') or {}
     coverage_matrix_payload=dict(first_record.get('coverage_matrix') or {})
     semantic_engine_summary=dict(first_record.get('semantic_evidence_engine') or {})
@@ -723,7 +725,14 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     normative_plan=review_domains.get('НТД',{})
     checklist_plan=review_domains.get('Чек-листы',{})
     comparison_plan=review_domains.get('Межраздельная сверка',{})
-    report_quality_gate=dict(first_record.get('report_quality_gate') or {})
+    report_quality_gate=validate_review_plan(
+        review_plan,
+        object_registry=list(first_record.get('consolidated_registry') or []),
+        checklist_rows=checklist_results,
+        comparisons=engineering_comparisons,
+    )
+    if first_record:
+        first_record['report_quality_gate']=report_quality_gate
     normative_registry_verified=sum(1 for x in normative_rows if x.get('coverage_status')=='Проверено по реестру')
     normative_registry_unverified=sum(1 for x in normative_rows if x.get('registry_match_state')=='MATCHED_UNVERIFIED')
     normative_registry_missing=sum(1 for x in normative_rows if x.get('registry_match_state')=='NOT_IN_REGISTRY')
@@ -834,6 +843,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['НТД: покрытие доказательной проверки, %', normative_plan.get('coverage_pct',0)],
         ['НТД: подтверждено требований', normative_plan.get('confirmed',0)],
         ['НТД: выявлено несоответствий', normative_plan.get('issue',0)],
+        ['20.0 НТД: исполняемых verified-clause', normative_execution20.get('contracts',0)],
+        ['20.0 НТД: подтверждено', normative_execution20.get('verified_ok',0)],
+        ['20.0 НТД: вопросов специалисту', normative_execution20.get('review_questions',0)],
+        ['20.0 НТД: не проверено системой', normative_execution20.get('system_limitations',0)],
+        ['20.0 НТД: адресное evidence, %', normative_execution20.get('evidence_coverage_pct',0)],
         ['НТД: обнаружено уникальных ссылок', len(normative_rows)],
         ['НТД: проверено по реестру актуальности', normative_registry_verified],
         ['НТД: распознано, но статус не верифицирован', normative_registry_unverified],
@@ -864,6 +878,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'AI-пакетов подготовлено','AI-пакетов обработано','Выполнение AI-очереди, %',
             'Задание: покрытие найденными кандидатами L3–L5, %','Чек-листы: покрытие найденными кандидатами L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',
+            '20.0 НТД: исполняемых verified-clause','20.0 НТД: подтверждено',
+            '20.0 НТД: вопросов специалисту','20.0 НТД: не проверено системой','20.0 НТД: адресное evidence, %',
             'НТД: распознано, но статус не верифицирован','НТД: отсутствует в кураторском реестре',
             'Межраздельная сверка: строгое покрытие L5, %','Межраздельная сверка: завершено','Межраздельная сверка: несоответствий',
             'Сверка реестров/чертежей: завершено','Инженерные параметры: завершено',
@@ -1293,6 +1309,23 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     } for index,issue in enumerate(report_data_contract.get('fatal_issues') or [],1))
     data_contract_df = _excel_safe_frame(pd.DataFrame(data_contract_rows))
 
+    normative_execution20_df = pd.DataFrame([{
+        'ID требования':x.get('requirement_id'),
+        'НТД':x.get('source') or x.get('document_id') or '—',
+        'Пункт / статья':x.get('paragraph') or '—',
+        'Тема':x.get('topic') or '—',
+        'Требование':x.get('requirement') or '—',
+        'Результат':x.get('state') or '—',
+        'Код причины':x.get('reason_code') or '—',
+        'Документ evidence':x.get('evidence_document') or '—',
+        'Страница':x.get('evidence_page') if x.get('evidence_page') not in (None,'') else '—',
+        'Фрагмент evidence':x.get('evidence_fragment') or '',
+        'Совпавшие признаки':' | '.join(str(v) for v in (x.get('matched_keywords') or [])),
+        'Обоснование':x.get('reason') or '',
+        'Упоминаний в истории':x.get('history_occurrences') or 0,
+        'Проектов в истории':x.get('history_projects') or 0,
+    } for x in normative_execution_rows20])
+
     normative_compliance_df = pd.DataFrame([{
         'ID требования':x.get('requirement_id'),
         'Тип знания':ru_label(x.get('knowledge_kind') or 'LAW_REQUIREMENT'),
@@ -1315,6 +1348,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     understanding_df = _excel_safe_frame(understanding_df)
     normative_requirement_df = _excel_safe_frame(normative_requirement_df)
     normative_compliance_df = _excel_safe_frame(normative_compliance_df)
+    normative_execution20_df = _excel_safe_frame(normative_execution20_df)
 
     sheets: list[tuple[str, pd.DataFrame]] = [('Резюме', summary_df)]
     # Подтверждённые расхождения и адресные вопросы имеют разный доказательный
@@ -1373,6 +1407,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not assignment_atomic_df.empty: sheets.append(('Задание — атомарные условия', assignment_atomic_df))
         if not assignment_gip_df.empty: sheets.append(('Задание на проектирование', assignment_gip_df))
         if not normative_compliance_df.empty: sheets.append(('НТД — требования', normative_compliance_df))
+        if not normative_execution20_df.empty: sheets.append(('НТД 20.0 — исполнение', normative_execution20_df))
         if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not checklist_all_df.empty: sheets.append(('Чек-листы', checklist_all_df))
         if not ai_summary_df.empty: sheets.append(('AI — сводка',ai_summary_df))
@@ -1387,6 +1422,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         if not normative_df.empty: sheets.append(('Актуальность НТД', normative_df))
         if not normative_queue_df.empty: sheets.append(('НТД — очередь KB', normative_queue_df))
         if not normative_compliance_df.empty: sheets.append(('Проверка требований НТД', normative_compliance_df))
+        if not normative_execution20_df.empty: sheets.append(('НТД 20.0 — исполнение', normative_execution20_df))
         if not normative_requirement_df.empty: sheets.append(('Контекст ссылок НТД', normative_requirement_df))
         if not understanding_df.empty: sheets.append(('Модель проекта', understanding_df))
         if not assignment_df.empty: sheets.append(('Задание — диагностика', assignment_df))

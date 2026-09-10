@@ -1,0 +1,46 @@
+{
+  "baseline_id": "18.7.3-control",
+  "applicability": {
+    "minimum_golden_object_matches": 2
+  },
+  "metrics": {
+    "objects_confirmed": {"expected": 36, "policy": "EXACT", "description": "Подтверждённый Trusted Object Registry"},
+    "passport_characteristics": {"expected": 137, "policy": "AT_LEAST", "description": "Характеристики подтверждённых паспортов"},
+    "cross_section_comparisons": {"expected": 99, "policy": "EXACT", "description": "Сформированные межраздельные сопоставления"},
+    "cross_section_l5": {"expected": 45, "policy": "AT_LEAST", "description": "Строго завершённые межраздельные проверки"},
+    "project_findings": {"expected": 1, "policy": "EXACT", "description": "Доказанные проблемы контрольного проекта"},
+    "specialist_questions": {"expected": 346, "policy": "AT_MOST", "description": "Адресные вопросы специалисту"},
+    "review_packages": {"expected": 26, "policy": "AT_MOST", "description": "Рабочие пакеты после compression"},
+    "verified_checks": {"expected": 49, "policy": "AT_LEAST", "description": "Проверки с доказательством"},
+    "system_limitations": {"expected": 319, "policy": "AT_MOST", "description": "Ограничения автоматического покрытия"}
+  },
+  "golden_cases": [
+    {
+      "case_id": "GOLD-COMPRESSOR-AREA-CONFLICT",
+      "object_name": "Компрессорная",
+      "parameter_code": "AREA_BUILD",
+      "expected_kind": "PROJECT_FINDING",
+      "expected_values": [54.3, 48.7],
+      "expected_position": "4.5",
+      "notes": "Факт конфликта должен быть доказан; правильное значение без owner-раздела не утверждается."
+    },
+    {
+      "case_id": "GOLD-DEDUSTING-AREA",
+      "object_name": "Модуль обеспыливания",
+      "parameter_code": "AREA_BUILD",
+      "expected_kind": "VERIFIED_OK",
+      "expected_values": [23.5],
+      "expected_position": "4.12",
+      "notes": "23,5 м² не должно мигрировать к зданию проборазделки."
+    },
+    {
+      "case_id": "GOLD-SAMPLE-PREP-AREA",
+      "object_name": "Здание проборазделки",
+      "parameter_code": "AREA_BUILD",
+      "expected_kind": "VERIFIED_OK",
+      "expected_values": [89.9],
+      "expected_position": "4.13",
+      "notes": "89,9 м² остаётся физически и семантически привязано к строке здания проборазделки."
+    }
+  ]
+}

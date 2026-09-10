@@ -1,0 +1,61 @@
+name: Core20 quality gates
+
+on:
+  push:
+    branches:
+      - codex/expertcheck-20.0
+  pull_request:
+    paths:
+      - "core20/**"
+      - "tests/test_core20_*.py"
+      - ".github/workflows/core20-quality.yml"
+
+jobs:
+  core20-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test runner
+        run: python -m pip install --upgrade pip pytest "PyMuPDF>=1.24,<2" "openpyxl>=3.1,<4"
+
+      - name: Run Core20 regression suite
+        working-directory: tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -q test_core20_*.py --rootdir=.
+
+
+  results-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install report-test dependencies
+        run: python -m pip install pytest "pandas>=2.2,<3" "openpyxl>=3.1,<4" "XlsxWriter>=3.2,<4" "PyMuPDF>=1.24,<2"
+
+      - name: Results and report integrity
+        working-directory: tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest -q \
+            test_results_integrity_alpha62.py \
+            test_results_report_parity_alpha63.py \
+            test_report_engine_resilience.py \
+            test_result_surface_1872.py \
+            --rootdir=.

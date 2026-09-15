@@ -19,6 +19,16 @@ def _packet(rid: str) -> dict:
     }
 
 
+def _ok(state: str = "VERIFIED_OK") -> dict:
+    return {
+        "state": state,
+        "judge_verdict": "SUPPORTS" if state == "VERIFIED_OK" else "INSUFFICIENT",
+        "judge_confidence": 0.96,
+        "critic_confidence": 0.93 if state == "VERIFIED_OK" else 0,
+        "selected_evidence": [],
+    }
+
+
 def test_alpha10_removes_processed_packets_from_pending_queue():
     queue = [_packet("R1"), _packet("R2"), _packet("R3")]
     root = queue_fingerprint(queue)
@@ -36,8 +46,8 @@ def test_alpha10_removes_processed_packets_from_pending_queue():
         "root_queue_total": 3,
         "queue_total": 3,
         "decisions": {
-            "R1": {"state": "VERIFIED_OK", "reason": "ok", "selected_evidence": []},
-            "R2": {"state": "REVIEW_QUESTION", "reason": "review", "selected_evidence": []},
+            "R1": _ok("VERIFIED_OK"),
+            "R2": _ok("REVIEW_QUESTION"),
         },
     }
 
@@ -61,14 +71,14 @@ def test_alpha10_merges_multiple_semantic_runs_on_same_root():
         "root_queue_total": 3,
         "queue_total": 3,
         "decisions": {
-            "R1": {"state": "VERIFIED_OK"},
-            "R2": {"state": "REVIEW_QUESTION"},
+            "R1": _ok("VERIFIED_OK"),
+            "R2": _ok("REVIEW_QUESTION"),
         },
         "provider_errors": [],
     }
 
     merged = a10._merge_result(
-        {"decisions": {"R3": {"state": "VERIFIED_OK"}}, "provider_errors": ["temporary 429"]},
+        {"decisions": {"R3": _ok("VERIFIED_OK")}, "provider_errors": ["temporary 429"]},
         previous,
         root_fingerprint=root,
         root_total=3,
@@ -96,7 +106,7 @@ def test_alpha10_rejects_checkpoint_from_another_root_queue():
     stale = {
         "root_fingerprint": "another-project",
         "fingerprint": "another-project",
-        "decisions": {"R1": {"state": "VERIFIED_OK"}},
+        "decisions": {"R1": _ok("VERIFIED_OK")},
     }
 
     result = a10.apply_normative_semantic_proof(proof, stale)
@@ -104,3 +114,62 @@ def test_alpha10_rejects_checkpoint_from_another_root_queue():
     assert result["semantic_queue_total"] == 2
     assert result["semantic_queue_processed"] == 0
     assert result.get("semantic_proof_stale") is True
+
+
+def test_alpha10_provider_failure_does_not_consume_packet():
+    queue = [_packet("R1")]
+    root = queue_fingerprint(queue)
+    proof = {
+        "rows": [{"requirement_id": "R1", "kind": "REVIEW_QUESTION", "proof_state": "SEMANTIC_PROOF_REQUIRED"}],
+        "semantic_queue": queue,
+        "semantic_queue_total": 1,
+    }
+    failed_checkpoint = {
+        "root_fingerprint": root,
+        "fingerprint": root,
+        "root_queue_total": 1,
+        "decisions": {
+            "R1": {
+                "state": "REVIEW_QUESTION",
+                "judge_verdict": "INSUFFICIENT",
+                "judge_confidence": 0,
+                "critic_confidence": 0,
+            }
+        },
+        "provider_errors": ["HTTP 429"],
+    }
+
+    result = a10.apply_normative_semantic_proof(proof, failed_checkpoint)
+
+    assert result["semantic_queue_processed"] == 0
+    assert result["semantic_queue_total"] == 1
+    assert result["semantic_proof_applied"] == 0
+
+
+def test_alpha10_supports_without_critic_response_stays_pending():
+    queue = [_packet("R1")]
+    root = queue_fingerprint(queue)
+    proof = {
+        "rows": [{"requirement_id": "R1", "kind": "REVIEW_QUESTION", "proof_state": "SEMANTIC_PROOF_REQUIRED"}],
+        "semantic_queue": queue,
+        "semantic_queue_total": 1,
+    }
+    critic_failed = {
+        "root_fingerprint": root,
+        "fingerprint": root,
+        "root_queue_total": 1,
+        "decisions": {
+            "R1": {
+                "state": "REVIEW_QUESTION",
+                "judge_verdict": "SUPPORTS",
+                "judge_confidence": 0.96,
+                "critic_confidence": 0,
+            }
+        },
+        "provider_errors": ["Critic HTTP 429"],
+    }
+
+    result = a10.apply_normative_semantic_proof(proof, critic_failed)
+
+    assert result["semantic_queue_processed"] == 0
+    assert result["semantic_queue_total"] == 1

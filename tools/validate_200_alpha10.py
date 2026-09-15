@@ -21,6 +21,16 @@ def packet(rid: str) -> dict:
     }
 
 
+def complete(state: str) -> dict:
+    return {
+        "state": state,
+        "judge_verdict": "SUPPORTS" if state == "VERIFIED_OK" else "INSUFFICIENT",
+        "judge_confidence": 0.96,
+        "critic_confidence": 0.93 if state == "VERIFIED_OK" else 0,
+        "selected_evidence": [],
+    }
+
+
 def main() -> None:
     queue = [packet("R1"), packet("R2"), packet("R3")]
     root = queue_fingerprint(queue)
@@ -40,8 +50,8 @@ def main() -> None:
         "root_queue_total": 3,
         "queue_total": 3,
         "decisions": {
-            "R1": {"state": "VERIFIED_OK", "reason": "ok", "selected_evidence": []},
-            "R2": {"state": "REVIEW_QUESTION", "reason": "review", "selected_evidence": []},
+            "R1": complete("VERIFIED_OK"),
+            "R2": complete("REVIEW_QUESTION"),
         },
     }
 
@@ -56,7 +66,7 @@ def main() -> None:
 
     merged = a10._merge_result(
         {
-            "decisions": {"R3": {"state": "VERIFIED_OK"}},
+            "decisions": {"R3": complete("VERIFIED_OK")},
             "provider_errors": ["temporary 429"],
         },
         checkpoint,
@@ -76,6 +86,24 @@ def main() -> None:
     stale_result = a10.apply_normative_semantic_proof(proof, stale)
     assert stale_result["semantic_queue_total"] == 3
     assert stale_result.get("semantic_proof_stale") is True
+
+    failed = {
+        "root_fingerprint": root,
+        "fingerprint": root,
+        "root_queue_total": 3,
+        "decisions": {
+            "R1": {
+                "state": "REVIEW_QUESTION",
+                "judge_verdict": "INSUFFICIENT",
+                "judge_confidence": 0,
+                "critic_confidence": 0,
+            }
+        },
+        "provider_errors": ["HTTP 429"],
+    }
+    failed_result = a10.apply_normative_semantic_proof(proof, failed)
+    assert failed_result["semantic_queue_processed"] == 0
+    assert failed_result["semantic_queue_total"] == 3
 
     print("ExpertCheck 20.0 Alpha 10 reliability validation: OK")
 

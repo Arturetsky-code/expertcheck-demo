@@ -13,6 +13,14 @@ from .verification import (
     VerificationEngine20, VerificationRequest,
 )
 
+# Alpha 10 installs a narrow reliability overlay before downstream modules bind
+# the normative semantic proof functions.  The Alpha 9 engine remains the
+# underlying proof implementation; the overlay only adds cumulative checkpoint
+# semantics and exposes the actually pending queue.
+from .alpha10_reliability import install as _install_alpha10_reliability
+
+_install_alpha10_reliability()
+
 __all__ = [
     "CanonicalProject", "Comparison", "Evidence", "Finding", "ProjectObject",
     "PropertyValue", "Requirement", "ValidationIssue", "stable_id",
@@ -20,4 +28,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha6.2-results-report-integrity"
+__version__ = "20.0-alpha10-expert-workflow-reliability"

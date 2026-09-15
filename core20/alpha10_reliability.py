@@ -50,7 +50,7 @@ def _root_identity(previous: dict[str, Any], queue: list[dict[str, Any]]) -> tup
     previous_total = int(previous.get("root_queue_total") or previous.get("queue_total") or 0)
 
     # If the current queue is already the pending subset produced by Alpha 10,
-    # keep the persisted root identity.  Otherwise a new queue becomes a new
+    # keep the persisted root identity. Otherwise a new queue becomes a new
     # root and old decisions must not leak into it.
     if previous_root and previous_total >= len(queue):
         previous_decisions = dict(previous.get("decisions") or {})
@@ -78,8 +78,8 @@ def _merge_result(
 
     merged["version"] = ENGINE_VERSION
     merged["root_fingerprint"] = root_fingerprint
-    # Keep fingerprint compatible with the Alpha 9 apply gate.  The fingerprint
-    # now identifies the complete root queue rather than one pending slice.
+    # Keep fingerprint compatible with the Alpha 9 apply gate. The fingerprint
+    # identifies the complete root queue rather than one pending slice.
     merged["fingerprint"] = root_fingerprint
     merged["root_queue_total"] = int(root_total)
     merged["queue_total"] = int(root_total)
@@ -146,16 +146,21 @@ def apply_normative_semantic_proof(
     full_queue = [dict(x) for x in (proof.get("semantic_queue") or []) if isinstance(x, dict)]
     expected = _semantic.queue_fingerprint(full_queue)
     semantic = dict(semantic_result or {})
-    root = str(semantic.get("root_fingerprint") or semantic.get("fingerprint") or "")
+    fingerprint = str(semantic.get("fingerprint") or "")
+    root = str(semantic.get("root_fingerprint") or fingerprint or "")
 
-    if semantic and root == expected:
+    # Preserve the Alpha 9 stale-check contract: an explicitly mismatched
+    # fingerprint is always stale, even if a separate root_fingerprint remains
+    # present. This keeps old project checkpoints and regression tests fail-closed.
+    compatible_root = bool(semantic and root == expected and (not fingerprint or fingerprint == expected))
+    if compatible_root:
         compatible = dict(semantic)
         compatible["fingerprint"] = expected
         result = _ORIGINAL_APPLY(proof, compatible)
     else:
         result = _ORIGINAL_APPLY(proof, semantic)
 
-    decisions = dict(semantic.get("decisions") or {}) if root == expected else {}
+    decisions = dict(semantic.get("decisions") or {}) if compatible_root else {}
     processed_ids = set(decisions)
     pending = [packet for packet in full_queue if _packet_requirement_id(packet) not in processed_ids]
     confirmed = sum(
@@ -176,7 +181,7 @@ def apply_normative_semantic_proof(
     result["semantic_queue_evidence"] = sum(len(packet.get("evidence") or []) for packet in pending)
 
     summary = dict(result.get("semantic_proof_summary") or {})
-    if semantic and root == expected:
+    if compatible_root:
         summary.update({
             "version": ENGINE_VERSION,
             "root_fingerprint": expected,

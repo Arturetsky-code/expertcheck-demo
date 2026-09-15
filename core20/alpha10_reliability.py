@@ -3,9 +3,9 @@ from __future__ import annotations
 """Alpha 10 reliability overlay for the canonical normative proof workflow.
 
 The overlay is deliberately small and reversible: it keeps the Alpha 9 proof
-engine intact, but turns its semantic queue into a resumable queue.  The full
-proof queue remains the root contract; only packets without a persisted
-Judge/Critic decision are exposed for the next call.
+engine intact, but turns its semantic queue into a resumable queue. The full
+proof queue remains the root contract; only packets without a persisted,
+completed Judge/Critic decision are exposed for the next call.
 """
 
 from typing import Any
@@ -25,6 +25,29 @@ def _packet_requirement_id(packet: dict[str, Any]) -> str:
         return rid
     pid = str(packet.get("packet_id") or "").strip()
     return pid.removeprefix("NORM-")
+
+
+def _positive_confidence(value: Any) -> bool:
+    try:
+        return float(value or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _decision_complete(value: dict[str, Any] | None) -> bool:
+    """Distinguish a real AI decision from a synthetic fail-closed placeholder.
+
+    Alpha 9 intentionally materialises REVIEW_QUESTION when a provider returns
+    no answer. That is safe as a verdict, but it must not consume the resumable
+    queue. A real non-SUPPORTS Judge answer is complete without Critic; SUPPORTS
+    additionally requires an actual Critic answer (accept or reject).
+    """
+    if not isinstance(value, dict) or not _positive_confidence(value.get("judge_confidence")):
+        return False
+    verdict = str(value.get("judge_verdict") or "").upper()
+    if verdict == "SUPPORTS":
+        return _positive_confidence(value.get("critic_confidence"))
+    return bool(verdict)
 
 
 def _previous_checkpoint() -> dict[str, Any]:
@@ -53,7 +76,10 @@ def _root_identity(previous: dict[str, Any], queue: list[dict[str, Any]]) -> tup
     # keep the persisted root identity. Otherwise a new queue becomes a new
     # root and old decisions must not leak into it.
     if previous_root and previous_total >= len(queue):
-        previous_decisions = dict(previous.get("decisions") or {})
+        previous_decisions = {
+            key: value for key, value in dict(previous.get("decisions") or {}).items()
+            if _decision_complete(value)
+        }
         current_ids = {_packet_requirement_id(packet) for packet in queue}
         known_ids = set(previous_decisions)
         if not current_ids.intersection(known_ids):
@@ -72,8 +98,14 @@ def _merge_result(
 ) -> dict[str, Any]:
     merged = dict(current or {})
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
-    previous_decisions = dict(previous.get("decisions") or {}) if previous_root == root_fingerprint else {}
-    current_decisions = dict(merged.get("decisions") or {})
+    previous_decisions = {
+        key: value for key, value in dict(previous.get("decisions") or {}).items()
+        if previous_root == root_fingerprint and _decision_complete(value)
+    }
+    current_decisions = {
+        key: value for key, value in dict(merged.get("decisions") or {}).items()
+        if _decision_complete(value)
+    }
     decisions = {**previous_decisions, **current_decisions}
 
     merged["version"] = ENGINE_VERSION
@@ -99,8 +131,9 @@ def _merge_result(
     current_errors = [str(x) for x in merged.get("provider_errors") or [] if str(x)]
     merged["provider_errors"] = list(dict.fromkeys([*previous_errors, *current_errors]))
     merged["principle"] = (
-        "Alpha 10 resumable proof: each addressable normative packet is processed once per root evidence set; "
-        "only independent Judge/Critic SUPPORTS may create VERIFIED_OK. Provider failures leave packets pending."
+        "Alpha 10 resumable proof: each addressable normative packet is consumed only after a real Judge decision "
+        "and, for SUPPORTS, a real Critic decision; only independent Judge/Critic SUPPORTS may create VERIFIED_OK. "
+        "Provider failures leave unanswered packets pending."
     )
     return merged
 
@@ -112,13 +145,16 @@ def run_normative_semantic_proof(
     critic_provider: Any = None,
     limit: int = 24,
 ) -> dict[str, Any]:
-    """Run only unprocessed packets and accumulate decisions in one checkpoint."""
+    """Run only unprocessed packets and accumulate completed decisions."""
     source = [dict(x) for x in (queue or []) if isinstance(x, dict)]
     previous = _previous_checkpoint()
     root_fingerprint, root_total = _root_identity(previous, source)
 
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
-    previous_decisions = dict(previous.get("decisions") or {}) if previous_root == root_fingerprint else {}
+    previous_decisions = {
+        key: value for key, value in dict(previous.get("decisions") or {}).items()
+        if previous_root == root_fingerprint and _decision_complete(value)
+    }
     pending = [packet for packet in source if _packet_requirement_id(packet) not in previous_decisions]
 
     current = _ORIGINAL_RUN(
@@ -150,17 +186,23 @@ def apply_normative_semantic_proof(
     root = str(semantic.get("root_fingerprint") or fingerprint or "")
 
     # Preserve the Alpha 9 stale-check contract: an explicitly mismatched
-    # fingerprint is always stale, even if a separate root_fingerprint remains
-    # present. This keeps old project checkpoints and regression tests fail-closed.
+    # fingerprint is always stale, even if a separate root_fingerprint remains.
     compatible_root = bool(semantic and root == expected and (not fingerprint or fingerprint == expected))
     if compatible_root:
         compatible = dict(semantic)
         compatible["fingerprint"] = expected
+        compatible["decisions"] = {
+            key: value for key, value in dict(semantic.get("decisions") or {}).items()
+            if _decision_complete(value)
+        }
         result = _ORIGINAL_APPLY(proof, compatible)
     else:
         result = _ORIGINAL_APPLY(proof, semantic)
 
-    decisions = dict(semantic.get("decisions") or {}) if compatible_root else {}
+    decisions = {
+        key: value for key, value in dict(semantic.get("decisions") or {}).items()
+        if compatible_root and _decision_complete(value)
+    }
     processed_ids = set(decisions)
     pending = [packet for packet in full_queue if _packet_requirement_id(packet) not in processed_ids]
     confirmed = sum(

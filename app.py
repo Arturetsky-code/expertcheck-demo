@@ -234,7 +234,7 @@ if st.session_state.get('expert_mode'):
                 st.caption(
                     f"Текущий проект: нормативных маршрутов {knowledge.get('project_relevant',0)} · "
                     f"готовых контрактов {knowledge.get('project_automatic_contract_ready',0)} · "
-                    f"исторически приоритетных {knowledge.get('history_prioritized',0)}"
+                    f"исторически приоритетных {knowledge.get('project_history_prioritized',0)}"
                 )
                 counts=verification.get('counts') or {}
                 st.caption(

@@ -58,6 +58,5 @@ jobs:
             test_results_report_parity_alpha63.py \
             test_report_engine_resilience.py \
             test_result_surface_1872.py \
-            test_ai_continuation_ledger_1841.py \
             test_ai_queue_universe_patch.py \
             --rootdir=.

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import copy
 from io import BytesIO
 import re
 from typing import Any
@@ -90,11 +89,25 @@ def _control_row(sheet: Any) -> int | None:
     return None
 
 
+def _summary_rows(sheet: Any) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for row_index in range(2, sheet.max_row + 1):
+        label = str(sheet.cell(row=row_index, column=1).value or "").strip()
+        if label:
+            result[label] = row_index
+    return result
+
+
 def reconcile_report_consensus(
     payload: bytes | bytearray | None,
     canonical_manifest: dict[str, Any] | None,
 ) -> bytes | None:
-    """Make exported consensus and Report Integrity agree with NTD semantic proof."""
+    """Fallback reconciliation for workbooks not yet processed by Alpha 10.1.
+
+    The main report exporter already writes explicit matrix/NTD consensus rows.
+    If those rows are present, this overlay must be a no-op so totals cannot be
+    double-counted by two compatible integrity layers.
+    """
     if payload is None:
         return None
     raw = bytes(payload)
@@ -106,22 +119,22 @@ def reconcile_report_consensus(
     if "Резюме" not in workbook.sheetnames:
         return raw
 
-    already_reconciled = False
+    summary = workbook["Резюме"]
+    rows = _summary_rows(summary)
+    if "AI-консенсус — матрица проверки" in rows and "AI-консенсус — НТД 20.0" in rows:
+        # Already reconciled by core20.report_proof_export._reconcile_ai_consensus.
+        return raw
+
+    consensus_row = rows.get("Проверок с независимым AI-консенсусом")
+    if consensus_row is None:
+        return raw
+
     control = workbook["Контроль отчёта"] if "Контроль отчёта" in workbook.sheetnames else None
     control_index = _control_row(control) if control is not None else None
+    already_reconciled = False
     if control is not None and control_index is not None:
         reason = str(control.cell(row=control_index, column=4).value or "")
         already_reconciled = _REPORT_MARKER in reason
-
-    summary = workbook["Резюме"]
-    consensus_row = None
-    for row_index in range(2, summary.max_row + 1):
-        label = str(summary.cell(row=row_index, column=1).value or "").strip()
-        if label == "Проверок с независимым AI-консенсусом":
-            consensus_row = row_index
-            break
-    if consensus_row is None:
-        return raw
 
     current = _safe_int(summary.cell(row=consensus_row, column=2).value)
     if already_reconciled:

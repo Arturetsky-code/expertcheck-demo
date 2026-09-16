@@ -36,8 +36,15 @@ def _execution_rows(canonical_manifest: dict[str, Any] | None) -> list[dict[str,
 
 
 def _evidence_excerpt(item: dict[str, Any], limit: int = 320) -> str:
-    text=" ".join(str(item.get(key) or "").split() for key in ("text", "quote", "excerpt") if item.get(key))
-    text=" ".join(text.split()).strip()
+    parts=[]
+    for key in ("text", "quote", "excerpt"):
+        value=item.get(key)
+        if not value:
+            continue
+        normalized=" ".join(str(value).split()).strip()
+        if normalized:
+            parts.append(normalized)
+    text=" ".join(parts).strip()
     if len(text) > limit:
         return text[:limit-1].rstrip()+"…"
     return text

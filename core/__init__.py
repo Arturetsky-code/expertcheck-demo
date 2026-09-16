@@ -27,3 +27,9 @@ from .object_identity import ObjectIdentityEngine, IdentityDecision
 from .ai_queue_universe_patch import install_ai_queue_universe_patch
 
 install_ai_queue_universe_patch()
+
+# 18.5.3: reopening legacy OTHER_ENTITY decisions after a contract change is a
+# one-shot checkpoint migration. Fresh Judge responses must survive rerenders.
+from .owner_revalidation_once_patch import install_owner_revalidation_once_patch
+
+install_owner_revalidation_once_patch()

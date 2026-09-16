@@ -3,28 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from core20.quality_integrity import as_list as _as_list, present as _present
 from studio.components import card, empty, section
-
-
-def _present(value) -> bool:
-    if value is None:
-        return False
-    try:
-        if pd.isna(value):
-            return False
-    except (TypeError, ValueError):
-        pass
-    if isinstance(value, str) and value.strip().casefold() in {'', 'nan', 'none', 'null', 'nat'}:
-        return False
-    return value not in ([], {}, ())
-
-
-def _as_list(value) -> list[str]:
-    if not _present(value):
-        return []
-    if isinstance(value, (list, tuple, set)):
-        return [str(x).strip() for x in value if _present(x) and str(x).strip()]
-    return [str(value).strip()]
 
 
 def _render_gate(row) -> None:

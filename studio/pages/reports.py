@@ -23,9 +23,10 @@ def _safe_count(value)->int:
 
 
 def _consensus_counts(coverage:dict,normative20:dict)->tuple[int,int,int]:
-    """Return transparent independent Judge+Critic totals across both proof streams."""
+    """Return current independent Judge+Critic totals across both proof streams."""
     matrix=_safe_count((coverage or {}).get('semantic_consensus_completed'))
-    normative=_safe_count((normative20 or {}).get('semantic_proof_applied'))
+    normative_state=normative20 or {}
+    normative=0 if normative_state.get('semantic_proof_stale') else _safe_count(normative_state.get('semantic_proof_applied'))
     return matrix,normative,matrix+normative
 
 
@@ -106,12 +107,12 @@ def render(ctx):
         retrieval=dict(normative20.get('retrieval') or {})
         st.caption(
             f"Retrieval-кандидатов evidence: {retrieval.get('candidate_evidence',0)}; "
-            f"semantic proof применён: {normative_consensus}. "
+            f"актуальный semantic proof применён: {normative_consensus}. "
             "AI-консенсус выше учитывает отдельно матрицу проверки и НТД 20.0. "
             "В выгружаемом листе «НТД 20.0 — исполнение» сохраняются proof type/state и трассировка Judge/Critic."
         )
         if normative20.get('semantic_proof_stale'):
-            st.warning('Сохранённый semantic proof НТД относится к устаревшей очереди и не включён в доказанные нормативные результаты. Требуется повторная AI-проверка НТД.')
+            st.warning('Сохранённый semantic proof НТД относится к устаревшей очереди, поэтому не включён в AI-консенсус. Требуется повторная AI-проверка НТД.')
     st.info(report['conclusion'])
 
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')

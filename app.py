@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 10 · Expert Workflow Reliability · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 10.1 · Quality & Integrity Fix · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -146,8 +146,8 @@ raw_passports=passports(docs)
 filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
 # Canonical Core 20.0 runs independently beside the accepted legacy result.
-# Alpha 10 adds resumable reliability to the normative semantic-proof workflow
-# while preserving the Alpha 9 proof engine, deterministic gates and legacy verdicts.
+# Alpha 10.1 adds resumable reliability and result-integrity fixes around the
+# underlying proof engine while preserving deterministic gates and legacy verdicts.
 canonical_manifest=None
 if st.session_state.result:
     try:
@@ -161,7 +161,7 @@ if st.session_state.result:
         st.session_state['canonical_core_20_manifest']=canonical_manifest
     except Exception as canonical_error:
         canonical_manifest={
-            'version':'20.0-alpha10-expert-workflow-reliability',
+            'version':'20.0-alpha10.1-quality-integrity',
             'legacy_results_unchanged':True,
             'error':f'{type(canonical_error).__name__}: {canonical_error}',
         }

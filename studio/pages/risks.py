@@ -12,12 +12,41 @@ def _checklist_results() -> list[dict]:
     return rows if isinstance(rows,list) else []
 
 
+def _risk_id(risk:dict,index:int=0)->str:
+    value=risk.get('risk_id')
+    try:
+        if value != value:
+            value=''
+    except (TypeError,ValueError):
+        pass
+    text=str(value or '').strip()
+    if text.casefold() in {'nan','none','null','nat'}:
+        text=''
+    return text or f'R-UI-{index+1:04d}'
+
+
+def _risk_score_text(risk:dict)->str:
+    breakdown=risk.get('risk_score_breakdown') or {}
+    if not isinstance(breakdown,dict):
+        return str(risk.get('risk_level_reason') or '')
+    source=breakdown.get('source_score',0)
+    severity=breakdown.get('scenario_severity',0)
+    evidence=breakdown.get('evidence_bonus',0)
+    recurrence=breakdown.get('recurrence_bonus',0)
+    final=breakdown.get('final_score',risk.get('score',0))
+    if severity:
+        return f'Инженерная оценка {source}/100 · сценарий {severity}/100 · доказательства +{evidence} · повторяемость +{recurrence} → {final}/100.'
+    return f'Исходная инженерная оценка → {final}/100; подтверждённый сценарий базы замечаний не применялся.'
+
+
 def render(ctx)->None:
     docs,findings,comparisons,registry,passports,metrics,eng=ctx.data
     hero("Риски экспертизы","Оценка рисков замечаний на основе межраздельной сверки, чек-листов и базы типовых замечаний проектов-аналогов.","GGE Risk Intelligence · прогноз, а не гарантия позиции эксперта")
     if not st.session_state.get("object_registry_confirmed"):
         st.warning("Сначала подтвердите состав проектируемых объектов. Оценка рисков заблокирована."); return
     risks=build_expert_risks(comparisons.to_dict("records") if not comparisons.empty else [],st.session_state.get("object_assembly_rows") or [],_checklist_results(),documents=docs.to_dict("records") if not docs.empty else [])
+    for index,risk in enumerate(risks):
+        risk['risk_id']=_risk_id(risk,index)
     decisions=st.session_state.setdefault("risk_user_decisions",{})
     summary=summarize_risks(risks)
     cols=st.columns(5)
@@ -31,10 +60,15 @@ def render(ctx)->None:
             if not selected: empty("Риски этой группы не сформированы."); continue
             table=pd.DataFrame([{"ID":r["risk_id"],"Категория":r["category"],"Объект / раздел":r.get("object") or "—","Вопрос":r["parameter"],"Аналоги":", ".join(r.get("analog_projects") or []),"Решение":decisions.get(r["risk_id"],{}).get("status","Не рассмотрено")} for r in selected])
             st.dataframe(table,hide_index=True,width="stretch")
-            section("Карточки риска","Каждый вывод содержит источник, аналогичный сценарий и действие до подачи.")
+            section("Карточки риска","Каждый вывод содержит источник, аналогичный сценарий, основание уровня риска и действие до подачи.")
             for risk_index, risk in enumerate(selected[:50]):
                 with st.expander(f"{risk['level']} · {risk.get('scenario_title') or risk['category']} · {risk.get('object') or risk['parameter']}"):
                     st.write("**Выявленная проблема**"); st.write(risk["finding"])
+                    st.write("**Почему такой уровень риска**")
+                    st.write(f"{risk.get('level','—')} · {risk.get('score',0)}/100")
+                    st.caption(_risk_score_text(risk))
+                    if risk.get('risk_level_reason') and st.session_state.get('expert_mode'):
+                        st.caption(str(risk.get('risk_level_reason')))
                     st.write("**Возможная формулировка замечания**"); st.info(risk["possible_remark"])
                     st.write("**Рекомендация до подачи**"); st.write(risk["recommendation"])
                     if risk.get("scenario_id"):
@@ -50,7 +84,11 @@ def render(ctx)->None:
                     if risk.get("sources"): st.write("**Доказательства**"); st.write(risk["sources"])
                     current=decisions.get(risk["risk_id"],{})
                     c1,c2=st.columns([1,2])
-                    status=c1.selectbox("Решение",["Не рассмотрено","Принято в работу","Проверено","Не применимо"],index=["Не рассмотрено","Принято в работу","Проверено","Не применимо"].index(current.get("status","Не рассмотрено")),key=f"risk_status_{tab_index}_{risk_index}_{risk.get('risk_id', 'risk')}")
+                    statuses=["Не рассмотрено","Принято в работу","Проверено","Не применимо"]
+                    current_status=current.get("status","Не рассмотрено")
+                    if current_status not in statuses:
+                        current_status="Не рассмотрено"
+                    status=c1.selectbox("Решение",statuses,index=statuses.index(current_status),key=f"risk_status_{tab_index}_{risk_index}_{risk.get('risk_id', 'risk')}")
                     comment=c2.text_input("Комментарий",value=current.get("comment",""),key=f"risk_comment_{tab_index}_{risk_index}_{risk.get('risk_id', 'risk')}")
                     decisions[risk["risk_id"]]={"status":status,"comment":comment}
                     st.caption(f"Источник оценки: {risk['origin']} · Risk ID: {risk['risk_id']} · Надёжность доказательств: {risk.get('evidence_strength','—')}")

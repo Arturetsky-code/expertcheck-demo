@@ -6,28 +6,11 @@ from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
 from studio.report_resilience import build_report_isolated
 from core.project_snapshot import project_snapshot_bytes
+from core20.quality_integrity import consensus_counts as _consensus_counts, safe_count as _safe_count
 from core20.report_proof_export import (
     enrich_normative_proof_workbook,
     reconcile_project_data_contract_workbook,
 )
-
-
-def _safe_count(value)->int:
-    try:
-        number=float(value or 0)
-        if number != number:
-            return 0
-        return max(0,int(number))
-    except (TypeError,ValueError,OverflowError):
-        return 0
-
-
-def _consensus_counts(coverage:dict,normative20:dict)->tuple[int,int,int]:
-    """Return current independent Judge+Critic totals across both proof streams."""
-    matrix=_safe_count((coverage or {}).get('semantic_consensus_completed'))
-    normative_state=normative20 or {}
-    normative=0 if normative_state.get('semantic_proof_stale') else _safe_count(normative_state.get('semantic_proof_applied'))
-    return matrix,normative,matrix+normative
 
 
 def _report_documents(docs):

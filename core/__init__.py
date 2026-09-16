@@ -21,3 +21,9 @@ from .cross_section_verification import qualify_cross_section_verdicts, technolo
 from .project_profiles import ProjectProfileRegistry, ProjectProfile
 
 from .object_identity import ObjectIdentityEngine, IdentityDecision
+
+# 18.5.2: current rebuilt L4 packet universe is authoritative for the active
+# resumable AI queue. Historical ledger totals remain diagnostics only.
+from .ai_queue_universe_patch import install_ai_queue_universe_patch
+
+install_ai_queue_universe_patch()

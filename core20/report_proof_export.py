@@ -37,7 +37,7 @@ def _execution_rows(canonical_manifest: dict[str, Any] | None) -> list[dict[str,
 
 def _evidence_excerpt(item: dict[str, Any], limit: int = 320) -> str:
     parts=[]
-    for key in ("text", "quote", "excerpt"):
+    for key in ("text", "fragment", "quote", "excerpt"):
         value=item.get(key)
         if not value:
             continue

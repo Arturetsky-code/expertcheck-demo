@@ -16,16 +16,17 @@ PROOF_COLUMNS = (
     "Кандидатов доказательства",
     "Смысловое доказательство применено",
     "Решение проверяющей модели",
-    "Достоверность проверяющей модели",
+    "Заявленная уверенность проверяющей модели",
     "Провайдер проверяющей модели",
     "Проверяющая модель",
     "Контрольная модель приняла",
-    "Достоверность контрольной модели",
+    "Заявленная уверенность контрольной модели",
     "Провайдер контрольной модели",
     "Контрольная модель",
     "Независимость моделей",
     "Основание независимости",
     "Выбранные доказательства",
+    "Примечание к уверенности",
 )
 
 
@@ -79,16 +80,21 @@ def proof_export_row(row: dict[str, Any]) -> dict[str, Any]:
         "Кандидатов доказательства":int(row.get("retrieval_candidate_count") or 0),
         "Смысловое доказательство применено":"Да" if row.get("proof_state")=="SEMANTIC_CONSENSUS_PROOF" else "Нет",
         "Решение проверяющей модели":judge_label(proof.get("judge_verdict")) if has_semantic else "—",
-        "Достоверность проверяющей модели":proof.get("judge_confidence") if has_semantic else "—",
+        "Заявленная уверенность проверяющей модели":proof.get("judge_confidence") if has_semantic else "—",
         "Провайдер проверяющей модели":proof.get("judge_provider") or "—",
         "Проверяющая модель":proof.get("judge_model") or "—",
         "Контрольная модель приняла":("Да" if proof.get("critic_accept") is True else "Нет") if has_semantic else "—",
-        "Достоверность контрольной модели":proof.get("critic_confidence") if has_semantic else "—",
+        "Заявленная уверенность контрольной модели":proof.get("critic_confidence") if has_semantic else "—",
         "Провайдер контрольной модели":proof.get("critic_provider") or "—",
         "Контрольная модель":proof.get("critic_model") or "—",
         "Независимость моделей":("Да" if proof.get("independent") is True else "Нет") if has_semantic else "—",
         "Основание независимости":proof.get("independence_reason") or "—",
         "Выбранные доказательства":_selected_trace(row,proof) or "—",
+        "Примечание к уверенности":(
+            "Уверенность сообщена самой AI-моделью и используется только как один из proof-gate сигналов; "
+            "она не является измеренной вероятностью корректности вывода."
+            if has_semantic else "—"
+        ),
     }
 
 
@@ -131,7 +137,7 @@ def enrich_normative_proof_workbook(
             cell.border=copy(template.border)
         if template.alignment:
             cell.alignment=copy(template.alignment)
-        sheet.column_dimensions[cell.column_letter].width=24 if header not in {"Основание независимости","Выбранные доказательства"} else 42
+        sheet.column_dimensions[cell.column_letter].width=24 if header not in {"Основание независимости","Выбранные доказательства","Примечание к уверенности"} else 42
 
     for row_index in range(2,sheet.max_row+1):
         requirement_id=str(sheet.cell(row=row_index,column=requirement_col).value or "").strip()

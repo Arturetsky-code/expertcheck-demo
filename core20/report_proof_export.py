@@ -35,6 +35,14 @@ def _execution_rows(canonical_manifest: dict[str, Any] | None) -> list[dict[str,
     return [dict(row) for row in (execution.get("rows") or []) if isinstance(row,dict)]
 
 
+def _evidence_excerpt(item: dict[str, Any], limit: int = 320) -> str:
+    text=" ".join(str(item.get(key) or "").split() for key in ("text", "quote", "excerpt") if item.get(key))
+    text=" ".join(text.split()).strip()
+    if len(text) > limit:
+        return text[:limit-1].rstrip()+"…"
+    return text
+
+
 def _selected_trace(row: dict[str, Any], proof: dict[str, Any]) -> str:
     selected=list(proof.get("selected_evidence") or row.get("semantic_selected_evidence") or [])
     rendered=[]
@@ -47,7 +55,9 @@ def _selected_trace(row: dict[str, Any], proof: dict[str, Any]) -> str:
             page=item.get("page")
             locator=f"{document}, стр. {page}" if document and page not in (None,"") else document
         evidence_id=str(item.get("evidence_id") or "").strip()
-        text=f"{evidence_id}: {locator}" if evidence_id and locator else evidence_id or locator
+        prefix=f"{evidence_id}: {locator}" if evidence_id and locator else evidence_id or locator
+        excerpt=_evidence_excerpt(item)
+        text=f"{prefix} — «{excerpt}»" if prefix and excerpt else excerpt or prefix
         if text and text not in rendered:
             rendered.append(text)
     return " | ".join(rendered)
@@ -79,7 +89,7 @@ def enrich_normative_proof_workbook(
     payload: bytes | bytearray | None,
     canonical_manifest: dict[str, Any] | None,
 ) -> bytes | None:
-    """Append Alpha 9 proof trace to the existing NTD execution worksheet."""
+    """Append Alpha 10.1 auditable proof trace to the existing NTD execution worksheet."""
     if payload is None:
         return None
     raw=bytes(payload)

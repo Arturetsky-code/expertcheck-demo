@@ -21,6 +21,13 @@ from .alpha10_reliability import install as _install_alpha10_reliability
 
 _install_alpha10_reliability()
 
+# Alpha 10.1.1 tightens evidence quality and exported report integrity: table-of-
+# contents pages are not admissible project proof, and exported AI-consensus is
+# reconciled with the persisted normative Judge/Critic proof stream.
+from .quality_integrity_1011 import install_quality_integrity_1011 as _install_quality_integrity_1011
+
+_install_quality_integrity_1011()
+
 __all__ = [
     "CanonicalProject", "Comparison", "Evidence", "Finding", "ProjectObject",
     "PropertyValue", "Requirement", "ValidationIssue", "stable_id",
@@ -28,4 +35,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha10-expert-workflow-reliability"
+__version__ = "20.0-alpha10.1.1-quality-integrity"

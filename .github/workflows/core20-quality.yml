@@ -60,4 +60,5 @@ jobs:
             test_result_surface_1872.py \
             test_ai_queue_universe_patch.py \
             test_owner_revalidation_once_patch.py \
+            test_normative_proof_persistence_signature.py \
             --rootdir=.

@@ -40,3 +40,10 @@ install_owner_revalidation_once_patch()
 from .workspace_signature_normative_patch import install_workspace_signature_normative_patch
 
 install_workspace_signature_normative_patch()
+
+# Alpha 10.1.1: provenance shown to the engineer must never contain pandas/JSON
+# serialization sentinels such as literal "nan". Patch both the evidence renderer
+# and the already-bound project assembly function before Studio imports them.
+from .quality_integrity_1011_patch import install_quality_integrity_1011_patch
+
+install_quality_integrity_1011_patch()

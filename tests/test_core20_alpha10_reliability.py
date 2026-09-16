@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from core20 import alpha10_reliability as a10
 from core20.normative_semantic_proof import queue_fingerprint
+from core20.quality_integrity import as_list, consensus_counts
 from core.expert_review_engine import _enrich, _text
-from studio.pages.checks import _as_list
-from studio.pages.reports import _consensus_counts
 
 
 def _packet(rid: str) -> dict:
@@ -221,7 +220,7 @@ def test_alpha10_1_risk_escalation_is_explainable():
 
 
 def test_alpha10_1_report_consensus_includes_normative_semantic_proof():
-    matrix, normative, total = _consensus_counts(
+    matrix, normative, total = consensus_counts(
         {"semantic_consensus_completed": 0},
         {"semantic_proof_applied": 12},
     )
@@ -231,6 +230,6 @@ def test_alpha10_1_report_consensus_includes_normative_semantic_proof():
 
 
 def test_alpha10_1_cross_section_legacy_values_normalize_safely():
-    assert _as_list(float("nan")) == []
-    assert _as_list("ПЗ") == ["ПЗ"]
-    assert _as_list(["ПЗ", "ПЗУ"]) == ["ПЗ", "ПЗУ"]
+    assert as_list(float("nan")) == []
+    assert as_list("ПЗ") == ["ПЗ"]
+    assert as_list(["ПЗ", "ПЗУ"]) == ["ПЗ", "ПЗУ"]

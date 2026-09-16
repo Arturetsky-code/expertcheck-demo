@@ -15,8 +15,17 @@ from .nonfinding_policy import can_create_negative_finding
 def _text(row: dict[str, Any], *keys: str) -> str:
     for key in keys:
         value = row.get(key)
-        if value not in (None, "", []):
-            return str(value)
+        if value in (None, "", [], {}):
+            continue
+        try:
+            if value != value:  # NaN, including numpy floating NaN
+                continue
+        except (TypeError, ValueError):
+            pass
+        text = str(value).strip()
+        if not text or text.casefold() in {"nan", "none", "null", "nat"}:
+            continue
+        return text
     return ""
 
 
@@ -83,6 +92,7 @@ def _scenario_match(blob: str, scenario: dict[str, Any], parameter_code: str = "
 
 def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any]:
     blob=_norm(" ".join(str(risk.get(k) or "") for k in ("category","object","parameter","finding","possible_remark","sources")))
+    source_score=_safe_score(risk.get("score"),0)
     best=None; best_score=0; best_tokens=[]
     for scenario in scenarios:
         score,tokens=_scenario_match(blob,scenario,str(risk.get("parameter_code") or ""))
@@ -90,9 +100,19 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
             best,best_score,best_tokens=scenario,score,tokens
     if not best or best_score < 22:
         risk.update({"scenario_id":"","scenario_title":"","recurrence":0,"analog_projects":[],"knowledge_match_score":0,"matched_signals":[]})
+        risk["risk_score_breakdown"]={
+            "source_score":source_score,
+            "scenario_severity":0,
+            "base_score":source_score,
+            "evidence_bonus":0,
+            "recurrence_bonus":0,
+            "final_score":source_score,
+        }
+        risk["risk_level_reason"]="Уровень определён исходной инженерной оценкой; подтверждённый сценарий базы замечаний не применялся."
         return risk
     recurrence=_safe_score(best.get("recurrence"),0)
-    base=max(_safe_score(risk.get("score"),0), _safe_score(best.get("severity"),0))
+    scenario_severity=_safe_score(best.get("severity"),0)
+    base=max(source_score, scenario_severity)
     evidence_bonus=8 if risk.get("sources") else 0
     recurrence_bonus=min(12, recurrence*2)
     risk["score"]=min(100,base+evidence_bonus+recurrence_bonus)
@@ -108,6 +128,18 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
     risk["matched_signals"]=best_tokens
     risk["possible_remark"]=best.get("possible_remark") or risk.get("possible_remark")
     risk["recommendation"]=best.get("recommendation") or risk.get("recommendation")
+    risk["risk_score_breakdown"]={
+        "source_score":source_score,
+        "scenario_severity":scenario_severity,
+        "base_score":base,
+        "evidence_bonus":evidence_bonus,
+        "recurrence_bonus":recurrence_bonus,
+        "final_score":risk["score"],
+    }
+    risk["risk_level_reason"]=(
+        f"Исходная инженерная оценка {source_score}/100; сценарий базы замечаний {scenario_severity}/100; "
+        f"доказательства +{evidence_bonus}; повторяемость +{recurrence_bonus}. Итог {risk['score']}/100."
+    )
     return risk
 
 

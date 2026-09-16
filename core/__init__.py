@@ -33,3 +33,10 @@ install_ai_queue_universe_patch()
 from .owner_revalidation_once_patch import install_owner_revalidation_once_patch
 
 install_owner_revalidation_once_patch()
+
+# 18.5.4: normative semantic proof mutates inside the persisted project result.
+# Include a compact proof digest in the workspace rerun signature so partial and
+# final Alpha 10 proof runs are autosaved and survive Streamlit reboot.
+from .workspace_signature_normative_patch import install_workspace_signature_normative_patch
+
+install_workspace_signature_normative_patch()

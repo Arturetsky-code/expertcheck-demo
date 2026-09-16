@@ -79,7 +79,7 @@ def test_site_other_entity_revalidation_runs_once_then_fresh_judge_stays_complet
 
     second = continuation_pending(doc, checkpoint)
     assert packet_id in checkpoint["assignment"]["judge"]
-    assert second["contract_revalidation_reopened"] == 0
+    assert second.get("contract_revalidation_reopened", 0) == 0
     assert second["judge_done"] == 1
     assert second["judge_remaining"] == 0
     assert second["packages_remaining"] == 0

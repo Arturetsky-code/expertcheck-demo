@@ -4,7 +4,11 @@ from io import BytesIO
 
 from openpyxl import Workbook, load_workbook
 
-from core.quality_integrity_1011_patch import clean_source_text, compact_source_clean
+from core.quality_integrity_1011_patch import (
+    _sanitize_assembly_row,
+    clean_source_text,
+    compact_source_clean,
+)
 from core20.quality_integrity_1011 import (
     candidate_payloads_without_toc,
     is_toc_like_text,
@@ -21,6 +25,20 @@ def test_alpha1011_object_source_removes_literal_nan():
         "page": 5,
         "table": float("nan"),
     }) == "ПЗУ2, Экспликация/поле генерального плана, стр. 5"
+
+    cleaned = _sanitize_assembly_row({
+        "Канонический источник": source,
+        "_evidence": [{
+            "document_type": "ПЗУ2",
+            "section": "Экспликация/поле генерального плана",
+            "page": 5,
+            "table": "nan",
+            "row": float("nan"),
+        }],
+    })
+    assert cleaned["Канонический источник"] == "ПЗУ2, Экспликация/поле генерального плана, стр. 5"
+    assert cleaned["_evidence"][0]["table"] == ""
+    assert cleaned["_evidence"][0]["row"] == ""
 
 
 def test_alpha1011_toc_page_is_not_normative_proof_candidate():

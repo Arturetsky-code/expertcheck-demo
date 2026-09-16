@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from core20 import alpha10_reliability as a10
 from core20.normative_semantic_proof import queue_fingerprint
+from core.expert_review_engine import _enrich, _text
+from studio.pages.checks import _as_list
+from studio.pages.reports import _consensus_counts
 
 
 def _packet(rid: str) -> dict:
@@ -173,3 +176,61 @@ def test_alpha10_supports_without_critic_response_stays_pending():
 
     assert result["semantic_queue_processed"] == 0
     assert result["semantic_queue_total"] == 1
+
+
+def test_alpha10_1_nan_identifier_is_not_literal_nan():
+    row = {"comparison_id": float("nan"), "rule_id": "", "check_code": "PLAUSIBILITY-001"}
+    assert _text(row, "comparison_id", "rule_id", "check_code") == "PLAUSIBILITY-001"
+
+
+def test_alpha10_1_risk_escalation_is_explainable():
+    risk = {
+        "score": 38,
+        "category": "ТЭП и межраздельные сведения",
+        "object": "КПП",
+        "parameter": "Высота здания",
+        "parameter_code": "BUILDING_HEIGHT",
+        "finding": "Требуется проверка высоты",
+        "possible_remark": "Проверить высоту",
+        "sources": "ПЗ",
+        "origin": "CrossCheck Engine",
+    }
+    scenarios = [{
+        "scenario_id": "HEIGHT-001",
+        "title": "Высота здания",
+        "category": "ТЭП и межраздельные сведения",
+        "parameter_codes": ["BUILDING_HEIGHT"],
+        "severity": 70,
+        "recurrence": 3,
+        "triggers": {"keywords": ["высота"], "statuses": []},
+        "analogs": ["Проект А"],
+    }]
+
+    result = _enrich(risk, scenarios)
+
+    assert result["level"] == "Высокий"
+    assert result["risk_score_breakdown"] == {
+        "source_score": 38,
+        "scenario_severity": 70,
+        "base_score": 70,
+        "evidence_bonus": 8,
+        "recurrence_bonus": 6,
+        "final_score": 84,
+    }
+    assert "Исходная инженерная оценка 38/100" in result["risk_level_reason"]
+
+
+def test_alpha10_1_report_consensus_includes_normative_semantic_proof():
+    matrix, normative, total = _consensus_counts(
+        {"semantic_consensus_completed": 0},
+        {"semantic_proof_applied": 12},
+    )
+    assert matrix == 0
+    assert normative == 12
+    assert total == 12
+
+
+def test_alpha10_1_cross_section_legacy_values_normalize_safely():
+    assert _as_list(float("nan")) == []
+    assert _as_list("ПЗ") == ["ПЗ"]
+    assert _as_list(["ПЗ", "ПЗУ"]) == ["ПЗ", "ПЗУ"]

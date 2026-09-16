@@ -12,6 +12,23 @@ from core20.report_proof_export import (
 )
 
 
+def _safe_count(value)->int:
+    try:
+        number=float(value or 0)
+        if number != number:
+            return 0
+        return max(0,int(number))
+    except (TypeError,ValueError,OverflowError):
+        return 0
+
+
+def _consensus_counts(coverage:dict,normative20:dict)->tuple[int,int,int]:
+    """Return transparent independent Judge+Critic totals across both proof streams."""
+    matrix=_safe_count((coverage or {}).get('semantic_consensus_completed'))
+    normative=_safe_count((normative20 or {}).get('semantic_proof_applied'))
+    return matrix,normative,matrix+normative
+
+
 def _report_documents(docs):
     """Inject user decisions and current Canonical Core state into exports."""
     report_docs = docs.copy()
@@ -72,15 +89,14 @@ def render(ctx):
     assembly=st.session_state.get('object_assembly_rows') or []
     risks=build_expert_risks(comparisons.to_dict('records') if not comparisons.empty else [],assembly,checklist,documents=docs.to_dict('records'))
     report=build_structured_report(st.session_state.project_name,docs.to_dict('records'),comparisons.to_dict('records'),risks=risks,checklist_results=checklist,assembly_rows=assembly)
-    plan=first.get('project_review_plan') or {}
-    domains=plan.get('domains') or {}
     coverage=first.get('coverage_matrix') or {}
+    matrix_consensus,normative_consensus,total_consensus=_consensus_counts(coverage,normative20)
     c1,c2,c3,c4,c5=st.columns(5)
     with c1:card('Несоответствия',report['summary'].get('project_findings',0),'Доказанные выводы','bad' if report['summary'].get('project_findings') else 'ok')
     with c2:card('Строгое покрытие',f"{coverage.get('coverage_pct',0)}%",'Завершено на L5')
     with c3:card('Доказательства',f"{coverage.get('evidence_coverage_pct',0)}%",'Адресные уровни L3–L5')
-    with c4:card('Готово для Judge',int((coverage.get('evidence_levels') or {}).get('L4',0)),'Пакеты L4')
-    with c5:card('AI-консенсус',coverage.get('semantic_consensus_completed',0),'Независимые Judge + Critic')
+    with c4:card('Готово для Judge',_safe_count((coverage.get('evidence_levels') or {}).get('L4')),'Пакеты L4')
+    with c5:card('AI-консенсус',total_consensus,f'Матрица: {matrix_consensus} · НТД: {normative_consensus}')
     if normative20.get('contracts'):
         n1,n2,n3,n4=st.columns(4)
         with n1:card('НТД 20.0 — контрактов',normative20.get('contracts',0),'Исполняемые verified-clause')
@@ -90,9 +106,12 @@ def render(ctx):
         retrieval=dict(normative20.get('retrieval') or {})
         st.caption(
             f"Retrieval-кандидатов evidence: {retrieval.get('candidate_evidence',0)}; "
-            f"semantic proof применён: {normative20.get('semantic_proof_applied',0)}. "
+            f"semantic proof применён: {normative_consensus}. "
+            "AI-консенсус выше учитывает отдельно матрицу проверки и НТД 20.0. "
             "В выгружаемом листе «НТД 20.0 — исполнение» сохраняются proof type/state и трассировка Judge/Critic."
         )
+        if normative20.get('semantic_proof_stale'):
+            st.warning('Сохранённый semantic proof НТД относится к устаревшей очереди и не включён в доказанные нормативные результаты. Требуется повторная AI-проверка НТД.')
     st.info(report['conclusion'])
 
     section('Скачать отчёт','Основные отчёты сокращены. Полная диагностика доступна только в техническом приложении.')

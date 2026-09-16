@@ -17,6 +17,17 @@ def _clean_scalar(value: Any) -> str:
     return "" if text.casefold() in _SENTINELS else text
 
 
+def _clean_runtime_value(value: Any) -> Any:
+    """Preserve useful scalar types while dropping NaN/null display sentinels."""
+    if value is None:
+        return ""
+    if isinstance(value, float) and not math.isfinite(value):
+        return ""
+    if isinstance(value, str) and value.strip().casefold() in _SENTINELS:
+        return ""
+    return value
+
+
 def clean_source_text(value: Any) -> str:
     """Remove serialization sentinels without losing the human source trace."""
     text = _clean_scalar(value)
@@ -46,11 +57,30 @@ def compact_source_clean(rec: dict[str, Any] | None) -> str:
     return ", ".join(parts) or document or "Источник не определён"
 
 
+def _sanitize_evidence(evidence: Any) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for item in evidence or []:
+        if not isinstance(item, dict):
+            continue
+        cleaned = dict(item)
+        for key in (
+            "document_type", "document", "page", "section", "table", "row",
+            "position", "source_type", "source_type_label", "confidence",
+            "lifecycle", "quote", "forbidden_reason",
+        ):
+            if key in cleaned:
+                cleaned[key] = _clean_runtime_value(cleaned.get(key))
+        result.append(cleaned)
+    return result
+
+
 def _sanitize_assembly_row(row: dict[str, Any]) -> dict[str, Any]:
     result = dict(row)
     for key in ("Источники", "Основание включения", "Канонический источник"):
         if key in result:
             result[key] = clean_source_text(result.get(key))
+    if "_evidence" in result:
+        result["_evidence"] = _sanitize_evidence(result.get("_evidence"))
     return result
 
 

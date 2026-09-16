@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-"""Alpha 10 reliability overlay for the canonical normative proof workflow.
+"""Alpha 10.1 reliability overlay for the canonical normative proof workflow.
 
-The overlay is deliberately small and reversible: it keeps the Alpha 9 proof
+The overlay is deliberately small and reversible: it keeps the underlying proof
 engine intact, but turns its semantic queue into a resumable queue. The full
 proof queue remains the root contract; only packets without a persisted,
 completed Judge/Critic decision are exposed for the next call.
@@ -13,7 +13,7 @@ from typing import Any
 from . import normative_semantic_proof as _semantic
 
 
-ENGINE_VERSION = "20.0-alpha10-expert-workflow-reliability"
+ENGINE_VERSION = "20.0-alpha10.1-quality-integrity"
 _INSTALLED = False
 _ORIGINAL_RUN = _semantic.run_normative_semantic_proof
 _ORIGINAL_APPLY = _semantic.apply_normative_semantic_proof
@@ -37,10 +37,10 @@ def _positive_confidence(value: Any) -> bool:
 def _decision_complete(value: dict[str, Any] | None) -> bool:
     """Distinguish a real AI decision from a synthetic fail-closed placeholder.
 
-    Alpha 9 intentionally materialises REVIEW_QUESTION when a provider returns
-    no answer. That is safe as a verdict, but it must not consume the resumable
-    queue. A real non-SUPPORTS Judge answer is complete without Critic; SUPPORTS
-    additionally requires an actual Critic answer (accept or reject).
+    The base engine intentionally materialises REVIEW_QUESTION when a provider
+    returns no answer. That is safe as a verdict, but it must not consume the
+    resumable queue. A real non-SUPPORTS Judge answer is complete without Critic;
+    SUPPORTS additionally requires an actual Critic answer (accept or reject).
     """
     if not isinstance(value, dict) or not _positive_confidence(value.get("judge_confidence")):
         return False
@@ -72,7 +72,7 @@ def _root_identity(previous: dict[str, Any], queue: list[dict[str, Any]]) -> tup
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
     previous_total = int(previous.get("root_queue_total") or previous.get("queue_total") or 0)
 
-    # If the current queue is already the pending subset produced by Alpha 10,
+    # If the current queue is already the pending subset produced by Alpha 10.1,
     # keep the persisted root identity. Otherwise a new queue becomes a new
     # root and old decisions must not leak into it.
     if previous_root and previous_total >= len(queue):
@@ -110,7 +110,7 @@ def _merge_result(
 
     merged["version"] = ENGINE_VERSION
     merged["root_fingerprint"] = root_fingerprint
-    # Keep fingerprint compatible with the Alpha 9 apply gate. The fingerprint
+    # Keep fingerprint compatible with the base apply gate. The fingerprint
     # identifies the complete root queue rather than one pending slice.
     merged["fingerprint"] = root_fingerprint
     merged["root_queue_total"] = int(root_total)
@@ -131,7 +131,7 @@ def _merge_result(
     current_errors = [str(x) for x in merged.get("provider_errors") or [] if str(x)]
     merged["provider_errors"] = list(dict.fromkeys([*previous_errors, *current_errors]))
     merged["principle"] = (
-        "Alpha 10 resumable proof: each addressable normative packet is consumed only after a real Judge decision "
+        "Alpha 10.1 resumable proof: each addressable normative packet is consumed only after a real Judge decision "
         "and, for SUPPORTS, a real Critic decision; only independent Judge/Critic SUPPORTS may create VERIFIED_OK. "
         "Provider failures leave unanswered packets pending."
     )
@@ -185,7 +185,7 @@ def apply_normative_semantic_proof(
     fingerprint = str(semantic.get("fingerprint") or "")
     root = str(semantic.get("root_fingerprint") or fingerprint or "")
 
-    # Preserve the Alpha 9 stale-check contract: an explicitly mismatched
+    # Preserve the base stale-check contract: an explicitly mismatched
     # fingerprint is always stale, even if a separate root_fingerprint remains.
     compatible_root = bool(semantic and root == expected and (not fingerprint or fingerprint == expected))
     if compatible_root:

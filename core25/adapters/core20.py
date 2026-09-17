@@ -3,6 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from core20.model import Evidence, Requirement
+from core20.parameter_contracts import (
+    compare_values as _compare_values,
+    numeric as _numeric,
+    reserve_topology as _reserve_topology,
+    unit as _unit,
+)
 
 from ..contracts import Domain, Evidence25, Requirement25
 from ..requirement_engine import normalize_assignment_requirement, normalize_scope, normalize_verification_kind
@@ -92,3 +98,23 @@ def adapt_evidence(ev: Evidence) -> Evidence25:
         confidence=ev.confidence,
         metadata=metadata,
     )
+
+
+def normalize_unit(value: Any) -> str:
+    """Use the stable 20.0 engineering unit normalizer behind the 25.0 adapter boundary."""
+    return _unit(value)
+
+
+def numeric_value(value: Any) -> float | None:
+    """Use the stable 20.0 numeric parser behind the 25.0 adapter boundary."""
+    return _numeric(value)
+
+
+def compare_typed_values(values: list[float], required: float) -> tuple[str, float]:
+    """Compare already owner/parameter-bound values with stable 20.0 tolerances."""
+    return _compare_values(values, required)
+
+
+def parse_reserve_topology(text: str) -> tuple[int, int] | None:
+    """Reuse the stable 20.0 working/reserve topology parser."""
+    return _reserve_topology(text)

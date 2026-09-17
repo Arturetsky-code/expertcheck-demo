@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha1
+import re
 from typing import Mapping
 
 from .contracts import Binding25, BindingState, Evidence25, Requirement25, Scope
@@ -32,14 +33,47 @@ def _resolve_owner_name(
     return matches[0] if len(set(matches)) == 1 else ""
 
 
+def _word_stem(word: str) -> str:
+    """Return a conservative Russian noun stem for semantic owner hints only.
+
+    This helper is deliberately not used for deterministic structured owner
+    binding. It only lets obvious inflection variants such as
+    ``проборазделка`` / ``проборазделки`` produce AMBIGUOUS instead of UNBOUND.
+    """
+    token = _norm(word)
+    if len(token) < 8:
+        return token
+    for suffix in ("ами", "ями", "ого", "ему", "ому", "ах", "ях", "ов", "ев", "ей", "ам", "ям", "ом", "ем", "а", "я", "ы", "и", "у", "ю", "е", "о"):
+        if token.endswith(suffix) and len(token) - len(suffix) >= 7:
+            return token[: -len(suffix)]
+    return token
+
+
+def _alias_semantically_present(alias: str, fragment: str) -> bool:
+    alias_norm = _norm(alias)
+    fragment_norm = _norm(fragment)
+    if not alias_norm:
+        return False
+    if alias_norm in fragment_norm:
+        return True
+
+    alias_words = [word for word in re.findall(r"[a-zа-я0-9-]+", alias_norm) if len(word) >= 8]
+    fragment_words = re.findall(r"[a-zа-я0-9-]+", fragment_norm)
+    if not alias_words or not fragment_words:
+        return False
+
+    fragment_stems = {_word_stem(word) for word in fragment_words if len(word) >= 8}
+    alias_stems = {_word_stem(word) for word in alias_words}
+    return bool(alias_stems and alias_stems <= fragment_stems)
+
+
 def _semantic_owner_candidates(
     fragment: str,
     known_objects: Mapping[str, tuple[str, ...]],
 ) -> list[str]:
-    low = _norm(fragment)
     matches: list[str] = []
     for object_id, aliases in known_objects.items():
-        if any(_norm(alias) and _norm(alias) in low for alias in aliases):
+        if any(_alias_semantically_present(alias, fragment) for alias in aliases):
             matches.append(str(object_id))
     return sorted(set(matches))
 

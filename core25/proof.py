@@ -3,9 +3,38 @@ from __future__ import annotations
 from hashlib import sha1
 from typing import Iterable, Mapping
 
-from .adapters.core20 import compare_typed_values, normalize_unit, numeric_value
+from .adapters.core20 import (
+    compare_typed_values,
+    normalize_unit,
+    numeric_value,
+    parse_reserve_topology,
+)
 from .contracts import Binding25, BindingState, Evidence25, Proof25, ProofState, Requirement25
 from .routing import VerificationRoute
+
+
+_DESIGN_MARKERS = (
+    "предусмотр",
+    "проектом",
+    "принят",
+    "выполнен",
+    "выполнена",
+    "оборудуется",
+    "ограждается",
+    "устанавливается",
+    "размещается",
+    "осуществляется",
+    "обеспечивается",
+)
+
+
+def _norm_text(value: object) -> str:
+    return " ".join(str(value or "").replace("ё", "е").casefold().split())
+
+
+def _has_project_assertion(text: str) -> bool:
+    normalized = _norm_text(text)
+    return any(marker in normalized for marker in _DESIGN_MARKERS)
 
 
 def _proof_id(
@@ -202,6 +231,105 @@ def _typed_value_proof(
     )
 
 
+def _presence_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    selected = tuple(
+        (evidence_item, binding)
+        for evidence_item, binding in pairs
+        if _has_project_assertion(evidence_item.fragment)
+    )
+    if not selected:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="PRESENCE_EVIDENCE_NOT_STRONG_ENOUGH",
+        )
+
+    evidence_ids = tuple(item.evidence_id for item, _ in selected)
+    binding_ids = tuple(binding.binding_id for _, binding in selected)
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="ASSIGNMENT_PRESENCE_CONFIRMED",
+    )
+
+
+def _reserve_topology_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    required = parse_reserve_topology(requirement.text)
+    if required is None:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="RESERVE_TOPOLOGY_REQUIREMENT_UNSTRUCTURED",
+        )
+
+    accepted: list[tuple[Evidence25, Binding25, tuple[int, int]]] = []
+    for evidence_item, binding in pairs:
+        if not _has_project_assertion(evidence_item.fragment):
+            continue
+        topology = parse_reserve_topology(evidence_item.fragment)
+        if topology is None:
+            continue
+        accepted.append((evidence_item, binding, topology))
+
+    if not accepted:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="RESERVE_TOPOLOGY_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(item.evidence_id for item, _, _ in accepted)
+    binding_ids = tuple(binding.binding_id for _, binding, _ in accepted)
+    topologies = tuple(topology for _, _, topology in accepted)
+    unique_topologies = set(topologies)
+    proof_id = _proof_id(requirement, route, evidence_ids, binding_ids)
+    required_metadata = {"working": required[0], "reserve": required[1]}
+
+    if len(unique_topologies) > 1:
+        return Proof25(
+            proof_id=proof_id,
+            requirement_id=requirement.requirement_id,
+            state=ProofState.CONFLICT,
+            evidence_ids=evidence_ids,
+            binding_ids=binding_ids,
+            reason_code="RESERVE_TOPOLOGY_PROJECT_CONFLICT",
+            metadata={
+                "required_topology": required_metadata,
+                "project_topologies": tuple(
+                    {"working": topology[0], "reserve": topology[1]}
+                    for topology in sorted(unique_topologies)
+                ),
+            },
+        )
+
+    actual = next(iter(unique_topologies))
+    state = ProofState.PROVEN_MATCH if actual == required else ProofState.PROVEN_MISMATCH
+    reason_code = "RESERVE_TOPOLOGY_MATCH" if actual == required else "RESERVE_TOPOLOGY_MISMATCH"
+    return Proof25(
+        proof_id=proof_id,
+        requirement_id=requirement.requirement_id,
+        state=state,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code=reason_code,
+        metadata={
+            "required_topology": required_metadata,
+            "project_topology": {"working": actual[0], "reserve": actual[1]},
+        },
+    )
+
+
 def build_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -241,6 +369,10 @@ def build_proof(
 
     if route.kind == "TYPED_VALUE":
         return _typed_value_proof(requirement, route, pairs)
+    if route.kind == "PRESENCE":
+        return _presence_proof(requirement, route, pairs)
+    if route.kind == "RESERVE_TOPOLOGY":
+        return _reserve_topology_proof(requirement, route, pairs)
 
     return _insufficient(
         requirement,

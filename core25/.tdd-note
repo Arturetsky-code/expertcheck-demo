@@ -1,0 +1,1 @@
+RED target: tests/core25/test_integrity_gate.py must fail until contracts/integrity are implemented.

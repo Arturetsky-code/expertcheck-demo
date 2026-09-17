@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import re
 from typing import Any
 
@@ -12,7 +11,8 @@ ENGINE_VERSION = "20.0-alpha10.1.2-evidence-quality"
 _GENERIC_TOPIC_STEMS = {
     "проект", "докум", "разде", "объек", "требо", "сведе", "решен",
     "описа", "обосн", "соста", "содер", "основ", "должн", "приве",
-    "преду", "мероп", "харак", "часть", "данны", "инфор",
+    "преду", "мероп", "харак", "часть", "данны", "инфор", "орган",
+    "земел", "участ", "терри",
 }
 
 
@@ -42,6 +42,21 @@ def _meaningful_stems(value: Any) -> list[str]:
     return stems
 
 
+def _content_body(value: Any) -> str:
+    """Strip recurring project title/page headers before semantic alignment."""
+    raw = " ".join(str(value or "").replace("\xa0", " ").split())
+    if not raw:
+        return ""
+    # Typical design-document marker after the repeated title block:
+    # "Л и с т |28" / "Лист 28". Search only near page start.
+    marker = re.search(r"(?:л\s*и\s*с\s*т|лист)\s*\|?\s*\d+", raw[:650], flags=re.I)
+    if marker:
+        return raw[marker.end():].strip()
+    # Conservative fallback: remove a short repeated title/header prefix only on
+    # long pages. Fail-closed topic gates may demote evidence to REVIEW_QUESTION.
+    return raw[280:].strip() if len(raw) > 700 else raw
+
+
 def toc_diagnostics(value: Any) -> dict[str, Any]:
     """Return explainable signals for table-of-contents and index-like pages.
 
@@ -63,29 +78,30 @@ def toc_diagnostics(value: Any) -> dict[str, Any]:
             "chained_page_refs": 0,
         }
 
+    sample = original[:7000]
+    low_sample = sample.casefold().replace("ё", "е")
     explicit_heading = bool(re.search(r"\b(?:содержание|оглавление)\b", low[:1800]))
-    leader_page_refs = len(re.findall(r"(?:\.{3,}|…{2,})\s*\d{1,3}\b", original[:6000]))
+    leader_page_refs = len(re.findall(r"(?:\.{3,}|…{2,})\s*\d{1,4}\b", sample))
     numbered_entries = len(re.findall(
         r"(?:^|\s)\d+(?:\.\d+){0,3}\s+[a-zа-я][a-zа-я-]{3,}",
-        low[:6000],
+        low_sample,
     ))
-    lettered_entries = len(re.findall(r"(?:^|\s)[а-я]\)\s+[a-zа-я][a-zа-я-]{3,}", low[:6000]))
-    # Typical collapsed extraction: "... мероприятия 14 7 Сведения ... 18 8 ...".
+    lettered_entries = len(re.findall(r"(?:^|\s)[а-я]\)\s+[a-zа-я][a-zа-я-]{3,}", low_sample))
     chained_page_refs = len(re.findall(
-        r"\b\d{1,3}\s+(?=\d+(?:\.\d+){0,3}\s+[a-zа-я][a-zа-я-]{3,})",
-        low[:6000],
+        r"\b\d{1,4}\s+(?=\d+(?:\.\d+){0,3}\s+[a-zа-я][a-zа-я-]{3,})",
+        low_sample,
     ))
     toc_vocabulary = len(re.findall(
-        r"\b(?:сведения|обоснование|описание|мероприятия|характеристика|решения|перечень)\b",
-        low[:6000],
+        r"\b(?:сведения|обоснование|описание|мероприятия|характеристика|решения|перечень|расчеты|результаты)\b",
+        low_sample,
     ))
 
     score = 0
     if explicit_heading:
         score += 3
-    if leader_page_refs >= 2:
-        score += 3
-    elif leader_page_refs == 1:
+    if leader_page_refs >= 3:
+        score += 4
+    elif leader_page_refs >= 1:
         score += 1
     if numbered_entries >= 5:
         score += 3
@@ -124,14 +140,8 @@ def is_toc_or_index_page(value: Any) -> bool:
 
 
 def topic_alignment(contract: dict[str, Any], page_text: Any) -> dict[str, Any]:
-    """Fail closed when a page is lexically related but topically wrong.
-
-    The first two meaningful tokens from the curated topic act as discriminators.
-    This prevents, for example, a transport-communications page from proving the
-    separate "Планировочная организация" requirement merely because both contain
-    generic words such as "организация" or "земельный участок".
-    """
-    text = _norm(page_text)
+    """Fail closed when only a repeated document header matches the requirement."""
+    body = _norm(_content_body(page_text))
     topic_stems = _meaningful_stems(contract.get("topic") or "")
     keyword_stems: list[str] = []
     for keyword in contract.get("keywords") or []:
@@ -139,12 +149,14 @@ def topic_alignment(contract: dict[str, Any], page_text: Any) -> dict[str, Any]:
             if stem not in keyword_stems:
                 keyword_stems.append(stem)
 
-    # Prefer the curated topic as the semantic discriminator. If the topic is too
-    # generic, fall back to curated keywords. Two anchors are deliberately strict:
-    # absence of proof becomes REVIEW_QUESTION, never a negative project finding.
+    # Prefer curated topic discriminators; supplement with one keyword anchor.
     required_anchors = topic_stems[:2]
-    if not required_anchors:
-        required_anchors = keyword_stems[:2]
+    if len(required_anchors) < 2:
+        for stem in keyword_stems:
+            if stem not in required_anchors:
+                required_anchors.append(stem)
+            if len(required_anchors) >= 2:
+                break
     if not required_anchors:
         return {
             "eligible": True,
@@ -154,9 +166,12 @@ def topic_alignment(contract: dict[str, Any], page_text: Any) -> dict[str, Any]:
             "reason": "NO_DISCRIMINATIVE_TOPIC_ANCHORS",
         }
 
-    matched = [stem for stem in required_anchors if stem and stem in text]
+    matched = [stem for stem in required_anchors if stem and stem in body]
+    # One strong discriminator is sufficient when only one exists. With two
+    # curated anchors require both; uncertainty is deliberately fail-closed.
+    needed = min(2, len(required_anchors))
     coverage = len(matched) / max(1, len(required_anchors))
-    eligible = len(matched) == len(required_anchors)
+    eligible = len(matched) >= needed
     return {
         "eligible": eligible,
         "required_anchors": required_anchors,

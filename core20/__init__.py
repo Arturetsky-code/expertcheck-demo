@@ -14,9 +14,9 @@ from .verification import (
 )
 
 # Alpha 10 installs a narrow reliability overlay before downstream modules bind
-# the normative semantic proof functions.  The Alpha 9 engine remains the
-# underlying proof implementation; the overlay only adds cumulative checkpoint
-# semantics and exposes the actually pending queue.
+# the normative semantic proof functions. The older semantic engine remains the
+# underlying implementation; the overlay adds cumulative checkpoint semantics
+# and exposes the actually pending queue.
 from .alpha10_reliability import install as _install_alpha10_reliability
 
 _install_alpha10_reliability()
@@ -35,6 +35,12 @@ from .evidence_quality_1012 import install_evidence_quality_1012 as _install_evi
 
 _install_evidence_quality_1012()
 
+# Alpha 10.1.3 makes the evidence accepted by Judge/Critic the canonical visible
+# proof while preserving the original retrieval winner as an auditable trace.
+from .proof_trace_1013 import install_proof_trace_1013 as _install_proof_trace_1013
+
+_install_proof_trace_1013()
+
 __all__ = [
     "CanonicalProject", "Comparison", "Evidence", "Finding", "ProjectObject",
     "PropertyValue", "Requirement", "ValidationIssue", "stable_id",
@@ -42,4 +48,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha10.1.2-evidence-quality"
+__version__ = "20.0-alpha10.1.3-proof-trace-consistency"

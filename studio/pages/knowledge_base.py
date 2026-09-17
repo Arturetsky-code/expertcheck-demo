@@ -17,7 +17,7 @@ def _foundation():
 
 
 def _persist_normative_semantic_proof(value:dict) -> bool:
-    """Persist Alpha 9 proof beside the project result so normal workspace save keeps it."""
+    """Persist normative proof beside the project result so workspace autosave keeps it."""
     result=st.session_state.get("result")
     if not isinstance(result,(list,tuple)) or not result:
         return False
@@ -41,6 +41,24 @@ def _semantic_trace(row:dict)->str:
         if locator and locator not in rendered:
             rendered.append(locator)
     return " | ".join(rendered)
+
+
+def _provider_error_summary(errors:list[str]|None)->str:
+    messages=[str(value or "") for value in (errors or []) if str(value or "").strip()]
+    low=" ".join(messages).casefold()
+    if "429" in low or "rate limit" in low or "лимит" in low:
+        return "Лимит AI-провайдера временно исчерпан. Выполненные проверки сохранены; незавершённые пакеты можно продолжить позже."
+    if "timeout" in low or "timed out" in low:
+        return "AI-провайдер временно не ответил. Выполненные проверки сохранены; незавершённые пакеты остаются в очереди."
+    return "Часть AI-запросов не была выполнена. Выполненные проверки сохранены; незавершённые пакеты остаются в очереди."
+
+
+def _retrieval_trace(row:dict)->str:
+    document=str(row.get("retrieval_evidence_document") or "").strip()
+    page=row.get("retrieval_evidence_page")
+    if document and page not in (None,""):
+        return f"{document}, стр. {page}"
+    return "—"
 
 
 def render(ctx):
@@ -113,13 +131,14 @@ def render(ctx):
             e3.metric("Не проверено системой",execution.get("system_limitations",0))
             e4.metric("Адресное доказательство",f"{execution.get('evidence_coverage_pct',0)}%")
             st.caption(
-                "Alpha 9 разделяет поиск кандидата и доказательство. Совпадение терминов — это только поиск, а не нормативное подтверждение. "
+                "ExpertCheck разделяет поиск кандидата и доказательство. Совпадение терминов — это только поиск, а не нормативное подтверждение. "
                 "Для смыслового требования система сохраняет до четырёх адресных кандидатов, а проверяющая модель должна выбрать конкретные доказательства. "
-                "Ненайденный текст и недоказанный смысл не превращаются в несоответствие."
+                "После независимого контроля выбранное доказательство становится каноническим proof trace; исходный retrieval сохраняется отдельно для аудита."
             )
 
             semantic_queue=list(execution.get("semantic_queue") or [])
             semantic_summary=dict(execution.get("semantic_proof_summary") or {})
+            provider_errors=[str(value) for value in semantic_summary.get("provider_errors") or [] if str(value).strip()]
             if execution.get("semantic_proof_applied"):
                 st.success(
                     f"Независимая смысловая проверка подтвердила требований: {execution.get('semantic_proof_applied',0)}. "
@@ -127,8 +146,12 @@ def render(ctx):
                 )
             if execution.get("semantic_proof_stale"):
                 st.warning("Сохранённая смысловая проверка относится к другой версии набора доказательств и не применена.")
-            if semantic_summary.get("provider_errors"):
-                st.warning("Последняя смысловая проверка завершена с ограничениями: "+" | ".join(semantic_summary.get("provider_errors") or []))
+            if provider_errors and semantic_queue:
+                st.warning(_provider_error_summary(provider_errors))
+            if provider_errors and st.session_state.get("expert_mode"):
+                with st.expander("Технические сообщения AI-провайдеров",expanded=False):
+                    for message in provider_errors:
+                        st.code(message)
 
             if semantic_queue:
                 st.info(
@@ -139,7 +162,7 @@ def render(ctx):
                 if st.button(
                     "Проверить смысловые требования двумя моделями",
                     type="primary",
-                    key="alpha9_normative_semantic_proof",
+                    key="normative_semantic_proof",
                 ):
                     judge=provider_for_role("judge",st.session_state,st.secrets)
                     critic=provider_for_role("critic",st.session_state,st.secrets)
@@ -157,7 +180,7 @@ def render(ctx):
                             st.error("Не удалось сохранить результат смысловой проверки в цифровой снимок проекта.")
                         else:
                             if proof.get("provider_errors"):
-                                st.warning("Результат сохранён в безопасном режиме без повышения статуса: "+" | ".join(proof.get("provider_errors") or []))
+                                st.warning(_provider_error_summary(proof.get("provider_errors") or []))
                             else:
                                 st.success(
                                     f"Смысловая проверка завершена: подтверждено {proof.get('verified_ok',0)} из {proof.get('selected',0)} выбранных пакетов."
@@ -172,18 +195,19 @@ def render(ctx):
                 "НТД":x.get("source") or x.get("document_id") or "",
                 "Пункт":x.get("paragraph") or "",
                 "Требование":x.get("requirement") or "",
-                "Основное доказательство":(
+                "Каноническое доказательство":(
                     f"{x.get('evidence_document')}, стр. {x.get('evidence_page')}"
                     if x.get("evidence_document") and x.get("evidence_page") not in (None,"")
                     else ""
                 ),
+                "Исходный retrieval-кандидат":_retrieval_trace(x),
                 "Выбранные доказательства":_semantic_trace(x) or "—",
                 "Решение проверяющей модели":judge_label((x.get("semantic_proof") or {}).get("judge_verdict")) if x.get("semantic_proof") else "—",
                 "Провайдер проверяющей модели":(x.get("semantic_proof") or {}).get("judge_provider") or "—",
                 "Контрольная модель":("Приняла" if (x.get("semantic_proof") or {}).get("critic_accept") is True else "Не приняла") if x.get("semantic_proof") else "—",
                 "Провайдер контрольной модели":(x.get("semantic_proof") or {}).get("critic_provider") or "—",
                 "Независимость моделей":("Да" if (x.get("semantic_proof") or {}).get("independent") is True else "Нет") if x.get("semantic_proof") else "—",
-                "Фрагмент":x.get("evidence_fragment") or "",
+                "Фрагмент канонического доказательства":x.get("evidence_fragment") or "",
                 "Причина":x.get("reason") or "",
             } for x in execution_rows],hide_index=True,width="stretch")
 
@@ -256,6 +280,6 @@ def render(ctx):
             "Всего исторических упоминаний":summary.get("history_expert_occurrences",0),
         })
         st.caption(
-            "Цель Alpha 9 — отделить релевантный поиск от доказательства нормативного требования. "
+            "Цель доказательного контура ExpertCheck — отделить релевантный поиск от доказательства нормативного требования. "
             "Наличие документа или совпадение ключевых слов само по себе не означает подтверждённое соответствие."
         )

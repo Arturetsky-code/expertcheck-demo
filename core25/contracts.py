@@ -182,9 +182,10 @@ class Trace25:
             return False
 
         evidence_by_id = {item.evidence_id: item for item in self.evidence}
-        if not self.proof.evidence_ids:
+        proof_evidence_ids = set(self.proof.evidence_ids)
+        if not proof_evidence_ids:
             return False
-        for evidence_id in self.proof.evidence_ids:
+        for evidence_id in proof_evidence_ids:
             item = evidence_by_id.get(evidence_id)
             if item is None or not item.proof_eligible:
                 return False
@@ -196,7 +197,7 @@ class Trace25:
             item = binding_by_id.get(binding_id)
             if item is None or item.state is not BindingState.BOUND:
                 return False
-            if item.evidence_id not in evidence_by_id:
+            if item.evidence_id not in proof_evidence_ids:
                 return False
         return True
 

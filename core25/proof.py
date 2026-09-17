@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha1
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from .adapters.core20 import compare_typed_values, normalize_unit, numeric_value
 from .contracts import Binding25, BindingState, Evidence25, Proof25, ProofState, Requirement25
@@ -43,6 +43,48 @@ def _insufficient(
     )
 
 
+def _system_limitation(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    *,
+    reason_code: str,
+    metadata: Mapping[str, object] | None = None,
+) -> Proof25:
+    return Proof25(
+        proof_id=_proof_id(requirement, route, (), ()),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.SYSTEM_LIMITATION,
+        reason_code=reason_code,
+        metadata=dict(metadata or {}),
+    )
+
+
+def _provider_failure(metadata: Mapping[str, object] | None) -> str:
+    meta = dict(metadata or {})
+    direct = str(meta.get("provider_error") or meta.get("ai_error") or "").strip()
+    status = str(meta.get("provider_status") or meta.get("ai_status") or "").strip().casefold()
+    http_status = str(meta.get("http_status") or meta.get("status_code") or "").strip()
+    combined = " ".join((direct, status, http_status)).casefold()
+    failure_markers = (
+        "429",
+        "rate limit",
+        "rate_limit",
+        "timeout",
+        "timed out",
+        "unavailable",
+        "provider error",
+        "provider_error",
+        "service unavailable",
+        "503",
+    )
+    if direct or status in {"error", "failed", "unavailable", "timeout"}:
+        if not combined or any(marker in combined for marker in failure_markers) or status:
+            return direct or status or http_status or "provider failure"
+    if http_status in {"429", "503"}:
+        return http_status
+    return ""
+
+
 def _eligible_pairs(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -56,6 +98,8 @@ def _eligible_pairs(
     }
     pairs: list[tuple[Evidence25, Binding25]] = []
     for item in evidence:
+        if _provider_failure(item.metadata):
+            continue
         binding = binding_by_evidence.get(item.evidence_id)
         if binding is None:
             continue
@@ -167,11 +211,32 @@ def build_proof(
     evidence_tuple = tuple(evidence)
     bindings_tuple = tuple(bindings)
 
+    requirement_provider_failure = _provider_failure(requirement.metadata)
+    if requirement_provider_failure:
+        return _system_limitation(
+            requirement,
+            route,
+            reason_code="AI_PROVIDER_FAILURE",
+            metadata={"provider_error": requirement_provider_failure},
+        )
+
     if route.kind == "REVIEW_ONLY":
         return _insufficient(requirement, route, reason_code="REVIEW_ONLY_ROUTE")
 
+    failed_provider_evidence = tuple(
+        item for item in evidence_tuple if _provider_failure(item.metadata)
+    )
     pairs = _eligible_pairs(requirement, route, evidence_tuple, bindings_tuple)
     if not pairs:
+        if failed_provider_evidence:
+            return _system_limitation(
+                requirement,
+                route,
+                reason_code="AI_PROVIDER_FAILURE",
+                metadata={
+                    "provider_failed_evidence_ids": tuple(item.evidence_id for item in failed_provider_evidence),
+                },
+            )
         return _insufficient(requirement, route, reason_code="NO_BOUND_CANONICAL_EVIDENCE")
 
     if route.kind == "TYPED_VALUE":

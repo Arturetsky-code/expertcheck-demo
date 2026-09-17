@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import isfinite
 from typing import Any
 
 from core20.model import Evidence, Requirement
@@ -106,8 +107,11 @@ def normalize_unit(value: Any) -> str:
 
 
 def numeric_value(value: Any) -> float | None:
-    """Use the stable 20.0 numeric parser behind the 25.0 adapter boundary."""
-    return _numeric(value)
+    """Parse a numeric value through 20.0 but reject NaN/±inf at the 25.0 boundary."""
+    parsed = _numeric(value)
+    if parsed is None or not isfinite(parsed):
+        return None
+    return parsed
 
 
 def compare_typed_values(values: list[float], required: float) -> tuple[str, float]:

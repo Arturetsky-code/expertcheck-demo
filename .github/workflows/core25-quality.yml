@@ -27,11 +27,12 @@ jobs:
         run: python -m pip install --upgrade pip pytest "PyMuPDF>=1.24,<2" "openpyxl>=3.1,<4"
 
       - name: Run Core25 tests
+        working-directory: tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          if [ -d tests/core25 ]; then
-            python -m pytest -q tests/core25 --rootdir=.
+          if [ -d core25 ]; then
+            python -m pytest -q core25 --rootdir=.
           else
             echo "tests/core25 not created yet; harness ready"
           fi

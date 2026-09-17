@@ -144,6 +144,8 @@ class Decision25:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.is_categorical and self.proof is None:
+            raise ValueError("Categorical decision requires concrete Proof25")
         if self.proof is None:
             return
         if self.proof.requirement_id != self.requirement_id:

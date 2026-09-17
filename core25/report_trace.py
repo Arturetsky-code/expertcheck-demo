@@ -23,7 +23,16 @@ def report_trace_row(result: VerificationResult25) -> dict[str, Any]:
     binding_by_id = {item.binding_id: item for item in trace.bindings}
 
     evidence = next((evidence_by_id[item] for item in proof.evidence_ids if item in evidence_by_id), None)
-    binding = next((binding_by_id[item] for item in proof.binding_ids if item in binding_by_id), None)
+    binding = None
+    if evidence is not None:
+        binding = next(
+            (
+                binding_by_id[item]
+                for item in proof.binding_ids
+                if item in binding_by_id and binding_by_id[item].evidence_id == evidence.evidence_id
+            ),
+            None,
+        )
 
     row = {
         "requirement_id": result.requirement.requirement_id,

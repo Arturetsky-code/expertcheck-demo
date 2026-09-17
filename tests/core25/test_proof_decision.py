@@ -79,6 +79,26 @@ def _bound_evidence(evidence_id: str, value: float, *, page: int = 7):
     return evidence, binding
 
 
+def _bound_fragment(evidence_id: str, fragment: str, *, owner_id: str = "PROJECT"):
+    evidence = Evidence25(
+        evidence_id=evidence_id,
+        document="ТХ.pdf",
+        section="ТХ",
+        page=9,
+        fragment=fragment,
+        addressable=True,
+        source_kind="PAGE_TEXT",
+    )
+    binding = Binding25(
+        binding_id=f"B-{evidence_id}",
+        evidence_id=evidence_id,
+        state=BindingState.BOUND,
+        owner_id=owner_id,
+        parameter_code="",
+    )
+    return evidence, binding
+
+
 def test_positive_semantic_judgment_without_selected_evidence_stays_insufficient(
     requirement_factory,
     route_factory,
@@ -129,3 +149,86 @@ def test_unbound_value_cannot_create_categorical_proof(requirement_factory, rout
     proof = build_proof(req, route_factory(), (ev,), (binding,))
     assert proof.state is ProofState.INSUFFICIENT
     assert decide(proof).state is DecisionState.REVIEW
+
+
+def test_bound_presence_with_project_assertion_is_proven(requirement_factory, route_factory):
+    req = requirement_factory(
+        text="Предусмотреть ограждение площадки",
+        verification_kind="PRESENCE",
+        parameter_code="",
+        required_value=None,
+        unit="",
+    )
+    route = route_factory(kind="PRESENCE", parameter_code="")
+    ev, binding = _bound_fragment(
+        "E-PRESENCE",
+        "Проектом предусматривается ограждение площадки высотой 2 м.",
+    )
+
+    proof = build_proof(req, route, (ev,), (binding,))
+
+    assert proof.state is ProofState.PROVEN_MATCH
+    assert proof.evidence_ids == ("E-PRESENCE",)
+    assert proof.binding_ids == ("B-E-PRESENCE",)
+    assert decide(proof).state is DecisionState.COMPLIANT
+
+
+def test_presence_without_project_assertion_stays_review(requirement_factory, route_factory):
+    req = requirement_factory(
+        text="Предусмотреть ограждение площадки",
+        verification_kind="PRESENCE",
+        parameter_code="",
+        required_value=None,
+        unit="",
+    )
+    route = route_factory(kind="PRESENCE", parameter_code="")
+    ev, binding = _bound_fragment("E-HEADING", "Ограждение площадки")
+
+    proof = build_proof(req, route, (ev,), (binding,))
+
+    assert proof.state is ProofState.INSUFFICIENT
+    assert decide(proof).state is DecisionState.REVIEW
+
+
+def test_reserve_topology_match_is_proven(requirement_factory, route_factory):
+    req = requirement_factory(
+        text="Предусмотреть 2 рабочих насоса и 1 резервный насос",
+        verification_kind="RESERVE_TOPOLOGY",
+        parameter_code="",
+        required_value=None,
+        unit="",
+    )
+    route = route_factory(kind="RESERVE_TOPOLOGY", parameter_code="")
+    ev, binding = _bound_fragment(
+        "E-TOPOLOGY",
+        "Проектом предусмотрены 2 рабочих насоса и 1 резервный насос.",
+        owner_id="PUMP-STATION",
+    )
+
+    proof = build_proof(req, route, (ev,), (binding,))
+
+    assert proof.state is ProofState.PROVEN_MATCH
+    assert proof.metadata["required_topology"] == {"working": 2, "reserve": 1}
+    assert proof.metadata["project_topology"] == {"working": 2, "reserve": 1}
+    assert decide(proof).state is DecisionState.COMPLIANT
+
+
+def test_reserve_topology_mismatch_is_proven(requirement_factory, route_factory):
+    req = requirement_factory(
+        text="Предусмотреть 2 рабочих насоса и 1 резервный насос",
+        verification_kind="RESERVE_TOPOLOGY",
+        parameter_code="",
+        required_value=None,
+        unit="",
+    )
+    route = route_factory(kind="RESERVE_TOPOLOGY", parameter_code="")
+    ev, binding = _bound_fragment(
+        "E-TOPOLOGY-WRONG",
+        "Проектом предусмотрен 1 рабочий насос и 1 резервный насос.",
+        owner_id="PUMP-STATION",
+    )
+
+    proof = build_proof(req, route, (ev,), (binding,))
+
+    assert proof.state is ProofState.PROVEN_MISMATCH
+    assert decide(proof).state is DecisionState.NONCOMPLIANT

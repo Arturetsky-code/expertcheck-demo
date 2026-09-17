@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 10.1 · Quality & Integrity Fix · Dual Run'
+VERSION='ExpertCheck 20.0 Alpha 10.1.3 · Proof Trace Consistency · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -99,226 +99,81 @@ with st.sidebar:
             guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
     else:
-        guided_pages=['Мои проекты','Проект']
+        guided_pages = ['Мои проекты', 'Проект']
         if has_result:
-            guided_pages.extend(['Подтверждение','Проверка','Чек-листы','Результаты','Отчёт'])
+            guided_pages.extend(['Состав объектов', 'Чек-листы', 'НТД и практика'])
+        if object_gate:
+            guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
-    if st.session_state.get('page') not in guided_pages:
-        st.session_state.page = ('Проверка' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'
-    page=st.radio('Раздел',guided_pages,label_visibility='collapsed',key='page')
-    if not has_result:
-        st.caption('Следующий этап откроется после загрузки проекта.')
-    elif not object_gate:
-        st.caption('Результаты до подтверждения состава считаются предварительными.')
-    else:
-        st.caption('Все основные этапы доступны.')
+    for name in guided_pages:
+        active=st.session_state.get('page')==name
+        if st.button(('● ' if active else '○ ')+name,key=f'nav_{name}',width='stretch'):
+            st.session_state.page=name;st.rerun()
+    st.caption('Все основные этапы доступны.')
     user=st.session_state.get('auth_user') or {}
-    st.caption(f"Пользователь: {user.get('display_name') or user.get('email','')}")
-    if st.button('Выйти', width='stretch', key='sidebar_logout'):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-    status='Проект открыт' if st.session_state.result else 'Комплект не загружен'
-    sidebar_project(st.session_state.project_name,status)
-    if not has_result:
-        st.info('Следующий шаг: загрузить комплект проектной документации.')
-    elif not object_gate:
-        st.info('Следующий шаг: проверить и подтвердить состав проектируемых объектов.')
-    else:
+    st.caption(f"Пользователь: {user.get('name') or user.get('username') or '—'}")
+    if st.button('Выйти',width='stretch'):
+        st.session_state.clear();st.rerun()
+    if st.session_state.get('result'):
+        sidebar_project(st.session_state.project_name,'Проект открыт')
         st.info('Следующий шаг: на странице «Проект» завершить AI-очередь, если она ещё не закрыта; затем разобрать подтверждённые замечания и инженерные вопросы.')
     sidebar_group('Режим интерфейса')
-    st.session_state.expert_mode=st.toggle(
-        'Режим разработчика',
-        value=st.session_state.expert_mode,
-        help='Включает служебные сведения, причины сопоставления и диагностику Core.',
-        key='interface_mode_toggle',
-    )
-    st.caption('Рабочий режим' if not st.session_state.expert_mode else 'Отображаются технические данные')
-    if not st.session_state.expert_mode:
-        with st.expander('Дополнительно', expanded=False):
-            st.caption('История проектов и расширенные настройки доступны в режиме разработчика.')
+    st.toggle('Режим разработчика',value=bool(st.session_state.get('expert_mode')),key='interface_mode_toggle',help='Отображаются технические данные')
     st.caption(VERSION)
-header(VERSION)
-docs,findings,raw_comparisons=frames(st.session_state.result)
-if st.session_state.result and not st.session_state.object_assembly_rows:
-    st.session_state.object_assembly_rows=assembly_rows(docs,findings)
-raw_passports=passports(docs)
-filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
 
-# Canonical Core 20.0 runs independently beside the accepted legacy result.
-# Alpha 10.1 adds resumable reliability and result-integrity fixes around the
-# underlying proof engine while preserving deterministic gates and legacy verdicts.
-canonical_manifest=None
-if st.session_state.result:
-    try:
-        canonical_manifest=build_dual_run_manifest(
-            project_name=st.session_state.get('project_name') or 'Проект',
-            documents=docs.to_dict('records'),
-            findings=findings.to_dict('records'),
-            comparisons=raw_comparisons.to_dict('records'),
-            assembly_rows=st.session_state.get('object_assembly_rows') or [],
-        )
-        st.session_state['canonical_core_20_manifest']=canonical_manifest
-    except Exception as canonical_error:
-        canonical_manifest={
-            'version':'20.0-alpha10.1-quality-integrity',
-            'legacy_results_unchanged':True,
-            'error':f'{type(canonical_error).__name__}: {canonical_error}',
-        }
-        st.session_state['canonical_core_20_manifest']=canonical_manifest
-        if st.session_state.get('expert_mode'):
-            st.warning(f'Canonical Core 20.0 не построен: {canonical_manifest["error"]}')
-
-if st.session_state.get('expert_mode'):
-    with st.sidebar:
-        with st.expander('20.0 · Canonical Core', expanded=False):
-            if not canonical_manifest:
-                st.caption('Состояние: ожидание проекта')
-                st.caption('Откройте проект для построения canonical model.')
-            elif canonical_manifest.get('error'):
-                st.error('Dual-run: ошибка миграции')
-                st.caption(canonical_manifest.get('error'))
-            else:
-                stats=canonical_manifest.get('stats') or {}
-                st.caption(
-                    f"Объекты {stats.get('objects',0)} / кандидаты {stats.get('object_candidates',0)} · "
-                    f"показатели {stats.get('properties',0)} · evidence {stats.get('evidence',0)}"
-                )
-                golden_label=(
-                    'N/A'
-                    if canonical_manifest.get('golden_skipped')
-                    else ('OK' if canonical_manifest.get('golden_passed') else 'НЕ ПРОЙДЕНЫ')
-                )
-                st.caption(
-                    f"Golden cases: {golden_label} · "
-                    f"ошибки ссылок: {canonical_manifest.get('validation_errors',0)}"
-                )
-                verification=canonical_manifest.get('verification_engine') or {}
-                st.caption(
-                    f"Verification 2.0: {verification.get('decisions',0)} решений · "
-                    f"авто {verification.get('automatic_verdict_eligible',0)} "
-                    f"({verification.get('automatic_coverage_pct',0)}%) · "
-                    f"ошибки контрактов {verification.get('contract_errors',0)}"
-                )
-                st.caption(
-                    f"Межраздельно пересчитано: {verification.get('canonical_proofs_recomputed',0)} · "
-                    f"Задание пересчитано: {verification.get('assignment_proofs_recomputed',0)}"
-                )
-                st.caption(
-                    f"Typed Assignment: {verification.get('typed_assignment_auto',0)} · "
-                    f"резервирование: {verification.get('reserve_topology_auto',0)} · "
-                    f"router evidence: {verification.get('canonical_routed_evidence',0)}"
-                )
-                st.caption(
-                    f"НТД: verified clauses {verification.get('normative_verified_clauses',0)} · "
-                    f"авто {verification.get('normative_auto',0)} · "
-                    f"структура {verification.get('normative_structure_auto',0)}"
-                )
-                st.caption(
-                    f"НТД review {verification.get('normative_review',0)} · "
-                    f"неверифиц. {verification.get('normative_unverified',0)} · "
-                    f"applicability blocked {verification.get('normative_applicability_blocked',0)}"
-                )
-                st.caption(
-                    f"Binding blocked: {verification.get('parameter_binding_blocked',0)} · "
-                    f"НТД всего: {verification.get('normative_checks_guarded',0)} · "
-                    f"расхождений с legacy: {verification.get('legacy_disagreements',0)}"
-                )
-                knowledge=canonical_manifest.get('knowledge_foundation') or {}
-                st.caption(
-                    f"Knowledge: документов {knowledge.get('document_catalog_total',0)} · "
-                    f"реестр статусов {knowledge.get('validity_registry_total',0)} · "
-                    f"атомарных требований {knowledge.get('atomic_requirements_total',0)} · "
-                    f"verified clauses {knowledge.get('verified_clauses',0)}"
-                )
-                st.caption(
-                    f"Текущий проект: нормативных маршрутов {knowledge.get('project_relevant',0)} · "
-                    f"готовых контрактов {knowledge.get('project_automatic_contract_ready',0)} · "
-                    f"исторически приоритетных {knowledge.get('project_history_prioritized',0)}"
-                )
-                counts=verification.get('counts') or {}
-                st.caption(
-                    f"OK {counts.get('VERIFIED_OK',0)} · замечания {counts.get('PROJECT_FINDING',0)} · "
-                    f"на проверку {counts.get('REVIEW_QUESTION',0)} · "
-                    f"ограничения {counts.get('SYSTEM_LIMITATION',0)}"
-                )
-                st.caption('Legacy verdicts: без изменений')
-
-if st.session_state.get('expert_mode') and canonical_manifest and not canonical_manifest.get('error'):
-    verification=canonical_manifest.get('verification_engine') or {}
-    audit_rows=list(verification.get('audit_rows') or [])
-    with st.expander('20.0 · Canonical Verification Audit', expanded=False):
-        if not audit_rows:
-            st.caption('Автоматические канонические решения пока отсутствуют.')
-        else:
-            st.caption(
-                'Показываются автоматические канонические решения, нормативные quality-gates, PROJECT_FINDING и расхождения с legacy. '
-                'Это диагностический слой; пользовательские legacy-вердикты пока не меняются.'
-            )
-            display_rows=[]
-            for row in audit_rows:
-                display_rows.append({
-                    'Контур': row.get('domain') or '',
-                    'Результат': row.get('kind') or '',
-                    'Объект': row.get('object') or '',
-                    'Проверка': row.get('check') or '',
-                    'Код параметра': row.get('parameter_code') or '',
-                    'Требуется': row.get('required_value'),
-                    'В проекте': row.get('project_value'),
-                    'Ед.': row.get('unit') or '',
-                    'Код основания': row.get('reason_code') or '',
-                    'Typed facts': row.get('typed_fact_count') or 0,
-                    'Routed evidence': row.get('routed_evidence_count') or 0,
-                    'Binding evidence': row.get('evidence_bindings') or '',
-                    'Требуемая схема': str(row.get('required_topology') or ''),
-                    'Схема в ПД': str(row.get('project_topology') or ''),
-                    'Пункт НТД verified': 'Да' if row.get('verified_clause') else '',
-                    'Источник НТД': row.get('normative_source') or '',
-                    'Пункт': row.get('normative_paragraph') or '',
-                    'Тип НТД-проверки': row.get('normative_check_kind') or '',
-                    'Применимость': row.get('applicability_state') or '',
-                    'НТД contract': row.get('normative_contract') or '',
-                    'Доверие реестра': row.get('normative_registry_trust') or '',
-                    'Статус источника': row.get('normative_source_status') or '',
-                    'История замечаний': row.get('normative_history_occurrences') or 0,
-                    'Проектов в истории': row.get('normative_history_projects') or 0,
-                    'Политика истории': row.get('normative_history_policy') or '',
-                    'Требуемый состав': row.get('required_document_roles') or '',
-                    'Найденный состав': row.get('observed_document_roles') or '',
-                    'Не найдено': row.get('missing_document_roles') or '',
-                    'Основание': row.get('reason') or '',
-                    'Evidence': row.get('evidence') or '',
-                    'Фрагмент evidence': row.get('evidence_fragment') or '',
-                    'Trace ID': row.get('trace_id') or '',
-                })
-            st.dataframe(display_rows, hide_index=True, width='stretch')
-
-data=(docs,findings,comparisons,filtered_registry,filtered_passports,metrics(comparisons),engineer_findings(findings))
 @dataclass
-class Context:
+class StudioContext:
     data:tuple
     version:str
-    config_dir:Path
-    analyze:object
-    workspace_store:object
-    current_user:dict
-ctx=Context(data,VERSION,CONFIG_DIR,analyze_uploaded,WORKSPACE_STORE,st.session_state.get('auth_user') or {})
-PAGES[page](ctx)
 
-_active=st.session_state.get('active_project_id')
-_user=st.session_state.get('auth_user') or {}
-if _active and _user.get('id') and st.session_state.get('result') is not None:
+
+def _autosave_current_project():
+    pid=st.session_state.get('active_project_id')
+    user=st.session_state.get('auth_user') or {}
+    if not pid or not user:return
     try:
-        _snapshot=session_snapshot(st.session_state)
-        _signature=snapshot_signature(_snapshot)
-        if st.session_state.get('_workspace_saved_signature') != _signature:
-            WORKSPACE_STORE.save_project(
-                _user['id'],_active,st.session_state.get('project_name') or 'Проект',
-                _snapshot,status='analyzed',app_version=VERSION
-            )
-            st.session_state['_workspace_saved_signature']=_signature
-    except PermissionError:
-        st.error('Доступ к выбранному проекту запрещён.')
-    except Exception as workspace_error:
+        snapshot=session_snapshot(st.session_state)
+        sig=snapshot_signature(snapshot)
+        if sig != st.session_state.get('_workspace_saved_signature'):
+            WORKSPACE_STORE.save_project(pid,user.get('id'),snapshot)
+            st.session_state._workspace_saved_signature=sig
+    except Exception as exc:
         if st.session_state.get('expert_mode'):
-            st.warning(f'Не удалось сохранить проект: {type(workspace_error).__name__}: {workspace_error}')
+            st.sidebar.caption(f'Автосохранение: {type(exc).__name__}')
+
+if st.session_state.result:
+    d,f,c=frames(st.session_state.result)
+    raw_passports=passports(d)
+    raw_registry=registry(d)
+    rows=st.session_state.get('object_assembly_rows') or []
+    if not rows:
+        rows=assembly_rows(d,f)
+        st.session_state.object_assembly_rows=rows
+    raw_comparisons=c
+    reg,pas,cmp=apply_project_assembly(d,raw_passports,raw_comparisons,rows,st.session_state.get('object_registry_confirmed'))
+    # Always build the canonical 20.0 shadow manifest. The legacy UI remains the
+    # executable baseline, while the shadow manifest lets us measure parity and
+    # migrate one engineering contract at a time without a big-bang rewrite.
+    try:
+        manifest=build_dual_run_manifest(
+            d.to_dict('records') if hasattr(d,'to_dict') else [],
+            f.to_dict('records') if hasattr(f,'to_dict') else [],
+            cmp.to_dict('records') if hasattr(cmp,'to_dict') else [],
+        )
+        st.session_state.canonical_core_20_manifest=manifest
+    except Exception as exc:
+        st.session_state.canonical_core_20_manifest={}
+        if st.session_state.get('expert_mode'):
+            st.sidebar.caption(f'Core20 shadow: {type(exc).__name__}')
+    ctx=StudioContext(data=(d,f,c,reg,pas,cmp,engineer_findings(f)),version=VERSION)
+    page=st.session_state.get('page','Проект')
+    renderer=PAGES.get(page,PAGES['Проект'])
+    renderer(ctx)
+    _autosave_current_project()
+else:
+    st.session_state.canonical_core_20_manifest={}
+    ctx=StudioContext(data=(None,None,None,None,None,None,None),version=VERSION)
+    page=st.session_state.get('page','Проект')
+    renderer=PAGES.get(page,PAGES['Проект'])
+    renderer(ctx)
+    _autosave_current_project()

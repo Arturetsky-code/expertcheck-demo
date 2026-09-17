@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from math import isfinite
 from typing import Any
 
@@ -7,7 +8,6 @@ from core20.model import Evidence, Requirement
 from core20.parameter_contracts import (
     compare_values as _compare_values,
     numeric as _numeric,
-    reserve_topology as _reserve_topology,
     unit as _unit,
 )
 
@@ -119,6 +119,36 @@ def compare_typed_values(values: list[float], required: float) -> tuple[str, flo
     return _compare_values(values, required)
 
 
+def _topology_count(text: str, label: str) -> int | None:
+    if label == "working":
+        keywords = r"(?:рабоч\w*|в\s+работе)"
+    else:
+        keywords = r"(?:резерв\w*)"
+
+    before = re.search(rf"(?<!\d)(\d{{1,2}})\s*(?:шт\.?\s*)?{keywords}", text, re.I)
+    if before:
+        return int(before.group(1))
+
+    # Deliberately accept only a number immediately after the semantic label.
+    # A wider gap can cross into the next topology clause, e.g.
+    # "2 рабочих насоса и 1 резервный" and incorrectly bind the reserve count
+    # to the working label.
+    after = re.search(rf"{keywords}\s*(?:[:=\-–—]\s*)?(\d{{1,2}})(?!\d)", text, re.I)
+    if after:
+        return int(after.group(1))
+    return None
+
+
 def parse_reserve_topology(text: str) -> tuple[int, int] | None:
-    """Reuse the stable 20.0 working/reserve topology parser."""
-    return _reserve_topology(text)
+    """Parse working/reserve counts conservatively at the 25.0 adapter boundary.
+
+    Core20's broader reverse pattern may cross from one clause into the next and
+    overwrite an already-correct working count. Core25 fails closed instead of
+    accepting an ambiguous topology.
+    """
+    normalized = " ".join(str(text or "").replace("ё", "е").casefold().split())
+    working = _topology_count(normalized, "working")
+    reserve = _topology_count(normalized, "reserve")
+    if working is None or reserve is None:
+        return None
+    return working, reserve

@@ -167,8 +167,8 @@ def _typed_value_proof(
             requirement,
             route,
             reason_code="BOUND_TYPED_VALUE_NOT_FOUND",
-            evidence_ids=evidence_ids,
-            binding_ids=binding_ids,
+            evidence_ids=tuple(accepted_evidence_ids),
+            binding_ids=tuple(accepted_binding_ids),
         )
 
     comparison_state, anchor = compare_typed_values(values, required)

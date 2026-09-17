@@ -28,6 +28,13 @@ from .quality_integrity_1011 import install_quality_integrity_1011 as _install_q
 
 _install_quality_integrity_1011()
 
+# Alpha 10.1.2 closes the remaining evidence-quality gap: TOC continuation pages
+# are rejected even without an explicit heading, and lexical matches confined to
+# a repeated project/page header cannot prove a differently themed requirement.
+from .evidence_quality_1012 import install_evidence_quality_1012 as _install_evidence_quality_1012
+
+_install_evidence_quality_1012()
+
 __all__ = [
     "CanonicalProject", "Comparison", "Evidence", "Finding", "ProjectObject",
     "PropertyValue", "Requirement", "ValidationIssue", "stable_id",
@@ -35,4 +42,4 @@ __all__ = [
     "VerificationEngine20", "VerificationRequest",
 ]
 
-__version__ = "20.0-alpha10.1.1-quality-integrity"
+__version__ = "20.0-alpha10.1.2-evidence-quality"

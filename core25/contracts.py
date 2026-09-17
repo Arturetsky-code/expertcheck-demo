@@ -110,6 +110,8 @@ class Binding25:
     owner_id: str = ""
     parameter_code: str = ""
     concept_code: str = ""
+    method: str = ""
+    reason: str = ""
     reason_code: str = ""
     supporting_evidence_ids: tuple[str, ...] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)

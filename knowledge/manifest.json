@@ -1,11 +1,23 @@
 {
-  "core_version": "2.4-sprint2-alpha1",
-  "packs": ["core", "industrial", "mining", "infrastructure", "corporate"],
-  "project_profiles": ["PROFILE-UNIVERSAL-INDUSTRIAL", "PROFILE-LINEAR", "PROFILE-MINING"],
+  "core_version": "20.0-alpha7-normative-knowledge-foundation",
+  "packs": [
+    "core",
+    "industrial",
+    "mining",
+    "infrastructure",
+    "corporate"
+  ],
+  "project_profiles": [
+    "PROFILE-UNIVERSAL-INDUSTRIAL",
+    "PROFILE-LINEAR",
+    "PROFILE-MINING"
+  ],
   "principles": [
     "ядро не зависит от отрасли или конкретного проекта",
     "реестры источников консолидируются без назначения единственного источника истины",
     "отраслевые знания подключаются пакетами",
-    "профиль проекта выбирает применимые пакеты, но не меняет Core"
+    "профиль проекта выбирает применимые пакеты, но не меняет Core",
+    "размер корпуса НТД не равен автоматическому покрытию: автоматический вывод требует verified-clause и проектного доказательства",
+    "история замечаний и ответов экспертизы используется для приоритизации и поиска аналогов, но не как самостоятельное нормативное основание"
   ]
 }

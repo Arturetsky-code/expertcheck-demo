@@ -87,3 +87,68 @@ def test_technical_report_accepts_mixed_cross_section_gate_reasons():
     assert "422" in reasons
     assert "MISSING_OWNER" in reasons
     assert "вложенная" in reasons
+
+
+
+def test_exported_cross_section_metrics_reconcile_with_confirmed_finding():
+    document = {
+        "Файл": "ПЗ.pdf",
+        "Тип документа": "ПЗ",
+        "Страниц": 50,
+        "consolidated_registry": [{"name":"Компрессорная"}],
+        "assignment_compliance": [],
+        "normative_compliance_audit": [],
+        "automatic_checklist_review": {"results": []},
+        # Deliberately stale plan: report boundary must rebuild it.
+        "project_review_plan": {
+            "domains": {
+                "comparison": {
+                    "total": 1, "completed": 0, "issue": 0,
+                    "verified_ok": 0, "project_findings": 0,
+                    "review_questions": 1, "system_limitations": 0,
+                    "informational": 0, "coverage_pct": 0,
+                }
+            }
+        },
+        "coverage_matrix": {},
+        "semantic_evidence_engine": {},
+        "report_quality_gate": {"status": "PASSED", "issues": []},
+        "completeness_user_confirmed": True,
+    }
+    comparison = {
+        "check_code":"CORE-XSEC-AREA_BUILD-TEST",
+        "object":"Компрессорная",
+        "object_id":"OBJ-1",
+        "parameter_code":"AREA_BUILD",
+        "parameter_name":"Площадь застройки",
+        "unit":"m2",
+        "status":"ПОТЕНЦИАЛЬНОЕ РАСХОЖДЕНИЕ",
+        "document_values":"ПЗ: 54.3 m2 | ПЗУ: 48.7 m2",
+        "verification_evidence":[
+            {
+                "document":"ПЗ.pdf","page":45,"section":"ПЗ",
+                "object_id":"OBJ-1","parameter_code":"AREA_BUILD",
+                "value":54.3,"unit":"m2","trusted_for_mismatch":True,
+            },
+            {
+                "document":"ПЗУ.pdf","page":18,"section":"ПЗУ",
+                "object_id":"OBJ-1","parameter_code":"AREA_BUILD",
+                "value":48.7,"unit":"m2","trusted_for_mismatch":True,
+            },
+        ],
+        "source_records":[],
+        "trusted_section_families":["ПЗ","ПЗУ"],
+        "independent_trusted_sources":2,
+    }
+
+    payload = structured_excel_report(
+        "Проект", "ExpertCheck 20.0 Alpha 6.2", [document], [], [comparison],
+        report_kind="manager", checklist_results=[],
+    )
+    workbook = load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
+    rows = list(workbook["Резюме"].iter_rows(values_only=True))
+    summary = {row[0]: row[1] for row in rows if row and row[0]}
+    assert summary["Подтверждённых несоответствий проекта"] == 1
+    assert summary["Межраздельная сверка: завершено"] == 1
+    assert summary["Межраздельная сверка: несоответствий"] == 1
+    assert summary["Контроль согласованности отчёта"] == "Пройден"

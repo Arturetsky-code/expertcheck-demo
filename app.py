@@ -13,6 +13,7 @@ try:
     from studio.pages import PAGES
     from studio.auth import auth_screen
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
+    from core20.dual_run import build_dual_run_manifest
     from core.free_ai_patch import install as install_free_ai_patch
     from core.gemini_runtime_preference import install as install_gemini_runtime_preference
     from core.quality_gates_patch import install as install_quality_gates
@@ -27,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 18.7.3 Candidate · Verification Coverage & Review Compression'
+VERSION='ExpertCheck 20.0 Alpha 10.1.3 · Proof Trace Consistency · Dual Run'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -82,82 +83,97 @@ with st.sidebar:
         st.session_state.semantic_execution_checkpoint={}
         st.session_state.page='Проект'
         st.rerun()
+    # Streamlit updates widget-state before the script reruns. Synchronise the
+    # developer-mode mirror before building the navigation, otherwise the
+    # sidebar can show the old page set for one rerun after the toggle.
+    if 'interface_mode_toggle' in st.session_state:
+        st.session_state.expert_mode=bool(st.session_state.get('interface_mode_toggle'))
     sidebar_group('Этапы проверки')
     has_result = bool(st.session_state.result)
     object_gate = bool(st.session_state.get('object_registry_confirmed'))
     if st.session_state.get('expert_mode'):
         guided_pages = ['Мои проекты', 'Проект']
         if has_result:
-            guided_pages.extend(['Состав объектов', 'Чек-листы'])
+            guided_pages.extend(['Состав объектов', 'Чек-листы', 'НТД и практика'])
         if object_gate:
             guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
     else:
-        guided_pages=['Мои проекты','Проект']
+        guided_pages = ['Мои проекты', 'Проект']
         if has_result:
-            guided_pages.extend(['Подтверждение','Проверка','Чек-листы','Результаты','Отчёт'])
+            guided_pages.extend(['Состав объектов', 'Чек-листы', 'НТД и практика'])
+        if object_gate:
+            guided_pages.extend(['Межраздельная сверка', 'Риски экспертизы', 'Отчёт'])
         guided_pages.append('Настройки')
-    if st.session_state.get('page') not in guided_pages:
-        st.session_state.page = ('Проверка' if has_result and not st.session_state.get('expert_mode') else 'Состав объектов') if has_result else 'Мои проекты'
-    page=st.radio('Раздел',guided_pages,label_visibility='collapsed',key='page')
-    if not has_result:
-        st.caption('Следующий этап откроется после загрузки проекта.')
-    elif not object_gate:
-        st.caption('Результаты до подтверждения состава считаются предварительными.')
-    else:
-        st.caption('Все основные этапы доступны.')
+    for name in guided_pages:
+        active=st.session_state.get('page')==name
+        if st.button(('● ' if active else '○ ')+name,key=f'nav_{name}',width='stretch'):
+            st.session_state.page=name;st.rerun()
+    st.caption('Все основные этапы доступны.')
     user=st.session_state.get('auth_user') or {}
-    st.caption(f"Пользователь: {user.get('display_name') or user.get('email','')}")
-    if st.button('Выйти', width='stretch', key='sidebar_logout'):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-    status='Проверка выполнена' if st.session_state.result else 'Комплект не загружен'
-    sidebar_project(st.session_state.project_name,status)
+    st.caption(f"Пользователь: {user.get('name') or user.get('username') or '—'}")
+    if st.button('Выйти',width='stretch'):
+        st.session_state.clear();st.rerun()
+    if st.session_state.get('result'):
+        sidebar_project(st.session_state.project_name,'Проект открыт')
+        st.info('Следующий шаг: на странице «Проект» завершить AI-очередь, если она ещё не закрыта; затем разобрать подтверждённые замечания и инженерные вопросы.')
     sidebar_group('Режим интерфейса')
-    st.session_state.expert_mode=st.toggle(
-        'Режим разработчика',
-        value=st.session_state.expert_mode,
-        help='Включает служебные сведения, причины сопоставления и диагностику Core.',
-        key='interface_mode_toggle',
-    )
-    st.caption('Рабочий режим' if not st.session_state.expert_mode else 'Отображаются технические данные')
-    if not st.session_state.expert_mode:
-        with st.expander('Дополнительно', expanded=False):
-            st.caption('История проектов и расширенные настройки доступны в режиме разработчика.')
+    st.toggle('Режим разработчика',value=bool(st.session_state.get('expert_mode')),key='interface_mode_toggle',help='Отображаются технические данные')
     st.caption(VERSION)
-header(VERSION)
-docs,findings,raw_comparisons=frames(st.session_state.result)
-if st.session_state.result and not st.session_state.object_assembly_rows:
-    st.session_state.object_assembly_rows=assembly_rows(docs,findings)
-raw_passports=passports(docs)
-filtered_registry,filtered_passports,comparisons=apply_project_assembly(docs,raw_passports,raw_comparisons,st.session_state.object_assembly_rows,st.session_state.object_registry_confirmed)
-data=(docs,findings,comparisons,filtered_registry,filtered_passports,metrics(comparisons),engineer_findings(findings))
+
 @dataclass
-class Context:
+class StudioContext:
     data:tuple
     version:str
-    config_dir:Path
-    analyze:object
-    workspace_store:object
-    current_user:dict
-ctx=Context(data,VERSION,CONFIG_DIR,analyze_uploaded,WORKSPACE_STORE,st.session_state.get('auth_user') or {})
-PAGES[page](ctx)
 
-_active=st.session_state.get('active_project_id')
-_user=st.session_state.get('auth_user') or {}
-if _active and _user.get('id') and st.session_state.get('result') is not None:
+
+def _autosave_current_project():
+    pid=st.session_state.get('active_project_id')
+    user=st.session_state.get('auth_user') or {}
+    if not pid or not user:return
     try:
-        _snapshot=session_snapshot(st.session_state)
-        _signature=snapshot_signature(_snapshot)
-        if st.session_state.get('_workspace_saved_signature') != _signature:
-            WORKSPACE_STORE.save_project(
-                _user['id'],_active,st.session_state.get('project_name') or 'Проект',
-                _snapshot,status='analyzed',app_version=VERSION
-            )
-            st.session_state['_workspace_saved_signature']=_signature
-    except PermissionError:
-        st.error('Доступ к выбранному проекту запрещён.')
-    except Exception as workspace_error:
+        snapshot=session_snapshot(st.session_state)
+        sig=snapshot_signature(snapshot)
+        if sig != st.session_state.get('_workspace_saved_signature'):
+            WORKSPACE_STORE.save_project(pid,user.get('id'),snapshot)
+            st.session_state._workspace_saved_signature=sig
+    except Exception as exc:
         if st.session_state.get('expert_mode'):
-            st.warning(f'Не удалось сохранить проект: {type(workspace_error).__name__}: {workspace_error}')
+            st.sidebar.caption(f'Автосохранение: {type(exc).__name__}')
+
+if st.session_state.result:
+    d,f,c=frames(st.session_state.result)
+    raw_passports=passports(d)
+    raw_registry=registry(d)
+    rows=st.session_state.get('object_assembly_rows') or []
+    if not rows:
+        rows=assembly_rows(d,f)
+        st.session_state.object_assembly_rows=rows
+    raw_comparisons=c
+    reg,pas,cmp=apply_project_assembly(d,raw_passports,raw_comparisons,rows,st.session_state.get('object_registry_confirmed'))
+    # Always build the canonical 20.0 shadow manifest. The legacy UI remains the
+    # executable baseline, while the shadow manifest lets us measure parity and
+    # migrate one engineering contract at a time without a big-bang rewrite.
+    try:
+        manifest=build_dual_run_manifest(
+            d.to_dict('records') if hasattr(d,'to_dict') else [],
+            f.to_dict('records') if hasattr(f,'to_dict') else [],
+            cmp.to_dict('records') if hasattr(cmp,'to_dict') else [],
+        )
+        st.session_state.canonical_core_20_manifest=manifest
+    except Exception as exc:
+        st.session_state.canonical_core_20_manifest={}
+        if st.session_state.get('expert_mode'):
+            st.sidebar.caption(f'Core20 shadow: {type(exc).__name__}')
+    ctx=StudioContext(data=(d,f,c,reg,pas,cmp,engineer_findings(f)),version=VERSION)
+    page=st.session_state.get('page','Проект')
+    renderer=PAGES.get(page,PAGES['Проект'])
+    renderer(ctx)
+    _autosave_current_project()
+else:
+    st.session_state.canonical_core_20_manifest={}
+    ctx=StudioContext(data=(None,None,None,None,None,None,None),version=VERSION)
+    page=st.session_state.get('page','Проект')
+    renderer=PAGES.get(page,PAGES['Проект'])
+    renderer(ctx)
+    _autosave_current_project()

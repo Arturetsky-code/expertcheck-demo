@@ -104,12 +104,15 @@ class NormativeComplianceEngine:
             check_kind=str(req.get('check_kind') or req.get('check_type') or 'SEMANTIC').upper()
             verified_clause=bool(quality.get('verified_clause'))
             categorical=quality.get('conclusion_mode')=='CATEGORICAL_ALLOWED'
+            sections=[str(x).strip() for x in (req.get('sections') or []) if str(x).strip()]
             contract=dict(req.get('evidence_contract') or {})
             contract.update({
               'check_kind':check_kind,
               'negative_from_not_found_allowed':False,
               'requires_verified_clause':True,
               'minimum_sources':int(contract.get('minimum_sources') or 1),
+              'sections':sections,
+              'expected_sections':sections,
             })
             structural=_pp87_structural_evidence(req,list(page_corpus or [])) if verified_clause else None
             if structural and structural.get('complete'):
@@ -140,6 +143,7 @@ class NormativeComplianceEngine:
             rows.append({
                 'requirement_id':req.get('id'),'knowledge_kind':'LAW_REQUIREMENT','source':req.get('source'),'paragraph':req.get('paragraph') or '',
                 'topic':req.get('topic') or '','requirement':req.get('requirement') or '','check_kind':check_kind,
+                'expected_evidence_route':sections,
                 'verification_status':req.get('verification_status') or req.get('status') or '',
                 'verified_clause':verified_clause,'categorical_conclusion_allowed':categorical,
                 'status':status,'coverage_state':coverage_state,'decision_basis':basis,'evidence':evidence,

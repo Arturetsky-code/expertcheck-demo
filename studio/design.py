@@ -91,6 +91,29 @@ html,body,[class*="css"]{font-family:"Segoe UI",Arial,sans-serif}
 [data-testid="stSidebar"] .stAlert{background:#21323F;border-color:#344858}
 [data-testid="stSidebar"] .stAlert p{color:#DDE7ED!important}
 
+[data-testid="stSidebar"] [data-testid="stExpander"]{
+ background:#21323F!important;
+ border:1px solid #3B4D5C!important;
+ border-radius:9px!important;
+ overflow:hidden;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] details,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary{
+ background:#21323F!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary *{
+ color:#EAF0F4!important;
+ font-weight:700!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] svg{
+ fill:#EAF0F4!important;
+ color:#EAF0F4!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stCaptionContainer"] p{
+ color:#B8C6D0!important;
+}
+
 .ec-sidebar-brand{padding:.3rem .3rem .75rem}.ec-sidebar-logo{display:flex;align-items:center;gap:.7rem}
 .ec-sidebar-mark{width:36px;height:36px;border-radius:9px;background:var(--ec-brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;letter-spacing:.02em}
 .ec-sidebar-name{font-weight:750;font-size:1rem;color:#fff}.ec-sidebar-caption{font-size:.75rem;color:#9FB0BD;margin-top:.1rem}

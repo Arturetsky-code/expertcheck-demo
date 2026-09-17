@@ -4,11 +4,11 @@ import streamlit as st
 from studio.components import hero,card,empty,section
 from core.global_finding_gate import apply_finding_gate
 from core.expert_review_engine import build_expert_risks
-from core.verification_core import annotate_rows
 from core.review_queue import build_review_clusters
-from core.project_review_planner import build_review_plan
+from core.result_ledger import build_qualified_result_ledger
 from core.report_engine import build_structured_report
 from core.result_surface import build_project_surface_rows, build_review_surface_rows
+from core20.proof_labels import judge_label, proof_state_label, proof_type_label
 
 
 def _first(docs):return docs.iloc[0].to_dict() if not docs.empty else {}
@@ -19,21 +19,41 @@ def _checklist(first):
     return list((first.get('automatic_checklist_review') or {}).get('results') or [])
 
 
+def _semantic_trace(row):
+    proof=dict(row.get('semantic_proof') or {})
+    selected=list(proof.get('selected_evidence') or row.get('semantic_selected_evidence') or [])
+    rendered=[]
+    for item in selected:
+        if not isinstance(item,dict):
+            continue
+        locator=item.get('source_locator')
+        if not locator and item.get('document'):
+            locator=f"{item.get('document')}, стр. {item.get('page')}"
+        if locator and locator not in rendered:
+            rendered.append(str(locator))
+    return ' | '.join(rendered)
+
+
 def render(ctx):
     docs, findings, comparisons, registry, passports, metrics, eng = ctx.data
     hero('Результаты','Только квалифицированные результаты проверки проекта.','Несоответствия · вопросы специалисту · подтверждённое соответствие')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     first=_first(docs); checklist=_checklist(first)
-    assignment=annotate_rows(list(first.get('assignment_compliance') or []),'assignment')
-    normative=annotate_rows(list(first.get('normative_compliance_audit') or []),'normative')
-    checklist=annotate_rows(checklist,'checklist')
-    comparison_rows=comparisons.to_dict('records') if not comparisons.empty else []
-    plan=build_review_plan(
+    canonical=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
+    normative20=dict(canonical.get('normative_execution') or {})
+    normative20_rows=list(normative20.get('rows') or [])
+    raw_comparisons=comparisons.to_dict('records') if not comparisons.empty else []
+    ledger=build_qualified_result_ledger(
         assignment_rows=list(first.get('assignment_compliance') or []),
         normative_rows=list(first.get('normative_compliance_audit') or []),
-        checklist_review={'results': checklist},
-        comparisons=comparison_rows,
+        checklist_rows=checklist,
+        comparisons=raw_comparisons,
     )
+    assignment=ledger['assignment_rows']
+    normative=ledger['normative_rows']
+    checklist=ledger['checklist_rows']
+    comparison_rows=ledger['comparisons']
+    plan=ledger['review_plan']
     plan_items=list(plan.get('items') or [])
     report=build_structured_report(
         st.session_state.get('project_name') or 'Проект',
@@ -58,6 +78,54 @@ def render(ctx):
     )
     with c3:card('Подтверждено',verified,'Проверки с доказательством','ok')
     with c4:card('Не проверено',limits,'Ограничения покрытия','info')
+
+    if normative20_rows:
+        section(
+            'НТД 20.0 — доказательная проверка',
+            'Верифицированный пункт проходит отдельный доказательный контроль: найденный текст ещё не означает выполненное нормативное требование.'
+        )
+        retrieval=dict(normative20.get('retrieval') or {})
+        n1,n2,n3,n4,n5=st.columns(5)
+        with n1:card('Контрактов',normative20.get('contracts',0),'Верифицированные пункты')
+        with n2:card('Кандидатов доказательства',retrieval.get('candidate_evidence',0),'Адресные фрагменты по страницам','info')
+        with n3:card('Доказано',normative20.get('verified_ok',0),'Прошло доказательный контроль','ok')
+        with n4:card('Удержано',normative20.get('demoted_keyword_only',0),'Поиск ≠ доказательство','warn' if normative20.get('demoted_keyword_only') else 'ok')
+        with n5:card('Очередь смысловой проверки',normative20.get('semantic_queue_total',0),'Нужна смысловая проверка','warn' if normative20.get('semantic_queue_total') else 'ok')
+        m1,m2,m3,m4=st.columns(4)
+        with m1:card('Смысл подтверждён',normative20.get('semantic_proof_applied',0),'Проверяющая + контрольная модель + программный контроль','ok' if normative20.get('semantic_proof_applied') else 'info')
+        with m2:card('Вопросы',normative20.get('review_questions',0),'Нужна инженерная проверка','warn' if normative20.get('review_questions') else 'ok')
+        with m3:card('Не проверено',normative20.get('system_limitations',0),'Нет подходящего доказательного механизма','info')
+        with m4:card('Адресное доказательство',f"{normative20.get('evidence_coverage_pct',0)}%",'Документ + страница','info')
+        st.caption(
+            'Наличие сведений и структура могут подтверждаться детерминированно. Смысловое выполнение, содержание графической части, '
+            'полнота обязательного набора, структурированное значение и межраздельная согласованность требуют своего доказательного контракта. '
+            'Для смысловой проверки проверяющая модель получает до четырёх адресных кандидатов и обязана сослаться на конкретные ID доказательств. '
+            'Недостаточность доказательства не является несоответствием.'
+        )
+        st.dataframe(pd.DataFrame([{
+            'Результат':row.get('state') or '—',
+            'Тип доказательства':proof_type_label(row.get('proof_type')),
+            'Состояние доказательства':proof_state_label(row.get('proof_state')),
+            'Кандидатов доказательства':row.get('retrieval_candidate_count') or 0,
+            'НТД':row.get('source') or row.get('document_id') or '—',
+            'Пункт':row.get('paragraph') or '—',
+            'Требование':row.get('requirement') or '—',
+            'Основное доказательство':(
+                f"{row.get('evidence_document')}, стр. {row.get('evidence_page')}"
+                if row.get('evidence_document') and row.get('evidence_page') not in (None,'')
+                else 'Не сформировано'
+            ),
+            'Выбранные доказательства':_semantic_trace(row) or '—',
+            'Решение проверяющей модели':judge_label((row.get('semantic_proof') or {}).get('judge_verdict')) if row.get('semantic_proof') else '—',
+            'Достоверность проверяющей модели':(row.get('semantic_proof') or {}).get('judge_confidence') if row.get('semantic_proof') else '—',
+            'Провайдер проверяющей модели':(row.get('semantic_proof') or {}).get('judge_provider') or '—',
+            'Контрольная модель':('Приняла' if (row.get('semantic_proof') or {}).get('critic_accept') is True else 'Не приняла') if row.get('semantic_proof') else '—',
+            'Достоверность контрольной модели':(row.get('semantic_proof') or {}).get('critic_confidence') if row.get('semantic_proof') else '—',
+            'Провайдер контрольной модели':(row.get('semantic_proof') or {}).get('critic_provider') or '—',
+            'Независимость моделей':('Да' if (row.get('semantic_proof') or {}).get('independent') is True else 'Нет') if row.get('semantic_proof') else '—',
+            'Фрагмент':row.get('evidence_fragment') or '',
+            'Обоснование':row.get('reason') or '',
+        } for row in normative20_rows]).head(160),hide_index=True,width='stretch')
 
     tabs=st.tabs(['Несоответствия','Вопросы специалисту','Подтверждено'])
     with tabs[0]:

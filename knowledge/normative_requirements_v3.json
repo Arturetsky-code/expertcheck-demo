@@ -995,10 +995,16 @@
     "source": "Постановление Правительства РФ от 16.02.2008 № 87",
     "topic": "Состав раздела ПЗУ",
     "requirement": "Раздел 2 «Схема планировочной организации земельного участка» должен содержать предусмотренные пунктом 12 текстовую и графическую части.",
-    "sections": ["ПЗУ"],
+    "sections": [
+      "ПЗУ"
+    ],
     "check_kind": "STRUCTURE",
     "automation": "AUTO",
-    "keywords": ["схема планировочной организации", "экспликация", "земельного участка"],
+    "keywords": [
+      "схема планировочной организации",
+      "экспликация",
+      "земельного участка"
+    ],
     "document_id": "PP87",
     "paragraph": "п. 12",
     "verification_status": "Верифицировано",
@@ -1006,7 +1012,11 @@
     "verified_clause_text": "Адрес и заголовок пункта 12 проверены по официальной редакции rdk=30.",
     "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
     "verified_on": "2026-08-24",
-    "evidence_contract": {"minimum_sources": 1, "requires_profile_owner": false, "requires_page_reference": true},
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
     "conclusion_policy": "VERIFIED_ONLY"
   },
   {
@@ -1014,10 +1024,16 @@
     "source": "Постановление Правительства РФ от 16.02.2008 № 87",
     "topic": "Состав архитектурных решений",
     "requirement": "Раздел 3 «Объёмно-планировочные и архитектурные решения» должен содержать предусмотренные пунктом 13 сведения и решения.",
-    "sections": ["АР"],
+    "sections": [
+      "АР"
+    ],
     "check_kind": "STRUCTURE",
     "automation": "AUTO",
-    "keywords": ["объемно-планировочные", "объёмно-планировочные", "архитектурные решения"],
+    "keywords": [
+      "объемно-планировочные",
+      "объёмно-планировочные",
+      "архитектурные решения"
+    ],
     "document_id": "PP87",
     "paragraph": "п. 13",
     "verification_status": "Верифицировано",
@@ -1025,7 +1041,11 @@
     "verified_clause_text": "Адрес и заголовок пункта 13 проверены по официальной редакции rdk=30.",
     "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
     "verified_on": "2026-08-24",
-    "evidence_contract": {"minimum_sources": 1, "requires_profile_owner": false, "requires_page_reference": true},
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
     "conclusion_policy": "VERIFIED_ONLY"
   },
   {
@@ -1033,10 +1053,16 @@
     "source": "Постановление Правительства РФ от 16.02.2008 № 87",
     "topic": "Состав инженерных систем",
     "requirement": "Раздел 5 «Сведения об инженерном оборудовании, о сетях и системах инженерно-технического обеспечения» должен содержать предусмотренные пунктом 15 подразделы и решения.",
-    "sections": ["ИОС"],
+    "sections": [
+      "ИОС"
+    ],
     "check_kind": "STRUCTURE",
     "automation": "AUTO",
-    "keywords": ["сведения об инженерном оборудовании", "система электроснабжения", "система водоснабжения"],
+    "keywords": [
+      "сведения об инженерном оборудовании",
+      "система электроснабжения",
+      "система водоснабжения"
+    ],
     "document_id": "PP87",
     "paragraph": "п. 15",
     "verification_status": "Верифицировано",
@@ -1044,7 +1070,942 @@
     "verified_clause_text": "Адрес, заголовок и деление на подразделы пункта 15 проверены по официальной редакции rdk=30.",
     "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
     "verified_on": "2026-08-24",
-    "evidence_contract": {"minimum_sources": 1, "requires_profile_owner": false, "requires_page_reference": true},
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-A-LAND",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Характеристика земельного участка",
+    "requirement": "В текстовой части ПЗУ должна быть приведена характеристика земельного участка, предоставленного для размещения объекта капитального строительства.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "характеристика земельного участка",
+      "земельного участка",
+      "размещения объекта"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «а»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «а» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-A1-ZOUIT",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "ЗОУИТ",
+    "requirement": "В ПЗУ должны быть приведены сведения о наличии зон с особыми условиями использования территорий в границах земельного участка.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "зоны с особыми условиями",
+      "зоуит",
+      "границах земельного участка"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «а(1)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «а(1)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-C-PLANNING",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Планировочная организация",
+    "requirement": "В ПЗУ должны быть обоснованы и описаны решения по планировочной организации земельного участка.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "планировочной организации",
+      "обоснование",
+      "земельного участка"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «в»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «в» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-D-TEP",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "ТЭП земельного участка",
+    "requirement": "В ПЗУ должны быть приведены технико-экономические показатели земельного участка.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "технико-экономические показатели",
+      "площадь участка",
+      "коэффициент"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «г»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «г» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-E-ENGINEERING-PREP",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Инженерная подготовка территории",
+    "requirement": "В ПЗУ должны быть обоснованы и описаны решения по инженерной подготовке и инженерной защите территории от опасных процессов и вод.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "инженерной подготовке",
+      "инженерной защите",
+      "поверхностных",
+      "грунтовых вод"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «д»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «д» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-F-VERTICAL",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Вертикальная планировка",
+    "requirement": "В ПЗУ должно быть приведено описание организации рельефа вертикальной планировкой.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "организации рельефа",
+      "вертикальной планировк"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «е»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «е» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-G-LANDSCAPE",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Благоустройство территории",
+    "requirement": "В ПЗУ должны быть описаны решения по благоустройству территории.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "благоустройств",
+      "территории"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «ж»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «ж» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-H-ZONING",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Зонирование производственной территории",
+    "requirement": "Для объекта производственного назначения в ПЗУ должно быть обосновано зонирование территории и принципиальная схема размещения территориальных зон.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "зонирован",
+      "территориальных зон",
+      "производственного назначения"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «з»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «з» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-I-TRANSPORT",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Транспортные коммуникации",
+    "requirement": "Для объекта производственного назначения в ПЗУ должны быть обоснованы схемы транспортных коммуникаций для внешних и внутренних грузоперевозок.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "транспортных коммуникаций",
+      "грузоперевоз",
+      "внешн",
+      "внутрен"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «и»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «и» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-K-TRANSPORT-PARAMS",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Показатели транспортных коммуникаций",
+    "requirement": "Для объекта производственного назначения в ПЗУ при наличии транспортных коммуникаций должны быть приведены их характеристики и технические показатели.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "транспортных коммуникаций",
+      "технические показатели",
+      "характеристик"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «к»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «к» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-M-GRAPHIC",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Графическая схема ПЗУ",
+    "requirement": "Графическая часть ПЗУ должна отображать земельный участок, существующие и проектируемые объекты, инженерные сети, подъезды и подходы.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "существующих и проектируемых",
+      "сетей инженерно-технического обеспечения",
+      "подъезд",
+      "подход"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «м»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «м» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-N-EARTHWORKS",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Организация рельефа и земляные массы",
+    "requirement": "Графическая часть ПЗУ должна содержать схему организации рельефа и план земляных масс.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "схема организации рельефа",
+      "план земляных масс"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «н»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «н» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-O-UTILITIES",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Сводный план инженерных сетей",
+    "requirement": "Графическая часть ПЗУ должна содержать сводный план сетей инженерно-технического обеспечения с местами подключения проектируемого объекта.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "сводный план сетей",
+      "мест подключения",
+      "инженерно-технического обеспечения"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «о»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «о» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-12-P-SITUATION",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Ситуационный план",
+    "requirement": "Для объекта производственного назначения графическая часть ПЗУ должна содержать ситуационный план с установленными пунктом 12 границами и коммуникациями.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "ситуационный план",
+      "границ",
+      "транспортных",
+      "инженерных коммуникаций"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 12, подп. «п»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 12, подп. «п» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-A-ORGANIZATION",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Пространственная и функциональная организация",
+    "requirement": "В текстовой части АР должны быть описаны внешний вид, пространственная, планировочная и функциональная организация объекта.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "внешнего вида",
+      "пространственной",
+      "планировочной",
+      "функциональной организации"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «а»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «а» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-B-ARCH",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Архитектурные решения",
+    "requirement": "В АР должно быть приведено обоснование принятых объёмно-пространственных и архитектурно-художественных решений.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "объемно-пространственных",
+      "архитектурно-художественных",
+      "обоснование"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «б»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «б» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-B1-EFF",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Энергетическая эффективность архитектурных решений",
+    "requirement": "Для объектов, на которые распространяются требования энергетической эффективности, АР должно содержать обоснование соответствия архитектурных решений этим требованиям.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "энергетической эффективности",
+      "архитектурных решений",
+      "соответствия"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «б(1)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «б(1)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-B2-EFF-MEASURES",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Мероприятия по энергетической эффективности",
+    "requirement": "Для применимых объектов в АР должен быть приведён перечень мероприятий по соблюдению требований энергетической эффективности.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "перечень мероприятий",
+      "энергетической эффективности",
+      "архитектурным решениям"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «б(2)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «б(2)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-B3-EFF-DESIGN",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Решения по повышению энергоэффективности",
+    "requirement": "АР должно содержать описание и обоснование архитектурных решений, направленных на повышение энергетической эффективности объекта.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "повышение энергетической эффективности",
+      "архитектурных решений",
+      "описание",
+      "обоснование"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «б(3)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «б(3)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-C-FACADE",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Композиционные приёмы",
+    "requirement": "В АР должны быть описаны и обоснованы композиционные приёмы при оформлении фасадов и интерьеров.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "композиционных прием",
+      "фасад",
+      "интерьер"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «в»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «в» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-D-FINISH",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Отделка помещений",
+    "requirement": "В АР должны быть описаны и обоснованы решения по отделке помещений основного, вспомогательного, обслуживающего и технического назначения.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "отделк",
+      "помещений",
+      "вспомогательного",
+      "технического назначения"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «г»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «г» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-E-LIGHT",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Естественное освещение",
+    "requirement": "В АР должны быть описаны архитектурные решения по обеспечению естественного освещения помещений с постоянным пребыванием людей.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "естественного освещения",
+      "постоянным пребыванием"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «д»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «д» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-D1-INSOLATION",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Инсоляция и КЕО",
+    "requirement": "В АР должны быть приведены результаты расчётов продолжительности инсоляции и коэффициента естественной освещённости.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "продолжительности инсоляции",
+      "коэффициента естественной освещенности",
+      "кео"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «д(1)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «д(1)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-F-NOISE",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Защита от шума и вибрации",
+    "requirement": "В АР должны быть описаны архитектурно-строительные мероприятия по защите помещений от шума, вибрации и других воздействий.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "защит",
+      "шум",
+      "вибрац",
+      "архитектурно-строительных"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «е»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «е» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-H-SANITARY",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Санитарные требования",
+    "requirement": "В АР должны быть описаны и обоснованы объёмно-планировочные решения, обеспечивающие соблюдение санитарно-эпидемиологических требований.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "объемно-планировочных решений",
+      "санитарно-эпидемиологических",
+      "обоснование"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «з»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «з» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-H1-PROD-AREAS",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Номенклатура и площади производственных помещений",
+    "requirement": "Для объекта производственного назначения в АР должны быть приведены сведения о номенклатуре, компоновке и площадях производственных и вспомогательных помещений.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "номенклатур",
+      "компоновк",
+      "площад",
+      "производственных"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «з(1)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «з(1)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-I-FACADES",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Фасады",
+    "requirement": "Графическая часть АР должна содержать отображение фасадов.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "фасад"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «и»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «и» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-L1-FLOOR-PLANS",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Поэтажные планы производственных объектов",
+    "requirement": "Для объекта производственного назначения графическая часть АР должна содержать поэтажные планы с экспликацией помещений и размещением технологического оборудования.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "поэтажные планы",
+      "экспликац",
+      "технологического оборудования"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «л(1)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «л(1)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "PP87-13-L2-SECTIONS",
+    "source": "Постановление Правительства РФ от 16.02.2008 № 87",
+    "topic": "Характерные разрезы производственных объектов",
+    "requirement": "Для объекта производственного назначения графическая часть АР должна содержать характерные разрезы с конструкциями, отметками и верхними отметками основного технологического оборудования.",
+    "sections": [
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "характерных разрез",
+      "высотных отметок",
+      "технологического оборудования"
+    ],
+    "document_id": "PP87",
+    "paragraph": "п. 13, подп. «л(2)»",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Адрес и содержание п. 13, подп. «л(2)» сверены с действующей редакцией ПП РФ №87; атомарное требование сформировано без расширения смысла нормы.",
+    "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102119991&page=1&rdk=30",
+    "verified_on": "2026-09-09",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
     "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

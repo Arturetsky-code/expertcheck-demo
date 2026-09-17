@@ -22,12 +22,21 @@ def _packet(rid: str) -> dict:
 
 
 def _ok(state: str = "VERIFIED_OK") -> dict:
+    selected = []
+    if state == "VERIFIED_OK":
+        selected = [{
+            "evidence_id": "E-R1",
+            "document": "PZ.pdf",
+            "page": 10,
+            "source_locator": "PZ.pdf, стр. 10",
+            "fragment": "addressable project evidence",
+        }]
     return {
         "state": state,
         "judge_verdict": "SUPPORTS" if state == "VERIFIED_OK" else "INSUFFICIENT",
         "judge_confidence": 0.96,
         "critic_confidence": 0.93 if state == "VERIFIED_OK" else 0,
-        "selected_evidence": [],
+        "selected_evidence": selected,
     }
 
 
@@ -62,6 +71,10 @@ def test_alpha10_removes_processed_packets_from_pending_queue():
     assert result["semantic_queue_total"] == 1
     assert [row["requirement_id"] for row in result["semantic_queue"]] == ["R3"]
     assert result["semantic_proof_applied"] == 1
+    confirmed = next(row for row in result["rows"] if row["requirement_id"] == "R1")
+    assert confirmed["evidence_document"] == "PZ.pdf"
+    assert confirmed["evidence_page"] == 10
+    assert confirmed["canonical_evidence_source"] == "SEMANTIC_SELECTED_EVIDENCE"
 
 
 def test_alpha10_merges_multiple_semantic_runs_on_same_root():

@@ -63,3 +63,15 @@ def test_raw_assignment_requirement_normalizes_to_same_contract():
     assert req.expected_sections == ("ТХ", "ПЗ")
     assert req.source_document == "Задание.pdf"
     assert req.source_page == 5
+
+
+def test_core20_topic_alignment_keeps_stable_baseline_contract():
+    from core20.evidence_quality_1012 import topic_alignment
+
+    result = topic_alignment(
+        {"topic": "ограждение", "keywords": ["производительность"]},
+        "Проектом предусмотрено ограждение площадки.",
+    )
+
+    assert result["eligible"] is False
+    assert len(result["required_anchors"]) == 2

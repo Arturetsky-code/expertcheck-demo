@@ -50,3 +50,23 @@ def report_trace_row(result: VerificationResult25) -> dict[str, Any]:
         "parameter_code": binding.parameter_code if binding else result.requirement.parameter_code,
     }
     return _safe(row)
+
+
+def report_row(result: VerificationResult25) -> dict[str, Any]:
+    """Return the public report mapping and fail closed on broken categorical traces."""
+    if result.decision.is_categorical and not result.trace.is_categorical_trace_valid():
+        raise ValueError("categorical trace is invalid or incomplete")
+
+    trace_row = report_trace_row(result)
+    row = {
+        "requirement_id": trace_row["requirement_id"],
+        "decision": trace_row["decision"],
+        "reason": trace_row["reason_code"],
+        "document": trace_row["document"],
+        "page": trace_row["page"],
+        "fragment": trace_row["fragment"],
+        "evidence_id": trace_row["evidence_id"],
+        "binding_id": trace_row["binding_id"],
+        "proof_id": trace_row["proof_id"],
+    }
+    return _safe(row)

@@ -41,7 +41,57 @@ def _has_addressable_evidence(row: dict[str, Any]) -> bool:
     return False
 
 
+def _core25_categorical_gate(row: dict[str, Any], *, domain: str) -> dict[str, Any] | None:
+    """Accept a categorical Core25 verdict only through its canonical public trace.
+
+    Core25 already performs Routing -> Evidence -> Binding -> Proof -> Decision.
+    Re-running the legacy 17.0 adversarial/proof classifier over that result can
+    incorrectly demote a valid Core25 decision because the two cores use
+    different proof vocabularies.  This bridge therefore validates only the
+    explicit Core25 integrity contract and never infers trust from the status
+    label alone.
+    """
+    if domain != "assignment":
+        return None
+    decision = str(row.get("core25_decision") or "").upper().strip()
+    if decision not in {"COMPLIANT", "NONCOMPLIANT"}:
+        return None
+
+    reasons: list[str] = []
+    expected_kind = "VERIFIED_OK" if decision == "COMPLIANT" else "PROJECT_FINDING"
+    expected_proof = "PROVEN_MATCH" if decision == "COMPLIANT" else "PROVEN_MISMATCH"
+    if str(row.get("core25_integrity_gate_state") or "").upper() != "PASSED":
+        reasons.append("Core25 public trace is not marked as integrity-passed.")
+    if _kind(row) != expected_kind:
+        reasons.append("Core25 decision and public verification kind disagree.")
+    if str(row.get("proof_state") or "").upper() != expected_proof:
+        reasons.append("Core25 proof state does not match the categorical decision.")
+    if not str(row.get("proof_id") or "").strip():
+        reasons.append("Core25 categorical decision has no proof_id.")
+    if not str(row.get("trace_id") or "").strip():
+        reasons.append("Core25 categorical decision has no trace_id.")
+    if not _has_addressable_evidence(row):
+        reasons.append("Core25 categorical decision has no addressable project evidence.")
+
+    return {
+        "passed": not reasons,
+        "required": True,
+        "version": "25.1-core25-public-trace-gate-v1",
+        "domain": domain,
+        "proof_kind": "CORE25_CANONICAL_PROOF",
+        "semantic_route": False,
+        "semantic_completed": 0,
+        "addressable_evidence": _has_addressable_evidence(row),
+        "core25_authoritative": True,
+        "reasons": reasons,
+    }
+
+
 def verdict_gate(row: dict[str, Any], *, domain: str = "") -> dict[str, Any]:
+    core25_gate = _core25_categorical_gate(row, domain=domain)
+    if core25_gate is not None:
+        return core25_gate
+
     kind = _kind(row)
     if kind not in CATEGORICAL and str(row.get("evidence_level") or "") != "L5":
         return {"passed": True, "required": False, "reasons": []}

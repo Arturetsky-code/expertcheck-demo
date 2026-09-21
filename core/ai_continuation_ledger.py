@@ -183,9 +183,12 @@ def reconcile_domain_audit(
     row_judge = _row_response_lane(row_list, "judge")
     row_critic = _row_response_lane(row_list, "critic")
 
-    # Recover auditable row responses into the checkpoint, then remove every
-    # checkpoint response that no longer belongs to the current packet graph or
-    # is not represented by a current row response.
+    # Recover auditable row responses into the checkpoint. The checkpoint is the
+    # durable source of truth for completed provider calls, while the *current
+    # eligible packet universe* decides which checkpoint ids are still valid.
+    # Do not require every durable response to be copied back onto the row:
+    # continuation/primary-run summaries may retain valid checkpoint responses
+    # even when the current execution_log only describes the latest slice.
     recovered_judge = 0
     recovered_critic = 0
     if current_packet_ids:
@@ -200,11 +203,11 @@ def reconcile_domain_audit(
 
         stale_judge_ids = {
             str(packet_id) for packet_id in list(judge_lane)
-            if str(packet_id) not in current_packet_ids or str(packet_id) not in row_judge
+            if str(packet_id) not in current_packet_ids
         }
         stale_critic_ids = {
             str(packet_id) for packet_id in list(critic_lane)
-            if str(packet_id) not in current_packet_ids or str(packet_id) not in row_critic
+            if str(packet_id) not in current_packet_ids
         }
         for packet_id in stale_judge_ids:
             judge_lane.pop(packet_id, None)
@@ -288,6 +291,8 @@ def reconcile_domain_audit(
         "telemetry_stale_critic_pruned": len(stale_critic_ids),
         "telemetry_judge_recovered_from_rows": recovered_judge,
         "telemetry_critic_recovered_from_rows": recovered_critic,
+        "telemetry_checkpoint_judge_responses": judge_done,
+        "telemetry_checkpoint_critic_responses": critic_done,
         "telemetry_row_judge_responses": len(row_judge),
         "telemetry_row_critic_responses": len(row_critic),
     })

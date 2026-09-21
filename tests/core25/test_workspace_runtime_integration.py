@@ -51,3 +51,9 @@ def test_autosave_uses_workspace_store_save_project_contract_explicitly():
     assert len(calls) == 1
     keywords = {kw.arg for kw in calls[0].keywords if kw.arg}
     assert {"owner_id", "project_id", "name", "payload", "app_version"} <= keywords
+
+
+def test_fresh_project_routes_to_upload_before_dataframe_empty_access():
+    project_path = Path(__file__).resolve().parents[2] / "studio" / "pages" / "project.py"
+    source = project_path.read_text(encoding="utf-8")
+    assert "if docs is None or docs.empty:" in source

@@ -220,3 +220,73 @@ def test_report_trace_row_pairs_binding_with_its_evidence():
     assert row["evidence_id"] == "E1"
     assert row["binding_id"] == "B1"
     assert row["owner_id"] == "BUILDING-LAB"
+
+
+def test_report_row_rejects_forged_cross_owner_categorical_result():
+    requirement = Requirement25(
+        requirement_id="AREA-CROSS-OWNER",
+        domain=Domain.ASSIGNMENT,
+        text="Площадь здания проборазделки 89,9 м2",
+        scope=Scope.OBJECT_SPECIFIC,
+        target_object_id="OBJ-LAB",
+        verification_kind="TYPED_VALUE",
+        parameter_code="AREA",
+        required_value=89.9,
+        unit="м2",
+    )
+    evidence = Evidence25(
+        evidence_id="E-WRONG-OWNER",
+        document="АР.pdf",
+        page=12,
+        fragment="Модуль обеспыливания. Площадь 89,9 м2.",
+        addressable=True,
+        source_kind="PAGE_TEXT",
+    )
+    binding = Binding25(
+        binding_id="B-WRONG-OWNER",
+        evidence_id="E-WRONG-OWNER",
+        state=BindingState.BOUND,
+        owner_id="OBJ-DUST",
+        parameter_code="AREA",
+    )
+    proof = Proof25(
+        proof_id="P-WRONG-OWNER",
+        requirement_id="AREA-CROSS-OWNER",
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=("E-WRONG-OWNER",),
+        binding_ids=("B-WRONG-OWNER",),
+    )
+    decision = Decision25(
+        decision_id="D-WRONG-OWNER",
+        requirement_id="AREA-CROSS-OWNER",
+        state=DecisionState.COMPLIANT,
+        proof=proof,
+        proof_id="P-WRONG-OWNER",
+    )
+    result = VerificationResult25(
+        requirement=requirement,
+        trace=Trace25(
+            requirement_id="AREA-CROSS-OWNER",
+            evidence=(evidence,),
+            bindings=(binding,),
+            proof=proof,
+            decision=decision,
+        ),
+    )
+
+    assert result.trace.is_categorical_trace_valid() is True
+    with pytest.raises(ValueError, match="categorical"):
+        report_row(result)
+
+
+def test_load_results_rejects_tampered_cross_owner_trace():
+    import json
+
+    original = _categorical_result()
+    raw = json.loads(dump_results((original,)))
+    raw[0]["requirement"]["scope"] = "OBJECT_SPECIFIC"
+    raw[0]["requirement"]["target_object_id"] = "OBJ-LAB"
+    raw[0]["trace"]["bindings"][0]["owner_id"] = "OBJ-DUST"
+
+    with pytest.raises(ValueError, match="categorical"):
+        load_results(json.dumps(raw, ensure_ascii=False))

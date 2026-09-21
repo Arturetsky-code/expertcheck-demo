@@ -149,12 +149,14 @@ def topic_alignment(contract: dict[str, Any], page_text: Any) -> dict[str, Any]:
             if stem not in keyword_stems:
                 keyword_stems.append(stem)
 
-    # Prefer curated topic discriminators. Keywords are only a fallback when
-    # the topic itself has no discriminative stem; otherwise a generic/distractor
-    # keyword must not become a second mandatory semantic condition.
+    # Prefer curated topic discriminators; supplement with one keyword anchor.
     required_anchors = topic_stems[:2]
-    if not required_anchors:
-        required_anchors = keyword_stems[:2]
+    if len(required_anchors) < 2:
+        for stem in keyword_stems:
+            if stem not in required_anchors:
+                required_anchors.append(stem)
+            if len(required_anchors) >= 2:
+                break
     if not required_anchors:
         return {
             "eligible": True,

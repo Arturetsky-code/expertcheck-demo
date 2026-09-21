@@ -235,3 +235,28 @@ def run_assignment_runtime(
         "rows": rows,
         "summary": summary,
     }
+
+
+
+def public_assignment_payload(document: Mapping[str, Any] | None):
+    """Select the public Assignment surface.
+
+    New 25.0 analyses are fail-closed: if the runtime payload exists, its rows
+    and summary are authoritative even when the bridge recorded an error.
+    Legacy snapshots without a 25.0 payload remain readable.
+    """
+    source = dict(document or {})
+    if "assignment_core25_runtime" in source:
+        runtime = dict(source.get("assignment_core25_runtime") or {})
+        runtime.setdefault("engine", "core25")
+        rows = list(source.get("assignment_core25_compliance") or [])
+        summary = dict(source.get("assignment_core25_summary") or {})
+        if runtime.get("error") and not summary.get("error"):
+            summary["error"] = runtime["error"]
+        return rows, summary, runtime
+
+    return (
+        list(source.get("assignment_compliance") or []),
+        dict(source.get("assignment_compliance_summary") or {}),
+        {"engine": "legacy_snapshot", "engine_version": "", "error": ""},
+    )

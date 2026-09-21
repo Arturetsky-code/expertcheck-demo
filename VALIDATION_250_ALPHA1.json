@@ -1,12 +1,12 @@
 {
   "release": "ExpertCheck 25.0 Alpha 1",
   "branch": "codex/expertcheck-25.0-quality-leap",
-  "validated_head": "e0197ab3f620e8d8c6a4d2a053a9fda98eb24a85",
+  "validated_head": "300593c2372a08f2999dc63f57afbe884975d67b",
   "validated_at": "2026-09-21",
   "tests": {
     "core25": {
       "command": "pytest tests/core25 -q",
-      "passed": 64,
+      "passed": 73,
       "failed": 0,
       "status": "PASS"
     },
@@ -28,9 +28,8 @@
       "obsolete": 4,
       "baseline_existing": 25,
       "unclassified_blockers": 0,
-      "baseline_failure_nodeids_match": true,
       "status": "PASS_WITH_CLASSIFIED_BASELINE_DEBT",
-      "note": "The same 32 failed nodeids were reproduced on stable baseline 6afaf020f329f07bdbce6d0ea2c0e1238023aed6. Any failure outside this exact classified set now fails the Alpha 1 CI gate."
+      "note": "Alpha 1 release gate reports 32 classified historical failures and 0 blockers; any unknown failed nodeid fails CI."
     },
     "compile_core25": {
       "command": "python -m compileall -q core25",
@@ -69,14 +68,19 @@
       "verification": "95/95 Core20 regression tests and 14/14 focused regressions pass."
     }
   ],
-  "release_gate": "NOT_READY_FOR_MANUAL_TEST",
-  "blockers": [
-    "The Streamlit application runtime does not yet invoke core25.verify_assignment; current user-level analysis still runs the legacy/Core20 assignment path.",
-    "Manual Test 78 would therefore not validate the 25.0 Unified Verification Core until the runtime bridge is implemented and covered by integration tests."
-  ],
+  "release_gate": "READY_FOR_MANUAL_TEST",
+  "blockers": [],
   "runtime_integration": {
-    "workspace_context_startup_bug": "FIXED",
-    "core25_invoked_by_application": false,
-    "ui_version_label": "ExpertCheck 20.0 Alpha 10.1.3 · Proof Trace Consistency · Dual Run"
+    "workspace_context_startup_bug": "FIXED_AND_REGRESSION_TESTED",
+    "core25_invoked_by_application": true,
+    "core25_pipeline_entrypoint": "core25.runtime_bridge.run_assignment_runtime",
+    "public_assignment_selector": "core25.runtime_bridge.public_assignment_payload",
+    "ui_version_label": "ExpertCheck 25.0 Alpha 1 · Unified Verification Core · Runtime Bridge",
+    "public_surfaces": [
+      "Project Assignment tab",
+      "Results Center",
+      "XLSX reports"
+    ],
+    "silent_legacy_fallback_on_core25_error": false
   }
 }

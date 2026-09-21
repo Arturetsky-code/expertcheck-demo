@@ -1,0 +1,14 @@
+{
+  "release": "ExpertCheck 25.1 Alpha 1",
+  "branch": "codex/expertcheck-25.1-runtime-integrity",
+  "status": "NOT_READY_FOR_MANUAL_TEST",
+  "purpose": "Runtime integrity before coverage-first 25.2",
+  "gates": {
+    "core25_public_verdict_not_redowngraded": "PENDING_CI",
+    "ai_telemetry_matches_current_packet_rows": "PENDING_CI",
+    "review_risk_cannot_be_promoted_to_high": "PENDING_CI",
+    "completeness_state_separate_from_confirmation": "PENDING_CI",
+    "core25_regression": "PENDING_CI",
+    "core20_regression": "PENDING_CI"
+  }
+}

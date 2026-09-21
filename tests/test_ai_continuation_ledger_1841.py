@@ -71,14 +71,18 @@ def test_reconcile_never_regresses_completed_checkpoint_counts():
     )
 
     assert audit["cumulative_ledger_version"] == LEDGER_VERSION
-    assert audit["cumulative_packet_total"] == 33
-    assert audit["judge_responses"] == 33
-    assert audit["critic_required"] == 15
-    assert audit["critic_responses"] == 15
-    assert audit["unique_packages_complete"] == 33
+    # 25.1: the current eligible packet graph is authoritative. Cached
+    # responses outside that graph are pruned instead of inflating completion.
+    assert audit["cumulative_packet_total"] == 10
+    assert audit["judge_responses"] == 10
+    assert audit["critic_required"] == 10
+    assert audit["critic_responses"] == 10
+    assert audit["unique_packages_complete"] == 10
     assert audit["unique_packages_pending"] == 0
-    assert ledger["judge_done"] == 33
-    assert ledger["critic_done"] == 15
+    assert audit["telemetry_stale_judge_pruned"] == 23
+    assert audit["telemetry_stale_critic_pruned"] == 5
+    assert ledger["judge_done"] == 10
+    assert ledger["critic_done"] == 10
 
 
 def test_test77_style_migration_recovers_83_unique_packages_from_old_checkpoint():

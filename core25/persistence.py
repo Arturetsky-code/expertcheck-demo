@@ -148,11 +148,14 @@ def _result(raw: Mapping[str, Any]) -> VerificationResult25:
         decision=decision,
         trace_id=str(trace_raw.get("trace_id") or ""),
     )
-    return VerificationResult25(
+    result = VerificationResult25(
         requirement=requirement,
         trace=trace,
         metadata=dict(raw.get("metadata") or {}),
     )
+    if result.decision.is_categorical and not result.is_categorical_result_valid():
+        raise ValueError("categorical verification result has invalid canonical trace")
+    return result
 
 
 def load_result(payload: str) -> VerificationResult25:

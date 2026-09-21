@@ -753,7 +753,10 @@ def render(ctx):
             st.rerun()
         return
     docs = ctx.data[0]
-    if docs.empty:
+    # A freshly created project has no analysis result yet. In that state the
+    # application intentionally supplies None for the document frame, so route
+    # directly to the upload screen instead of dereferencing DataFrame.empty.
+    if docs is None or docs.empty:
         _upload(ctx)
     else:
         _dashboard(ctx)

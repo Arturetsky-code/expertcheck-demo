@@ -13,22 +13,31 @@ def _load_allowlist() -> dict[str, tuple[str, ...]]:
     return {
         "fixture_bound": tuple(str(x) for x in raw.get("fixture_bound", ())),
         "obsolete": tuple(str(x) for x in raw.get("obsolete", ())),
+        "baseline_existing": tuple(str(x) for x in raw.get("baseline_existing", ())),
     }
 
 
 def classify_failed_nodeids(failures: Iterable[str]) -> dict[str, tuple[str, ...]]:
-    """Classify known legacy diagnostics and fail closed for every unknown nodeid."""
+    """Classify proven legacy diagnostics and fail closed for every unknown nodeid."""
     allowlist = _load_allowlist()
     fixture = set(allowlist["fixture_bound"])
     obsolete = set(allowlist["obsolete"])
+    baseline_existing = set(allowlist["baseline_existing"])
 
-    classified = {"fixture_bound": [], "obsolete": [], "blockers": []}
+    classified = {
+        "fixture_bound": [],
+        "obsolete": [],
+        "baseline_existing": [],
+        "blockers": [],
+    }
     for raw in failures:
         nodeid = str(raw).strip()
         if nodeid in fixture:
             classified["fixture_bound"].append(nodeid)
         elif nodeid in obsolete:
             classified["obsolete"].append(nodeid)
+        elif nodeid in baseline_existing:
+            classified["baseline_existing"].append(nodeid)
         else:
             classified["blockers"].append(nodeid)
 

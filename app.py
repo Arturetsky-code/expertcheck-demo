@@ -125,6 +125,8 @@ with st.sidebar:
 class StudioContext:
     data:tuple
     version:str
+    config_dir:Path
+    analyze:object
     workspace_store:object
 
 
@@ -175,6 +177,8 @@ if st.session_state.result:
     ctx=StudioContext(
         data=(d,f,c,reg,pas,cmp,engineer_findings(f)),
         version=VERSION,
+        config_dir=CONFIG_DIR,
+        analyze=analyze_uploaded,
         workspace_store=WORKSPACE_STORE,
     )
     page=st.session_state.get('page','Проект')
@@ -186,6 +190,8 @@ else:
     ctx=StudioContext(
         data=(None,None,None,None,None,None,None),
         version=VERSION,
+        config_dir=CONFIG_DIR,
+        analyze=analyze_uploaded,
         workspace_store=WORKSPACE_STORE,
     )
     page=st.session_state.get('page','Проект')

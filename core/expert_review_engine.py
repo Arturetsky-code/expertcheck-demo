@@ -57,6 +57,15 @@ def _level(score: int) -> str:
     return "Недостаточно данных"
 
 
+def _max_score_for_level(level: str) -> int:
+    return {
+        "Недостаточно данных": 0,
+        "Низкий": 39,
+        "Средний": 69,
+        "Высокий": 100,
+    }.get(str(level or ""), 100)
+
+
 def load_risk_scenarios(path: str | Path | None = None) -> list[dict[str, Any]]:
     target = Path(path) if path else Path(__file__).resolve().parents[1] / "knowledge" / "gge_risk_scenarios.json"
     try:
@@ -100,13 +109,16 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
             best,best_score,best_tokens=scenario,score,tokens
     if not best or best_score < 22:
         risk.update({"scenario_id":"","scenario_title":"","recurrence":0,"analog_projects":[],"knowledge_match_score":0,"matched_signals":[]})
+        capped=min(source_score,_max_score_for_level(risk.get("max_risk_level")))
+        risk["score"]=capped
+        risk["level"]=_level(capped)
         risk["risk_score_breakdown"]={
             "source_score":source_score,
             "scenario_severity":0,
             "base_score":source_score,
             "evidence_bonus":0,
             "recurrence_bonus":0,
-            "final_score":source_score,
+            "final_score":capped,
         }
         risk["risk_level_reason"]="Уровень определён исходной инженерной оценкой; подтверждённый сценарий базы замечаний не применялся."
         return risk
@@ -115,7 +127,8 @@ def _enrich(risk: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, 
     base=max(source_score, scenario_severity)
     evidence_bonus=8 if risk.get("sources") else 0
     recurrence_bonus=min(12, recurrence*2)
-    risk["score"]=min(100,base+evidence_bonus+recurrence_bonus)
+    uncapped=min(100,base+evidence_bonus+recurrence_bonus)
+    risk["score"]=min(uncapped,_max_score_for_level(risk.get("max_risk_level")))
     risk["level"]=_level(risk["score"])
     risk["knowledge_category"]=best.get("category") or ""
     if risk.get("origin") == "CrossCheck Engine":
@@ -187,7 +200,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
         elif priority.lower().startswith("низ"): score-=8
         if qualification["max_risk_level"] == "Средний": score=min(score,69)
         sources=row.get("sources") or row.get("Источники") or row.get("sections") or row.get("document_values") or ""
-        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность","object":obj,"parameter":parameter,"parameter_code":_text(row,"parameter_code"),"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark("mismatch",obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if qualification["finding_class"]=="CONFIRMED_ISSUE" else "Средняя","finding_class":qualification["finding_class"],"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
+        risk={"risk_id":_text(row,"comparison_id","rule_id","check_code") or f"R-CMP-{index+1:04d}","level":_level(min(100,score)),"score":min(100,score),"category":"Межраздельная согласованность","object":obj,"parameter":parameter,"parameter_code":_text(row,"parameter_code"),"finding":_text(row,"explanation","Пояснение") or f"Результат проверки: {_text(row,'status','Статус','result','Результат')}","possible_remark":_possible_remark("mismatch",obj,parameter),"recommendation":"Проверить исходные страницы и унифицировать сведения во всех связанных разделах.","sources":sources,"origin":"CrossCheck Engine","evidence_strength":"Высокая" if qualification["finding_class"]=="CONFIRMED_ISSUE" else "Средняя","finding_class":qualification["finding_class"],"finding_type":gate.get("finding_type"),"max_risk_level":qualification.get("max_risk_level"),"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
         risks.append(_enrich(risk,scenarios))
     for index,row in enumerate(object_rows):
         included=bool(row.get("Включить в состав проекта",row.get("include",False)))
@@ -210,7 +223,7 @@ def build_expert_risks(comparisons:list[dict[str,Any]],object_rows:list[dict[str
             continue
         status=_text(row,"status","Соответствие","result").lower()
         item_no=_text(row,"item_no","Позиция","position"); question=_text(row,"question","Вопрос","Позиция по чек-листу")
-        risk={"risk_id":f"R-CHK-{index+1:04d}","level":"Средний","score":58,"category":"Чек-лист раздела","object":"","parameter":f"{item_no} {question}".strip(),"finding":_text(row,"evidence","Обоснование") or f"Результат пункта: {status}","possible_remark":_possible_remark("checklist","",f"{item_no} {question}".strip()),"recommendation":"Открыть доказательства по пункту и подтвердить наличие реального несоответствия перед включением в отчёт.","sources":_text(row,"sources","Источники"),"origin":"Checklist Engine","evidence_strength":"Средняя","finding_class":qualification["finding_class"],"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
+        risk={"risk_id":f"R-CHK-{index+1:04d}","level":"Средний","score":58,"category":"Чек-лист раздела","object":"","parameter":f"{item_no} {question}".strip(),"finding":_text(row,"evidence","Обоснование") or f"Результат пункта: {status}","possible_remark":_possible_remark("checklist","",f"{item_no} {question}".strip()),"recommendation":"Открыть доказательства по пункту и подтвердить наличие реального несоответствия перед включением в отчёт.","sources":_text(row,"sources","Источники"),"origin":"Checklist Engine","evidence_strength":"Средняя","finding_class":qualification["finding_class"],"finding_type":gate.get("finding_type"),"max_risk_level":qualification.get("max_risk_level"),"user_status":qualification["user_status"],"qualification_reason":qualification["reason"]}
         risks.append(_enrich(risk,scenarios))
     # Source/permit document risks from Engineering Intelligence.
     if documents:

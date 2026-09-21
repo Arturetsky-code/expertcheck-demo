@@ -55,6 +55,8 @@ def normalize_verification_kind(value: Any) -> str:
         "NUMBER": "TYPED_VALUE",
         "TABLE_VALUE": "TABLE_CELL_VALUE",
         "TOPOLOGY": "RESERVE_TOPOLOGY",
+        "VALUE_COMPARISON": "TYPED_VALUE",
+        "PRESENCE_REQUIREMENT": "PRESENCE",
     }
     return aliases.get(raw, raw)
 

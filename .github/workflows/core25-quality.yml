@@ -98,3 +98,31 @@ jobs:
 
       - name: Compile Core25
         run: python -m compileall -q core25
+
+
+  baseline-full-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout stable Core20 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 6afaf020f329f07bdbce6d0ea2c0e1238023aed6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install full diagnostic dependencies
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pip install -r requirements.txt
+
+      - name: Run baseline full repository suite
+        continue-on-error: true
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          (cd tests && python -m pytest -q --rootdir=.)
+          python -m pytest -q test_*.py --rootdir=.

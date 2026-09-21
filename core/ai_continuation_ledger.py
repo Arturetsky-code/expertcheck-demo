@@ -99,6 +99,32 @@ def _validated_critic_requirements(
     return required, observed
 
 
+def _row_response_lane(rows: Iterable[dict[str, Any]], role: str) -> dict[str, dict[str, Any]]:
+    """Return AI responses that are physically attached to current project rows.
+
+    A checkpoint entry without a matching row-level response is not auditable by
+    the Results/XLSX surfaces.  25.1 therefore treats row + checkpoint agreement
+    as the completion contract and reopens orphaned checkpoint entries.
+    """
+    key = "semantic_critic" if role == "critic" else "semantic_judge"
+    result: dict[str, dict[str, Any]] = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        packet_id = _packet_id(row)
+        response = row.get(key)
+        if not packet_id or not isinstance(response, dict) or not response:
+            continue
+        received = response.get("response_received")
+        if received is True:
+            result[packet_id] = dict(response)
+            continue
+        # Compatibility for older Critic payloads that predate response_received.
+        if role == "critic" and "accept" in response and response.get("accept") is not None:
+            result[packet_id] = dict(response)
+    return result
+
+
 def _last_runtime_event(audit: dict[str, Any], role: str) -> dict[str, Any]:
     calls = audit.get("critic_calls" if role == "CRITIC" else "judge_calls")
     if not isinstance(calls, list):
@@ -130,44 +156,97 @@ def reconcile_domain_audit(
     previous_audit: dict[str, Any] | None = None,
     previous_ledger_domain: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Return monotonic counters and a compact persistent domain ledger."""
+    """Reconcile AI counters against the current packet graph and row evidence.
 
+    25.1 makes the telemetry fail-closed: a response counts as completed only
+    when the current project row carries the response and the checkpoint can
+    reproduce it.  Stale/orphan checkpoint ids are pruned so they cannot create
+    phantom completed packages after routing/evidence changes.
+    """
+
+    row_list = [row for row in rows or [] if isinstance(row, dict)]
     current = dict(audit or {})
     previous = dict(previous_audit or {})
-    judge = _lane(checkpoint_domain, "judge")
-    critic = _lane(checkpoint_domain, "critic")
+    domain = checkpoint_domain if isinstance(checkpoint_domain, dict) else {}
+    judge_lane = domain.get("judge")
+    critic_lane = domain.get("critic")
+    if not isinstance(judge_lane, dict):
+        judge_lane = {}
+        if isinstance(checkpoint_domain, dict):
+            checkpoint_domain["judge"] = judge_lane
+    if not isinstance(critic_lane, dict):
+        critic_lane = {}
+        if isinstance(checkpoint_domain, dict):
+            checkpoint_domain["critic"] = critic_lane
 
-    packet_ids = packet_ids_from_rows(rows)
-    packet_ids.update(judge)
-    packet_ids.update(critic)
-    packet_ids.update(_previous_ids(previous_ledger_domain))
+    current_packet_ids = packet_ids_from_rows(row_list)
+    row_judge = _row_response_lane(row_list, "judge")
+    row_critic = _row_response_lane(row_list, "critic")
 
-    # A previous build may know the aggregate total but not every packet id.
-    # Preserve that number monotonically while migration discovers ids again.
-    known_total = len(packet_ids)
-    legacy_total = max(
-        int(previous.get("cumulative_packet_total") or 0),
-        int(previous.get("judge_candidates") or 0),
-        int(current.get("judge_candidates") or 0),
-        int((previous_ledger_domain or {}).get("packet_total") or 0),
-    )
-    packet_total = max(known_total, legacy_total)
+    # Recover auditable row responses into the checkpoint, then remove every
+    # checkpoint response that no longer belongs to the current packet graph or
+    # is not represented by a current row response.
+    recovered_judge = 0
+    recovered_critic = 0
+    if current_packet_ids:
+        for packet_id, payload in row_judge.items():
+            if packet_id in current_packet_ids and packet_id not in judge_lane:
+                judge_lane[packet_id] = dict(payload)
+                recovered_judge += 1
+        for packet_id, payload in row_critic.items():
+            if packet_id in current_packet_ids and packet_id not in critic_lane:
+                critic_lane[packet_id] = dict(payload)
+                recovered_critic += 1
 
-    judge_ids = set(judge)
-    validated_required, validated_observed = _validated_critic_requirements(rows)
+        stale_judge_ids = {
+            str(packet_id) for packet_id in list(judge_lane)
+            if str(packet_id) not in current_packet_ids or str(packet_id) not in row_judge
+        }
+        stale_critic_ids = {
+            str(packet_id) for packet_id in list(critic_lane)
+            if str(packet_id) not in current_packet_ids or str(packet_id) not in row_critic
+        }
+        for packet_id in stale_judge_ids:
+            judge_lane.pop(packet_id, None)
+        for packet_id in stale_critic_ids:
+            critic_lane.pop(packet_id, None)
+    else:
+        stale_judge_ids = set()
+        stale_critic_ids = set()
+
+    judge = _lane(domain, "judge")
+    critic = _lane(domain, "critic")
+
+    if current_packet_ids:
+        packet_ids = set(current_packet_ids)
+        packet_total = len(packet_ids)
+    else:
+        # Legacy/snapshot fallback only when the current graph cannot expose
+        # eligible packets at all.
+        packet_ids = set(judge) | set(critic) | _previous_ids(previous_ledger_domain)
+        known_total = len(packet_ids)
+        legacy_total = max(
+            int(previous.get("cumulative_packet_total") or 0),
+            int(previous.get("judge_candidates") or 0),
+            int(current.get("judge_candidates") or 0),
+            int((previous_ledger_domain or {}).get("packet_total") or 0),
+        )
+        packet_total = max(known_total, legacy_total)
+
+    judge_ids = set(judge).intersection(packet_ids)
+    validated_required, validated_observed = _validated_critic_requirements(row_list)
     critic_required_ids: set[str] = set()
-    for packet_id, value in judge.items():
+    for packet_id in judge_ids:
+        value = judge.get(packet_id) or {}
         if packet_id in validated_observed:
             if packet_id in validated_required:
                 critic_required_ids.add(packet_id)
-        elif _requires_critic(value):
-            # Backward-compatible fallback for older checkpoint/snapshot rows
-            # that do not contain the local validated semantic_judge payload.
+        elif not current_packet_ids and _requires_critic(value):
+            # Compatibility only for legacy snapshots without current row
+            # validation metadata.
             critic_required_ids.add(packet_id)
 
-    # Existing Critic responses are proof that a packet was eligible even if
-    # older row metadata was compacted or unavailable.
-    critic_required_ids.update(critic)
+    critic_required_ids.update(set(critic).intersection(packet_ids))
     critic_ids = set(critic).intersection(critic_required_ids)
 
     judge_done = len(judge_ids)
@@ -185,6 +264,7 @@ def reconcile_domain_audit(
 
     judge_pending = max(0, packet_total - judge_done)
     critic_pending = max(0, critic_required - critic_done)
+    repaired = bool(stale_judge_ids or stale_critic_ids or recovered_judge or recovered_critic)
 
     merged = dict(previous)
     merged.update(current)
@@ -203,6 +283,13 @@ def reconcile_domain_audit(
         "unique_packages_complete": packages_complete,
         "unique_packages_pending": packages_pending,
         "package_completion_pct": round(100.0 * packages_complete / packet_total, 1) if packet_total else 100.0,
+        "telemetry_integrity_state": "REPAIRED" if repaired else "PASSED",
+        "telemetry_stale_judge_pruned": len(stale_judge_ids),
+        "telemetry_stale_critic_pruned": len(stale_critic_ids),
+        "telemetry_judge_recovered_from_rows": recovered_judge,
+        "telemetry_critic_recovered_from_rows": recovered_critic,
+        "telemetry_row_judge_responses": len(row_judge),
+        "telemetry_row_critic_responses": len(row_critic),
     })
 
     judge_event = _last_runtime_event(current, "JUDGE")
@@ -230,6 +317,9 @@ def reconcile_domain_audit(
         "critic_pending": critic_pending,
         "packages_complete": packages_complete,
         "packages_pending": packages_pending,
+        "telemetry_integrity_state": merged["telemetry_integrity_state"],
+        "stale_judge_pruned": len(stale_judge_ids),
+        "stale_critic_pruned": len(stale_critic_ids),
     }
     return merged, ledger
 

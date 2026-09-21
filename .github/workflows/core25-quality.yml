@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - codex/expertcheck-25.0-quality-leap
+      - codex/expertcheck-25.1-runtime-integrity
   pull_request:
     paths:
       - "core25/**"

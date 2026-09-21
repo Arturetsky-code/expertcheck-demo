@@ -4,6 +4,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from core25.runtime_bridge import run_assignment_runtime
+
 from .catalogs import KnowledgeRegistry
 from .confidence import calculate_confidence
 from .rule_engine import RuleEngine
@@ -563,12 +565,59 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     universal_project_fact_graph = {"version":"1.0","facts":[],"passages":[],"summary":{"facts":0}}
     assignment_atomic_rows = []
     assignment_parent_baseline = []
+    assignment_core25_rows = []
+    assignment_core25_summary = {
+        "total": 0, "compliant": 0, "deviation": 0,
+        "unconfirmed": 0, "semantic": 0, "not_checked": 0,
+        "evidence_coverage_pct": 0.0, "engine": "core25",
+        "engine_version": "25.0-alpha1-unified-verification-core",
+    }
+    assignment_core25_runtime = {
+        "engine": "core25",
+        "engine_version": "25.0-alpha1-unified-verification-core",
+        "error": "",
+    }
     try:
         progress(82, "Задание на проектирование", "Извлекаем строки и атомарные требования Задания")
         assignment_requirements = extract_assignment_requirements(
             pdf_files, legacy.read_pdf, page_corpus=assignment_page_corpus,
         )
         assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
+        try:
+            core25_payload = run_assignment_runtime(
+                assignment_requirements,
+                object_registry=object_registry,
+            )
+            assignment_core25_rows = list(core25_payload.get("rows") or [])
+            assignment_core25_summary = dict(core25_payload.get("summary") or {})
+            assignment_core25_runtime = {
+                "engine": str(core25_payload.get("engine") or "core25"),
+                "engine_version": str(core25_payload.get("engine_version") or "25.0-alpha1-unified-verification-core"),
+                "error": "",
+            }
+        except Exception as core25_exc:
+            assignment_core25_rows = []
+            assignment_core25_summary = {
+                "total": len(assignment_requirements),
+                "compliant": 0,
+                "deviation": 0,
+                "unconfirmed": 0,
+                "semantic": 0,
+                "not_checked": len(assignment_requirements),
+                "evidence_coverage_pct": 0.0,
+                "engine": "core25",
+                "engine_version": "25.0-alpha1-unified-verification-core",
+                "error": f"{type(core25_exc).__name__}: {core25_exc}",
+            }
+            assignment_core25_runtime = {
+                "engine": "core25",
+                "engine_version": "25.0-alpha1-unified-verification-core",
+                "error": f"{type(core25_exc).__name__}: {core25_exc}",
+            }
+            pipeline_errors.append({
+                "stage": "core25_assignment_runtime",
+                "error": str(core25_exc),
+            })
         assignment_parent_baseline = compare_assignment_requirements(assignment_requirements, findings, object_registry, project_page_corpus)
         atomic_requirement_graph = build_atomic_requirement_graph(assignment_requirements, domain="assignment")
         progress(83, "Задание на проектирование", f"Построено атомарных условий: {len(atomic_requirement_graph.get('atoms') or [])}")
@@ -1032,6 +1081,10 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["project_understanding_quality"] = project_understanding_quality
         doc["assignment_requirements"] = assignment_requirements
         doc["assignment_compliance"] = assignment_compliance
+        doc["assignment_compliance_legacy"] = assignment_compliance
+        doc["assignment_core25_compliance"] = assignment_core25_rows
+        doc["assignment_core25_summary"] = assignment_core25_summary
+        doc["assignment_core25_runtime"] = assignment_core25_runtime
         doc["assignment_atomic_compliance"] = assignment_atomic_rows
         doc["atomic_requirement_graph"] = atomic_requirement_graph
         doc["universal_project_fact_graph"] = {

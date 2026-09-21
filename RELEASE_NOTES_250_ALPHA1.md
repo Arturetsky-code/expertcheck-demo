@@ -56,3 +56,32 @@ The startup `AttributeError` on the «Мои проекты» page was traced to
 The same investigation exposed a more important release gap: the Streamlit application currently imports and runs the existing `core/pipeline.py` path and does **not** invoke `core25.verify_assignment`. The visible application version is still 20.0 Alpha 10.1.3. Therefore a user-level Test 78 run at this point would test the old runtime, not the new 25.0 Unified Verification Core.
 
 Manual validation is paused until the 25.0 runtime bridge is implemented, covered by integration tests, and the application visibly identifies the 25.0 Alpha 1 build.
+
+
+## Runtime bridge completed
+
+The application now executes `core25.runtime_bridge.run_assignment_runtime()` from the real `core/pipeline.py` Assignment stage after deterministic directed-evidence retrieval. Core25 independently performs Routing → Evidence qualification → Binding → Proof → Decision; the legacy status is not reused as the Core25 verdict.
+
+Public Assignment surfaces now select `assignment_core25_*` through `public_assignment_payload()`:
+
+- Project / «Задание на проектирование»;
+- Results Center;
+- generated XLSX reports.
+
+If the Core25 runtime fails, new analyses fail closed on the Core25 surface instead of silently falling back to the legacy verdict. Legacy snapshots created before 25.0 remain readable.
+
+The first Streamlit launch also exposed and fixed the separate `StudioContext.workspace_store` startup defect and the autosave `save_project` argument mismatch.
+
+### Current automated validation
+
+At code HEAD `300593c2372a08f2999dc63f57afbe884975d67b`:
+
+- Core25: **73 passed / 0 failed**;
+- Core20 regression: **95 passed / 0 failed**;
+- mandatory focused regressions: **14 passed / 0 failed**;
+- Alpha 1 release gate: **SUCCESS**;
+- historical diagnostics: **32 classified / 0 blockers**.
+
+**Manual release status: READY_FOR_MANUAL_TEST.**
+
+The next step is a fresh Test 78 run from a new analysis on the 25.0 Alpha 1 Runtime Bridge build. Existing saved analyses from older builds should not be used to judge Core25 behavior.

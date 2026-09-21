@@ -48,10 +48,29 @@ first real user Test 78 on 25.0 before the project moves into the coverage-first
    - Reports show actual completeness status, coverage and missing mandatory
      sections separately from user confirmation.
 
+## Automated validation
+
+Validated code HEAD: `30cc031a34764191377398efccf184cdfbd153a5`
+
+- Core25 suite: **80 passed / 0 failed**.
+- Core20 regression suite: **95 passed / 0 failed**.
+- Results/report integrity suite: **17 passed / 0 failed**.
+- Full release-gate diagnostic: **521 passed / 32 classified historical failures / 0 blockers**.
+- Historical failure classes: **3 fixture-bound / 4 obsolete / 25 baseline-existing**.
+- Core25 compile/release gate: **SUCCESS**.
+
+The AI ledger intentionally keeps the checkpoint as the durable record of
+completed provider calls, but 25.1 intersects those responses with the current
+eligible packet universe. This preserves valid completed calls while pruning
+responses for packets that no longer exist. The report now labels current-run
+attempts separately from cumulative checkpoint responses instead of presenting
+them as the same counter.
+
 ## Release gate
 
-Status: **NOT_READY_FOR_MANUAL_TEST** until Core25/Core20 CI and the new 25.1
-runtime-integrity regressions are green.
+Status: **READY_FOR_SHORT_MANUAL_INTEGRITY_TEST**.
 
-After CI, the intended manual check is a short Test 78 integrity rerun. A full
-coverage run is deferred to 25.2 Coverage Breakthrough.
+The intended manual check is a short Test 78 integrity rerun. Do **not** spend
+quota completing the full AI queue. Verify verdict parity, telemetry semantics,
+completeness semantics and risk-level integrity first. A full coverage run is
+deferred to 25.2 Coverage Breakthrough.

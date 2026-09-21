@@ -24,3 +24,13 @@ def test_release_gate_classifies_only_explicit_legacy_diagnostics():
 def test_release_gate_never_allows_unknown_failure():
     result = classify_failed_nodeids(("unknown.py::test_something",))
     assert result["blockers"] == ("unknown.py::test_something",)
+
+
+def test_release_gate_separates_baseline_existing_debt_from_new_regressions():
+    result = classify_failed_nodeids((
+        "test_cross_section_proof_th.py::test_two_control_sections_cannot_replace_missing_th_owner",
+    ))
+    assert result["baseline_existing"] == (
+        "test_cross_section_proof_th.py::test_two_control_sections_cannot_replace_missing_th_owner",
+    )
+    assert result["blockers"] == ()

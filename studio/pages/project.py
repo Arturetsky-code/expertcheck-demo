@@ -13,6 +13,7 @@ from core.report_engine import build_decision_report
 from core.ai_gateway import provider_for_role
 from core.semantic_continuation import continue_semantic_analysis, continuation_pending
 from core.workspace_store import session_snapshot, snapshot_signature
+from core25.runtime_bridge import public_assignment_payload
 from studio.pages.documents import render as render_documents
 from studio.pages.completeness import render as render_completeness
 from core.project_completeness import (
@@ -614,8 +615,14 @@ def _dashboard(ctx):
     with tab_assignment:
         section('Соответствие Заданию на проектирование','Требования Задания извлекаются отдельно и сопоставляются с объектами, ТЭП и найденными проектными решениями.')
         first_doc = docs.iloc[0].to_dict() if not docs.empty else {}
-        assignment_rows=first_doc.get('assignment_compliance') or []
-        assignment_summary=first_doc.get('assignment_compliance_summary') or {}
+        assignment_rows, assignment_summary, assignment_runtime = public_assignment_payload(first_doc)
+        if assignment_runtime.get('error'):
+            st.error(
+                'Core25 не завершил проверку Задания: '
+                + str(assignment_runtime.get('error'))
+            )
+        elif assignment_runtime.get('engine') == 'core25':
+            st.caption('Контур проверки: ExpertCheck 25.0 Alpha 1 · Unified Verification Core')
         if not assignment_rows:
             st.info('Задание на проектирование не распознано в комплекте либо машинно-интерпретируемые требования не извлечены. При необходимости укажите тип документа «Задание на проектирование» на этапе загрузки.')
         else:
@@ -746,7 +753,10 @@ def render(ctx):
             st.rerun()
         return
     docs = ctx.data[0]
-    if docs.empty:
+    # A freshly created project has no analysis result yet. In that state the
+    # application intentionally supplies None for the document frame, so route
+    # directly to the upload screen instead of dereferencing DataFrame.empty.
+    if docs is None or docs.empty:
         _upload(ctx)
     else:
         _dashboard(ctx)

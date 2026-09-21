@@ -22,6 +22,7 @@ from core.verification_core import verification_label
 from core.global_finding_gate import classify_finding
 from core.project_knowledge_recovery import recover_project_knowledge
 from core.verification_coverage_187 import refresh_verification_coverage
+from core25.runtime_bridge import public_assignment_payload
 from core.project_assembly import (
     build_assembly_rows, filter_comparisons_by_keys, filter_passports_by_keys,
     filter_registry_by_keys, selected_keys,
@@ -481,7 +482,7 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     # Reports and the Results page share one final qualified ledger.  The
     # report boundary already works on private copies, so keep clone_inputs=False
     # to preserve mutations in comparison_records for downstream report context.
-    assignment_for_report=list(first_record.get('assignment_compliance') or [])
+    assignment_for_report, assignment_core25_summary_for_report, assignment_runtime_for_report = public_assignment_payload(first_record)
     normative_for_report=list(first_record.get('normative_compliance_audit') or [])
     ledger=build_qualified_result_ledger(
         assignment_rows=assignment_for_report,
@@ -526,9 +527,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         first_doc=docs.iloc[0].to_dict()
         normative_reference_details=list(first_doc.get('normative_validity_audit') or [])
         normative_rows=list(first_doc.get('normative_reference_summary') or normative_reference_details)
-        assignment_rows=list(first_doc.get('assignment_compliance') or [])
-        assignment_atomic_rows=list(first_doc.get('assignment_atomic_compliance') or [])
-        assignment_summary=dict(first_doc.get('assignment_compliance_summary') or {})
+        assignment_rows, assignment_summary, assignment_runtime = public_assignment_payload(first_doc)
+        assignment_atomic_rows=(
+            list(assignment_rows)
+            if assignment_runtime.get('engine') == 'core25'
+            else list(first_doc.get('assignment_atomic_compliance') or [])
+        )
         normative_requirement_rows=list(first_doc.get('normative_requirement_audit') or [])
         normative_compliance_rows=list(first_doc.get('normative_compliance_audit') or [])
         normative_compliance_summary=dict(first_doc.get('normative_compliance_summary') or {})
@@ -537,9 +541,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     elif isinstance(docs,list) and docs:
         normative_reference_details=list((docs[0] or {}).get('normative_validity_audit') or [])
         normative_rows=list((docs[0] or {}).get('normative_reference_summary') or normative_reference_details)
-        assignment_rows=list((docs[0] or {}).get('assignment_compliance') or [])
-        assignment_atomic_rows=list((docs[0] or {}).get('assignment_atomic_compliance') or [])
-        assignment_summary=dict((docs[0] or {}).get('assignment_compliance_summary') or {})
+        assignment_rows, assignment_summary, assignment_runtime = public_assignment_payload(docs[0] or {})
+        assignment_atomic_rows=(
+            list(assignment_rows)
+            if assignment_runtime.get('engine') == 'core25'
+            else list((docs[0] or {}).get('assignment_atomic_compliance') or [])
+        )
         normative_requirement_rows=list((docs[0] or {}).get('normative_requirement_audit') or [])
         normative_compliance_rows=list((docs[0] or {}).get('normative_compliance_audit') or [])
         normative_compliance_summary=dict((docs[0] or {}).get('normative_compliance_summary') or {})

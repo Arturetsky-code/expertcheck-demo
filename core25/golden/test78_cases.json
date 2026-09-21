@@ -1,0 +1,92 @@
+[
+  {
+    "case_id": "toc_as_evidence",
+    "defect_class": "toc_as_evidence",
+    "requirement": {"requirement_id": "G-TOC", "requirement_text": "Продолжительность смены 12 часов", "scope": "PROJECT_GLOBAL", "verification_kind": "TYPED_VALUE", "parameter_code": "SHIFT_DURATION", "required_value": 12.0, "unit": "час", "expected_sections": ["ТХ"]},
+    "evidence": [{"evidence_id": "E-TOC", "document": "ТХ.pdf", "section": "ТХ", "page": 2, "fragment": "5 Технологические решения ........ 45", "addressable": true, "source_kind": "TABLE_OF_CONTENTS", "metadata": {"parameter_code": "SHIFT_DURATION", "value": 12.0, "unit": "час"}}],
+    "objects": {},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": ["E-TOC"]
+  },
+  {
+    "case_id": "wrong_object_owner",
+    "defect_class": "wrong_object_owner",
+    "requirement": {"requirement_id": "G-OWNER", "requirement_text": "Площадь здания проборазделки 89,9 м2", "scope": "OBJECT_SPECIFIC", "target_object_id": "OBJ-LAB", "verification_kind": "TYPED_VALUE", "parameter_code": "AREA", "required_value": 89.9, "unit": "м2", "expected_sections": ["АР"]},
+    "evidence": [{"evidence_id": "E-DUST", "document": "АР.pdf", "section": "АР", "page": 12, "fragment": "Модуль обеспыливания. Площадь 23,5 м2.", "addressable": true, "source_kind": "PAGE_TEXT", "metadata": {"owner_name": "Модуль обеспыливания", "parameter_code": "AREA", "value": 23.5, "unit": "м2"}}],
+    "objects": {"OBJ-LAB": ["Здание проборазделки"], "OBJ-DUST": ["Модуль обеспыливания"]},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": ["E-DUST"]
+  },
+  {
+    "case_id": "wrong_semantic_parameter",
+    "defect_class": "wrong_semantic_parameter",
+    "requirement": {"requirement_id": "G-PARAM", "requirement_text": "Площадь здания проборазделки 89,9 м2", "scope": "OBJECT_SPECIFIC", "target_object_id": "OBJ-LAB", "verification_kind": "TYPED_VALUE", "parameter_code": "AREA", "required_value": 89.9, "unit": "м2", "expected_sections": ["АР"]},
+    "evidence": [{"evidence_id": "E-VOLUME", "document": "АР.pdf", "section": "АР", "page": 12, "fragment": "Здание проборазделки. Объем 89,9 м3.", "addressable": true, "source_kind": "PAGE_TEXT", "metadata": {"owner_id": "OBJ-LAB", "parameter_code": "VOLUME", "value": 89.9, "unit": "м3"}}],
+    "objects": {"OBJ-LAB": ["Здание проборазделки"]},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": ["E-VOLUME"]
+  },
+  {
+    "case_id": "owner_section_absent",
+    "defect_class": "owner_section_absent",
+    "requirement": {"requirement_id": "G-SECTION", "requirement_text": "Площадь здания проборазделки 89,9 м2", "scope": "OBJECT_SPECIFIC", "target_object_id": "OBJ-LAB", "verification_kind": "TYPED_VALUE", "parameter_code": "AREA", "required_value": 89.9, "unit": "м2", "expected_sections": ["АР"]},
+    "evidence": [{"evidence_id": "E-WRONG-SECTION", "document": "ТХ.pdf", "section": "ТХ", "page": 5, "fragment": "Здание проборазделки. Площадь 89,9 м2.", "addressable": true, "source_kind": "PAGE_TEXT", "metadata": {"owner_id": "OBJ-LAB", "parameter_code": "AREA", "value": 89.9, "unit": "м2"}}],
+    "objects": {"OBJ-LAB": ["Здание проборазделки"]},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": ["E-WRONG-SECTION"]
+  },
+  {
+    "case_id": "judge_critic_without_canonical_proof",
+    "defect_class": "judge_critic_without_canonical_proof",
+    "requirement": {"requirement_id": "G-JC", "requirement_text": "Продолжительность смены 12 часов", "scope": "PROJECT_GLOBAL", "verification_kind": "TYPED_VALUE", "parameter_code": "SHIFT_DURATION", "required_value": 12.0, "unit": "час", "expected_sections": ["ТХ"], "metadata": {"judge_verdict": "SUPPORTS", "critic_accept": true}},
+    "evidence": [],
+    "objects": {},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": []
+  },
+  {
+    "case_id": "provider_429_not_success",
+    "defect_class": "provider_429_not_success",
+    "requirement": {"requirement_id": "G-429", "requirement_text": "Продолжительность смены 12 часов", "scope": "PROJECT_GLOBAL", "verification_kind": "TYPED_VALUE", "parameter_code": "SHIFT_DURATION", "required_value": 12.0, "unit": "час", "expected_sections": ["ТХ"], "metadata": {"provider_error": "HTTP 429"}},
+    "evidence": [{"evidence_id": "E-429", "document": "ТХ.pdf", "section": "ТХ", "page": 7, "fragment": "Продолжительность смены составляет 12 часов.", "addressable": true, "source_kind": "AI_SELECTED_EVIDENCE", "metadata": {"parameter_code": "SHIFT_DURATION", "value": 12.0, "unit": "час", "provider_error": "HTTP 429"}}],
+    "objects": {},
+    "expected_decision": "LIMITATION",
+    "expected_proof_state": "SYSTEM_LIMITATION",
+    "forbidden_evidence_ids": []
+  },
+  {
+    "case_id": "nan_value_rejected",
+    "defect_class": "nan_value_rejected",
+    "requirement": {"requirement_id": "G-NAN", "requirement_text": "Продолжительность смены 12 часов", "scope": "PROJECT_GLOBAL", "verification_kind": "TYPED_VALUE", "parameter_code": "SHIFT_DURATION", "required_value": 12.0, "unit": "час", "expected_sections": ["ТХ"]},
+    "evidence": [{"evidence_id": "E-NAN", "document": "ТХ.pdf", "section": "ТХ", "page": 7, "fragment": "Продолжительность смены указана в таблице.", "addressable": true, "source_kind": "PAGE_TEXT", "metadata": {"parameter_code": "SHIFT_DURATION", "value": NaN, "unit": "час"}}],
+    "objects": {},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": ["E-NAN"]
+  },
+  {
+    "case_id": "canonical_proof_trace_required",
+    "defect_class": "canonical_proof_trace_required",
+    "requirement": {"requirement_id": "G-TRACE", "requirement_text": "Продолжительность смены 12 часов", "scope": "PROJECT_GLOBAL", "verification_kind": "TYPED_VALUE", "parameter_code": "SHIFT_DURATION", "required_value": 12.0, "unit": "час", "expected_sections": ["ТХ"]},
+    "evidence": [{"evidence_id": "E-TRACE", "document": "ТХ.pdf", "section": "ТХ", "page": 7, "fragment": "Продолжительность смены составляет 12 часов.", "addressable": true, "source_kind": "PAGE_TEXT", "metadata": {"parameter_code": "SHIFT_DURATION", "value": 12.0, "unit": "час"}}],
+    "objects": {},
+    "expected_decision": "COMPLIANT",
+    "expected_proof_state": "PROVEN_MATCH",
+    "forbidden_evidence_ids": []
+  },
+  {
+    "case_id": "positive_semantic_without_selected_evidence",
+    "defect_class": "positive_semantic_without_selected_evidence",
+    "requirement": {"requirement_id": "G-SEM", "requirement_text": "Обеспечить удобство эксплуатации", "scope": "UNRESOLVED", "verification_kind": "SEMANTIC_UNSUPPORTED", "metadata": {"judge_verdict": "SUPPORTS", "critic_accept": true}},
+    "evidence": [],
+    "objects": {},
+    "expected_decision": "REVIEW",
+    "expected_proof_state": "INSUFFICIENT",
+    "forbidden_evidence_ids": []
+  }
+]

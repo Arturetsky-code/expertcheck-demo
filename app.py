@@ -28,7 +28,7 @@ install_gemini_runtime_preference()
 install_quality_gates()
 install_gemini_model_tracking()
 CONFIG_DIR=BASE_DIR/'config' if (BASE_DIR/'config').exists() else BASE_DIR
-VERSION='ExpertCheck 20.0 Alpha 10.1.3 · Proof Trace Consistency · Dual Run'
+VERSION='ExpertCheck 25.0 Alpha 1 · Unified Verification Core · Runtime Bridge'
 st.set_page_config(page_title='ExpertCheck Studio',page_icon='EC',layout='wide',initial_sidebar_state='expanded')
 apply_design()
 WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
@@ -125,6 +125,9 @@ with st.sidebar:
 class StudioContext:
     data:tuple
     version:str
+    config_dir:Path
+    analyze:object
+    workspace_store:object
 
 
 def _autosave_current_project():
@@ -135,7 +138,13 @@ def _autosave_current_project():
         snapshot=session_snapshot(st.session_state)
         sig=snapshot_signature(snapshot)
         if sig != st.session_state.get('_workspace_saved_signature'):
-            WORKSPACE_STORE.save_project(pid,user.get('id'),snapshot)
+            WORKSPACE_STORE.save_project(
+                owner_id=user.get('id'),
+                project_id=pid,
+                name=st.session_state.get('project_name') or 'Проект',
+                payload=snapshot,
+                app_version=VERSION,
+            )
             st.session_state._workspace_saved_signature=sig
     except Exception as exc:
         if st.session_state.get('expert_mode'):
@@ -165,14 +174,26 @@ if st.session_state.result:
         st.session_state.canonical_core_20_manifest={}
         if st.session_state.get('expert_mode'):
             st.sidebar.caption(f'Core20 shadow: {type(exc).__name__}')
-    ctx=StudioContext(data=(d,f,c,reg,pas,cmp,engineer_findings(f)),version=VERSION)
+    ctx=StudioContext(
+        data=(d,f,c,reg,pas,cmp,engineer_findings(f)),
+        version=VERSION,
+        config_dir=CONFIG_DIR,
+        analyze=analyze_uploaded,
+        workspace_store=WORKSPACE_STORE,
+    )
     page=st.session_state.get('page','Проект')
     renderer=PAGES.get(page,PAGES['Проект'])
     renderer(ctx)
     _autosave_current_project()
 else:
     st.session_state.canonical_core_20_manifest={}
-    ctx=StudioContext(data=(None,None,None,None,None,None,None),version=VERSION)
+    ctx=StudioContext(
+        data=(None,None,None,None,None,None,None),
+        version=VERSION,
+        config_dir=CONFIG_DIR,
+        analyze=analyze_uploaded,
+        workspace_store=WORKSPACE_STORE,
+    )
     page=st.session_state.get('page','Проект')
     renderer=PAGES.get(page,PAGES['Проект'])
     renderer(ctx)

@@ -1,0 +1,262 @@
+from __future__ import annotations
+
+from hashlib import sha1
+import re
+from typing import Any, Iterable, Mapping
+
+from .contracts import DecisionState, Evidence25, VerificationResult25
+from .pipeline import verify_assignment
+
+
+_DECISION_PUBLIC = {
+    DecisionState.COMPLIANT: ("Соответствует заданию", "VERIFIED_OK", "L5"),
+    DecisionState.NONCOMPLIANT: ("Выявлено отклонение", "PROJECT_FINDING", "L5"),
+    DecisionState.REVIEW: ("Требует проверки", "REVIEW_QUESTION", "L0"),
+    DecisionState.LIMITATION: ("Не проверено системой", "SYSTEM_LIMITATION", "L0"),
+    DecisionState.NOT_APPLICABLE: ("Не применимо", "NOT_APPLICABLE", "L0"),
+}
+
+_SECTION_PATTERNS = (
+    ("ПЗУ", ("пзу", "схема планировочной")),
+    ("АР", ("_ар", "№3_ар", "архитектурн")),
+    ("КР", ("_кр", "№4_кр", "конструктивн")),
+    ("ТХ", ("_тх", "№6_тх", "технологическ")),
+    ("ИОС1", ("иос1", "электроснабжен")),
+    ("ИОС2", ("иос2", "водоснабжен", "водоотведен")),
+    ("ПЗ", ("_пз.", "№1_пз", "пояснительн")),
+)
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
+    item = dict(raw)
+    contract = dict(item.get("evidence_contract_v2") or {})
+    if contract.get("scope") and not item.get("requirement_scope"):
+        item["requirement_scope"] = contract["scope"]
+    if contract.get("expected_sections") and not item.get("expected_sections"):
+        item["expected_sections"] = list(contract["expected_sections"])
+
+    kind = _text(item.get("verification_kind") or item.get("requirement_type")).upper()
+    aliases = {
+        "VALUE_COMPARISON": "TYPED_VALUE",
+        "PRESENCE_REQUIREMENT": "PRESENCE",
+    }
+    item["verification_kind"] = aliases.get(kind, kind)
+    return item
+
+
+def _section(document: str, candidate: Mapping[str, Any]) -> str:
+    direct = _text(candidate.get("document_type") or candidate.get("section"))
+    if direct:
+        return direct
+    low = document.replace("ё", "е").casefold()
+    for section, markers in _SECTION_PATTERNS:
+        if any(marker.casefold() in low for marker in markers):
+            return section
+    return ""
+
+
+def _evidence_id(requirement_id: str, candidate: Mapping[str, Any]) -> str:
+    raw = "|".join(
+        (
+            requirement_id,
+            _text(candidate.get("document")),
+            _text(candidate.get("page")),
+            _text(candidate.get("parameter_code")),
+            _text(candidate.get("value")),
+            _text(candidate.get("context") or candidate.get("exact_clause")),
+        )
+    )
+    return "E25R-" + sha1(raw.encode("utf-8", "ignore")).hexdigest()[:16].upper()
+
+
+def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...]:
+    requirement_id = _text(requirement.get("requirement_id") or requirement.get("id"))
+    scope = _text(
+        requirement.get("requirement_scope")
+        or (requirement.get("evidence_contract_v2") or {}).get("scope")
+    ).upper()
+    result: list[Evidence25] = []
+    for candidate in requirement.get("directed_evidence_candidates") or ():
+        if not isinstance(candidate, Mapping):
+            continue
+        if _text(candidate.get("evidence_state")).lower() != "verified_candidate":
+            continue
+        if scope in {"OBJECT_SPECIFIC", "EQUIPMENT_SPECIFIC"} and candidate.get("owner_match") is not True:
+            continue
+
+        document = _text(candidate.get("document"))
+        page = candidate.get("page")
+        try:
+            page = int(page)
+        except (TypeError, ValueError):
+            page = None
+        fragment = _text(
+            candidate.get("context")
+            or candidate.get("exact_clause")
+            or candidate.get("source_trace")
+        )
+        result.append(
+            Evidence25(
+                evidence_id=_evidence_id(requirement_id, candidate),
+                document=document,
+                section=_section(document, candidate),
+                page=page,
+                fragment=fragment,
+                source_kind="PAGE_TEXT",
+                addressable=bool(document and page and fragment),
+                canonical=True,
+                trusted=True,
+                confidence=float(candidate.get("score") or 0) / 100.0,
+                metadata={
+                    "requirement_id": requirement_id,
+                    "owner_name": _text(candidate.get("object")),
+                    "parameter_code": _text(candidate.get("parameter_code")).upper(),
+                    "value": candidate.get("value"),
+                    "unit": _text(candidate.get("unit")),
+                    "project_value": candidate.get("value"),
+                    "project_unit": _text(candidate.get("unit")),
+                    "owner_match": candidate.get("owner_match"),
+                    "unit_compatible": candidate.get("unit_compatible"),
+                    "legacy_evidence_kind": candidate.get("evidence_kind"),
+                },
+            )
+        )
+    return tuple(result)
+
+
+def _known_objects(requirements: Iterable[Mapping[str, Any]], object_registry: Iterable[Mapping[str, Any]]) -> dict[str, tuple[str, ...]]:
+    aliases: dict[str, list[str]] = {}
+
+    def add(object_id: Any, *names: Any) -> None:
+        oid = _text(object_id)
+        if not oid:
+            return
+        bucket = aliases.setdefault(oid, [])
+        for value in names:
+            name = _text(value)
+            if name and name not in bucket:
+                bucket.append(name)
+
+    for raw in requirements:
+        add(
+            raw.get("object_id") or raw.get("target_object_id"),
+            raw.get("object_name") or raw.get("target_object"),
+        )
+    for raw in object_registry or ():
+        add(
+            raw.get("object_id") or raw.get("id") or raw.get("Ключ"),
+            raw.get("name") or raw.get("object_name") or raw.get("Наименование объекта"),
+            raw.get("alias"),
+        )
+    return {key: tuple(values) for key, values in aliases.items()}
+
+
+def _public_row(raw: Mapping[str, Any], result: VerificationResult25) -> dict[str, Any]:
+    status, final_kind, evidence_level = _DECISION_PUBLIC[result.decision.state]
+    evidence_by_id = {item.evidence_id: item for item in result.trace.evidence}
+    proof_evidence = [
+        evidence_by_id[item]
+        for item in result.trace.proof.evidence_ids
+        if item in evidence_by_id
+    ]
+    verification_evidence = [
+        {
+            "evidence_id": item.evidence_id,
+            "document": item.resolved_document,
+            "page": item.page,
+            "fragment": item.fragment,
+            "source_kind": item.source_kind,
+        }
+        for item in proof_evidence
+    ]
+    rendered = [
+        f"{item['document']}, стр. {item['page']}: {item['fragment']}"
+        for item in verification_evidence
+    ]
+    row = dict(raw)
+    row.update(
+        {
+            "requirement_id": result.requirement.requirement_id,
+            "requirement_text": result.requirement.text,
+            "status": status,
+            "final_verification_kind": final_kind,
+            "verification_kind": final_kind,
+            "evidence_level": evidence_level,
+            "decision_basis": result.decision.reason_code or result.trace.proof.reason_code,
+            "evidence": rendered,
+            "verification_evidence": verification_evidence,
+            "proof_id": result.trace.proof.proof_id,
+            "trace_id": result.trace.trace_id,
+            "proof_state": result.trace.proof.state.value,
+            "core25_decision": result.decision.state.value,
+            "core25_reason_code": result.trace.proof.reason_code,
+            "match_confidence": 1.0 if result.decision.is_categorical else 0.0,
+        }
+    )
+    return row
+
+
+def run_assignment_runtime(
+    requirements: Iterable[Mapping[str, Any]],
+    *,
+    object_registry: Iterable[Mapping[str, Any]] = (),
+) -> dict[str, Any]:
+    raw_requirements = [dict(item) for item in requirements or () if isinstance(item, Mapping)]
+    known_objects = _known_objects(raw_requirements, object_registry or ())
+    results: list[VerificationResult25] = []
+
+    for raw in raw_requirements:
+        requirement = _runtime_requirement(raw)
+        evidence = _candidate_evidence(requirement)
+        results.extend(verify_assignment((requirement,), evidence, known_objects))
+
+    rows = [_public_row(raw, result) for raw, result in zip(raw_requirements, results)]
+    summary = {
+        "total": len(rows),
+        "compliant": sum(row["final_verification_kind"] == "VERIFIED_OK" for row in rows),
+        "deviation": sum(row["final_verification_kind"] == "PROJECT_FINDING" for row in rows),
+        "unconfirmed": sum(row["final_verification_kind"] == "REVIEW_QUESTION" for row in rows),
+        "semantic": 0,
+        "not_checked": sum(row["final_verification_kind"] == "SYSTEM_LIMITATION" for row in rows),
+    }
+    categorical = summary["compliant"] + summary["deviation"]
+    summary["evidence_coverage_pct"] = round(100.0 * categorical / max(1, summary["total"]), 1)
+    summary["engine"] = "core25"
+    summary["engine_version"] = "25.0-alpha1-unified-verification-core"
+
+    return {
+        "engine": "core25",
+        "engine_version": "25.0-alpha1-unified-verification-core",
+        "results": tuple(results),
+        "rows": rows,
+        "summary": summary,
+    }
+
+
+
+def public_assignment_payload(document: Mapping[str, Any] | None):
+    """Select the public Assignment surface.
+
+    New 25.0 analyses are fail-closed: if the runtime payload exists, its rows
+    and summary are authoritative even when the bridge recorded an error.
+    Legacy snapshots without a 25.0 payload remain readable.
+    """
+    source = dict(document or {})
+    if "assignment_core25_runtime" in source:
+        runtime = dict(source.get("assignment_core25_runtime") or {})
+        runtime.setdefault("engine", "core25")
+        rows = list(source.get("assignment_core25_compliance") or [])
+        summary = dict(source.get("assignment_core25_summary") or {})
+        if runtime.get("error") and not summary.get("error"):
+            summary["error"] = runtime["error"]
+        return rows, summary, runtime
+
+    return (
+        list(source.get("assignment_compliance") or []),
+        dict(source.get("assignment_compliance_summary") or {}),
+        {"engine": "legacy_snapshot", "engine_version": "", "error": ""},
+    )

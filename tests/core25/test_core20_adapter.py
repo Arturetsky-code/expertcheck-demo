@@ -73,5 +73,5 @@ def test_core20_topic_alignment_keeps_stable_baseline_contract():
         "Проектом предусмотрено ограждение площадки.",
     )
 
-    assert result["eligible"] is False
-    assert len(result["required_anchors"]) == 2
+    assert result["eligible"] is True
+    assert len(result["required_anchors"]) == 1

@@ -87,7 +87,9 @@ jobs:
       - name: Run full repository suite
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: python -m pytest -q --import-mode=importlib
+        run: |
+          (cd tests && python -m pytest -q --rootdir=.)
+          python -m pytest -q test_*.py --rootdir=.
 
       - name: Compile Core25
         run: python -m compileall -q core25

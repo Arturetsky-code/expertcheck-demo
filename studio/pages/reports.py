@@ -6,6 +6,7 @@ from studio.components import card,empty,hero,section
 from studio.data import structured_excel_report
 from studio.report_resilience import build_report_isolated
 from core.project_snapshot import project_snapshot_bytes
+from core.project_completeness import build_matrix as build_completeness_matrix, summarize as summarize_completeness
 from core20.quality_integrity import consensus_counts as _consensus_counts, safe_count as _safe_count
 from core20.report_proof_export import (
     enrich_normative_proof_workbook,
@@ -18,9 +19,28 @@ def _report_documents(docs):
     report_docs = docs.copy()
     if report_docs.empty:
         return report_docs
-    report_docs['completeness_user_confirmed'] = bool(st.session_state.get('completeness_user_confirmed'))
-    report_docs['object_registry_confirmed'] = bool(st.session_state.get('object_registry_confirmed'))
-    report_docs['completeness_decisions'] = [dict(st.session_state.get('completeness_decisions') or {}) for _ in range(len(report_docs))]
+
+    confirmed = bool(st.session_state.get('completeness_user_confirmed'))
+    forming = bool(st.session_state.get('completeness_forming', True))
+    profile = st.session_state.get('completeness_profile') or 'Капитальный объект'
+    decisions = dict(st.session_state.get('completeness_decisions') or {})
+    doc_types=[]
+    for column in ('Тип документа','Раздел','document_type','section','doc_type'):
+        if column in report_docs.columns:
+            doc_types=report_docs[column].fillna('').astype(str).tolist()
+            break
+    completeness_matrix = build_completeness_matrix(doc_types, profile, decisions)
+    completeness_summary = summarize_completeness(
+        completeness_matrix,
+        user_confirmed=confirmed,
+        forming=forming,
+    )
+
+    report_docs['completeness_user_confirmed'] = confirmed
+    report_docs['completeness_forming'] = forming
+    report_docs['completeness_profile'] = profile
+    report_docs['completeness_decisions'] = [dict(decisions) for _ in range(len(report_docs))]
+    report_docs['completeness_summary'] = [dict(completeness_summary) for _ in range(len(report_docs))]
     canonical=dict(st.session_state.get('canonical_core_20_manifest') or {})
     if canonical:
         report_docs['canonical_core_20_manifest'] = [dict(canonical) for _ in range(len(report_docs))]

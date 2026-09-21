@@ -249,6 +249,15 @@ def build_structured_report(
     else:
         conclusion = "Критические межраздельные расхождения по доступным структурированным данным не выявлены. Требуется завершить ручную проверку применимых пунктов чек-листов."
 
+    completeness_summary = dict(first.get("completeness_summary") or {}) if isinstance(first, dict) else {}
+    completeness_status = str(
+        completeness_summary.get("status")
+        or ("Состояние матрицы подтверждено пользователем" if first.get("completeness_user_confirmed") else "Не подтверждена")
+    )
+    completeness_confirmed = bool(first.get("completeness_user_confirmed"))
+    completeness_coverage = completeness_summary.get("coverage")
+    completeness_missing = int(completeness_summary.get("missing") or 0)
+
     return {
         "project": project_name,
         "summary": {
@@ -263,7 +272,10 @@ def build_structured_report(
             "requires_attention": counts["high"] + counts["medium"],
             "high_priority": counts["high"],
             "medium_priority": counts["medium"],
-            "completeness": "Подтверждена" if first.get("completeness_user_confirmed") else "Не подтверждена",
+            "completeness": completeness_status,
+            "completeness_confirmed": completeness_confirmed,
+            "completeness_coverage": completeness_coverage,
+            "completeness_missing": completeness_missing,
             "risks_high": len(high_risks),
             "risks_medium": len(medium_risks),
             "risks_low": len(low_risks),

@@ -1,3 +1,5 @@
+import pytest
+
 from core25 import verify_assignment
 from core25.contracts import (
     Binding25,
@@ -13,8 +15,8 @@ from core25.contracts import (
     Trace25,
     VerificationResult25,
 )
-from core25.persistence import dump_result, load_result
-from core25.report_trace import report_trace_row
+from core25.persistence import dump_result, dump_results, load_result, load_results
+from core25.report_trace import report_row, report_trace_row
 
 
 def _categorical_result():
@@ -56,6 +58,22 @@ def test_persistence_roundtrip_preserves_canonical_trace():
     assert "12 часов" in restored.trace.evidence[0].fragment
 
 
+def test_plural_persistence_roundtrip_preserves_order_and_trace():
+    first = _categorical_result()
+    second = _categorical_result()
+
+    restored = load_results(dump_results((first, second)))
+
+    assert isinstance(restored, tuple)
+    assert len(restored) == 2
+    assert [item.requirement.requirement_id for item in restored] == [
+        "SHIFT-PERSIST",
+        "SHIFT-PERSIST",
+    ]
+    assert all(item.trace.is_categorical_trace_valid() for item in restored)
+    assert restored[0].trace.proof.evidence_ids == first.trace.proof.evidence_ids
+
+
 def test_report_trace_row_is_auditable_and_sanitized():
     result = _categorical_result()
     row = report_trace_row(result)
@@ -68,6 +86,67 @@ def test_report_trace_row_is_auditable_and_sanitized():
     assert row["page"] == 7
     assert "12 часов" in row["fragment"]
     assert "nan" not in str(row).casefold()
+
+
+def test_report_row_matches_public_task9_contract():
+    result = _categorical_result()
+    row = report_row(result)
+
+    assert row["requirement_id"] == "SHIFT-PERSIST"
+    assert row["decision"] == "COMPLIANT"
+    assert row["reason"]
+    assert row["document"] == "ТХ.pdf"
+    assert isinstance(row["page"], int)
+    assert "12 часов" in row["fragment"]
+    assert row["evidence_id"] == "E-SHIFT-PERSIST"
+    assert row["binding_id"]
+    assert row["proof_id"] == result.trace.proof.proof_id
+    assert "nan" not in str(row).casefold()
+    assert "alpha 9" not in str(row).casefold()
+
+
+def test_report_row_fails_closed_for_invalid_categorical_trace():
+    requirement = Requirement25(
+        requirement_id="BROKEN-TRACE",
+        domain=Domain.ASSIGNMENT,
+        text="Продолжительность смены 12 часов",
+        scope=Scope.PROJECT_GLOBAL,
+        verification_kind="TYPED_VALUE",
+        parameter_code="SHIFT_DURATION",
+        required_value=12.0,
+        unit="час",
+    )
+    proof = Proof25(
+        proof_id="P-BROKEN",
+        requirement_id="BROKEN-TRACE",
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=("E-MISSING",),
+        binding_ids=("B-MISSING",),
+        reason_code="MATCH",
+    )
+    decision = Decision25(
+        decision_id="D-BROKEN",
+        requirement_id="BROKEN-TRACE",
+        state=DecisionState.COMPLIANT,
+        proof=proof,
+        trace_id="T-BROKEN",
+        reason_code="MATCH",
+    )
+    result = VerificationResult25(
+        requirement=requirement,
+        trace=Trace25(
+            requirement_id="BROKEN-TRACE",
+            evidence=(),
+            bindings=(),
+            proof=proof,
+            decision=decision,
+            trace_id="T-BROKEN",
+        ),
+    )
+
+    assert result.trace.is_categorical_trace_valid() is False
+    with pytest.raises(ValueError, match="categorical trace"):
+        report_row(result)
 
 
 def test_report_trace_row_pairs_binding_with_its_evidence():

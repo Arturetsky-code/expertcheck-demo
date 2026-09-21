@@ -88,13 +88,37 @@ jobs:
       # releases plus fixture-bound tests under /mnt/data. Keep the full legacy
       # suite visible as a diagnostic, but gate Alpha 1 on the active Core20
       # workflows, Core25 suite and focused current regressions above.
-      - name: Run legacy full repository suite (diagnostic)
-        continue-on-error: true
+      - name: Run legacy full repository suite against baseline allowlist
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          (cd tests && python -m pytest -q --rootdir=.)
-          python -m pytest -q test_*.py --rootdir=.
+          set +e
+          (cd tests && python -m pytest -q --rootdir=.) 2>&1 | tee /tmp/legacy-pytest.log
+          code_tests=${PIPESTATUS[0]}
+          python -m pytest -q test_*.py --rootdir=. 2>&1 | tee -a /tmp/legacy-pytest.log
+          code_root=${PIPESTATUS[0]}
+          set -e
+
+          python - <<'PY'
+          from pathlib import Path
+          from core25.release_gate import classify_failed_nodeids, failed_nodeids_from_pytest_output
+
+          output = Path("/tmp/legacy-pytest.log").read_text(encoding="utf-8", errors="replace")
+          failures = failed_nodeids_from_pytest_output(output)
+          classified = classify_failed_nodeids(failures)
+          print("legacy diagnostic failures:", len(failures))
+          print("fixture_bound:", len(classified["fixture_bound"]))
+          print("obsolete:", len(classified["obsolete"]))
+          print("baseline_existing:", len(classified["baseline_existing"]))
+          print("blockers:", len(classified["blockers"]))
+          if classified["blockers"]:
+              print("Unclassified/current-contract failures:")
+              for nodeid in classified["blockers"]:
+                  print(" -", nodeid)
+              raise SystemExit(1)
+          PY
+
+          echo "Raw pytest exit codes: tests=${code_tests}, root=${code_root}; all failures are classified against the stable baseline."
 
       - name: Compile Core25
         run: python -m compileall -q core25

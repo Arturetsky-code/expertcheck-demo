@@ -9,6 +9,7 @@ from core.result_ledger import build_qualified_result_ledger
 from core.report_engine import build_structured_report
 from core.result_surface import build_project_surface_rows, build_review_surface_rows
 from core20.proof_labels import judge_label, proof_state_label, proof_type_label
+from core25.runtime_bridge import public_assignment_payload
 
 
 def _first(docs):return docs.iloc[0].to_dict() if not docs.empty else {}
@@ -39,12 +40,13 @@ def render(ctx):
     hero('Результаты','Только квалифицированные результаты проверки проекта.','Несоответствия · вопросы специалисту · подтверждённое соответствие')
     if docs.empty:return empty('Сначала выполните проверку проекта.')
     first=_first(docs); checklist=_checklist(first)
+    assignment_public, assignment_public_summary, assignment_runtime = public_assignment_payload(first)
     canonical=dict(first.get('canonical_core_20_manifest') or st.session_state.get('canonical_core_20_manifest') or {})
     normative20=dict(canonical.get('normative_execution') or {})
     normative20_rows=list(normative20.get('rows') or [])
     raw_comparisons=comparisons.to_dict('records') if not comparisons.empty else []
     ledger=build_qualified_result_ledger(
-        assignment_rows=list(first.get('assignment_compliance') or []),
+        assignment_rows=assignment_public,
         normative_rows=list(first.get('normative_compliance_audit') or []),
         checklist_rows=checklist,
         comparisons=raw_comparisons,

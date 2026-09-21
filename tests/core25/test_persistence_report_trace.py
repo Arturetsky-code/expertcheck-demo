@@ -171,9 +171,9 @@ def test_report_trace_row_pairs_binding_with_its_evidence():
     )
     evidence_2 = Evidence25(
         evidence_id="E2",
-        document="ТХ.pdf",
+        document="ПЗ.pdf",
         page=22,
-        fragment="Площадь модуля обеспыливания 23,5 м2",
+        fragment="Площадь здания проборазделки подтверждена как 89,9 м2",
         addressable=True,
         source_kind="PAGE_TEXT",
     )
@@ -188,7 +188,7 @@ def test_report_trace_row_pairs_binding_with_its_evidence():
         binding_id="B2",
         evidence_id="E2",
         state=BindingState.BOUND,
-        owner_id="MODULE-DUST",
+        owner_id="BUILDING-LAB",
         parameter_code="AREA",
     )
     proof = Proof25(

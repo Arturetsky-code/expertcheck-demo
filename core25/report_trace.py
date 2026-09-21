@@ -17,6 +17,8 @@ def _safe(value: Any) -> Any:
 
 
 def report_trace_row(result: VerificationResult25) -> dict[str, Any]:
+    if result.decision.is_categorical and not result.is_categorical_result_valid():
+        raise ValueError("categorical trace is invalid or incomplete")
     trace = result.trace
     proof = trace.proof
     evidence_by_id = {item.evidence_id: item for item in trace.evidence}
@@ -54,7 +56,7 @@ def report_trace_row(result: VerificationResult25) -> dict[str, Any]:
 
 def report_row(result: VerificationResult25) -> dict[str, Any]:
     """Return the public report mapping and fail closed on broken categorical traces."""
-    if result.decision.is_categorical and not result.trace.is_categorical_trace_valid():
+    if result.decision.is_categorical and not result.is_categorical_result_valid():
         raise ValueError("categorical trace is invalid or incomplete")
 
     trace_row = report_trace_row(result)

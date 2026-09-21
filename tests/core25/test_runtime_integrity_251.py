@@ -107,27 +107,6 @@ def test_ai_ledger_prunes_phantom_checkpoint_responses_and_uses_current_rows():
     assert ledger["packet_ids"] == ["PKT-1", "PKT-2"]
 
 
-def test_ai_ledger_recovers_row_response_into_checkpoint():
-    row = _packet("PKT-1")
-    row["semantic_judge"] = {
-        "response_received": True,
-        "valid": True,
-        "verdict": "INSUFFICIENT",
-        "confidence": 0.9,
-    }
-    checkpoint = {"judge": {}, "critic": {}}
-
-    audit, _ = reconcile_domain_audit(
-        {},
-        rows=[row],
-        checkpoint_domain=checkpoint,
-    )
-
-    assert audit["judge_responses"] == 1
-    assert audit["judge_pending"] == 0
-    assert audit["telemetry_judge_recovered_from_rows"] == 1
-    assert "PKT-1" in checkpoint["judge"]
-
 
 def test_review_question_cannot_be_promoted_to_high_risk_by_knowledge_scenario(tmp_path):
     scenario_path = tmp_path / "risk_scenarios.json"

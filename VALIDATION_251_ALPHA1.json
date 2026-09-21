@@ -1,14 +1,53 @@
 {
   "release": "ExpertCheck 25.1 Alpha 1",
   "branch": "codex/expertcheck-25.1-runtime-integrity",
-  "status": "NOT_READY_FOR_MANUAL_TEST",
+  "validated_code_head": "30cc031a34764191377398efccf184cdfbd153a5",
+  "validated_at": "2026-09-21",
+  "status": "READY_FOR_SHORT_MANUAL_INTEGRITY_TEST",
   "purpose": "Runtime integrity before coverage-first 25.2",
+  "tests": {
+    "core25": {
+      "passed": 80,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "core20_regression": {
+      "passed": 95,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "results_integrity": {
+      "passed": 17,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "legacy_full_repository_diagnostic": {
+      "passed": 521,
+      "known_failures": 32,
+      "fixture_bound": 3,
+      "obsolete": 4,
+      "baseline_existing": 25,
+      "unclassified_blockers": 0,
+      "status": "PASS_WITH_CLASSIFIED_BASELINE_DEBT"
+    },
+    "release_gate": {
+      "status": "SUCCESS"
+    }
+  },
   "gates": {
-    "core25_public_verdict_not_redowngraded": "PENDING_CI",
-    "ai_telemetry_matches_current_packet_rows": "PENDING_CI",
-    "review_risk_cannot_be_promoted_to_high": "PENDING_CI",
-    "completeness_state_separate_from_confirmation": "PENDING_CI",
-    "core25_regression": "PENDING_CI",
-    "core20_regression": "PENDING_CI"
-  }
+    "core25_public_verdict_not_redowngraded": "PASS",
+    "ai_telemetry_current_universe_integrity": "PASS",
+    "review_risk_cannot_be_promoted_to_high": "PASS",
+    "completeness_state_separate_from_confirmation": "PASS",
+    "core25_regression": "PASS",
+    "core20_regression": "PASS",
+    "results_report_integrity": "PASS"
+  },
+  "manual_scope": [
+    "Assignment UI/XLSX verdict parity",
+    "AI current-run attempts vs cumulative checkpoint counters",
+    "Actual completeness status vs user confirmation",
+    "Risk level cap for review-only findings"
+  ],
+  "full_coverage_test": "DEFERRED_TO_25.2_COVERAGE_BREAKTHROUGH"
 }

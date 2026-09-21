@@ -102,3 +102,46 @@ def test_runtime_bridge_routes_unsupported_requirement_to_review():
 
     assert payload["results"][0].decision.state is DecisionState.REVIEW
     assert payload["rows"][0]["final_verification_kind"] == "REVIEW_QUESTION"
+
+
+def test_public_assignment_payload_prefers_core25_and_never_silently_falls_back_on_runtime_error():
+    from core25.runtime_bridge import public_assignment_payload
+
+    legacy = [{"requirement_id": "R1", "status": "Соответствует заданию", "engine": "legacy"}]
+    core25 = [{"requirement_id": "R1", "status": "Требует проверки", "engine": "core25"}]
+
+    rows, summary, runtime = public_assignment_payload({
+        "assignment_compliance": legacy,
+        "assignment_compliance_summary": {"total": 1, "compliant": 1},
+        "assignment_core25_compliance": core25,
+        "assignment_core25_summary": {"total": 1, "compliant": 0, "unconfirmed": 1},
+        "assignment_core25_runtime": {"engine": "core25", "error": ""},
+    })
+    assert rows == core25
+    assert summary["unconfirmed"] == 1
+    assert runtime["engine"] == "core25"
+
+    rows, summary, runtime = public_assignment_payload({
+        "assignment_compliance": legacy,
+        "assignment_compliance_summary": {"total": 1, "compliant": 1},
+        "assignment_core25_compliance": [],
+        "assignment_core25_summary": {"total": 0, "error": "bridge failed"},
+        "assignment_core25_runtime": {"engine": "core25", "error": "bridge failed"},
+    })
+    assert rows == []
+    assert summary["error"] == "bridge failed"
+    assert runtime["error"] == "bridge failed"
+
+
+def test_legacy_snapshot_without_core25_payload_remains_readable():
+    from core25.runtime_bridge import public_assignment_payload
+
+    legacy = [{"requirement_id": "R1", "status": "Требует проверки"}]
+    rows, summary, runtime = public_assignment_payload({
+        "assignment_compliance": legacy,
+        "assignment_compliance_summary": {"total": 1, "unconfirmed": 1},
+    })
+
+    assert rows == legacy
+    assert summary["total"] == 1
+    assert runtime["engine"] == "legacy_snapshot"

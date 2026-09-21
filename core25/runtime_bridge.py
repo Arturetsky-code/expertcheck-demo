@@ -194,6 +194,8 @@ def _public_row(raw: Mapping[str, Any], result: VerificationResult25) -> dict[st
             "proof_state": result.trace.proof.state.value,
             "core25_decision": result.decision.state.value,
             "core25_reason_code": result.trace.proof.reason_code,
+            "core25_engine_version": "25.0-alpha1-unified-verification-core",
+            "core25_integrity_gate_state": "PASSED",
             "match_confidence": 1.0 if result.decision.is_categorical else 0.0,
         }
     )

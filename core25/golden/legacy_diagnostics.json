@@ -1,0 +1,13 @@
+{
+  "fixture_bound": [
+    "test_general_plan_engine.py::test_dsk_general_plan_explication_is_extracted",
+    "test_multisource_object_registry_73.py::test_four_real_general_plans_extract_core_explication_rows",
+    "test_multisource_object_registry_73.py::test_existing_gp_row_is_not_auto_included"
+  ],
+  "obsolete": [
+    "test_release_version_152a1.py::test_ui_and_core_identify_release_160",
+    "test_release_version_152a1.py::test_ui_and_core_identify_release_1525",
+    "test_release_version_152a1.py::test_ui_and_core_identify_release_1524",
+    "test_release_version_152a1.py::test_ui_and_core_identify_release_1522"
+  ]
+}

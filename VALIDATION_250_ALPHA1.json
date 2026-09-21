@@ -1,0 +1,53 @@
+{
+  "release": "ExpertCheck 25.0 Alpha 1",
+  "branch": "codex/expertcheck-25.0-quality-leap",
+  "validated_head": "08bdf47a60ccb369c9d97aec052c715699ff0bba",
+  "validated_at": "2026-09-21",
+  "tests": {
+    "core25": {
+      "command": "pytest tests/core25 -q",
+      "passed": 53,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "core20_regression": {
+      "command": "pytest test_core20_*.py -q",
+      "passed": 95,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "mandatory_focused_regressions": {
+      "command": "pytest test_evidence_driven_requirements_100.py test_evidence_provenance_96.py test_core20_alpha1012_evidence_quality.py test_core20_alpha1013_proof_trace.py -q",
+      "passed": 14,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "legacy_full_repository_diagnostic": {
+      "passed": 494,
+      "failed": 32,
+      "status": "DIAGNOSTIC_RED",
+      "note": "Contains historical mutually incompatible release tests and external-fixture-bound tests; failures are not yet fully classified against the 25.0 Alpha 1 acceptance contract."
+    },
+    "compile_core25": {
+      "command": "python -m compileall -q core25",
+      "status": "PASS"
+    }
+  },
+  "acceptance_gates": {
+    "assignment_requirements_56_represented": true,
+    "assignment_requirements_56_have_scope_and_route": true,
+    "categorical_requires_canonical_evidence": true,
+    "categorical_cross_owner_forbidden": true,
+    "toc_index_only_not_proof": true,
+    "categorical_trace_has_document_page_fragment": true,
+    "test78_golden_automated": true,
+    "targeted_core20_regressions_green": true,
+    "provider_judge_critic_only_non_categorical": true,
+    "persistence_preserves_canonical_trace": true
+  },
+  "release_gate": "NOT_READY",
+  "blockers": [
+    "Full historical repository suite is not green: 32 failures remain.",
+    "The 32 diagnostic failures must be classified as legacy-incompatible, external-fixture-only, or a real regression relevant to the 25.0 Alpha 1 contract before release status can become READY."
+  ]
+}

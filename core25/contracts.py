@@ -90,7 +90,8 @@ class Evidence25:
     @property
     def proof_eligible(self) -> bool:
         blocked_roles = {"TOC", "TABLE_OF_CONTENTS", "INDEX", "DOCUMENT_TITLE", "FILE_NAME_ONLY"}
-        role = (self.source_role or self.source_kind or "").strip().upper()
+        source_role = str(self.source_role or "").strip().upper()
+        source_kind = str(self.source_kind or "").strip().upper()
         return bool(
             self.addressable
             and self.canonical
@@ -98,7 +99,8 @@ class Evidence25:
             and isinstance(self.page, int)
             and self.page > 0
             and self.fragment.strip()
-            and role not in blocked_roles
+            and source_role not in blocked_roles
+            and source_kind not in blocked_roles
         )
 
 
@@ -150,6 +152,8 @@ class Decision25:
             return
         if self.proof.requirement_id != self.requirement_id:
             raise ValueError("Decision and proof must reference the same requirement")
+        if self.proof_id and self.proof_id != self.proof.proof_id:
+            raise ValueError("Decision proof_id must match concrete Proof25")
         if self.state is DecisionState.COMPLIANT and self.proof.state is not ProofState.PROVEN_MATCH:
             raise ValueError("COMPLIANT requires PROVEN_MATCH")
         if self.state is DecisionState.NONCOMPLIANT and self.proof.state is not ProofState.PROVEN_MISMATCH:
@@ -176,6 +180,10 @@ class Trace25:
     def is_categorical_trace_valid(self) -> bool:
         if not self.decision.is_categorical:
             return True
+        if self.requirement_id != self.proof.requirement_id:
+            return False
+        if self.requirement_id != self.decision.requirement_id:
+            return False
         if not self.proof.is_categorical:
             return False
         if self.decision.resolved_proof_id and self.decision.resolved_proof_id != self.proof.proof_id:
@@ -193,12 +201,16 @@ class Trace25:
         binding_by_id = {item.binding_id: item for item in self.bindings}
         if not self.proof.binding_ids:
             return False
+        bound_evidence_ids: set[str] = set()
         for binding_id in self.proof.binding_ids:
             item = binding_by_id.get(binding_id)
             if item is None or item.state is not BindingState.BOUND:
                 return False
             if item.evidence_id not in proof_evidence_ids:
                 return False
+            bound_evidence_ids.add(item.evidence_id)
+        if not proof_evidence_ids <= bound_evidence_ids:
+            return False
         return True
 
 
@@ -211,6 +223,38 @@ class VerificationResult25:
     @property
     def decision(self) -> Decision25:
         return self.trace.decision
+
+    def is_categorical_result_valid(self) -> bool:
+        if not self.decision.is_categorical:
+            return True
+        if self.requirement.requirement_id != self.trace.requirement_id:
+            return False
+        if not self.trace.is_categorical_trace_valid():
+            return False
+
+        binding_by_id = {item.binding_id: item for item in self.trace.bindings}
+        proof_bindings = [
+            binding_by_id[binding_id]
+            for binding_id in self.trace.proof.binding_ids
+            if binding_id in binding_by_id
+        ]
+        if len(proof_bindings) != len(self.trace.proof.binding_ids):
+            return False
+
+        if self.requirement.scope is Scope.OBJECT_SPECIFIC:
+            target_owner = str(self.requirement.target_object_id or "").strip()
+            if not target_owner:
+                return False
+            if any(binding.owner_id != target_owner for binding in proof_bindings):
+                return False
+
+        required_parameter = str(self.requirement.parameter_code or "").strip().upper()
+        if required_parameter and any(
+            str(binding.parameter_code or "").strip().upper() != required_parameter
+            for binding in proof_bindings
+        ):
+            return False
+        return True
 
 
 # ---------------------------------------------------------------------------

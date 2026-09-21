@@ -9,5 +9,32 @@
     "test_release_version_152a1.py::test_ui_and_core_identify_release_1525",
     "test_release_version_152a1.py::test_ui_and_core_identify_release_1524",
     "test_release_version_152a1.py::test_ui_and_core_identify_release_1522"
+  ],
+  "baseline_existing": [
+    "test_ai_continuation_ledger_1841.py::test_test77_style_migration_recovers_83_unique_packages_from_old_checkpoint",
+    "test_ai_resilience_readiness_1524.py::test_integrity_pass_does_not_claim_verification_is_complete",
+    "test_atomic_verification_110a1.py::test_clause_addressed_pp87_pack_is_verified_but_conservative",
+    "test_coverage_consensus_151a1.py::test_normative_registry_distinguishes_verified_unverified_and_missing",
+    "test_coverage_consensus_151a1.py::test_reports_expose_grouped_review_queue",
+    "test_coverage_verification_120a1.py::test_gip_report_shows_limitations_but_does_not_put_them_in_action_plan",
+    "test_cross_section_proof_th.py::test_th_owner_and_pz_control_create_verified_l5_without_ai",
+    "test_cross_section_proof_th.py::test_two_control_sections_cannot_replace_missing_th_owner",
+    "test_end_to_end_verification_150a2.py::test_external_packet_is_limited_to_four_short_evidence_fragments",
+    "test_evidence_contract_engine_111a1.py::test_pp87_p12_text_and_graphic_parts_are_checked_deterministically",
+    "test_evidence_quality_185.py::test_public_payload_uses_anchor_focused_window_not_first_720_chars",
+    "test_evidence_quality_185.py::test_entity_tokens_keep_short_project_code_and_drop_generic_noun",
+    "test_evidence_quality_185.py::test_completed_queue_reopens_from_assignment_result_when_atomic_graph_is_stale",
+    "test_executable_verification_150a1.py::test_l4_is_blocked_when_addressed_entity_does_not_match",
+    "test_executable_verification_150a1.py::test_technology_checklist_pack_is_active",
+    "test_project_data_contract_180.py::test_snapshot_roundtrip_enforces_contract_without_source_pdf",
+    "test_project_data_contract_180.py::test_ten_repeated_xlsx_and_snapshot_exports_are_stable",
+    "test_quality_leap_160.py::test_specialist_queue_is_topical_and_bounded",
+    "test_reliability_hotfix_1523.py::test_failed_quality_gate_forces_preliminary_xlsx_status_and_stable_question_id",
+    "test_reliability_snapshot_1522.py::test_xlsx_question_total_and_quality_gate_sheet_are_auditable",
+    "test_resilient_free_ai_181.py::test_semantic_roles_require_current_completed_qualification_for_l5",
+    "test_semantic_evidence_engine_140a1.py::test_independent_judge_and_critic_promote_only_to_l5",
+    "test_semantic_evidence_engine_140a1.py::test_explicit_conflict_survives_independent_consensus",
+    "test_semantic_evidence_engine_140a1.py::test_external_agent_payload_is_bounded_and_pseudonymised",
+    "test_verified_core_170.py::test_provider_ranking_excludes_unqualified_candidate_and_selects_stable_winner"
   ]
 }

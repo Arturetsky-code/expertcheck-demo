@@ -33,9 +33,28 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
+def _dump_payload(value: Any) -> str:
+    return json.dumps(
+        _json_safe(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
 def dump_result(result: VerificationResult25) -> str:
-    payload = _json_safe(asdict(result))
-    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    """Serialize one verification result.
+
+    Kept for compatibility with the first core25 persistence surface.
+    New callers that persist a run should use dump_results.
+    """
+    return _dump_payload(asdict(result))
+
+
+def dump_results(results: tuple[VerificationResult25, ...]) -> str:
+    """Serialize an ordered verification run without losing canonical trace data."""
+    return _dump_payload([asdict(result) for result in results])
 
 
 def _requirement(raw: Mapping[str, Any]) -> Requirement25:
@@ -106,8 +125,7 @@ def _proof(raw: Mapping[str, Any]) -> Proof25:
     )
 
 
-def load_result(payload: str) -> VerificationResult25:
-    raw = json.loads(payload)
+def _result(raw: Mapping[str, Any]) -> VerificationResult25:
     requirement = _requirement(raw["requirement"])
     trace_raw = raw["trace"]
     proof = _proof(trace_raw["proof"])
@@ -135,3 +153,21 @@ def load_result(payload: str) -> VerificationResult25:
         trace=trace,
         metadata=dict(raw.get("metadata") or {}),
     )
+
+
+def load_result(payload: str) -> VerificationResult25:
+    """Restore one result serialized by dump_result."""
+    raw = json.loads(payload)
+    if not isinstance(raw, Mapping):
+        raise ValueError("Single verification result payload must be a JSON object")
+    return _result(raw)
+
+
+def load_results(payload: str) -> tuple[VerificationResult25, ...]:
+    """Restore an ordered run serialized by dump_results."""
+    raw = json.loads(payload)
+    if not isinstance(raw, list):
+        raise ValueError("Verification results payload must be a JSON array")
+    if any(not isinstance(item, Mapping) for item in raw):
+        raise ValueError("Every verification result payload item must be a JSON object")
+    return tuple(_result(item) for item in raw)

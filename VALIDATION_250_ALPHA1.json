@@ -1,7 +1,7 @@
 {
   "release": "ExpertCheck 25.0 Alpha 1",
   "branch": "codex/expertcheck-25.0-quality-leap",
-  "validated_head": "cfde609b4adc09d592a4e9a69302c8ebd4e4dea3",
+  "validated_head": "e0197ab3f620e8d8c6a4d2a053a9fda98eb24a85",
   "validated_at": "2026-09-21",
   "tests": {
     "core25": {
@@ -69,6 +69,14 @@
       "verification": "95/95 Core20 regression tests and 14/14 focused regressions pass."
     }
   ],
-  "release_gate": "READY",
-  "blockers": []
+  "release_gate": "NOT_READY_FOR_MANUAL_TEST",
+  "blockers": [
+    "The Streamlit application runtime does not yet invoke core25.verify_assignment; current user-level analysis still runs the legacy/Core20 assignment path.",
+    "Manual Test 78 would therefore not validate the 25.0 Unified Verification Core until the runtime bridge is implemented and covered by integration tests."
+  ],
+  "runtime_integration": {
+    "workspace_context_startup_bug": "FIXED",
+    "core25_invoked_by_application": false,
+    "ui_version_label": "ExpertCheck 20.0 Alpha 10.1.3 · Proof Trace Consistency · Dual Run"
+  }
 }

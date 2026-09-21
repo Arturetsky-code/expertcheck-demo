@@ -5,7 +5,7 @@ Validated code HEAD: `cfde609b4adc09d592a4e9a69302c8ebd4e4dea3`
 
 ## Status
 
-**Release gate: READY**
+**Release gate: NOT_READY_FOR_MANUAL_TEST**
 
 The Alpha 1 Unified Verification Core satisfies all ten acceptance gates from the approved 25.0 design specification.
 
@@ -47,3 +47,12 @@ One small change remains in `core20/evidence_quality_1012.py`. It is not 25.0 ve
 ## Manual validation
 
 The automated Alpha 1 release gate is complete. The next useful step is the planned user-level manual control run (Test 78 / control package) against the 25.0 Alpha 1 build. Do not merge the draft PR into the stable 20.0 branch until that manual control run has been reviewed.
+
+
+## Runtime integration blocker discovered during first user launch
+
+The startup `AttributeError` on the «Мои проекты» page was traced to an incomplete `StudioContext ↔ WorkspaceStore` contract. The branch now passes `workspace_store` explicitly and uses the correct explicit `save_project` autosave signature.
+
+The same investigation exposed a more important release gap: the Streamlit application currently imports and runs the existing `core/pipeline.py` path and does **not** invoke `core25.verify_assignment`. The visible application version is still 20.0 Alpha 10.1.3. Therefore a user-level Test 78 run at this point would test the old runtime, not the new 25.0 Unified Verification Core.
+
+Manual validation is paused until the 25.0 runtime bridge is implemented, covered by integration tests, and the application visibly identifies the 25.0 Alpha 1 build.

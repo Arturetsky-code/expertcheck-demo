@@ -1,3 +1,7 @@
+from pathlib import Path
+
+from openpyxl import load_workbook
+
 from core25 import verify_assignment
 from core25.contracts import DecisionState, Domain, Evidence25, Requirement25, Scope
 
@@ -107,3 +111,89 @@ def test_unsupported_semantic_requirement_is_review_not_false_success():
 
     assert semantic.decision.state is DecisionState.REVIEW
     assert semantic.trace.proof.is_categorical is False
+
+
+def _control_assignment_requirements():
+    workbook_path = (
+        Path(__file__).resolve().parents[2]
+        / "validation_reports_150a2"
+        / "ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx"
+    )
+    workbook = load_workbook(workbook_path, read_only=True, data_only=True)
+    sheet = workbook["Задание на проектирование"]
+    rows = list(sheet.iter_rows(values_only=True))
+
+    header_hints = (
+        "id", "требован", "статус", "результ", "доказатель",
+        "объект", "показател", "основан",
+    )
+    scored = []
+    for index, row in enumerate(rows[:25]):
+        normalized = [str(value or "").strip().casefold() for value in row]
+        score = sum(
+            1 for value in normalized
+            if value and any(hint in value for hint in header_hints)
+        )
+        scored.append((score, index, normalized))
+    score, header_index, normalized_headers = max(scored, default=(0, -1, []))
+    assert score >= 2, f"Не найдена строка заголовков контрольного Задания: {scored!r}"
+
+    def _find_header(*needles, exclude=()):
+        for index, value in enumerate(normalized_headers):
+            if all(needle in value for needle in needles) and not any(
+                token in value for token in exclude
+            ):
+                return index
+        return None
+
+    id_index = (
+        _find_header("id", "требован")
+        if _find_header("id", "требован") is not None
+        else _find_header("id")
+    )
+    text_index = _find_header("требован", exclude=("id", "статус", "результ"))
+    if text_index is None:
+        text_index = _find_header("строк", "задан")
+    assert text_index is not None, (
+        "Не найдена колонка текста требования в контрольном отчёте: "
+        f"{normalized_headers!r}"
+    )
+
+    requirements = []
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
+        text = str(row[text_index] or "").strip() if text_index < len(row) else ""
+        if not text:
+            continue
+        requirement_id = ""
+        if id_index is not None and id_index < len(row):
+            requirement_id = str(row[id_index] or "").strip()
+        requirements.append(
+            {
+                "requirement_id": requirement_id or f"CONTROL-{row_number:03d}",
+                "requirement_text": text,
+            }
+        )
+    workbook.close()
+    return tuple(requirements), tuple(normalized_headers)
+
+
+def test_control_package_routes_all_56_assignment_requirements():
+    requirements, headers = _control_assignment_requirements()
+    assert len(requirements) == 56, (
+        f"Ожидалось 56 требований контрольного Задания, получено {len(requirements)}; "
+        f"заголовки={headers!r}"
+    )
+
+    results = verify_assignment(requirements, (), {})
+
+    assert len(results) == 56
+    assert all(result.metadata.get("route_kind") for result in results)
+    assert all(result.requirement.scope.value for result in results)
+    assert all(
+        result.requirement.verification_kind
+        or result.metadata.get("route_kind") == "REVIEW_ONLY"
+        for result in results
+    )
+    for result in results:
+        if result.decision.state in {DecisionState.COMPLIANT, DecisionState.NONCOMPLIANT}:
+            assert result.trace.is_categorical_trace_valid() is True

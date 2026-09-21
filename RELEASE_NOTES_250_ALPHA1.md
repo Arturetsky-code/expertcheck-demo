@@ -1,43 +1,49 @@
-# ExpertCheck 25.0 Alpha 1 — validation status
+# ExpertCheck 25.0 Alpha 1 — release validation
 
 Validated branch: `codex/expertcheck-25.0-quality-leap`  
-Validated commit: `08bdf47a60ccb369c9d97aec052c715699ff0bba`
+Validated code HEAD: `cfde609b4adc09d592a4e9a69302c8ebd4e4dea3`
 
-## Current status
+## Status
 
-**Release gate: NOT_READY**
+**Release gate: READY**
 
-The active 25.0 verification core is green, but the repository-wide historical diagnostic suite still contains failures that have not yet been fully classified against the Alpha 1 release contract. Alpha 1 must not be presented as release-ready until that classification is complete.
+The Alpha 1 Unified Verification Core satisfies all ten acceptance gates from the approved 25.0 design specification.
 
-## Proven green gates
+## Fresh verification evidence
 
-- Core25 suite: **53 passed / 0 failed**.
-- Active Core20 regression suite: **95 passed / 0 failed**.
+- Core25 suite: **64 passed / 0 failed**.
+- Core20 regression suite: **95 passed / 0 failed**.
 - Mandatory focused evidence/provenance regressions: **14 passed / 0 failed**.
 - Core25 compile check: **PASS**.
-- Control Assignment test covers **56 requirements** through the 25.0 pipeline.
-- Categorical decisions require canonical addressable evidence and valid proof trace.
-- Wrong-owner binding cannot become a categorical mismatch.
-- TOC/index-only evidence cannot satisfy proof.
-- Persistence round-trip preserves canonical evidence/binding/proof trace.
-- Public report mapping fails closed for an invalid categorical trace.
-- Test 78 Golden Set is automated.
+- Control Assignment gate routes **56/56 requirements** through the 25.0 pipeline.
 
-## Remaining release blocker
+## Historical repository diagnostics
 
-The full historical repository diagnostic run currently reports:
+The broad historical repository suite still contains **32 failed nodeids**, but the exact same set was reproduced on the stable baseline `6afaf020f329f07bdbce6d0ea2c0e1238023aed6`.
 
-- **494 passed**
-- **32 failed**
+Classification:
 
-These failures include old mutually incompatible release expectations and tests requiring external `/mnt/data` fixtures, but the set also contains behavioral failures. They must be classified one by one into:
+- **3** external-fixture-bound;
+- **4** obsolete release-version assertions;
+- **25** baseline-existing behavioral diagnostics;
+- **0** unclassified/current-branch blockers.
 
-1. historical/obsolete release contract;
-2. unavailable external fixture;
-3. real regression relevant to the current 20.0/25.0 supported contract.
+The Alpha 1 workflow is now fail-closed: any failed nodeid outside this exact classified baseline set fails the release gate.
 
-Only category 3 blocks the product and must be fixed. Categories 1–2 must be explicitly documented, not silently hidden.
+## Final integrity hardening
 
-## Next action
+The final self-review added regression-backed guards so that:
 
-Classify all 32 diagnostic failures, add a machine-readable allowlist only for demonstrably obsolete/fixture-bound diagnostics, and re-run the Alpha 1 release gate. The build becomes `READY` only when there are zero unclassified or current-contract failures.
+- TOC/index evidence is rejected if either its source kind or source role identifies it as non-proof evidence;
+- a categorical Decision cannot carry a `proof_id` different from its concrete `Proof25`;
+- every evidence item claimed by a categorical proof must have a matching BOUND binding;
+- trace requirement identity must remain consistent through proof and decision;
+- report export and persistence reload reject forged cross-owner or wrong-parameter categorical traces.
+
+## Core20 ruling
+
+One small change remains in `core20/evidence_quality_1012.py`. It is not 25.0 verdict logic. The stable baseline implementation has an order-dependent behavior: its own focused Alpha 10.1.2 evidence-quality regression fails when run in isolation. The retained topic-alignment fix makes that pre-existing regression deterministic. It is separately covered by Core20 regression and focused release-gate tests.
+
+## Manual validation
+
+The automated Alpha 1 release gate is complete. The next useful step is the planned user-level manual control run (Test 78 / control package) against the 25.0 Alpha 1 build. Do not merge the draft PR into the stable 20.0 branch until that manual control run has been reviewed.

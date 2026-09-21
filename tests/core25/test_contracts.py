@@ -114,3 +114,123 @@ def test_categorical_trace_rejects_binding_for_different_evidence():
     )
 
     assert trace.is_categorical_trace_valid() is False
+
+
+def test_proof_eligible_blocks_toc_source_kind_even_with_benign_source_role():
+    evidence = Evidence25(
+        evidence_id="E-TOC-MIXED",
+        document="ПЗ.pdf",
+        page=2,
+        fragment="1 Общие сведения",
+        addressable=True,
+        canonical=True,
+        source_kind="TABLE_OF_CONTENTS",
+        source_role="PAGE_TEXT",
+    )
+    assert evidence.proof_eligible is False
+
+
+def test_decision_rejects_conflicting_explicit_proof_id():
+    proof = Proof25(
+        proof_id="P-CANONICAL",
+        requirement_id="R-PROOF-ID",
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=("E1",),
+        binding_ids=("B1",),
+    )
+    with pytest.raises(ValueError, match="proof_id"):
+        Decision25(
+            decision_id="D-PROOF-ID",
+            requirement_id="R-PROOF-ID",
+            state=DecisionState.COMPLIANT,
+            proof=proof,
+            proof_id="P-OTHER",
+        )
+
+
+def test_categorical_trace_requires_bound_binding_for_every_proof_evidence():
+    evidence_1 = Evidence25(
+        evidence_id="E1",
+        document="ПЗ.pdf",
+        page=10,
+        fragment="Проектом предусмотрена площадь 89,9 м2",
+        addressable=True,
+        source_kind="PAGE_TEXT",
+    )
+    evidence_2 = Evidence25(
+        evidence_id="E2",
+        document="АР.pdf",
+        page=11,
+        fragment="Проектом подтверждена площадь 89,9 м2",
+        addressable=True,
+        source_kind="PAGE_TEXT",
+    )
+    binding_1 = Binding25(
+        binding_id="B1",
+        evidence_id="E1",
+        state=BindingState.BOUND,
+        owner_id="OBJ-1",
+        parameter_code="AREA",
+    )
+    proof = Proof25(
+        proof_id="P1",
+        requirement_id="R1",
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=("E1", "E2"),
+        binding_ids=("B1",),
+    )
+    decision = Decision25(
+        decision_id="D1",
+        requirement_id="R1",
+        state=DecisionState.COMPLIANT,
+        proof=proof,
+        proof_id="P1",
+    )
+    trace = Trace25(
+        requirement_id="R1",
+        evidence=(evidence_1, evidence_2),
+        bindings=(binding_1,),
+        proof=proof,
+        decision=decision,
+    )
+    assert trace.is_categorical_trace_valid() is False
+
+
+def test_categorical_trace_rejects_requirement_id_mismatch():
+    evidence = Evidence25(
+        evidence_id="E1",
+        document="ПЗ.pdf",
+        page=10,
+        fragment="Проектом предусмотрена площадь 89,9 м2",
+        addressable=True,
+        source_kind="PAGE_TEXT",
+    )
+    binding = Binding25(
+        binding_id="B1",
+        evidence_id="E1",
+        state=BindingState.BOUND,
+        owner_id="OBJ-1",
+        parameter_code="AREA",
+    )
+    proof = Proof25(
+        proof_id="P1",
+        requirement_id="R1",
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=("E1",),
+        binding_ids=("B1",),
+    )
+    decision = Decision25(
+        decision_id="D1",
+        requirement_id="R1",
+        state=DecisionState.COMPLIANT,
+        proof=proof,
+        proof_id="P1",
+    )
+    trace = Trace25(
+        requirement_id="R-OTHER",
+        evidence=(evidence,),
+        bindings=(binding,),
+        proof=proof,
+        decision=decision,
+    )
+    assert trace.is_categorical_trace_valid() is False

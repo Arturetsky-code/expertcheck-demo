@@ -183,24 +183,14 @@ def reconcile_domain_audit(
     row_judge = _row_response_lane(row_list, "judge")
     row_critic = _row_response_lane(row_list, "critic")
 
-    # Recover auditable row responses into the checkpoint. The checkpoint is the
-    # durable source of truth for completed provider calls, while the *current
-    # eligible packet universe* decides which checkpoint ids are still valid.
-    # Do not require every durable response to be copied back onto the row:
-    # continuation/primary-run summaries may retain valid checkpoint responses
-    # even when the current execution_log only describes the latest slice.
+    # The checkpoint is the durable source of truth for completed provider
+    # calls, while the *current eligible packet universe* decides which cached
+    # ids are still valid. Row-level semantic responses are diagnostic here:
+    # contract-aware recovery/reopening is performed by semantic_continuation
+    # before this ledger is reconciled.
     recovered_judge = 0
     recovered_critic = 0
     if current_packet_ids:
-        for packet_id, payload in row_judge.items():
-            if packet_id in current_packet_ids and packet_id not in judge_lane:
-                judge_lane[packet_id] = dict(payload)
-                recovered_judge += 1
-        for packet_id, payload in row_critic.items():
-            if packet_id in current_packet_ids and packet_id not in critic_lane:
-                critic_lane[packet_id] = dict(payload)
-                recovered_critic += 1
-
         stale_judge_ids = {
             str(packet_id) for packet_id in list(judge_lane)
             if str(packet_id) not in current_packet_ids
@@ -244,9 +234,10 @@ def reconcile_domain_audit(
         if packet_id in validated_observed:
             if packet_id in validated_required:
                 critic_required_ids.add(packet_id)
-        elif not current_packet_ids and _requires_critic(value):
-            # Compatibility only for legacy snapshots without current row
-            # validation metadata.
+        elif _requires_critic(value):
+            # The checkpoint verdict is durable evidence of a completed current
+            # Judge call when the packet id still belongs to the current
+            # universe. Row-level validation metadata is preferred when present.
             critic_required_ids.add(packet_id)
 
     critic_required_ids.update(set(critic).intersection(packet_ids))

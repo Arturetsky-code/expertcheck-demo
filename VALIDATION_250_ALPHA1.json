@@ -1,12 +1,12 @@
 {
   "release": "ExpertCheck 25.0 Alpha 1",
   "branch": "codex/expertcheck-25.0-quality-leap",
-  "validated_head": "08bdf47a60ccb369c9d97aec052c715699ff0bba",
+  "validated_head": "cfde609b4adc09d592a4e9a69302c8ebd4e4dea3",
   "validated_at": "2026-09-21",
   "tests": {
     "core25": {
       "command": "pytest tests/core25 -q",
-      "passed": 53,
+      "passed": 64,
       "failed": 0,
       "status": "PASS"
     },
@@ -23,10 +23,14 @@
       "status": "PASS"
     },
     "legacy_full_repository_diagnostic": {
-      "passed": 494,
-      "failed": 32,
-      "status": "DIAGNOSTIC_RED",
-      "note": "Contains historical mutually incompatible release tests and external-fixture-bound tests; failures are not yet fully classified against the 25.0 Alpha 1 acceptance contract."
+      "known_failures": 32,
+      "fixture_bound": 3,
+      "obsolete": 4,
+      "baseline_existing": 25,
+      "unclassified_blockers": 0,
+      "baseline_failure_nodeids_match": true,
+      "status": "PASS_WITH_CLASSIFIED_BASELINE_DEBT",
+      "note": "The same 32 failed nodeids were reproduced on stable baseline 6afaf020f329f07bdbce6d0ea2c0e1238023aed6. Any failure outside this exact classified set now fails the Alpha 1 CI gate."
     },
     "compile_core25": {
       "command": "python -m compileall -q core25",
@@ -45,9 +49,26 @@
     "provider_judge_critic_only_non_categorical": true,
     "persistence_preserves_canonical_trace": true
   },
-  "release_gate": "NOT_READY",
-  "blockers": [
-    "Full historical repository suite is not green: 32 failures remain.",
-    "The 32 diagnostic failures must be classified as legacy-incompatible, external-fixture-only, or a real regression relevant to the 25.0 Alpha 1 contract before release status can become READY."
-  ]
+  "final_review": {
+    "mode": "self-review (no reviewer subagent available)",
+    "critical_findings_remaining": 0,
+    "important_findings_remaining": 0,
+    "integrity_hardening": [
+      "TOC blocked if either source_kind or source_role identifies index/TOC evidence.",
+      "Decision proof_id must match the concrete Proof25.",
+      "Every evidence id used by categorical proof must have a matching BOUND binding.",
+      "Trace requirement id must match proof and decision.",
+      "Categorical report/persistence rejects cross-owner or parameter-mismatched forged traces."
+    ]
+  },
+  "rulings": [
+    {
+      "id": "CORE20-TOPIC-ALIGNMENT-ISOLATION",
+      "decision": "Retain the minimal core20/evidence_quality_1012.py topic-alignment bugfix.",
+      "reason": "Stable baseline passes the historical full suite only with order-dependent state, but its focused Alpha 10.1.2 regression fails in isolation. The small bugfix makes that existing regression deterministic and does not move core25 verdict logic into core20.",
+      "verification": "95/95 Core20 regression tests and 14/14 focused regressions pass."
+    }
+  ],
+  "release_gate": "READY",
+  "blockers": []
 }

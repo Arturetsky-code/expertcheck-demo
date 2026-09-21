@@ -576,13 +576,13 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Настроенная контрольная модель':audit.get('configured_critic_provider') or 'Не настроен',
             'Готово атомарных пакетов L4':audit.get('judge_candidates',0),
             'Отобрано для проверяющей модели':audit.get('judge_selected',0),
-            'Фактически отправлено проверяющей модели':audit.get('judge_attempted',0),
+            'Отправлено проверяющей модели в текущем запуске':audit.get('judge_attempted',0),
             'Возобновлено из снимка':audit.get('judge_checkpoint_reused',0),
             'Осталось в очереди':audit.get(
                 'queue_remaining',
                 int(audit.get('judge_pending',0) or 0) + int(audit.get('not_selected',0) or 0),
             ),
-            'Фактически отправлено контрольной модели':audit.get('critic_attempted',0),
+            'Отправлено контрольной модели в текущем запуске':audit.get('critic_attempted',0),
             'Ответов Critic возобновлено из снимка':audit.get('critic_checkpoint_reused',0),
             'Осталось у Critic':audit.get('critic_pending',0),
             'Предварительная проверка основной модели':ru_label(judge_preflight.get('state') or 'NOT_REQUIRED'),
@@ -599,6 +599,11 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
             'Заблокировано контролем':audit.get('blocked_consensus',0),
             'Причина неактивности':_safe_join(audit.get('activation_reasons')),
             'Причина консультативного режима':_safe_join(audit.get('advisory_reasons')),
+            'Целостность AI-телеметрии':ru_label(audit.get('telemetry_integrity_state') or 'NOT_CHECKED'),
+            'Удалено устаревших ответов Judge':audit.get('telemetry_stale_judge_pruned',0),
+            'Удалено устаревших ответов Critic':audit.get('telemetry_stale_critic_pruned',0),
+            'Восстановлено ответов Judge из строк':audit.get('telemetry_judge_recovered_from_rows',0),
+            'Восстановлено ответов Critic из строк':audit.get('telemetry_critic_recovered_from_rows',0),
             'Ошибки проверяющей модели — кратко':_ai_error_summary(audit.get('judge_errors') or []),
             'Ошибки контрольной модели — кратко':_ai_error_summary(audit.get('critic_errors') or []),
         })
@@ -786,7 +791,13 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         semantic_packages_pending=min(semantic_candidates, semantic_pending)
         semantic_packages_complete=max(0, semantic_candidates-semantic_packages_pending)
     semantic_completion_pct=round(100*semantic_packages_complete/max(1,semantic_candidates),1)
+    completeness_status=str(summary.get('completeness') or 'Не определена')
+    completeness_confirmed=bool(summary.get('completeness_confirmed',first_record.get('completeness_user_confirmed')))
+    completeness_coverage=summary.get('completeness_coverage')
+    completeness_missing=int(summary.get('completeness_missing') or 0)
     readiness_reasons=[]
+    if completeness_status in {'Неполный комплект','Требует уточнения','Комплект формируется'}:
+        readiness_reasons.append(f'комплектность: {completeness_status.lower()}')
     if total_review_questions:
         readiness_reasons.append(f'вопросов специалисту: {total_review_questions}')
     if total_system_limitations:
@@ -802,8 +813,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if total_system_limitations:
         conclusion_parts.append(f"Проверок вне текущего автоматического покрытия: {total_system_limitations}.")
     final_conclusion=' '.join(conclusion_parts) or report['conclusion']
-    if summary.get('completeness')!='Подтверждена':
-        report_status='Предварительный — состав/комплектность проекта не подтверждены пользователем'
+    if not completeness_confirmed:
+        report_status='Предварительный — состояние комплектности не подтверждено пользователем'
     elif report_quality_gate.get('status')!='PASSED':
         report_status='Предварительный — Quality Gate отчёта не пройден'
     elif verification_readiness!='Завершена':
@@ -812,8 +823,8 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         report_status='Итоговый — проверка завершена'
     if report_status.startswith('Предварительный'):
         reason=(
-            'окончательный вывод удержан до подтверждения состава и комплектности проекта'
-            if summary.get('completeness')!='Подтверждена'
+            'окончательный вывод удержан до подтверждения пользователем состояния матрицы комплектности'
+            if not completeness_confirmed
             else 'окончательный вывод удержан, потому что Quality Gate отчёта не пройден'
         )
         final_conclusion=f'Предварительный результат: {reason}. '+final_conclusion
@@ -825,7 +836,10 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['Целостность отчёта', 'Пройдена' if report_quality_gate.get('status')=='PASSED' else 'Не пройдена'],
         ['Готовность проверки', verification_readiness],
         ['Причины неполноты', '; '.join(readiness_reasons) if readiness_reasons else '—'],
-        ['Комплектность', summary['completeness']],
+        ['Комплектность', completeness_status],
+        ['Матрица комплектности подтверждена пользователем', 'Да' if completeness_confirmed else 'Нет'],
+        ['Покрытие комплектности, %', completeness_coverage if completeness_coverage is not None else '—'],
+        ['Базово обязательных разделов не загружено', completeness_missing],
         ['Загружено документов', summary['documents']],
         ['Подтверждено объектов', summary.get('objects_confirmed',summary['objects'])],
         ['Объектов требуют подтверждения источника', summary.get('objects_unresolved',0)],
@@ -841,6 +855,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         ['AI-пакетов осталось', semantic_packages_pending],
         ['Ответов Judge получено', semantic_responses],
         ['Ответов Critic получено', semantic_critic_responses],
+        ['Целостность AI-телеметрии', (
+            'Исправлена' if any(
+                str((semantic_engine_summary.get(code) or {}).get('telemetry_integrity_state') or '').upper()=='REPAIRED'
+                for code in ('assignment','checklist')
+            ) else 'Пройдена'
+        )],
         ['AI-операций осталось', semantic_pending],
         ['Выполнение AI-очереди по завершённым пакетам, %', semantic_completion_pct],
         ['Задание: покрытие автоматической проверки, %', assignment_plan.get('coverage_pct',0)],
@@ -877,11 +897,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
     if report_kind=='manager':
         manager_metrics={
             'Наименование проекта','Дата и время проверки','Версия ExpertCheck','Статус отчёта','Комплектность',
+            'Матрица комплектности подтверждена пользователем','Покрытие комплектности, %','Базово обязательных разделов не загружено',
             'Загружено документов','Подтверждено объектов','Объектов требуют подтверждения источника','Подтверждённых несоответствий проекта',
             'Вопросов специалисту','Задание: покрытие автоматической проверки, %',
             'Проверок вне автоматического покрытия',
             'Строгое покрытие L5, %','Покрытие найденными кандидатами L3–L5, %','Проверок с независимым AI-консенсусом',
-            'Консультативных AI-оценок без L5',
+            'Консультативных AI-оценок без L5','Целостность AI-телеметрии',
             'AI-пакетов подготовлено','AI-пакетов обработано','Выполнение AI-очереди, %',
             'Задание: покрытие найденными кандидатами L3–L5, %','Чек-листы: покрытие найденными кандидатами L3–L5, %',
             'НТД: покрытие доказательной проверки, %','Чек-листы: покрытие автоматической проверки, %',

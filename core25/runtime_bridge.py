@@ -199,7 +199,7 @@ def _public_row(raw: Mapping[str, Any], result: VerificationResult25) -> dict[st
             "proof_state": result.trace.proof.state.value,
             "core25_decision": result.decision.state.value,
             "core25_reason_code": result.trace.proof.reason_code,
-            "core25_engine_version": "25.0-alpha1-unified-verification-core",
+            "core25_engine_version": "25.2-alpha1-coverage-breakthrough",
             "core25_integrity_gate_state": "PASSED",
             "match_confidence": 1.0 if result.decision.is_categorical else 0.0,
         }
@@ -233,11 +233,11 @@ def run_assignment_runtime(
     categorical = summary["compliant"] + summary["deviation"]
     summary["evidence_coverage_pct"] = round(100.0 * categorical / max(1, summary["total"]), 1)
     summary["engine"] = "core25"
-    summary["engine_version"] = "25.0-alpha1-unified-verification-core"
+    summary["engine_version"] = "25.2-alpha1-coverage-breakthrough"
 
     return {
         "engine": "core25",
-        "engine_version": "25.0-alpha1-unified-verification-core",
+        "engine_version": "25.2-alpha1-coverage-breakthrough",
         "results": tuple(results),
         "rows": rows,
         "summary": summary,

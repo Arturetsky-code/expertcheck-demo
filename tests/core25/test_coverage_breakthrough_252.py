@@ -277,3 +277,69 @@ def test_modular_building_and_canopy_requirements_get_profile_sections():
     assert infer_expected_sections(
         {"requirement_text": "Навес системы подачи извести выполнить открытым."}
     ) == ["АР", "ПЗ"]
+
+
+def test_contractual_handover_materials_are_not_assignment_design_requirements(tmp_path):
+    import fitz
+    from core.assignment_compliance import extract_requirements
+    from core.project_upload import PreparedUpload
+    import legacy_analyzer
+
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.insert_text((72, 72), "Задание на проектирование")
+    page.insert_text((72, 100), "Количество и формат представляемых материалов")
+    page.insert_text((72, 128), "После получения положительных заключений экспертиз Исполнитель передает Заказчику окончательную версию проектной документации")
+    data = pdf.tobytes()
+    pdf.close()
+    upload = PreparedUpload(name="Задание на проектирование.pdf", data=data, declared_document_type="Задание на проектирование")
+    rows = extract_requirements([upload], legacy_analyzer.read_pdf)
+    assert not any("передает Заказчику окончательную версию" in row.get("requirement_text", "") for row in rows)
+
+
+def test_negative_applicability_requires_same_local_clause():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "PROHIBITION_OR_NOT_REQUIRED",
+        "source_row_title": "Требования к разработке специальных технических условий",
+        "requirement_text": "Разработка не требуется",
+        "evidence_contract_v2": {"expected_sections": []},
+    }
+    unrelated = [{
+        "document": "ПЗ.pdf", "document_type": "ПЗ", "page": 10,
+        "text": "Требования к разработке специальных технических условий рассматриваются отдельно.\nВозмещение убытков не требуется.",
+    }]
+    result = verify_assignment_requirement(requirement, unrelated)
+    assert result is None or result.get("status") != "Соответствует заданию"
+
+    same_clause = [{
+        "document": "ПЗ.pdf", "document_type": "ПЗ", "page": 11,
+        "text": "Разработка специальных технических условий\nне требуется.",
+    }]
+    result = verify_assignment_requirement(requirement, same_clause)
+    assert result and result.get("status") == "Соответствует заданию"
+
+
+def test_construction_duration_design_determined_requires_actual_duration_value():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "DESIGN_DETERMINED",
+        "source_row_title": "Срок строительства объекта",
+        "requirement_text": "Определить проектной документацией",
+        "evidence_contract_v2": {"expected_sections": []},
+    }
+    toc_only = [{
+        "document": "ПЗ.pdf", "document_type": "ПЗ", "page": 2,
+        "text": "Содержание. Срок строительства объекта. Проектом предусмотрено строительство объекта.",
+    }]
+    result = verify_assignment_requirement(requirement, toc_only)
+    assert result is None or result.get("status") != "Соответствует заданию"
+
+    actual = [{
+        "document": "ПЗ.pdf", "document_type": "ПЗ", "page": 20,
+        "text": "Срок строительства объекта проектом предусмотрен 8 месяцев.",
+    }]
+    result = verify_assignment_requirement(requirement, actual)
+    assert result and result.get("status") == "Соответствует заданию"

@@ -30,8 +30,8 @@ def test_streamlit_build_identifies_25_alpha1_and_assignment_surfaces_use_core25
     data = _source("studio/data.py")
     results = _source("studio/pages/results_center.py")
 
-    assert "ExpertCheck 25.2 Alpha 1" in app
-    assert "Coverage Breakthrough" in app
+    assert "ExpertCheck 25.2 Alpha 2" in app
+    assert "Evidence Admission Breakthrough" in app
     assert "public_assignment_payload" in project
     assert "public_assignment_payload" in data
     assert "public_assignment_payload" in results

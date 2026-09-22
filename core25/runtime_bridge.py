@@ -122,6 +122,11 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "owner_match": candidate.get("owner_match"),
                     "unit_compatible": candidate.get("unit_compatible"),
                     "legacy_evidence_kind": candidate.get("evidence_kind"),
+                    "coverage_executor": candidate.get("coverage_executor"),
+                    "negative_assertion": candidate.get("negative_assertion"),
+                    "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
+                    "matched_terms": tuple(candidate.get("matched_terms") or ()),
+                    "concept": candidate.get("concept"),
                 },
             )
         )

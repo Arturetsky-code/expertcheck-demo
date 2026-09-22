@@ -284,7 +284,7 @@ def _parameter(sentence:str):
 
 def _repair_pdf_hyphenation(text:str)->str:
     """Repair line-wrap hyphenation without touching real compound words."""
-    return re.sub(r"(?<=[А-Яа-яЁё])-\\s+(?=[а-яё])", "", str(text or ""))
+    return re.sub(r"(?<=[А-Яа-яЁё])-\s+(?=[а-яё])", "", str(text or ""))
 
 
 def _primary_negative_requirement(text:str)->bool:

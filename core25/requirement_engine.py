@@ -54,6 +54,11 @@ def normalize_scope(
     kind = _upper(verification_kind)
     if any(marker in kind for marker in _OBJECT_KIND_MARKERS):
         return Scope.OBJECT_SPECIFIC
+    # 25.2 Alpha 2: requirements that are semantically non-object-specific
+    # must not fail binding merely because the legacy extractor could not assign
+    # a UI scope label. Evidence still has to pass section/canonical/proof gates.
+    if kind in {"PRESENCE", "NEGATIVE_ASSERTION", "NORMATIVE_ASSERTION"}:
+        return Scope.PROJECT_GLOBAL
     return Scope.UNRESOLVED
 
 

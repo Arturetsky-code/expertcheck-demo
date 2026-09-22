@@ -400,6 +400,15 @@ def extract_requirements(files,reader,page_corpus:list[dict[str,Any]]|None=None)
             sentence=_repair_pdf_hyphenation(atom["text"])
             title=_repair_pdf_hyphenation(atom.get("row_title") or "")
             low=normalize_text(sentence)
+            # Contractual handover/format obligations belong to the project-delivery
+            # contract, not to design-compliance verification. Keeping them in the
+            # Assignment denominator produced a spurious 57th Test 78 requirement.
+            title_low=normalize_text(title)
+            if (
+                "количество и формат представляемых материалов" in title_low
+                or ("положительн" in low and "заключен" in low and "передает заказчику" in low)
+            ):
+                continue
             obj=_object_name(sentence,title); code,value,unit=_parameter(sentence)
             req_type=_requirement_type(sentence,title,code,value)
             has_requirement_verb=any(v in low for v in REQ_VERBS)

@@ -571,11 +571,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         "total": 0, "compliant": 0, "deviation": 0,
         "unconfirmed": 0, "semantic": 0, "not_checked": 0,
         "evidence_coverage_pct": 0.0, "engine": "core25",
-        "engine_version": "25.0-alpha1-unified-verification-core",
+        "engine_version": "25.2-alpha1-coverage-breakthrough",
     }
     assignment_core25_runtime = {
         "engine": "core25",
-        "engine_version": "25.0-alpha1-unified-verification-core",
+        "engine_version": "25.2-alpha1-coverage-breakthrough",
         "error": "",
     }
     try:
@@ -598,7 +598,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             assignment_core25_summary = dict(core25_payload.get("summary") or {})
             assignment_core25_runtime = {
                 "engine": str(core25_payload.get("engine") or "core25"),
-                "engine_version": str(core25_payload.get("engine_version") or "25.0-alpha1-unified-verification-core"),
+                "engine_version": str(core25_payload.get("engine_version") or "25.2-alpha1-coverage-breakthrough"),
                 "error": "",
             }
         except Exception as core25_exc:
@@ -612,12 +612,12 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
                 "not_checked": len(assignment_requirements),
                 "evidence_coverage_pct": 0.0,
                 "engine": "core25",
-                "engine_version": "25.0-alpha1-unified-verification-core",
+                "engine_version": "25.2-alpha1-coverage-breakthrough",
                 "error": f"{type(core25_exc).__name__}: {core25_exc}",
             }
             assignment_core25_runtime = {
                 "engine": "core25",
-                "engine_version": "25.0-alpha1-unified-verification-core",
+                "engine_version": "25.2-alpha1-coverage-breakthrough",
                 "error": f"{type(core25_exc).__name__}: {core25_exc}",
             }
             pipeline_errors.append({

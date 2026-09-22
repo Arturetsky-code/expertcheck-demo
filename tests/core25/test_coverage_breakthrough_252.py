@@ -112,3 +112,106 @@ def test_unverified_candidate_never_becomes_core25_proof():
     payload = run_assignment_runtime([req])
     row = payload["rows"][0]
     assert row["final_verification_kind"] == "REVIEW_QUESTION"
+
+
+def test_unresolved_negative_requirement_is_safe_project_global_and_closes():
+    req = {
+        "requirement_id": "REQ-NEG-UNRESOLVED",
+        "requirement_text": "Разработка отдельного раздела не требуется.",
+        "requirement_type": "PROHIBITION_OR_NOT_REQUIRED",
+        "requirement_scope": "UNRESOLVED",
+        "directed_evidence_candidates": [{
+            "evidence_state": "verified_candidate",
+            "evidence_kind": "QUALIFIED_NEGATIVE_APPLICABILITY",
+            "negative_assertion": True,
+            "document": "Раздел ПД №1_ПЗ.pdf",
+            "document_type": "ПЗ",
+            "page": 18,
+            "context": "Разработка отдельного раздела не требуется.",
+            "score": 97,
+        }],
+    }
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["core25_admission_stage"] == "PROVEN"
+    assert row["core25_binding_counts"]["BOUND"] == 1
+
+
+def test_exact_requirement_owner_wins_over_duplicate_registry_alias_ids():
+    req = {
+        "requirement_id": "REQ-DSK-CAPACITY",
+        "requirement_text": "Установить ДСК суммарной производительностью 500 т/ч.",
+        "requirement_type": "VALUE_COMPARISON",
+        "requirement_scope": "OBJECT_SPECIFIC",
+        "object_id": "REQ-DSK-ID",
+        "object_name": "ДСК",
+        "parameter_code": "CAPACITY",
+        "required_value": 500,
+        "unit": "т/ч",
+        "expected_sections": ["ТХ"],
+        "directed_evidence_candidates": [{
+            "evidence_state": "verified_candidate",
+            "evidence_kind": "DIRECTED_VALUE",
+            "document": "Раздел ПД №6_ТХ1.pdf",
+            "document_type": "ТХ",
+            "page": 20,
+            "context": "ДСК принят суммарной производительностью 500 т/ч.",
+            "object": "ДСК",
+            "owner_match": True,
+            "parameter_code": "CAPACITY",
+            "value": 500,
+            "unit": "т/ч",
+            "unit_compatible": True,
+            "score": 100,
+        }],
+    }
+    row = run_assignment_runtime(
+        [req],
+        object_registry=[{"object_id": "REG-DSK-ID", "name": "ДСК"}],
+    )["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["core25_reason_code"] == "TYPED_VALUE_MATCH"
+    assert row["core25_binding_reason_codes"]["OWNER_PARAMETER_BOUND"] == 1
+
+
+def test_admission_diagnostics_distinguish_unverified_candidate():
+    req = _base(
+        "PRESENCE_REQUIREMENT",
+        "Предусмотреть систему видеонаблюдения.",
+        {
+            "evidence_state": "candidate",
+            "evidence_kind": "SOURCE_LOCKED_PASSAGE",
+            "document": "Раздел ПД №1_ПЗ.pdf",
+            "document_type": "ПЗ",
+            "page": 30,
+            "context": "Система видеонаблюдения рассматривается в проекте.",
+            "score": 70,
+        },
+    )
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["core25_admission_stage"] == "CANDIDATE_NOT_VERIFIED"
+    assert row["core25_raw_candidate_count"] == 1
+    assert row["core25_verified_candidate_count"] == 0
+    assert row["core25_qualified_evidence_count"] == 0
+
+
+def test_pdf_hyphenation_repair_restores_equipment_owner_and_mixed_positive_is_not_prohibition():
+    from core.assignment_compliance import (
+        TYPE_PRESENCE,
+        _object_name,
+        _repair_pdf_hyphenation,
+        _requirement_type,
+    )
+
+    equipment = _repair_pdf_hyphenation(
+        "Подача руды в приёмный бункер осуществляется двумя погруз- чиками SHANTUI L76-С5 с объёмом ковша 4,5 м3"
+    )
+    owner = _object_name(equipment, "")
+    assert owner.startswith("Погрузчик")
+    assert "SHANTUI" in owner.upper()
+
+    mixed = (
+        "Выполнить электроснабжение согласно ТУ. "
+        "Прокладку кабельных линий в земле не предусматривать."
+    )
+    assert _requirement_type(mixed, "Электроснабжение", "", None) == TYPE_PRESENCE

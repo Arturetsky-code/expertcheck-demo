@@ -5,6 +5,7 @@ on:
     branches:
       - codex/expertcheck-20.0
       - codex/expertcheck-25.1-runtime-integrity
+      - codex/expertcheck-25.2-coverage-breakthrough
   pull_request:
     paths:
       - "core20/**"

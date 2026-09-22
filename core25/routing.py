@@ -21,6 +21,11 @@ _SUPPORTED = {
     "PRESENCE": "PRESENCE",
     "RESERVE_TOPOLOGY": "RESERVE_TOPOLOGY",
     "TABLE_CELL_VALUE": "TYPED_VALUE",
+    # 25.2 Coverage Breakthrough executors. These routes remain fail-closed:
+    # only addressable candidates admitted by the matching proof routine can
+    # become categorical.
+    "NEGATIVE_ASSERTION": "NEGATIVE_ASSERTION",
+    "NORMATIVE_ASSERTION": "NORMATIVE_ASSERTION",
 }
 
 

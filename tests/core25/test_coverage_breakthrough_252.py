@@ -243,3 +243,37 @@ def test_short_presence_requirement_can_be_verified_when_all_terms_match():
     assert result is not None
     assert result["status"] == "Соответствует заданию"
     assert result["verification_evidence"][0]["evidence_state"] == "verified_candidate"
+
+
+def test_support_wall_requirement_is_not_misbound_to_loader_or_dsk():
+    from core.assignment_compliance import _object_name
+    from core.requirement_contracts import build_contract
+
+    text = (
+        "Для формирования площадки временного хранения и перегрузки взорванной руды "
+        "фронтальными погрузчиками в приёмные бункера ДСК предусмотреть подпорную стену."
+    )
+    owner = _object_name(text, "")
+    assert owner == "Подпорная стена"
+
+    req = {
+        "requirement_text": text,
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "object_name": owner,
+        "parameter_code": "",
+        "source_row_title": "Технологические решения",
+    }
+    contract = build_contract(req)
+    assert contract["scope"] == "SITE_SPECIFIC"
+    assert contract["expected_sections"] == ["ПЗУ"]
+
+
+def test_modular_building_and_canopy_requirements_get_profile_sections():
+    from core.requirement_contracts import infer_expected_sections
+
+    assert infer_expected_sections(
+        {"requirement_text": "Характеристики блочно-модульных зданий принять по документации завода изготовителя."}
+    ) == ["АР", "ПЗ"]
+    assert infer_expected_sections(
+        {"requirement_text": "Навес системы подачи извести выполнить открытым."}
+    ) == ["АР", "ПЗ"]

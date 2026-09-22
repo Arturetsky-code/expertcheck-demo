@@ -199,7 +199,7 @@ def _public_row(raw: Mapping[str, Any], result: VerificationResult25) -> dict[st
             "proof_state": result.trace.proof.state.value,
             "core25_decision": result.decision.state.value,
             "core25_reason_code": result.trace.proof.reason_code,
-            "core25_engine_version": "25.2-alpha1-coverage-breakthrough",
+            "core25_engine_version": "25.2-alpha2-evidence-admission",
             "core25_integrity_gate_state": "PASSED",
             "match_confidence": 1.0 if result.decision.is_categorical else 0.0,
         }
@@ -215,13 +215,68 @@ def run_assignment_runtime(
     raw_requirements = [dict(item) for item in requirements or () if isinstance(item, Mapping)]
     known_objects = _known_objects(raw_requirements, object_registry or ())
     results: list[VerificationResult25] = []
+    admission_audits: list[dict[str, Any]] = []
 
     for raw in raw_requirements:
         requirement = _runtime_requirement(raw)
+        raw_candidates = [
+            dict(item) for item in raw.get("directed_evidence_candidates") or ()
+            if isinstance(item, Mapping)
+        ]
         evidence = _candidate_evidence(requirement)
-        results.extend(verify_assignment((requirement,), evidence, known_objects))
+        current = verify_assignment((requirement,), evidence, known_objects)
+        result = current[0]
+        results.append(result)
 
-    rows = [_public_row(raw, result) for raw, result in zip(raw_requirements, results)]
+        verified_candidates = sum(
+            _text(item.get("evidence_state")).lower() == "verified_candidate"
+            for item in raw_candidates
+        )
+        qualified_count = len(result.trace.evidence)
+        binding_counts: dict[str, int] = {}
+        binding_reasons: dict[str, int] = {}
+        for binding in result.trace.bindings:
+            state = binding.state.value
+            binding_counts[state] = binding_counts.get(state, 0) + 1
+            code = _text(binding.reason_code) or "UNSPECIFIED"
+            binding_reasons[code] = binding_reasons.get(code, 0) + 1
+        bound_count = binding_counts.get("BOUND", 0)
+
+        if result.trace.proof.is_categorical:
+            stage = "PROVEN"
+        elif not raw_candidates:
+            stage = "NO_CANDIDATE"
+        elif not verified_candidates:
+            stage = "CANDIDATE_NOT_VERIFIED"
+        elif not qualified_count:
+            stage = "CANONICAL_OR_SECTION_FILTER"
+        elif not bound_count:
+            stage = "BINDING_BLOCKED"
+        else:
+            stage = "PROOF_BLOCKED"
+
+        admission_audits.append({
+            "stage": stage,
+            "raw_candidates": len(raw_candidates),
+            "verified_candidates": verified_candidates,
+            "qualified_evidence": qualified_count,
+            "binding_counts": binding_counts,
+            "binding_reason_codes": binding_reasons,
+            "proof_reason_code": result.trace.proof.reason_code,
+        })
+
+    rows = []
+    for raw, result, audit in zip(raw_requirements, results, admission_audits):
+        row = _public_row(raw, result)
+        row.update({
+            "core25_admission_stage": audit["stage"],
+            "core25_raw_candidate_count": audit["raw_candidates"],
+            "core25_verified_candidate_count": audit["verified_candidates"],
+            "core25_qualified_evidence_count": audit["qualified_evidence"],
+            "core25_binding_counts": dict(audit["binding_counts"]),
+            "core25_binding_reason_codes": dict(audit["binding_reason_codes"]),
+        })
+        rows.append(row)
     summary = {
         "total": len(rows),
         "compliant": sum(row["final_verification_kind"] == "VERIFIED_OK" for row in rows),
@@ -233,11 +288,11 @@ def run_assignment_runtime(
     categorical = summary["compliant"] + summary["deviation"]
     summary["evidence_coverage_pct"] = round(100.0 * categorical / max(1, summary["total"]), 1)
     summary["engine"] = "core25"
-    summary["engine_version"] = "25.2-alpha1-coverage-breakthrough"
+    summary["engine_version"] = "25.2-alpha2-evidence-admission"
 
     return {
         "engine": "core25",
-        "engine_version": "25.2-alpha1-coverage-breakthrough",
+        "engine_version": "25.2-alpha2-evidence-admission",
         "results": tuple(results),
         "rows": rows,
         "summary": summary,

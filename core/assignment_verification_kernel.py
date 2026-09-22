@@ -637,19 +637,32 @@ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[d
 
 
 def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Run trusted Assignment checkers before generic semantic fallback."""
+    """Run trusted Assignment checkers before generic semantic fallback.
+
+    A weak concept hit is useful retrieval evidence, but it must not mask a
+    stronger same-page generic presence proof. Therefore concept retrieval is
+    retained as a fallback while a verified generic presence result may win.
+    """
     checkers=(
         _equipment_check,
         _capacity_topology_check,
         _negative_applicability_check,
         _normative_assertion_check,
         _design_determined_check,
-        _concept_check,
     )
     for checker in checkers:
         result = checker(requirement, page_corpus)
         if result:
             return result
+
+    concept_result = _concept_check(requirement, page_corpus)
+    if concept_result and str(concept_result.get("status") or "") == "Соответствует заданию":
+        return concept_result
+
     if str(requirement.get('requirement_type') or '') not in {'SET_COMPARISON','PROHIBITION_OR_NOT_REQUIRED'}:
-        return _generic_passage_candidates(requirement,page_corpus)
-    return None
+        generic_result = _generic_passage_candidates(requirement,page_corpus)
+        if generic_result:
+            if str(generic_result.get("status") or "") == "Соответствует заданию":
+                return generic_result
+            return concept_result or generic_result
+    return concept_result

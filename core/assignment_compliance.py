@@ -30,7 +30,7 @@ PARAMETERS=[
  ("QUANTITY",("количество",),("шт","шт.")),
  ("SHIFT_DURATION",("продолжительность смены",),("час","часа","часов","ч")),
 ]
-OBJECT_HINTS=("ктп","кпп","насосная","резервуар","дск","склад","здание","сооружение","дорога","трубопровод","водовод","дамба","хвостохранилище","карта кучного выщелачивания","цех","абк","навес","бункер","ограждение","проезд")
+OBJECT_HINTS=("ктп","кпп","насосная","резервуар","дск","склад","здание","сооружение","дорога","трубопровод","водовод","дамба","хвостохранилище","карта кучного выщелачивания","цех","абк","подпорная стена","навес","бункер","ограждение","проезд")
 
 TYPE_VALUE="VALUE_COMPARISON"
 TYPE_SET="SET_COMPARISON"
@@ -250,9 +250,16 @@ def _object_name(sentence:str,parent_title:str="")->str:
         (r"автосамосвал(?:ами|ы|а)?\s+([A-Za-zА-Яа-я0-9-]+)","Автосамосвал {}"),
         (r"погрузчик(?:ами|и|а)?\s+([A-Za-zА-Яа-я0-9-]+(?:\s+[A-Za-zА-Яа-я0-9-Сс-]+)?)","Погрузчик {}"),
     )
+    equipment_follow_stop={"в","на","для","по","при","из","с","со","к","от","под","над","через"}
     for pat,fmt in explicit:
         m=re.search(pat,sentence,re.I)
-        if m:return fmt.format(m.group(1)).strip()
+        if not m:
+            continue
+        captured=m.group(1).strip()
+        first=normalize_text(captured).split()[0] if captured else ""
+        if first in equipment_follow_stop:
+            continue
+        return fmt.format(captured).strip()
     if "дробильно-сортировоч" in low or re.search(r"\bдск\b",low): return "ДСК"
     for token in sorted(OBJECT_HINTS,key=len,reverse=True):
         if token in low:

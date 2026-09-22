@@ -15,10 +15,21 @@ from .metric_semantics import (
 
 
 DESIGN_MARKERS = (
-    "предусмотрен", "предусмотрена", "предусмотрены", "предусматривается",
-    "разработан", "разработана", "разработаны", "выполнен", "выполнена",
-    "принят", "принята", "приняты", "проектом предусматривается",
-    "оборудуется", "ограждается", "осуществляется",
+    "предусмотрен", "предусмотрена", "предусмотрено", "предусмотрены", "предусматривается",
+    "предусматривает", "разработан", "разработана", "разработаны", "выполнен", "выполнена",
+    "выполнено", "принят", "принята", "принято", "приняты", "проектом предусматривается",
+    "оборудуется", "ограждается", "осуществляется", "обеспечивается", "организована",
+)
+
+NEGATIVE_MARKERS = (
+    "не требуется", "не предусматривается", "не предусмотрено",
+    "разработка не требуется", "требования отсутствуют", "не применяется",
+    "отсутствует необходимость",
+)
+
+NORMATIVE_REF_RE = re.compile(
+    r"\b(?:ГОСТ(?:\s+Р)?|СП|СНиП|ФЗ)\s*[A-ZА-Я0-9.-]+(?:\s*[-–—]\s*\d{2,4})?",
+    re.I,
 )
 
 STOP_WORDS = {
@@ -407,9 +418,169 @@ def _capacity_topology_check(requirement: dict[str, Any], page_corpus: list[dict
     }
 
 
+def _query_text(requirement: dict[str, Any]) -> str:
+    return " ".join(
+        part for part in (
+            str(requirement.get("source_row_title") or ""),
+            str(requirement.get("requirement_text") or ""),
+        ) if part.strip()
+    )
+
+
+def _negative_applicability_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if str(requirement.get("requirement_type") or "") != "PROHIBITION_OR_NOT_REQUIRED":
+        return None
+    title = str(requirement.get("source_row_title") or "")
+    terms = _significant_terms(title)
+    if len(terms) < 2:
+        return None
+    ranked: list[tuple[int, dict[str, Any], list[str]]] = []
+    for page in _candidate_pages(page_corpus, ()):
+        low = _norm(page.get("text") or "")
+        if not any(marker in low for marker in NEGATIVE_MARKERS):
+            continue
+        hits = [term for term in terms if term in low]
+        if len(hits) < min(3, len(terms)):
+            continue
+        score = 55 + len(hits) * 8
+        ranked.append((score, page, hits))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    if not ranked:
+        return None
+    score, page, hits = ranked[0]
+    snippet = _context(page.get("text") or "", hits + list(NEGATIVE_MARKERS), radius=500)
+    evidence = {
+        "evidence_kind": "QUALIFIED_NEGATIVE_APPLICABILITY",
+        "evidence_state": "verified_candidate",
+        "document": page.get("document"), "document_type": page.get("document_type"),
+        "page": page.get("page"), "context": snippet,
+        "score": min(100, score), "matched_terms": hits,
+        "negative_assertion": True,
+    }
+    return {
+        "status": "Соответствует заданию",
+        "evidence": [f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],
+        "evidence_candidates": [evidence], "verification_evidence": [evidence],
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
+        "match_confidence": min(0.97, score / 100),
+        "decision_basis": "В проектной документации найдено адресное явное подтверждение неприменимости/отсутствия требуемого решения.",
+        "verification_kernel": "NEGATIVE_APPLICABILITY_EXECUTOR",
+    }
+
+
+def _normative_ids(text: str) -> list[str]:
+    return list(dict.fromkeys(_norm(match.group(0)) for match in NORMATIVE_REF_RE.finditer(str(text or ""))))
+
+
+def _normative_factual_requirement(text: str) -> bool:
+    low = _norm(text)
+    if any(token in low for token in (
+        "выполнить", "предусмотреть", "должны соответствовать", "разработать",
+        "основания для установки", "проектные решения",
+    )):
+        return False
+    if "климатическ" in low and any(token in low for token in ("район", "зона")):
+        return True
+    material_markers = ("извест", "цемент", "бетон", "сталь", "щебен", "песок")
+    return bool(NORMATIVE_REF_RE.search(text) and any(marker in low for marker in material_markers))
+
+
+def _normative_assertion_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
+        return None
+    text = str(requirement.get("requirement_text") or "")
+    norm_ids = _normative_ids(text)
+    if not norm_ids:
+        return None
+    terms = _significant_terms(text)
+    factual = _normative_factual_requirement(text)
+    sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
+    ranked: list[tuple[int, dict[str, Any], list[str], list[str]]] = []
+    for page in _candidate_pages(page_corpus, sections):
+        low = _norm(page.get("text") or "")
+        matched_norms = [norm for norm in norm_ids if norm in low]
+        if not matched_norms:
+            continue
+        hits = [term for term in terms if term in low]
+        distinctive = [term for term in hits if not any(term in norm for norm in matched_norms)]
+        if factual and len(distinctive) < 2:
+            continue
+        score = 48 + len(matched_norms) * 18 + min(28, len(distinctive) * 4)
+        ranked.append((score, page, matched_norms, distinctive))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    if not ranked:
+        return None
+    score, page, matched_norms, distinctive = ranked[0]
+    snippet = _context(page.get("text") or "", matched_norms + distinctive, radius=520)
+    verified = bool(factual and len(distinctive) >= 2)
+    evidence = {
+        "evidence_kind": "QUALIFIED_NORMATIVE_ASSERTION" if verified else "NORMATIVE_REFERENCE_CANDIDATE",
+        "evidence_state": "verified_candidate" if verified else "candidate",
+        "document": page.get("document"), "document_type": page.get("document_type"),
+        "page": page.get("page"), "context": snippet,
+        "score": min(100, score), "matched_normative_refs": matched_norms,
+        "matched_terms": distinctive,
+    }
+    return {
+        "status": "Соответствует заданию" if verified else "Требует проверки",
+        "evidence": [f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],
+        "evidence_candidates": [evidence], "verification_evidence": [evidence],
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE" if verified else "CANDIDATE_EVIDENCE",
+        "match_confidence": 0.95 if verified else min(0.82, score / 100),
+        "decision_basis": (
+            "В проектной документации адресно подтверждена та же нормативно заданная фактическая характеристика."
+            if verified else
+            "Найдена та же нормативная ссылка, но выполнение проектного требования требует отдельного доказательства."
+        ),
+        "verification_kernel": "NORMATIVE_ASSERTION_EXECUTOR",
+    }
+
+
+def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if str(requirement.get("requirement_type") or "") != "DESIGN_DETERMINED":
+        return None
+    title = str(requirement.get("source_row_title") or "")
+    terms = _significant_terms(title)
+    if len(terms) < 2:
+        return None
+    sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
+    ranked: list[tuple[int, dict[str, Any], list[str]]] = []
+    for page in _candidate_pages(page_corpus, sections):
+        low = _norm(page.get("text") or "")
+        hits = [term for term in terms if term in low]
+        if len(hits) < min(3, len(terms)):
+            continue
+        if not any(marker in low for marker in DESIGN_MARKERS):
+            continue
+        score = 48 + len(hits) * 10 + (12 if sections else 0)
+        ranked.append((score, page, hits))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    if not ranked:
+        return None
+    score, page, hits = ranked[0]
+    snippet = _context(page.get("text") or "", hits, radius=520)
+    evidence = {
+        "evidence_kind": "QUALIFIED_DESIGN_DETERMINED",
+        "evidence_state": "verified_candidate",
+        "document": page.get("document"), "document_type": page.get("document_type"),
+        "page": page.get("page"), "context": snippet,
+        "score": min(100, score), "matched_terms": hits,
+    }
+    return {
+        "status": "Соответствует заданию",
+        "evidence": [f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],
+        "evidence_candidates": [evidence], "verification_evidence": [evidence],
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
+        "match_confidence": min(0.95, score / 100),
+        "decision_basis": "Параметр, оставленный Заданием на определение проектом, найден в адресном проектном решении.",
+        "verification_kernel": "DESIGN_DETERMINED_EXECUTOR",
+    }
+
+
 def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     text = str(requirement.get("requirement_text") or "")
-    terms = _significant_terms(text)
+    query_text = _query_text(requirement)
+    terms = _significant_terms(query_text)
     if len(terms) < 3:
         return None
     sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
@@ -426,24 +597,54 @@ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[d
         return None
     score, page, hits = ranked[0]
     snippet = _context(page.get("text") or "", hits)
+    rtype = str(requirement.get("requirement_type") or "")
+    low = _norm(page.get("text") or "")
+    contract = requirement.get("evidence_contract_v2") or {}
+    critical = [str(x) for x in contract.get("critical_qualifiers") or []]
+    qualifier_ok = all(_norm(item) in low for item in critical)
+    denominator = max(1, min(len(terms), 8))
+    coverage = len(hits[:8]) / denominator
+    strong_presence = bool(
+        rtype == "PRESENCE_REQUIREMENT"
+        and sections
+        and len(hits) >= 4
+        and coverage >= 0.60
+        and qualifier_ok
+        and any(marker in low for marker in DESIGN_MARKERS)
+    )
     evidence = {
-        "evidence_kind": "SOURCE_LOCKED_PASSAGE", "evidence_state": "candidate",
+        "evidence_kind": "QUALIFIED_PROJECT_PASSAGE" if strong_presence else "SOURCE_LOCKED_PASSAGE",
+        "evidence_state": "verified_candidate" if strong_presence else "candidate",
         "document": page.get("document"), "document_type": page.get("document_type"), "page": page.get("page"),
         "context": snippet, "score": min(100, score), "matched_terms": hits,
+        "semantic_coverage": round(coverage, 3),
+        "critical_qualifiers_satisfied": qualifier_ok,
     }
     return {
-        "status": "Требует проверки",
+        "status": "Соответствует заданию" if strong_presence else "Требует проверки",
         "evidence": [f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],
         "evidence_candidates": [evidence], "verification_evidence": [evidence],
-        "evidence_quality_state": "CANDIDATE_EVIDENCE", "match_confidence": min(.79, score / 100),
-        "decision_basis": "Найден профильный проектный фрагмент. Для категоричного вывода требуется специализированный типизированный checker.",
-        "verification_kernel": "SOURCE_LOCKED_RETRIEVAL",
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE" if strong_presence else "CANDIDATE_EVIDENCE",
+        "match_confidence": min(.95 if strong_presence else .79, score / 100),
+        "decision_basis": (
+            "Адресное проектное решение подтверждено в ожидаемом профильном разделе с достаточным покрытием ключевых условий."
+            if strong_presence else
+            "Найден профильный проектный фрагмент. Для категоричного вывода требуется специализированный типизированный checker."
+        ),
+        "verification_kernel": "GENERIC_PRESENCE_EXECUTOR" if strong_presence else "SOURCE_LOCKED_RETRIEVAL",
     }
 
 
 def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Run trusted Assignment checkers before generic semantic fallback."""
-    checkers=(_equipment_check, _capacity_topology_check, _concept_check)
+    checkers=(
+        _equipment_check,
+        _capacity_topology_check,
+        _negative_applicability_check,
+        _normative_assertion_check,
+        _design_determined_check,
+        _concept_check,
+    )
     for checker in checkers:
         result = checker(requirement, page_corpus)
         if result:

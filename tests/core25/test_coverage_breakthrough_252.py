@@ -215,3 +215,31 @@ def test_pdf_hyphenation_repair_restores_equipment_owner_and_mixed_positive_is_n
         "Прокладку кабельных линий в земле не предусматривать."
     )
     assert _requirement_type(mixed, "Электроснабжение", "", None) == TYPE_PRESENCE
+
+
+def test_short_presence_requirement_can_be_verified_when_all_terms_match():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_id": "REQ-SHORT-PRESENCE",
+        "requirement_text": "Предусмотреть металлическое ограждение территории",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Ограждение территории",
+        "evidence_contract_v2": {
+            "scope": "SITE_SPECIFIC",
+            "expected_sections": ["ПЗУ"],
+            "critical_qualifiers": ["металлическ"],
+        },
+    }
+    result = verify_assignment_requirement(
+        requirement,
+        [{
+            "document": "Раздел ПД №2_ПЗУ.pdf",
+            "document_type": "ПЗУ",
+            "page": 12,
+            "text": "Проектом предусмотрено металлическое ограждение территории площадки.",
+        }],
+    )
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_evidence"][0]["evidence_state"] == "verified_candidate"

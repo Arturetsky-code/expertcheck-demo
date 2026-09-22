@@ -434,21 +434,35 @@ def _negative_applicability_check(requirement: dict[str, Any], page_corpus: list
     terms = _significant_terms(title)
     if len(terms) < 2:
         return None
-    ranked: list[tuple[int, dict[str, Any], list[str]]] = []
+    ranked: list[tuple[int, dict[str, Any], list[str], str]] = []
     for page in _candidate_pages(page_corpus, ()):
-        low = _norm(page.get("text") or "")
-        if not any(marker in low for marker in NEGATIVE_MARKERS):
-            continue
-        hits = [term for term in terms if term in low]
-        if len(hits) < min(3, len(terms)):
-            continue
-        score = 55 + len(hits) * 8
-        ranked.append((score, page, hits))
+        raw = str(page.get("text") or "")
+        lines = [re.sub(r"\s+", " ", line).strip() for line in raw.splitlines() if line.strip()]
+        # A page may contain an unrelated phrase "не требуется" next to a
+        # different heading. Reconstruct only line-wrapped clauses: join a line
+        # to the next one when the previous line has no terminal punctuation.
+        windows: list[str] = []
+        buffer = ""
+        for line in lines:
+            buffer = f"{buffer} {line}".strip() if buffer else line
+            if re.search(r"[.!?;:]\s*$", line):
+                windows.append(buffer)
+                buffer = ""
+        if buffer:
+            windows.append(buffer)
+        for window in windows:
+            low = _norm(window)
+            if not any(marker in low for marker in NEGATIVE_MARKERS):
+                continue
+            hits = [term for term in terms if term in low]
+            if len(hits) < min(3, len(terms)):
+                continue
+            score = 55 + len(hits) * 8
+            ranked.append((score, page, hits, window))
     ranked.sort(key=lambda item: item[0], reverse=True)
     if not ranked:
         return None
-    score, page, hits = ranked[0]
-    snippet = _context(page.get("text") or "", hits + list(NEGATIVE_MARKERS), radius=500)
+    score, page, hits, snippet = ranked[0]
     evidence = {
         "evidence_kind": "QUALIFIED_NEGATIVE_APPLICABILITY",
         "evidence_state": "verified_candidate",
@@ -544,11 +558,19 @@ def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict
     if len(terms) < 2:
         return None
     sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
+    construction_duration = "срок" in _norm(title) and "строитель" in _norm(title)
+    if construction_duration and not sections:
+        sections = ["ПОС", "ПЗ"]
     ranked: list[tuple[int, dict[str, Any], list[str]]] = []
     for page in _candidate_pages(page_corpus, sections):
         low = _norm(page.get("text") or "")
         hits = [term for term in terms if term in low]
-        if len(hits) < min(3, len(terms)):
+        if construction_duration:
+            duration_value = re.search(r"\b\d+(?:[,.]\d+)?\s*(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", low)
+            duration_subject = ("срок" in low and "строитель" in low) or ("продолжительност" in low and "строитель" in low)
+            if not (duration_value and duration_subject):
+                continue
+        elif len(hits) < min(3, len(terms)):
             continue
         if not any(marker in low for marker in DESIGN_MARKERS):
             continue

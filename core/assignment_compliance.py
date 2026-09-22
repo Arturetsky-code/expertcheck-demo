@@ -282,12 +282,32 @@ def _parameter(sentence:str):
     return "",None,""
 
 
+def _repair_pdf_hyphenation(text:str)->str:
+    """Repair line-wrap hyphenation without touching real compound words."""
+    return re.sub(r"(?<=[А-Яа-яЁё])-\\s+(?=[а-яё])", "", str(text or ""))
+
+
+def _primary_negative_requirement(text:str)->bool:
+    low=normalize_text(text)
+    negative=(
+        "не требуется","требования отсутствуют","разработка не требуется",
+        "не предусматривать","не применяется"
+    )
+    positions=[low.find(x) for x in negative if x in low]
+    if not positions:
+        return False
+    first_negative=min(positions)
+    positive=("предусмотреть","выполнить","разработать","обеспечить","принять","определить")
+    positive_positions=[low.find(x) for x in positive if x in low]
+    first_positive=min(positive_positions) if positive_positions else -1
+    return first_positive < 0 or first_negative <= first_positive
+
 def _requirement_type(text:str,row_title:str,code:str,value:float|None)->str:
     low=normalize_text(text); title=normalize_text(row_title)
     both=f"{title} {low}"
     if ("состав объект" in both and "приложен" in low) or ("идентификацион" in title and "приложен" in low): return TYPE_SET
     if "инженерн" in low and ("изыскан" in low or "согласно" in low): return TYPE_TRACE
-    if any(x in low for x in ("не требуется","требования отсутствуют","не предусматривать")): return TYPE_PROHIBITION
+    if _primary_negative_requirement(text): return TYPE_PROHIBITION
     if "расчет" in low or "расчёт" in low: return TYPE_CALCULATION
     if any(x in low for x in ("графическ","на чертеже","нанести","показать на")): return TYPE_DRAWING
     if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low) or "нормативн" in low: return TYPE_NORMATIVE
@@ -368,7 +388,9 @@ def extract_requirements(files,reader,page_corpus:list[dict[str,Any]]|None=None)
             for page,text in pages:
                 for atom in _plain_atomic_fragments(text): atoms.append({**atom,"page":page})
         for atom in atoms:
-            sentence=atom["text"]; low=normalize_text(sentence); title=atom.get("row_title") or ""
+            sentence=_repair_pdf_hyphenation(atom["text"])
+            title=_repair_pdf_hyphenation(atom.get("row_title") or "")
+            low=normalize_text(sentence)
             obj=_object_name(sentence,title); code,value,unit=_parameter(sentence)
             req_type=_requirement_type(sentence,title,code,value)
             has_requirement_verb=any(v in low for v in REQ_VERBS)

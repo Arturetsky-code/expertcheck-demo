@@ -2,11 +2,11 @@
   "release": "ExpertCheck 25.2 Alpha 2",
   "codename": "Evidence Admission Breakthrough",
   "branch": "codex/expertcheck-25.2-coverage-breakthrough",
-  "validated_head": "9a2fc0091b6c06c71524e6d21abb8338adf46659",
+  "validated_head": "0c8b3c6ff30e1ad89d385c5043b61ff730a47859",
   "status": "READY_FOR_FRESH_TEST78_BASELINE",
   "tests": {
     "core25": {
-      "passed": 89,
+      "passed": 91,
       "failed": 0,
       "status": "PASS"
     },
@@ -51,5 +51,13 @@
     "BINDING_BLOCKED",
     "PROOF_BLOCKED",
     "PROVEN"
-  ]
+  ],
+  "gates": {
+    "unresolved_safe_scope_binding": "PASS",
+    "duplicate_owner_id_resolution": "PASS",
+    "pdf_hyphenation_repair": "PASS",
+    "mixed_positive_negative_classification": "PASS",
+    "short_presence_admission": "PASS",
+    "support_wall_owner_and_pzu_routing": "PASS"
+  }
 }

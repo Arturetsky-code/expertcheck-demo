@@ -1161,6 +1161,12 @@ def structured_excel_report(project, version, docs, findings, comparisons, *, re
         'Доказательства':_safe_join(x.get('evidence')),
         'Качество доказательства':ru_label(x.get('evidence_quality_state')),
         'Направленных кандидатов':len(x.get('directed_evidence_candidates') or []),
+        'Кандидатов допущено к Core25':x.get('core25_verified_candidate_count',0),
+        'Канонических evidence после section gate':x.get('core25_qualified_evidence_count',0),
+        'Стадия удержания Core25':ru_label(x.get('core25_admission_stage')) if x.get('core25_admission_stage') else '',
+        'Причины binding Core25':' | '.join(
+            f"{ru_label(k)}: {v}" for k,v in (x.get('core25_binding_reason_codes') or {}).items()
+        ),
         'Ожидаемое доказательство':x.get('expected_evidence') or '',
         'Основание вывода':x.get('decision_basis') or '',
         'Рекомендация':x.get('recommendation'),

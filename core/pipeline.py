@@ -70,6 +70,7 @@ from .drawing_intelligence import annotate_drawing_evidence
 from .drawing_intelligence_v2 import DrawingIntelligenceV2, drawing_graph_findings
 from .finding_qualification import coverage_summary
 from .directed_evidence import build_page_corpus, attach_directed_evidence, directed_evidence_facts
+from .coverage_breakthrough import attach_coverage_executor_evidence
 from .table_semantic_scope import annotate_table_semantic_scope
 from .page_evidence_store import is_assignment_source
 from .atomic_requirement_graph import build_atomic_requirement_graph
@@ -583,6 +584,11 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
             pdf_files, legacy.read_pdf, page_corpus=assignment_page_corpus,
         )
         assignment_directed_evidence_summary = attach_directed_evidence(assignment_requirements, project_page_corpus)
+        assignment_coverage_executor_summary = attach_coverage_executor_evidence(
+            assignment_requirements,
+            project_page_corpus,
+        )
+        assignment_directed_evidence_summary["coverage_executors"] = assignment_coverage_executor_summary
         try:
             core25_payload = run_assignment_runtime(
                 assignment_requirements,

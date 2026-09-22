@@ -604,10 +604,11 @@ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[d
     qualifier_ok = all(_norm(item) in low for item in critical)
     denominator = max(1, min(len(terms), 8))
     coverage = len(hits[:8]) / denominator
+    required_hit_count = min(4, len(terms))
     strong_presence = bool(
         rtype == "PRESENCE_REQUIREMENT"
         and sections
-        and len(hits) >= 4
+        and len(hits) >= required_hit_count
         and coverage >= 0.60
         and qualifier_ok
         and any(marker in low for marker in DESIGN_MARKERS)

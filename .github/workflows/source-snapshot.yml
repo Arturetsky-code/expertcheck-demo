@@ -1,0 +1,23 @@
+name: Source Snapshot Artifact
+
+on:
+  push:
+    branches:
+      - codex/expertcheck-25.2-coverage-breakthrough
+  workflow_dispatch:
+
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build source snapshot
+        run: |
+          zip -qr expertcheck-source.zip .             -x '.git/*'             -x 'expertcheck-source.zip'
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: expertcheck-25.2-source
+          path: expertcheck-source.zip
+          if-no-files-found: error
+          retention-days: 7

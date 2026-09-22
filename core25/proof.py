@@ -260,6 +260,84 @@ def _presence_proof(
     )
 
 
+_NEGATIVE_ASSERTION_MARKERS = (
+    "не требуется",
+    "не предусматривается",
+    "не предусмотрено",
+    "разработка не требуется",
+    "требования отсутствуют",
+    "не применяется",
+    "отсутствует необходимость",
+)
+
+
+def _negative_assertion_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    selected: list[tuple[Evidence25, Binding25]] = []
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        kind = str(metadata.get("legacy_evidence_kind") or "").upper()
+        fragment = _norm_text(evidence_item.fragment)
+        if (
+            kind == "QUALIFIED_NEGATIVE_APPLICABILITY"
+            and metadata.get("negative_assertion") is True
+            and any(marker in fragment for marker in _NEGATIVE_ASSERTION_MARKERS)
+        ):
+            selected.append((evidence_item, binding))
+    if not selected:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="NEGATIVE_APPLICABILITY_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(item.evidence_id for item, _ in selected)
+    binding_ids = tuple(binding.binding_id for _, binding in selected)
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="NEGATIVE_APPLICABILITY_CONFIRMED",
+    )
+
+
+def _normative_assertion_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    selected: list[tuple[Evidence25, Binding25]] = []
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        kind = str(metadata.get("legacy_evidence_kind") or "").upper()
+        refs = tuple(metadata.get("matched_normative_refs") or ())
+        terms = tuple(metadata.get("matched_terms") or ())
+        if kind == "QUALIFIED_NORMATIVE_ASSERTION" and refs and len(terms) >= 2:
+            selected.append((evidence_item, binding))
+    if not selected:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="FACTUAL_NORMATIVE_ASSERTION_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(item.evidence_id for item, _ in selected)
+    binding_ids = tuple(binding.binding_id for _, binding in selected)
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="FACTUAL_NORMATIVE_ASSERTION_CONFIRMED",
+    )
+
+
 def _reserve_topology_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -373,6 +451,10 @@ def build_proof(
         return _presence_proof(requirement, route, pairs)
     if route.kind == "RESERVE_TOPOLOGY":
         return _reserve_topology_proof(requirement, route, pairs)
+    if route.kind == "NEGATIVE_ASSERTION":
+        return _negative_assertion_proof(requirement, route, pairs)
+    if route.kind == "NORMATIVE_ASSERTION":
+        return _normative_assertion_proof(requirement, route, pairs)
 
     return _insufficient(
         requirement,

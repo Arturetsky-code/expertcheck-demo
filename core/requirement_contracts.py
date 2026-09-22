@@ -80,10 +80,13 @@ def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
     text=normalize_text(requirement.get('requirement_text') or '')
     # Explicit site-layout features belong first to PZU even when their wording
     # also contains generic technology words such as «оборудование».
-    if any(marker in text for marker in (
-        'ограждение части площадк', 'территор площадк', 'ворота и калит',
-        'проезда и прохода', 'внутриплощадочн проезд', 'благоустройств территор',
-    )):
+    if (
+        any(marker in text for marker in (
+            'ограждение части площадк', 'территор площадк', 'ворота и калит',
+            'проезда и прохода', 'внутриплощадочн проезд', 'благоустройств территор',
+        ))
+        or ('подпорн' in text and 'стен' in text)
+    ):
         return ['ПЗУ']
     result=[]
     for hints,sections in TEXT_SECTION_HINTS:

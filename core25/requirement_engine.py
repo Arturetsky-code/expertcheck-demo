@@ -35,9 +35,19 @@ def normalize_scope(
     verification_kind: Any = None,
 ) -> Scope:
     raw = _upper(value)
-    if raw in {"PROJECT_GLOBAL", "PROJECT", "GLOBAL", "ПРОЕКТ"}:
+    if raw in {
+        "PROJECT_GLOBAL", "PROJECT", "GLOBAL", "ПРОЕКТ",
+        "SITE_SPECIFIC", "SYSTEM_SPECIFIC", "DOCUMENT_SPECIFIC",
+    }:
+        # Core25 ownership semantics distinguish project-global vs exact object
+        # ownership. Site/system/document scopes do not require an exact object id
+        # and are therefore treated as global for binding while their original
+        # scope remains available in requirement metadata.
         return Scope.PROJECT_GLOBAL
-    if raw in {"OBJECT_SPECIFIC", "OBJECT", "EQUIPMENT", "ОБЪЕКТ", "ОБОРУДОВАНИЕ"}:
+    if raw in {
+        "OBJECT_SPECIFIC", "EQUIPMENT_SPECIFIC", "OBJECT", "EQUIPMENT",
+        "ОБЪЕКТ", "ОБОРУДОВАНИЕ",
+    }:
         return Scope.OBJECT_SPECIFIC
     if _text(target_object_id):
         return Scope.OBJECT_SPECIFIC
@@ -57,6 +67,15 @@ def normalize_verification_kind(value: Any) -> str:
         "TOPOLOGY": "RESERVE_TOPOLOGY",
         "VALUE_COMPARISON": "TYPED_VALUE",
         "PRESENCE_REQUIREMENT": "PRESENCE",
+        "SEMANTIC_ENGINEERING": "PRESENCE",
+        "DESIGN_DETERMINED": "PRESENCE",
+        "PROHIBITION_OR_NOT_REQUIRED": "NEGATIVE_ASSERTION",
+        "APPLICABILITY_DECLARATION": "NEGATIVE_ASSERTION",
+        "NORMATIVE_COMPLIANCE": "NORMATIVE_ASSERTION",
+        "NORMATIVE_CLAUSE": "NORMATIVE_ASSERTION",
+        "SOURCE_TRACEABILITY": "TRACEABILITY",
+        "CROSS_DOCUMENT_TRACE": "TRACEABILITY",
+        "SET_COMPARISON": "SET_COMPARISON",
     }
     return aliases.get(raw, raw)
 

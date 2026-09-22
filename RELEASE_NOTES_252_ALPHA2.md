@@ -26,6 +26,9 @@ targets that admission path directly.
 - Exposes binding reason-code counts in the technical report.
 - Shows the actual runtime version on the Assignment UI instead of a hard-coded
   25.0 label.
+- Prevents contextual loader words from becoming false equipment owners; support-wall
+  requirements now bind as site-layout requirements and route primarily to PZU.
+- Adds profile routing for canopy and modular-building requirements to AR/PZ.
 
 ## Safety / proof policy
 
@@ -36,9 +39,9 @@ fail-closed.
 
 ## Automated validation
 
-Validated HEAD: `9a2fc0091b6c06c71524e6d21abb8338adf46659`
+Validated code HEAD: `0c8b3c6ff30e1ad89d385c5043b61ff730a47859`
 
-- Core25: **89 passed / 0 failed**
+- Core25: **91 passed / 0 failed**
 - Core20 regression: **95 passed / 0 failed**
 - Core20 main: **95 passed / 0 failed**
 - Results/report integrity: **17 passed / 0 failed**

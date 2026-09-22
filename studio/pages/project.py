@@ -622,7 +622,18 @@ def _dashboard(ctx):
                 + str(assignment_runtime.get('error'))
             )
         elif assignment_runtime.get('engine') == 'core25':
-            st.caption('Контур проверки: ExpertCheck 25.0 Alpha 1 · Unified Verification Core')
+            engine_version = str(assignment_runtime.get('engine_version') or '').strip()
+            display_versions = {
+                '25.2-alpha2-evidence-admission': 'ExpertCheck 25.2 Alpha 2 · Evidence Admission Breakthrough · Unified Verification Core',
+                '25.2-alpha1-coverage-breakthrough': 'ExpertCheck 25.2 Alpha 1 · Coverage Breakthrough · Unified Verification Core',
+                '25.1-alpha1-runtime-integrity': 'ExpertCheck 25.1 Alpha 1 · Runtime Integrity · Unified Verification Core',
+            }
+            label = display_versions.get(
+                engine_version,
+                f'ExpertCheck {engine_version} · Unified Verification Core' if engine_version
+                else 'ExpertCheck · Unified Verification Core',
+            )
+            st.caption('Контур проверки: ' + label)
         if not assignment_rows:
             st.info('Задание на проектирование не распознано в комплекте либо машинно-интерпретируемые требования не извлечены. При необходимости укажите тип документа «Задание на проектирование» на этапе загрузки.')
         else:

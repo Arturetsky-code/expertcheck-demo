@@ -260,6 +260,8 @@ def _object_name(sentence:str,parent_title:str="")->str:
         if first in equipment_follow_stop:
             continue
         return fmt.format(captured).strip()
+    if "подпорн" in low and "стен" in low and "предусмотр" in low:
+        return "Подпорная стена"
     if "дробильно-сортировоч" in low or re.search(r"\bдск\b",low): return "ДСК"
     for token in sorted(OBJECT_HINTS,key=len,reverse=True):
         if token in low:

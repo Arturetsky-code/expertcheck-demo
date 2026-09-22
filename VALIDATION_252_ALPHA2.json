@@ -1,0 +1,55 @@
+{
+  "release": "ExpertCheck 25.2 Alpha 2",
+  "codename": "Evidence Admission Breakthrough",
+  "branch": "codex/expertcheck-25.2-coverage-breakthrough",
+  "validated_head": "9a2fc0091b6c06c71524e6d21abb8338adf46659",
+  "status": "READY_FOR_FRESH_TEST78_BASELINE",
+  "tests": {
+    "core25": {
+      "passed": 89,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "core20_regression": {
+      "passed": 95,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "core20_main": {
+      "passed": 95,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "results_integrity": {
+      "passed": 17,
+      "failed": 0,
+      "status": "PASS"
+    },
+    "release_gate": {
+      "passed": 530,
+      "known_failures": 32,
+      "fixture_bound": 3,
+      "obsolete": 4,
+      "baseline_existing": 25,
+      "unclassified_blockers": 0,
+      "status": "SUCCESS"
+    }
+  },
+  "benchmark": {
+    "test78_assignment_history": {
+      "25.0": "2/56",
+      "25.1": "2/56",
+      "25.2-alpha1": "5/56",
+      "25.2-alpha2": "PENDING_MANUAL_BASELINE"
+    },
+    "ai_before_baseline": false
+  },
+  "new_admission_stages": [
+    "NO_CANDIDATE",
+    "CANDIDATE_NOT_VERIFIED",
+    "CANONICAL_OR_SECTION_FILTER",
+    "BINDING_BLOCKED",
+    "PROOF_BLOCKED",
+    "PROVEN"
+  ]
+}

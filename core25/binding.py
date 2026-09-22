@@ -97,6 +97,25 @@ def bind_evidence(
     explicit_owner_name = str(metadata.get("owner_name") or metadata.get("object_name") or "").strip()
     resolved_owner = explicit_owner_id or _resolve_owner_name(explicit_owner_name, known_objects)
 
+    # Requirement extraction and the project registry can legitimately carry two
+    # ids for the same named object. In that case a strict alias lookup becomes
+    # artificially ambiguous. When the coverage executor has already proven the
+    # owner text against the requirement owner, bind to the requirement target
+    # instead of discarding the evidence.
+    target_owner = str(requirement.target_object_id or "").strip()
+    requirement_owner_name = str(
+        (requirement.metadata or {}).get("object_name")
+        or (requirement.metadata or {}).get("target_object")
+        or ""
+    ).strip()
+    if (
+        target_owner
+        and explicit_owner_name
+        and metadata.get("owner_match") is True
+        and _norm(explicit_owner_name) == _norm(requirement_owner_name)
+    ):
+        resolved_owner = target_owner
+
     if required_parameter and evidence_parameter and evidence_parameter != required_parameter:
         return Binding25(
             binding_id=binding_id,
@@ -122,7 +141,6 @@ def bind_evidence(
             reason_code="PROJECT_GLOBAL_BOUND",
         )
 
-    target_owner = str(requirement.target_object_id or "").strip()
     if requirement.scope is not Scope.OBJECT_SPECIFIC or not target_owner:
         return Binding25(
             binding_id=binding_id,

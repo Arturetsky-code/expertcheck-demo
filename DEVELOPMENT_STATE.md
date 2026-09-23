@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated checkpoint commit: `1dd1d1bac61489a1957e0bf4b94ac04907e0935e`
+Latest validated checkpoint commit: `b8cad2b66364f13802b682318da1b7ce7d5732d3`
 
 ## Official accepted local checkpoint
 
@@ -37,6 +37,35 @@ Validation:
 
 Recovery:
 - Start from the validated 20/56 checkpoint and apply `checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch`.
+
+
+## Validated quality checkpoint — composite condition diagnostics
+
+The strict Test 78 verdict remains **21/56 = 37.5%** (19 compliant + 2 proven deviations). No partial condition evidence is allowed to promote a whole composite requirement.
+
+Condition-level diagnostics now expose:
+- Water supply (source row 30): **4/5** conditions proven. Missing: factory-complete supply of the modular-building tanks.
+- Automation (source row 37): **7/10** conditions proven. Missing: ASU complete supply; productivity control via additional/reserve aggregates; explicit optimal-mode condition.
+- Power supply (source row 38): **5/8** conditions proven. Missing: supports on concrete footings; DGS for the broader category-I requirement; addressable adoption of both mining-safety FNP and PUE (a bibliography hit is not enough).
+
+Safety rules:
+- partial slot evidence is emitted only as `candidate`, never `verified_candidate`;
+- category-I special-group DGS evidence cannot prove the broader category-I Assignment condition;
+- generic normative bibliography references cannot prove design adoption;
+- condition diagnostics are explanatory only until every material slot is proven.
+
+Report/UI surface:
+- Assignment diagnostic rows now include `Условия доказаны` and `Неподтверждённые условия`;
+- GIP and technical XLSX reports include a dedicated `Задание — условия` sheet with per-condition document/page/evidence traces.
+
+Validation:
+- `tests/core25/test_coverage_breakthrough_252.py`: **33/33 passed**;
+- other available Core25 tests: **79/79 passed** (same historical missing-XLSX fixture deselected);
+- report/result integrity selection: **10/10 passed**;
+- Test 78 deterministic benchmark reproduced at **21/56**.
+
+Recovery delta:
+- `checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64`
 
 ## Missing-profile-section policy
 

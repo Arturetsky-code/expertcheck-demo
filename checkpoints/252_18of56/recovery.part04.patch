@@ -1,0 +1,149 @@
++        "decision_basis": "Состав объектов из Приложения 1 адресно сопоставлен с явным перечнем объектов в ПЗУ по позициям и наименованиям.",
++        "verification_kernel": "PROJECT_COMPOSITION_EXECUTOR",
++    }
++
+ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+     """Run trusted Assignment checkers before generic semantic fallback.
+ 
+@@ -666,6 +1167,13 @@
+     retained as a fallback while a verified generic presence result may win.
+     """
+     checkers=(
++        _project_composition_check,
++        _operating_regime_check,
++        _annual_capacity_check,
++        _fencing_system_check,
++        _water_supply_check,
++        _site_lighting_check,
++        _open_canopy_check,
+         _equipment_check,
+         _capacity_topology_check,
+         _negative_applicability_check,
+--- a/core/requirement_contracts.py
++++ b/core/requirement_contracts.py
+@@ -32,7 +32,8 @@
+ TEXT_SECTION_HINTS=(
+  (('генеральн план','планировочн','внутриплощадочн','проезд','подтоплен','благоустрой','огражден','земельн участ','рельеф','водоотводн канав','подпорн'),['ПЗУ']),
+  (('технологическ','оборудован','производительност','дроблен','конвейер','погрузчик','самосвал','бункер'),['ТХ']),
+- (('архитектурн','помещен','фасад','ограждающ конструкц','навес','блочно-модульн'),['АР','ПЗ']),
++ (('архитектурн','помещен','фасад','ограждающ конструкц','блочно-модульн'),['АР','ПЗ']),
++ (('навес',),['КР','АР','ПЗ']),
+  (('конструктивн','фундамент','нагрузк','армирован','металлоконструкц'),['КР']),
+  (('электроснабжен','освещен','заземлен','молниезащит','напряжен'),['ИОС1']),
+  (('водоснабжен','канализац','водоотведен','расход вод','напор','сточн'),['ИОС2']),
+@@ -103,6 +104,17 @@
+     # Assignment atomisation may name a site feature (Ограждение, Проезд) as an
+     # object. It is still a property/feature of the site when the requirement is
+     # explicitly about territory/layout, so exact owner identity is not required.
++    # A section-level engineering-system title is a stronger ownership signal
++    # than an incidental mention of the facility name in the requirement text.
++    # Treat such requirements as system-scoped so Core25 does not demand an
++    # exact object owner merely because, e.g., 'ДСК' appears in the sentence.
++    system_title_markers=(
++        'водоснабжен','канализац','водоотвед','электроснабжен','электроосвещ',
++        'отоплен','вентиляц','связ','видеонаблюден','автоматизац','газификац',
++        'молниезащит','заземлен',
++    )
++    if any(x in title for x in system_title_markers):
++        return SCOPE_SYSTEM
+     site_feature_objects={'ограждение','проезд','ворота','калитка','благоустройство','территория','подпорная стена'}
+     site_feature_context=(
+         any(marker in text for marker in (
+@@ -130,8 +142,6 @@
+         return SCOPE_PROJECT
+     if any(x in title for x in ('схеме планировочной','земельного участка','генеральн')):
+         return SCOPE_SITE
+-    if any(x in title for x in ('водоснабжен','канализац','электроснабжен','отоплен','вентиляц','связ')):
+-        return SCOPE_SYSTEM
+     if any(x in title for x in ('состав проектной документации','графическим материал')):
+         return SCOPE_DOCUMENT
+     return SCOPE_UNRESOLVED
+--- a/core/assignment_compliance.py
++++ b/core/assignment_compliance.py
+@@ -319,9 +319,28 @@
+     if _primary_negative_requirement(text): return TYPE_PROHIBITION
+     if "расчет" in low or "расчёт" in low: return TYPE_CALCULATION
+     if any(x in low for x in ("графическ","на чертеже","нанести","показать на")): return TYPE_DRAWING
+-    if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low) or "нормативн" in low: return TYPE_NORMATIVE
++    # Generic wording such as «требования нормативной документации» does not
++    # by itself turn an engineering obligation into a normative-compliance
++    # check.  Reserve this type for an identifiable normative reference, or for
++    # a purely normative statement without an engineering action verb.
++    # Composite engineering obligations remain presence/system checks when the
++    # normative reference is only one condition in a concrete design chain.
++    # Example: LED luminaires + lighting masts + luminaires on supports + SP 52.
++    concrete_lighting = (
++        "светильник" in low and "мачт" in low and "освещ" in low
++        and any(x in low for x in ("опор", "консольн"))
++    )
++    if concrete_lighting and any(v in low for v in REQ_VERBS):
++        return TYPE_PRESENCE
++    if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low): return TYPE_NORMATIVE
++    if "нормативн" in low and not any(v in low for v in REQ_VERBS): return TYPE_NORMATIVE
+     if code and value is not None: return TYPE_VALUE
+-    if "определить проект" in low: return TYPE_DESIGN
++    if (
++        "определить проект" in low
++        or "определить при разработке" in low
++        or "определить в проектной документации" in low
++        or "определить документацией" in low
++    ): return TYPE_DESIGN
+     if any(v in low for v in REQ_VERBS): return TYPE_PRESENCE
+     return TYPE_SEMANTIC
+ 
+@@ -347,7 +366,8 @@
+             for cand in lines[idx+1:idx+7]:
+                 cl=normalize_text(cand)
+                 if re.match(r"^\d{2}\.\d{2}\.\d{3}",cand): break
+-                if len(cand)>=4 and not re.fullmatch(r"\d+",cand):
++                short_acronym = bool(re.fullmatch(r"[A-ZА-ЯЁ]{2,5}", cand))
++                if (len(cand)>=4 or short_acronym) and not re.fullmatch(r"\d+",cand):
+                     name=cand;break
+             if name:
+                 key=(pos,normalize_text(name))
+--- a/tests/core25/test_coverage_breakthrough_252.py
++++ b/tests/core25/test_coverage_breakthrough_252.py
+@@ -276,7 +276,7 @@
+     ) == ["АР", "ПЗ"]
+     assert infer_expected_sections(
+         {"requirement_text": "Навес системы подачи извести выполнить открытым."}
+-    ) == ["АР", "ПЗ"]
++    ) == ["КР", "АР", "ПЗ"]
+ 
+ 
+ def test_contractual_handover_materials_are_not_assignment_design_requirements(tmp_path):
+@@ -343,3 +343,45 @@
+     }]
+     result = verify_assignment_requirement(requirement, actual)
+     assert result and result.get("status") == "Соответствует заданию"
++
++
++def test_equipment_brand_only_difference_is_not_categorical_mismatch():
++    from core.assignment_verification_kernel import verify_assignment_requirement
++    req={
++        'requirement_type':'VALUE_COMPARISON',
++        'requirement_text':'Подвоз руды осуществляется автосамосвалами SinoTrack г/п 42 тонны и объемом кузова 32 м3.',
++        'object_name':'Автосамосвал SinoTrack',
++        'evidence_contract_v2':{'expected_sections':['ТХ']},
++    }
++    corpus=[{'document':'ТХ.pdf','document_type':'ТХ','page':37,'text':'Для работ предусмотрен автосамосвал HOWO T5G – 6 шт.;'}]
++    result=verify_assignment_requirement(req,corpus)
++    assert result
++    assert result.get('status')!='Выявлено отклонение'
++    assert result.get('verification_kernel')=='EQUIPMENT_IDENTITY_AND_QUANTITY'
++
++
++def test_site_lighting_composite_requirement_is_presence_and_can_be_proven():
++    from core.assignment_compliance import _requirement_type, TYPE_PRESENCE
++    from core.assignment_verification_kernel import verify_assignment_requirement
++    text=(
++        'Для электроосвещения предусмотреть светодиодные светильники. '
++        'Освещение площадки выполнить с помощью прожекторных мачт. '
++        'Остальную территорию осветить светильниками на опорах. '
++        'Уровни искусственного освещения принять в соответствии с СП 52.13330.2016.'
++    )
++    assert _requirement_type(text,'Электроосвещение','',None)==TYPE_PRESENCE
++    req={'requirement_type':'PRESENCE_REQUIREMENT','requirement_text':text,
++         'evidence_contract_v2':{'expected_sections':['ИОС1']}}
++    corpus=[
++        {'document':'ИОС1.pdf','document_type':'ИОС1','page':24,'text':'Уровни искусственного освещения приняты в соответствии с СП 52.13330.2016.'},

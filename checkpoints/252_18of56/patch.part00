@@ -1,0 +1,129 @@
+--- a/core/assignment_verification_kernel.py
++++ b/core/assignment_verification_kernel.py
+@@ -23,7 +23,7 @@
+ 
+ NEGATIVE_MARKERS = (
+     "не требуется", "не предусматривается", "не предусмотрено",
+-    "разработка не требуется", "требования отсутствуют", "не применяется",
++    "разработка не требуется", "требования отсутствуют", "не применяется", "не применялись",
+     "отсутствует необходимость",
+ )
+ 
+@@ -230,8 +230,6 @@
+         # Prefer the physical register row itself.  Including the previous row
+         # mixed adjacent truck/loader brands in the same evidence packet.
+         windows = [lines[index]]
+-        if index + 1 < len(lines):
+-            windows.append(" ".join(lines[index:index + 2]))
+         for window_rank, window in enumerate(windows):
+             low = _norm(window)
+             if equipment not in low:
+@@ -251,6 +249,303 @@
+     return _context(text, task_models or (equipment,), radius=520)
+ 
+ 
++
++def _operating_regime_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    if "продолжительност" not in low_req or "смен" not in low_req:
++        return None
++    match = re.search(r"(\d+(?:[,.]\d+)?)\s*(?:час(?:а|ов)?|ч)\b", low_req)
++    if not match:
++        return None
++    required = float(match.group(1).replace(",", "."))
++    ranked = []
++    for page in _candidate_pages(page_corpus, ("ТХ", "ИОС2", "ПЗ")):
++        raw = re.sub(r"\s+", " ", str(page.get("text") or "")).strip()
++        low = _norm(raw)
++        if "смен" not in low:
++            continue
++        patterns = [
++            r"продолжительност\w*\s+(?:рабоч\w*\s+)?смен\w*\s*[-–—:=]?\s*(\d+(?:[,.]\d+)?)\s*(?:час(?:а|ов)?|ч)\b",
++            r"\d+\s+смен\w*\s+по\s+(\d+(?:[,.]\d+)?)\s*(?:час(?:а|ов)?|ч)\b",
++        ]
++        values = []
++        for pat in patterns:
++            for m in re.finditer(pat, low):
++                try: values.append(float(m.group(1).replace(",", ".")))
++                except ValueError: pass
++        if any(math.isclose(v, required, rel_tol=0, abs_tol=0.01) for v in values):
++            score = 90 + (5 if str(page.get("document_type") or "").upper().startswith("ТХ") else 0)
++            ranked.append((score, page, values))
++    if not ranked:
++        return None
++    ranked.sort(key=lambda x: x[0], reverse=True)
++    score, page, values = ranked[0]
++    snippet = _context(page.get("text") or "", ("смен", str(int(required))), radius=420)
++    evidence = {"evidence_kind":"OPERATING_REGIME_VALUE","evidence_state":"verified_candidate","document":page.get("document"),"document_type":page.get("document_type"),"page":page.get("page"),"context":snippet,"score":score,"observed_values":values}
++    return {"status":"Соответствует заданию","evidence":[f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],"evidence_candidates":[evidence],"verification_evidence":[evidence],"evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE","match_confidence":0.97,"decision_basis":"Продолжительность рабочей смены адресно подтверждена профильным проектным разделом.","verification_kernel":"OPERATING_REGIME_EXECUTOR"}
++
++
++def _annual_capacity_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    if "производствен" not in low_req or not any(x in low_req for x in ("т/год", "тонн в год", "тыс")):
++        return None
++    # Normalize Assignment values such as 1 600 тыс. т/год to tonnes/year.
++    m_thousand = re.search(r"(\d[\d\s]*(?:[,.]\d+)?)\s*тыс\.?\s*(?:т|тонн)", low_req)
++    m_plain = re.search(r"(\d[\d\s]*(?:[,.]\d+)?)\s*(?:т|тонн)(?:\s*/\s*год|\s+в\s+год)", low_req)
++    if m_thousand:
++        required = float(m_thousand.group(1).replace(" ", "").replace(",", ".")) * 1000.0
++    elif m_plain:
++        required = float(m_plain.group(1).replace(" ", "").replace(",", "."))
++    else:
++        return None
++    ranked = []
++    for page in _candidate_pages(page_corpus, ("ТХ", "ПЗ")):
++        raw = re.sub(r"\s+", " ", str(page.get("text") or "")).strip()
++        low = _norm(raw)
++        if not any(k in low for k in ("годовая производительност", "переработка минерального сырья", "мощность")):
++            continue
++        values = []
++        for m in re.finditer(r"(\d[\d\s]*(?:[,.]\d+)?)\s*(?:тонн(?:/год|\s+в\s+год)?|т\s*/\s*год)", low):
++            try: values.append(float(m.group(1).replace(" ", "").replace(",", ".")))
++            except ValueError: pass
++        for m in re.finditer(r"(\d[\d\s]*(?:[,.]\d+)?)\s*тыс\.?\s*т", low):
++            try: values.append(float(m.group(1).replace(" ", "").replace(",", ".")) * 1000.0)
++            except ValueError: pass
++        if any(math.isclose(v, required, rel_tol=.001, abs_tol=1.0) for v in values):
++            score = 96 if str(page.get("document_type") or "").upper().startswith("ТХ") else 92
++            ranked.append((score, page, values))
++    if not ranked:
++        return None
++    ranked.sort(key=lambda x: x[0], reverse=True)
++    score, page, values = ranked[0]
++    snippet = _context(page.get("text") or "", ("производительност", "1 600 000"), radius=450)
++    evidence = {"evidence_kind":"ANNUAL_CAPACITY_VALUE","evidence_state":"verified_candidate","document":page.get("document"),"document_type":page.get("document_type"),"page":page.get("page"),"context":snippet,"score":score,"required_tpy":required,"observed_tpy":values}
++    return {"status":"Соответствует заданию","evidence":[f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],"evidence_candidates":[evidence],"verification_evidence":[evidence],"evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE","match_confidence":0.98,"decision_basis":"Годовая производственная мощность адресно совпала с проектным значением в профильном разделе.","verification_kernel":"ANNUAL_CAPACITY_EXECUTOR"}
++
++
++def _fencing_system_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    if not all(token in low_req for token in ("огражд", "ворот", "калит")):
++        return None
++    groups = {"fence":None, "gate":None, "wicket":None, "factory":None}
++    for page in _candidate_pages(page_corpus, ("ПЗУ", "КР")):
++        raw = str(page.get("text") or ""); low = _norm(raw)
++        if groups["fence"] is None and "огражд" in low and any(x in low for x in ("панел", "столб")):
++            groups["fence"] = page
++        if groups["gate"] is None and "ворот" in low:
++            groups["gate"] = page
++        if groups["wicket"] is None and "калит" in low:
++            groups["wicket"] = page
++        if groups["factory"] is None and any(x in low for x in ("комплектной поставк", "заводского изготов", "завода изготов")) and any(x in low for x in ("ворот", "калит", "огражд")):
++            groups["factory"] = page
++    if not all(groups.values()):
++        return None
++    unique=[]; evidence=[]
++    for key,page in groups.items():
++        ident=(page.get("document"),page.get("page"))
++        if ident in unique: continue
++        unique.append(ident)
++        snippet=_context(page.get("text") or "", ("огражд", "ворот", "калит", "комплектной поставк"), radius=430)
++        evidence.append({"evidence_kind":"FENCING_SYSTEM_COMPONENTS","evidence_state":"verified_candidate","document":page.get("document"),"document_type":page.get("document_type"),"page":page.get("page"),"context":snippet,"score":96})
++    return {"status":"Соответствует заданию","evidence":[f"{e['document']}, стр. {e['page']}: {e['context']}" for e in evidence],"evidence_candidates":evidence,"verification_evidence":evidence,"evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE","match_confidence":0.96,"decision_basis":"Ограждение, ворота, калитки и комплектное/заводское исполнение подтверждены адресными проектными источниками.","verification_kernel":"FENCING_SYSTEM_EXECUTOR"}
++
++
++

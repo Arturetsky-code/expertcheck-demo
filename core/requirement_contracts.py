@@ -113,6 +113,16 @@ def infer_scope(requirement:dict[str,Any])->str:
     )
     if obj in site_feature_objects and site_feature_context:
         return SCOPE_SITE
+    # Electrical protection is a system-level design requirement even when
+    # atomisation inherited the DSK object name. Words such as
+    # «электрооборудование» describe the protected system, not a single
+    # equipment owner, so system scope must win before object/equipment scope.
+    lightning_grounding_system = (
+        ("молниезащит" in title and "зазем" in title)
+        or ("молниезащит" in text and "зазем" in text)
+    )
+    if lightning_grounding_system:
+        return SCOPE_SYSTEM
     if obj:
         if any(x in text for x in ('автосамосвал','погрузчик','оборудован','агрегат','насос','трансформатор')):
             return SCOPE_EQUIPMENT

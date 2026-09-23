@@ -441,3 +441,25 @@ def test_lightning_grounding_composite_requires_all_conditions():
         for item in result["verification_evidence"]
     )
 
+def test_lightning_grounding_scope_precedes_inherited_dsk_equipment_owner():
+    from core.requirement_contracts import SCOPE_EQUIPMENT, SCOPE_SYSTEM, infer_scope
+
+    lightning = {
+        "source_row_title": "Молниезащита и заземление",
+        "requirement_text": (
+            "Для защиты людей от поражения электрическим током и защиты "
+            "электрооборудования предусматривается заземляющее устройство. "
+            "Молниезащиту площадки ДСК выполнить с помощью молниеприемников "
+            "на мачтах освещения."
+        ),
+        "object_name": "ДСК",
+    }
+    assert infer_scope(lightning) == SCOPE_SYSTEM
+
+    equipment = {
+        "source_row_title": "Технологические решения",
+        "requirement_text": "Предусмотреть насосный агрегат для технологической линии ДСК.",
+        "object_name": "Насос",
+    }
+    assert infer_scope(equipment) == SCOPE_EQUIPMENT
+

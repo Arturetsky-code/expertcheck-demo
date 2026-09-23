@@ -1,0 +1,161 @@
+rm in target_terms):
++            continue
++        if "открыт" not in page_low:
++            continue
++        # Strong preference for an explicit declarative clause, especially KR.
++        score = 70
++        if str(page.get("document_type") or "").upper().startswith("КР"):
++            score += 20
++        if re.search(r"навес[^.]{0,180}открыт", page_low, re.I):
++            score += 20
++        snippet = _context(raw, ("навес", "открыт"), radius=520)
++        ranked.append((score, page, snippet))
++    ranked.sort(key=lambda item: item[0], reverse=True)
++    if not ranked:
++        return None
++    score, page, snippet = ranked[0]
++    evidence = {
++        "evidence_kind": "QUALIFIED_PROJECT_PASSAGE",
++        "evidence_state": "verified_candidate",
++        "document": page.get("document"), "document_type": page.get("document_type"),
++        "page": page.get("page"), "context": snippet, "score": min(100, score),
++        "critical_qualifiers_satisfied": True,
++        "canopy_open_assertion": True,
++    }
++    return {
++        "status": "Соответствует заданию",
++        "evidence": [f"{page.get('document')}, стр. {page.get('page')}: {snippet}"],
++        "evidence_candidates": [evidence], "verification_evidence": [evidence],
++        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
++        "match_confidence": 0.98,
++        "decision_basis": "В профильном разделе адресно указано, что требуемый навес является открытым сооружением.",
++        "verification_kernel": "OPEN_CANOPY",
++    }
++
+ def _equipment_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+     text = str(requirement.get("requirement_text") or "")
+     low = _norm(text)
+@@ -305,13 +600,25 @@
+         and re.search(r"[-–—]\s*\d{1,3}\s*шт", snippet, re.I)
+         and project_brand
+     )
+-    verified_difference = bool(differences) and source_is_register
++    # A brand-only difference is not enough for a categorical mismatch: the
++    # register can contain several vehicles of the same broad role used for
++    # different operations. Require an additional identity attribute (model or
++    # quantity) to diverge, or a near-exact task/model match that proves the
++    # compared equipment row is the same functional item.
++    brand_only = bool(differences) and all(x.startswith("обозначение изготовителя/марки") for x in differences)
++    verified_difference = bool(differences) and source_is_register and not brand_only
+     evidence = {
+         "evidence_kind": "EQUIPMENT_REGISTER_COMPARISON", "evidence_state": "verified_candidate",
+         "document": page.get("document"), "document_type": page.get("document_type"), "page": page.get("page"),
+         "context": snippet, "score": min(100, ranked[0][0] + 15),
++        "equipment_role": equipment,
++        "equipment_role_match": True,
++        "task_brand": task_brand, "project_brand": project_brand,
+         "task_models": task_models, "project_models": project_models,
+         "task_quantity": task_qty, "project_quantity": project_qty,
++        "identity_differences": list(differences),
++        "verified_identity_mismatch": verified_difference,
++        "source_is_equipment_register": source_is_register,
+     }
+     return {
+         "status": "Выявлено отклонение" if verified_difference else "Требует проверки",
+@@ -438,26 +745,47 @@
+     for page in _candidate_pages(page_corpus, ()):
+         raw = str(page.get("text") or "")
+         lines = [re.sub(r"\s+", " ", line).strip() for line in raw.splitlines() if line.strip()]
+-        # A page may contain an unrelated phrase "не требуется" next to a
+-        # different heading. Reconstruct only line-wrapped clauses: join a line
+-        # to the next one when the previous line has no terminal punctuation.
+-        windows: list[str] = []
+-        buffer = ""
+-        for line in lines:
+-            buffer = f"{buffer} {line}".strip() if buffer else line
+-            if re.search(r"[.!?;:]\s*$", line):
+-                windows.append(buffer)
+-                buffer = ""
+-        if buffer:
+-            windows.append(buffer)
+-        for window in windows:
+-            low = _norm(window)
+-            if not any(marker in low for marker in NEGATIVE_MARKERS):
++        # Negative proof must be local. Build a tiny clause window around the
++        # line that actually contains the negative assertion; never accumulate
++        # a whole PDF page because extracted text often loses punctuation.
++        for idx, line in enumerate(lines):
++            low_line = _norm(line)
++            if not any(marker in low_line for marker in NEGATIVE_MARKERS):
+                 continue
++            parts = [line]
++            # Recover a short line-wrapped subject immediately before the
++            # negative assertion, but stop at an explicit sentence boundary.
++            back = idx - 1
++            taken = 0
++            while back >= 0 and taken < 3 and not re.search(r"[.!?;:]\s*$", lines[back]):
++                parts.insert(0, lines[back])
++                back -= 1
++                taken += 1
++            if idx + 1 < len(lines) and not re.search(r"[.!?;:]\s*$", line):
++                parts.append(lines[idx + 1])
++            window = " ".join(parts)
++            low = _norm(window)
+             hits = [term for term in terms if term in low]
+-            if len(hits) < min(3, len(terms)):
++            req_low = _norm(requirement.get("requirement_text") or "")
++            # The negated predicate must match the requirement, not merely its
++            # broad topic. "Разработка не требуется" cannot be proven by
++            # "технический учет не предусматривается".
++            if "разработ" in req_low and "разработ" not in low:
++                continue
++            if "требования отсутств" in req_low and not ("требован" in low and "отсутств" in low):
+                 continue
+-            score = 55 + len(hits) * 8
++            generic_subject_terms = {
++                "требовани", "необходим", "соответств", "проектной", "документац",
++                "безопасно", "объекта", "мероприят", "обеспечен", "используе",
++            }
++            distinctive = [term for term in terms if term not in generic_subject_terms]
++            distinctive_hits = [term for term in distinctive if term in low]
++            if "разработ" not in req_low and len(distinctive) >= 2 and len(distinctive_hits) < 2:
++                continue
++            required_hits = max(3, min(5, (len(terms) + 1) // 2))
++            if len(hits) < required_hits:
++                continue
++            score = 55 + len(hits) * 8 + len(distinctive_hits) * 4
+             ranked.append((score, page, hits, window))
+     ranked.sort(key=lambda item: item[0], reverse=True)
+     if not ranked:
+@@ -515,6 +843,14 @@
+         matched_norms = [norm for norm in norm_ids if norm in low]
+         if not matched_norms:
+             continue
++        req_low = _norm(text)
++        # A shared normative citation is not enough to prove a factual climate
++        # proposition. Preserve polarity/subject for special climate assertions.
++        if "северн" in req_low:
++            if "северн" not in low:
++                continue
++            if any(token in req_low for token in ("не относится", "не относит")) and not any(token in low for token in ("не относится", "не относит")):
++                continue
+         hits = [term for term in terms if term in low]
+         distinctive = [term for term in hits if not any(term in norm for norm in matched_norms)]
+         if factual and len(distinctive) < 2:
+@@ -558,9 +894,16 @@
+     if len(terms) < 2:
+         return None
+     sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
+-    construction_duration = "срок" in _norm(title) and "строитель" in _norm(title)
++    title_low = _norm(title)
++    construction_duration = "срок" in title_low and "строитель" in title_low
++    site_landscaping = "благоустрой" in title_low and "земельн" in title_low
+     if construction_duration and not sections:
+         sections = ["ПОС", "ПЗ"]
++    if site_landscaping:
++        # A table-of-contents line must never prove that landscaping decisions
++        # were actually developed. Require the profile PZU section and concrete
++        # site-improvement decisions in the same page.
++        sections = ["ПЗУ"]
+     ranked: list[tuple[int, dict[str, Any], list[str]]] = []
+     for page in _candidate_pages(pa

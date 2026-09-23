@@ -1,0 +1,91 @@
+# ExpertCheck development state
+
+Updated: 2026-09-23
+Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
+
+## Official accepted local checkpoint
+
+Assignment compliance / Test 78 / AI off:
+
+- Requirements: 56
+- `Соответствует заданию`: 17
+- Proven deviations: 1
+- `Требует проверки`: 38
+- Strict categorical coverage: **18/56 = 32.1%**
+- Admission diagnostics include **PROFILE_SECTION_ABSENT**
+- Current Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
+
+Accepted categorical deviation:
+- Requirement 22, loader identity/quantity mismatch. This remains categorical because the equipment identity evidence is stronger than a brand-only similarity.
+
+Not accepted as categorical:
+- Requirement 21, ore-haul truck. A brand difference alone is insufficient.
+- Lime-supply composite requirement remains review-only until every material qualifier, including the MKR volume condition, is addressably proven.
+- Identification-register mismatch experiment is WIP and is NOT part of the accepted checkpoint.
+
+## Validation of accepted checkpoint
+
+- `tests/core25/test_coverage_breakthrough_252.py`: **20/20 passed**
+- Other locally available Core25 tests: **96/96 passed**
+- Historical Assignment pipeline test requiring `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` cannot run because that fixture is absent from the source snapshot; this is not a code failure.
+
+## Missing-profile-section policy
+
+This is an established fail-closed rule, not a new feature:
+
+1. absence of the expected profile section cannot prove compliance;
+2. absence of the expected profile section cannot prove a deviation;
+3. runtime diagnostics must distinguish `PROFILE_SECTION_ABSENT` from retrieval/proof failure where the profile section is present.
+
+Examples in Test 78:
+- ИОС3 absent -> sewerage requirement stays review-only;
+- ИОС4 absent -> heating/ventilation requirements stay review-only;
+- ИОС5 absent -> cellular/radio/video requirements stay review-only;
+- ИОС6 absent -> gasification requirement stays review-only;
+- OOS/PB/EE/ODI/POS requirements are likewise marked by missing expected sections where those sections are not in the 12-file package.
+
+## Current development priority
+
+Do not revisit missing-section fail-closed logic unless a regression appears.
+
+Continue with requirements where the expected section IS present but proof is not closed:
+- 33 Water supply (ИОС2 present): most conditions are present, but factory-supply wording for the module tanks is not yet addressably proven.
+- 39 Automation (ТХ/PЗ present): many ASU functions are proven, but complete-supply and reserve-aggregate/productivity conditions are not fully proven.
+- 40 Power supply (ИОС1 present): many clauses are proven (overhead lines, SIP, cable trays, no buried routing, DGS/category-I reserve, PUE/FNP); support-on-concrete-footings remains to be proven before categorical closure.
+
+After these, prioritize other `PROFILE_SECTION_PRESENT` rows by admission stage rather than chasing raw coverage.
+
+## WIP preserved but not accepted
+
+Identification-register executor experiment:
+- produced an extra categorical mismatch for requirement 3;
+- not yet manually audited;
+- was rolled back from the accepted local runtime;
+- WIP tests/research must be preserved separately and revisited later, not silently merged into the accepted checkpoint.
+
+Operating-regime evidence ranking improvement is also WIP: prefer project-wide DSK regime evidence over a coincidental 12-hour shift of a local subsystem.
+
+## Checkpoint protocol — mandatory
+
+Use GitHub as the durable development journal.
+
+Create a checkpoint:
+- at most every **20 minutes of active development** when changes exist;
+- immediately after any audited benchmark improvement;
+- immediately after a green regression package;
+- before a substantial architectural experiment;
+- before ending work, switching chats, or when the chat is becoming large.
+
+Checkpoint types:
+- **WIP checkpoint** — preserves unfinished experiments without promoting them to the accepted baseline.
+- **Validated checkpoint** — benchmark reproduced, false-positive audit completed for new categorical results, tests recorded.
+
+Every validated checkpoint records:
+- exact branch / commit SHA or recovery delta;
+- Test 78 counts;
+- tests passed / blocked and why;
+- new categorical requirements and their evidence audit;
+- false-positive safeguards;
+- unfinished next step.
+
+Do not rely on chat history or ephemeral local filesystem as the only record of development progress.

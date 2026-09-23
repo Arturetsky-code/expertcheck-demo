@@ -1,0 +1,274 @@
+--- a/core/assignment_compliance.py
++++ b/core/assignment_compliance.py
+@@ -346,12 +346,23 @@
+     if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low): return TYPE_NORMATIVE
+     if "нормативн" in low and not any(v in low for v in REQ_VERBS): return TYPE_NORMATIVE
+     if code and value is not None: return TYPE_VALUE
+-    if (
+-        "определить проект" in low
+-        or "определить при разработке" in low
+-        or "определить в проектной документации" in low
+-        or "определить документацией" in low
+-    ): return TYPE_DESIGN
++    determine_markers=(
++        "определить проект",
++        "определить при разработке",
++        "определить в проектной документации",
++        "определить документацией",
++    )
++    determine_positions=[low.find(x) for x in determine_markers if low.find(x) >= 0]
++    if determine_positions:
++        first_det=min(determine_positions)
++        primary_engineering_verbs=("предусмотреть","выполнить","разработать","обеспечить","принять")
++        primary_positions=[low.find(x) for x in primary_engineering_verbs if low.find(x) >= 0]
++        # «Определить проектом» is DESIGN_DETERMINED only when it is the main
++        # obligation. In a composite engineering requirement (e.g. provide
++        # fencing, gates and wickets; determine only their sizes by design) the
++        # main requirement remains PRESENCE.
++        if not primary_positions or first_det <= min(primary_positions):
++            return TYPE_DESIGN
+     if any(v in low for v in REQ_VERBS): return TYPE_PRESENCE
+     return TYPE_SEMANTIC
+ 
+--- a/core/assignment_verification_kernel.py
++++ b/core/assignment_verification_kernel.py
+@@ -1035,10 +1035,21 @@
+     for page in _candidate_pages(page_corpus, sections):
+         low = _norm(page.get("text") or "")
+         hits = [term for term in terms if term in low]
++        structured_duration = False
+         if construction_duration:
+-            duration_value = re.search(r"\b\d+(?:[,.]\d+)?\s*(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", low)
++            duration_value = (
++                re.search(r"\b\d+(?:[,.]\d+)?\s*(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", low)
++                or re.search(r"(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\s*[:=-]?\s*\d+(?:[,.]\d+)?\b", low)
++            )
+             duration_subject = ("срок" in low and "строитель" in low) or ("продолжительност" in low and "строитель" in low)
+-            if not (duration_value and duration_subject):
++            # Structured project facts in PZ/XML use labels such as
++            # «Сведения о сроках проведения работ» + «Продолжительность работ, месяц: N».
++            # This is a substantive value and must not be confused with a TOC heading.
++            structured_duration = bool(
++                "сведени" in low and "срок" in low and "проведен" in low and "работ" in low
++                and re.search(r"продолжительност\w*\s+работ\w*[^\d]{0,40}\d+(?:[,.]\d+)?", low)
++            )
++            if not (duration_value and (duration_subject or structured_duration)):
+                 continue
+         elif site_landscaping:
+             substantive = (
+@@ -1050,7 +1061,7 @@
+             hits = ["благоустрой"] + [token for token in ("озелен", "пешеход", "проезд", "огражд", "водоотвод") if token in low]
+         elif len(hits) < min(3, len(terms)):
+             continue
+-        if not any(marker in low for marker in DESIGN_MARKERS):
++        if not structured_duration and not any(marker in low for marker in DESIGN_MARKERS):
+             continue
+         score = 48 + len(hits) * 10 + (12 if sections else 0)
+         ranked.append((score, page, hits))
+@@ -1058,13 +1069,37 @@
+     if not ranked:
+         return None
+     score, page, hits = ranked[0]
+-    snippet = _context(page.get("text") or "", hits, radius=520)
++    selected_low = _norm(page.get("text") or "")
++    selected_structured_duration = bool(
++        construction_duration
++        and "сведени" in selected_low and "срок" in selected_low and "проведен" in selected_low and "работ" in selected_low
++        and re.search(r"продолжительност\w*\s+работ\w*[^\d]{0,40}\d+(?:[,.]\d+)?", selected_low)
++    )
++    anchors = ("продолжительност",) if selected_structured_duration else hits
++    snippet = _context(page.get("text") or "", anchors, radius=260 if selected_structured_duration else 520)
++    observed_value = None
++    observed_unit = ""
++    if selected_structured_duration:
++        value_match = re.search(
++            r"продолжительност\w*\s+работ\w*[^\d]{0,40}(?:(?:мес(?:яц\w*)?)\s*[:=-]?\s*)?(\d+(?:[,.]\d+)?)",
++            selected_low,
++        )
++        if value_match:
++            try:
++                observed_value = float(value_match.group(1).replace(",", "."))
++                observed_unit = "месяц"
++            except ValueError:
++                pass
+     evidence = {
+         "evidence_kind": "QUALIFIED_DESIGN_DETERMINED",
+         "evidence_state": "verified_candidate",
+         "document": page.get("document"), "document_type": page.get("document_type"),
+         "page": page.get("page"), "context": snippet,
+         "score": min(100, score), "matched_terms": hits,
++        "design_determined_subject": "CONSTRUCTION_DURATION" if construction_duration else "PROJECT_PARAMETER",
++        "structured_project_fact": selected_structured_duration,
++        "observed_value": observed_value,
++        "observed_unit": observed_unit,
+     }
+     return {
+         "status": "Соответствует заданию",
+@@ -1076,6 +1111,7 @@
+         "verification_kernel": "DESIGN_DETERMINED_EXECUTOR",
+     }
+ 
++
+ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+     text = str(requirement.get("requirement_text") or "")
+     query_text = _query_text(requirement)
+--- a/core25/routing.py
++++ b/core25/routing.py
+@@ -30,6 +30,7 @@
+     "EQUIPMENT_IDENTITY": "EQUIPMENT_IDENTITY",
+     "PROJECT_COMPOSITION": "PROJECT_COMPOSITION",
+     "IDENTIFICATION_RESPONSIBILITY": "IDENTIFICATION_RESPONSIBILITY",
++    "DESIGN_DETERMINED": "DESIGN_DETERMINED",
+ }
+ 
+ 
+--- a/core25/runtime_bridge.py
++++ b/core25/runtime_bridge.py
+@@ -54,6 +54,8 @@
+         item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
+     elif executor == "IDENTIFICATION_RESPONSIBILITY_EXECUTOR":
+         item["verification_kind"] = "IDENTIFICATION_RESPONSIBILITY"
++    elif executor == "DESIGN_DETERMINED_EXECUTOR":
++        item["verification_kind"] = "DESIGN_DETERMINED"
+     return item
+ 
+ 
+@@ -170,6 +172,10 @@
+                     "project_responsibility": dict(candidate.get("project_responsibility") or {}),
+                     "identification_differences": tuple(candidate.get("identification_differences") or ()),
+                     "verified_identification_mismatch": candidate.get("verified_identification_mismatch"),
++                    "design_determined_subject": candidate.get("design_determined_subject"),
++                    "structured_project_fact": candidate.get("structured_project_fact"),
++                    "observed_value": candidate.get("observed_value"),
++                    "observed_unit": candidate.get("observed_unit"),
+                 },
+             )
+         )
+--- a/core25/requirement_engine.py
++++ b/core25/requirement_engine.py
+@@ -57,7 +57,7 @@
+     # 25.2 Alpha 2: requirements that are semantically non-object-specific
+     # must not fail binding merely because the legacy extractor could not assign
+     # a UI scope label. Evidence still has to pass section/canonical/proof gates.
+-    if kind in {"PRESENCE", "NEGATIVE_ASSERTION", "NORMATIVE_ASSERTION"}:
++    if kind in {"PRESENCE", "NEGATIVE_ASSERTION", "NORMATIVE_ASSERTION", "DESIGN_DETERMINED"}:
+         return Scope.PROJECT_GLOBAL
+     return Scope.UNRESOLVED
+ 
+@@ -73,7 +73,7 @@
+         "VALUE_COMPARISON": "TYPED_VALUE",
+         "PRESENCE_REQUIREMENT": "PRESENCE",
+         "SEMANTIC_ENGINEERING": "PRESENCE",
+-        "DESIGN_DETERMINED": "PRESENCE",
++        "DESIGN_DETERMINED": "DESIGN_DETERMINED",
+         "PROHIBITION_OR_NOT_REQUIRED": "NEGATIVE_ASSERTION",
+         "APPLICABILITY_DECLARATION": "NEGATIVE_ASSERTION",
+         "NORMATIVE_COMPLIANCE": "NORMATIVE_ASSERTION",
+--- a/core25/proof.py
++++ b/core25/proof.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ from hashlib import sha1
++import re
+ from typing import Iterable, Mapping
+ 
+ from .adapters.core20 import (
+@@ -272,6 +273,56 @@
+ )
+ 
+ 
++def _design_determined_proof(
++    requirement: Requirement25,
++    route: VerificationRoute,
++    pairs: tuple[tuple[Evidence25, Binding25], ...],
++) -> Proof25:
++    selected: list[tuple[Evidence25, Binding25]] = []
++    for evidence_item, binding in pairs:
++        metadata = dict(evidence_item.metadata or {})
++        if (
++            str(metadata.get("legacy_evidence_kind") or "").upper()
++            != "QUALIFIED_DESIGN_DETERMINED"
++            or str(metadata.get("coverage_executor") or "").upper()
++            != "DESIGN_DETERMINED_EXECUTOR"
++        ):
++            continue
++        fragment = _norm_text(evidence_item.fragment)
++        if metadata.get("structured_project_fact") is True:
++            subject = str(metadata.get("design_determined_subject") or "").upper()
++            if subject == "CONSTRUCTION_DURATION":
++                if not (
++                    "продолжительност" in fragment
++                    and "работ" in fragment
++                    and re.search(r"(?:мес(?:яц\w*)?\s*[:=-]?\s*\d+|\d+\s*мес)", fragment)
++                ):
++                    continue
++                try:
++                    if float(metadata.get("observed_value")) <= 0:
++                        continue
++                except (TypeError, ValueError):
++                    continue
++        elif not _has_project_assertion(evidence_item.fragment):
++            continue
++        selected.append((evidence_item, binding))
++
++    if not selected:
++        return _insufficient(
++            requirement, route, reason_code="DESIGN_DETERMINED_VALUE_NOT_PROVEN"
++        )
++    evidence_ids = tuple(item.evidence_id for item, _ in selected)
++    binding_ids = tuple(binding.binding_id for _, binding in selected)
++    return Proof25(
++        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
++        requirement_id=requirement.requirement_id,
++        state=ProofState.PROVEN_MATCH,
++        evidence_ids=evidence_ids,
++        binding_ids=binding_ids,
++        reason_code="ASSIGNMENT_DESIGN_VALUE_CONFIRMED",
++    )
++
++
+ def _negative_assertion_proof(
+     requirement: Requirement25,
+     route: VerificationRoute,
+@@ -644,6 +695,8 @@
+         return _typed_value_proof(requirement, route, pairs)
+     if route.kind == "PRESENCE":
+         return _presence_proof(requirement, route, pairs)
++    if route.kind == "DESIGN_DETERMINED":
++        return _design_determined_proof(requirement, route, pairs)
+     if route.kind == "RESERVE_TOPOLOGY":
+         return _reserve_topology_proof(requirement, route, pairs)
+     if route.kind == "NEGATIVE_ASSERTION":
+--- a/tests/core25/test_coverage_breakthrough_252.py
++++ b/tests/core25/test_coverage_breakthrough_252.py
+@@ -578,3 +578,28 @@
+     assert result is None or result.get('status')!='Соответствует заданию'
+ 
+ 
++def test_construction_duration_accepts_structured_pz_project_fact():
++    from core.assignment_verification_kernel import verify_assignment_requirement
++    requirement = {
++        "requirement_type": "DESIGN_DETERMINED",
++        "source_row_title": "Срок строительства объекта",
++        "requirement_text": "Определить проектной документацией",
++        "evidence_contract_v2": {"expected_sections": []},
++    }
++    corpus = [{
++        "document": "ПЗ.pdf", "document_type": "ПЗ", "page": 27,
++        "text": "Сведения о сроках проведении работ. Продолжительность работ, месяц: 12.",
++    }]
++    result = verify_assignment_requirement(requirement, corpus)
++    assert result and result.get("status") == "Соответствует заданию"
++    assert result.get("verification_kernel") == "DESIGN_DETERMINED_EXECUTOR"
++
++
++def test_secondary_determine_clause_does_not_reclassify_composite_presence_requirement():
++    from core.assignment_compliance import _requirement_type, TYPE_PRESENCE, TYPE_DESIGN
++    composite = (
++        "Предусмотреть ограждение площадки. Для проезда предусмотреть ворота и калитки. "
++        "Размеры определить проектом исходя из габаритов техники."
++    )
++    assert _requirement_type(composite, "Требования к схеме планировочной организации земельного участка", "", None) == TYPE_PRESENCE
++    assert _requirement_type("Определить проектной документацией", "Срок строительства объекта", "", None) == TYPE_DESIGN
++

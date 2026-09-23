@@ -149,3 +149,27 @@ Every validated checkpoint records:
 - unfinished next step.
 
 Do not rely on chat history or ephemeral local filesystem as the only record of development progress.
+
+
+## Session-end checkpoint — 2026-09-23
+
+Accepted baseline remains **Test 78 = 21/56 (37.5%)**:
+- 19 compliant;
+- 2 proven deviations;
+- 35 review-only.
+
+Manual evidence audit completed before ending the session:
+- Water supply remains **4/5 conditions proven**. The missing factory-complete-supply condition for tanks serving modular buildings is not addressably proven. The phrase about factory-complete supply in IOS2 refers to fire-water reservoirs and must not be borrowed across subjects.
+- Automation remains **7/10 conditions proven**. No addressable proof was found for ASU complete supply, productivity control by starting additional/reserve aggregates, or an explicit optimal-operating-mode condition.
+- Power supply remains **5/8 conditions proven**. No addressable proof was found for supports on concrete footings; DGS is tied to the special group of category I rather than category I generally; PUE has a local application example, while FNP No. 505 is only listed in the normative bibliography and therefore cannot close the full adoption condition.
+- No checker was weakened and no categorical result was added from these three audits.
+
+Repository integrity note:
+- all validated 21/56 work is preserved in GitHub;
+- the accepted state is still reconstructed from the branch source plus checkpoint/recovery deltas:
+  - `checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch`;
+  - `checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64`.
+- The main Python sources on the branch do not yet contain every condition-matrix checker from the recovery delta. This is intentional only as a preserved recovery state, not as the desired long-term branch layout.
+- **First task next session:** materialize the validated 21/56 recovery deltas into the normal source tree, rerun the Core25/Test 78 regression package, then create a self-contained validated checkpoint commit before further coverage work.
+
+No new runtime/code changes were accepted on 2026-09-23 after the 21/56 checkpoint.

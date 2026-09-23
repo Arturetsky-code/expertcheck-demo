@@ -1,0 +1,64 @@
+name: Recover ExpertCheck 25.2 validated source
+
+on:
+  push:
+    branches:
+      - codex/expertcheck-25.2-coverage-breakthrough
+    paths:
+      - .github/workflows/recover-252.yml
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/expertcheck-25.2-coverage-breakthrough
+          fetch-depth: 0
+
+      - name: Apply validated recovery deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          apply_idempotent() {
+            local patch="$1"
+            if git apply --check "$patch"; then
+              git apply "$patch"
+              echo "Applied: $patch"
+            elif git apply --reverse --check "$patch"; then
+              echo "Already applied: $patch"
+            else
+              echo "Recovery patch conflicts with current source: $patch" >&2
+              exit 1
+            fi
+          }
+
+          apply_idempotent checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch
+          base64 -d checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64 | gzip -dc > /tmp/condition_matrix.patch
+          apply_idempotent /tmp/condition_matrix.patch
+
+      - name: Validate recovered checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -q -r requirements.txt
+          pytest -q tests/core25/test_coverage_breakthrough_252.py
+          pytest -q tests/core25 --ignore=tests/core25/test_assignment_pipeline.py
+
+      - name: Commit recovered source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No recovery changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add core core25 studio tests
+          git commit -m "restore: materialize validated 25.2 source from recovery deltas"
+          git push origin HEAD:codex/expertcheck-25.2-coverage-breakthrough

@@ -2,6 +2,7 @@
 
 Updated: 2026-09-23
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
+Latest validated checkpoint commit: `e37a7e805fd4e3c3a674944e81e2fa5462aa71e0`
 
 ## Official accepted local checkpoint
 
@@ -9,26 +10,23 @@ Assignment compliance / Test 78 / AI off:
 
 - Requirements: 56
 - `Соответствует заданию`: 18
-- Proven deviations: 1
-- `Требует проверки`: 37
-- Strict categorical coverage: **19/56 = 33.9%**
+- Proven deviations: 2
+- `Требует проверки`: 36
+- Strict categorical coverage: **20/56 = 35.7%**
 - Admission diagnostics include **PROFILE_SECTION_ABSENT**
-- Current Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
+- Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
 
-Accepted categorical deviation:
-- Requirement 22, loader identity/quantity mismatch. This remains categorical because the equipment identity evidence is stronger than a brand-only similarity.
+Accepted categorical deviations:
+- Requirement 22: loader identity/quantity mismatch.
+- Requirement 3: Appendix 1 identification responsibility mismatch for exact GP position **4.25 “Навес системы подачи извести”**: Assignment **КС-2, γn=1.0** vs KR **КС-3, γn=1.1**.
 
-Not accepted as categorical:
-- Requirement 21, ore-haul truck. A brand difference alone is insufficient.
-- Lime-supply composite requirement remains review-only until every material qualifier, including the MKR volume condition, is addressably proven.
-- Identification-register mismatch experiment is WIP and is NOT part of the accepted checkpoint.
+New accepted compliance since 18/56:
+- Requirement 12 via `NORMATIVE_DESIGN_ADOPTION_EXECUTOR`: the Assignment-mandated СП 45.13330.2017 is addressably adopted in the project design chain. This is only an Assignment→PD verdict and does not substitute for full normative compliance checking.
 
-## Validation of accepted checkpoint
-
-- `tests/core25/test_coverage_breakthrough_252.py`: **25/25 passed**
-- Core25 suite: **104 passed / 1 blocked by missing historical XLSX fixture**
-- The blocked test still requires `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx`; this is not a code failure.
-- Historical Assignment pipeline test requiring `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` cannot run because that fixture is absent from the source snapshot; this is not a code failure.
+Validation:
+- `tests/core25/test_coverage_breakthrough_252.py`: **27/27 passed**
+- Other available Core25 tests: **106 passed**
+- One historical test remains blocked only because `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` is absent from the source snapshot.
 
 ## Missing-profile-section policy
 

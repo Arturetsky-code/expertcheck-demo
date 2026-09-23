@@ -1,0 +1,172 @@
++        # were actually developed. Require the profile PZU section and concrete
++        # site-improvement decisions in the same page.
++        sections = ["ПЗУ"]
+     ranked: list[tuple[int, dict[str, Any], list[str]]] = []
+     for page in _candidate_pages(page_corpus, sections):
+         low = _norm(page.get("text") or "")
+@@ -570,6 +913,14 @@
+             duration_subject = ("срок" in low and "строитель" in low) or ("продолжительност" in low and "строитель" in low)
+             if not (duration_value and duration_subject):
+                 continue
++        elif site_landscaping:
++            substantive = (
++                "благоустраив" in low
++                and any(token in low for token in ("озелен", "пешеход", "проезд", "огражд", "водоотвод"))
++            )
++            if not substantive:
++                continue
++            hits = ["благоустрой"] + [token for token in ("озелен", "пешеход", "проезд", "огражд", "водоотвод") if token in low]
+         elif len(hits) < min(3, len(terms)):
+             continue
+         if not any(marker in low for marker in DESIGN_MARKERS):
+@@ -658,6 +1009,156 @@
+     }
+ 
+ 
++
++def _project_composition_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    """Verify only the explicit *composition of objects* requirement.
++
++    Identification attributes from Assignment Appendix 1 are intentionally NOT
++    closed by this checker: matching names/GP positions does not prove all
++    identification characteristics.  The checker therefore applies only when
++    the Assignment explicitly asks to accept the project object composition.
++    """
++    if str(requirement.get("requirement_type") or "") != "SET_COMPARISON":
++        return None
++    query = _norm(
++        f"{requirement.get('source_row_title') or ''} {requirement.get('requirement_text') or ''}"
++    )
++    if "состав объект" not in query:
++        return None
++    expected = [x for x in (requirement.get("expected_objects") or []) if isinstance(x, dict)]
++    if not expected:
++        return None
++
++    # The PZU textual part contains an explicit two-page list introduced by this
++    # anchor.  It is preferable to OCR-like reading order from the graphical
++    # explication because every item is addressable and sequential in text.
++    pzu_pages = [
++        p for p in (page_corpus or [])
++        if str(p.get("document_type") or "").upper().startswith("ПЗУ")
++        and not is_assignment_source(p)
++    ]
++    anchors = [p for p in pzu_pages if "в состав объектов проектируемого" in _norm(p.get("text") or "")]
++    if not anchors:
++        return None
++
++    def name_terms(value: str) -> list[str]:
++        words = re.findall(r"[a-zа-яе0-9]+", _norm(value).replace("-", " "))
++        stop = {"здание", "сооружение", "сооружения", "станция", "комплекс", "номер", "поз"}
++        out: list[str] = []
++        for word in words:
++            if word in stop or word.isdigit() or len(word) < 4:
++                continue
++            # A 5-8 character prefix tolerates inflection and Appendix PDF
++            # truncation (e.g. "кана-" -> "канализации") without semantic guessing.
++            stem = word if len(word) <= 6 else word[:7]
++            if stem not in out:
++                out.append(stem)
++        return out
++
++    best: dict[str, Any] | None = None
++    for anchor in anchors:
++        document = str(anchor.get("document") or "")
++        first_page = int(anchor.get("page") or 0)
++        selected = sorted(
++            [p for p in pzu_pages if str(p.get("document") or "") == document and int(p.get("page") or 0) in {first_page, first_page + 1}],
++            key=lambda p: int(p.get("page") or 0),
++        )
++        if not selected:
++            continue
++        matched_by_page: dict[int, list[str]] = {int(p.get("page") or 0): [] for p in selected}
++        matched_names: dict[str, str] = {}
++        for exp in expected:
++            pos = str(exp.get("position") or "").strip()
++            name = str(exp.get("name") or "").strip()
++            if not pos:
++                continue
++            needle = f"({pos})"
++            for page in selected:
++                raw = str(page.get("text") or "")
++                idx = raw.find(needle)
++                if idx < 0:
++                    continue
++                prev_bullet = raw.rfind("−", max(0, idx - 320), idx)
++                prev_line = raw.rfind("\n", 0, idx)
++                line_start = prev_bullet if prev_bullet >= 0 else prev_line
++                line_start = 0 if line_start < 0 else line_start
++                line_end_candidates = [x for x in (raw.find(";", idx), raw.find("\n", idx)) if x >= 0]
++                line_end = min(line_end_candidates) + 1 if line_end_candidates else min(len(raw), idx + 220)
++                snippet = raw[max(0, line_start):min(len(raw), line_end)]
++                snippet_norm = _norm(snippet).replace("-", " ")
++                terms = name_terms(name)
++                hits = [term for term in terms if term in snippet_norm]
++                required_hits = 1 if len(terms) <= 2 else max(2, (len(terms) + 1) // 2)
++                if terms and len(hits) < required_hits:
++                    continue
++                matched_by_page[int(page.get("page") or 0)].append(pos)
++                matched_names[pos] = re.sub(r"\s+", " ", snippet).strip()
++                break
++
++        expected_positions = [str(x.get("position") or "").strip() for x in expected if str(x.get("position") or "").strip()]
++        matched_positions = sorted(matched_names, key=lambda x: [int(p) for p in x.split('.')])
++        missing = [pos for pos in expected_positions if pos not in matched_names]
++        score = len(matched_positions)
++        candidate = {
++            "document": document,
++            "first_page": first_page,
++            "selected": selected,
++            "matched_by_page": matched_by_page,
++            "matched_names": matched_names,
++            "matched_positions": matched_positions,
++            "missing_positions": missing,
++            "expected_positions": expected_positions,
++            "score": score,
++        }
++        if best is None or candidate["score"] > best["score"]:
++            best = candidate
++
++    if not best or best["missing_positions"]:
++        return None
++
++    evidence_rows: list[dict[str, Any]] = []
++    rendered: list[str] = []
++    for page in best["selected"]:
++        page_no = int(page.get("page") or 0)
++        page_positions = best["matched_by_page"].get(page_no) or []
++        if not page_positions:
++            continue
++        raw = str(page.get("text") or "")
++        anchor_text = "В состав объектов проектируемого" if page_no == best["first_page"] else ""
++        start = raw.find(anchor_text) if anchor_text else 0
++        if start < 0:
++            start = 0
++        # Keep an addressable page-local fragment; proof combines positions from
++        # both pages instead of pretending a single page contains the full list.
++        fragment = re.sub(r"\s+", " ", raw[start:start + 4200]).strip()
++        row = {
++            "evidence_kind": "QUALIFIED_PROJECT_COMPOSITION_LIST",
++            "evidence_state": "verified_candidate",
++            "document": best["document"],
++            "document_type": page.get("document_type"),
++            "page": page_no,
++            "context": fragment,
++            "score": 98,
++            "matched_positions": page_positions,
++            "expected_position_count": len(best["expected_positions"]),
++            "composition_list_anchor": True,
++        }
++        evidence_rows.append(row)
++        rendered.append(f"{best['document']}, стр. {page_no}: {fragment}")
++
++    if not evidence_rows:
++        return None
++    return {
++        "status": "Соответствует заданию",
++        "evidence": rendered,
++        "evidence_candidates": evidence_rows,
++        "verification_evidence": evidence_rows,
++        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
++        "match_confidence": 0.98,
++

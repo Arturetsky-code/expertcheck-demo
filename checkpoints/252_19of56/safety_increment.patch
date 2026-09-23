@@ -1,0 +1,113 @@
+--- core/assignment_compliance.py (19of56 pre-safety)
++++ core/assignment_compliance.py (19of56 safety)
+@@ -274,10 +274,21 @@
+ def _parameter(sentence:str):
+     low=normalize_text(sentence)
+     unit_re=r"м²|м2|м³|м3|квт|мвт|ква|т/ч|т/год|тыс\.?s*т(?:онн)?(?:/|\s+в\s+)год|м3/ч|м³/ч|л/с|км|м|шт\.?|час(?:а|ов)?|ч"
+     for code,aliases,units in PARAMETERS:
+-        if not any(a in low for a in aliases): continue
++        positions=[]
++        for alias in aliases:
++            if code == "VOLUME" and alias in {"объем", "объём"}:
++                # Do not treat the compound adjective «объёмно-планировочный»
++                # as the engineering metric VOLUME.
++                match=re.search(rf"(?<![а-яёa-z]){re.escape(alias)}(?![а-яёa-z-])", low, re.I)
++                if match:
++                    positions.append(match.start())
++            elif alias in low:
++                positions.append(low.find(alias))
++        if not positions: continue
+         # Prefer a value following the matched metric phrase, not any number in the sentence.
+-        positions=[low.find(a) for a in aliases if a in low]
+-        start=min(p for p in positions if p>=0)
++        start=min(positions)
+
+--- core/assignment_verification_kernel.py (19of56 pre-safety)
++++ core/assignment_verification_kernel.py (19of56 safety)
+@@ -28,7 +28,7 @@
+ NORMATIVE_REF_RE = re.compile(
+-    r"\b(?:ГОСТ(?:\s+Р)?|СП|СНиП|ФЗ)\s*[A-ZА-Я0-9.-]+(?:\s*[-–—]\s*\d{2,4})?",
++    r"\b(?:(?:ГОСТ(?:\s+Р)?|СП|СНиП|ФЗ)\s*[A-ZА-Я0-9.-]+(?:\s*[-–—]\s*\d{2,4})?|ПУЭ)\b",
+     re.I,
+ )
+@@ -856,7 +856,7 @@
+-    adoption_ranked: list[tuple[int, dict[str, Any], list[str], list[str]]] = []
++    adoption_ranked: list[tuple[int, dict[str, Any], list[str], list[str], str]] = []
+@@ -868,17 +868,31 @@
+-        matched_refs = [ref for ref in required_refs if ref in low]
+-        if not matched_refs:
+-            continue
+-        distinctive = [term for term in all_terms if term in low and not any(term in ref for ref in matched_refs)]
+-        if len(distinctive) < 2:
+-            continue
+-        if not any(marker in low for marker in ("руководствоваться", "в соответствии", "выполня", "производств", "предусмотр")):
+-            continue
+-        score = 58 + len(matched_refs) * 18 + min(24, len(distinctive) * 3)
+-        adoption_ranked.append((score, page, matched_refs, distinctive))
++        # Norm adoption must be local to the cited norm. A bibliography page or
++        # a standard title is not evidence that the design adopted the standard.
++        lines = [re.sub(r"\s+", " ", line).strip() for line in raw.splitlines() if line.strip()]
++        for index, line in enumerate(lines):
++            window = " ".join(lines[max(0, index - 1):min(len(lines), index + 2)])
++            window_low = _norm(window)
++            matched_refs = [ref for ref in required_refs if ref in window_low]
++            if not matched_refs:
++                continue
++            adoption_cue = bool(
++                re.search(r"\b(?:согласно|руководствоват\w*|в\s+соответствии\s+с)\b", window_low)
++                or re.search(r"\b(?:принят\w*|выполн\w*|запроектирован\w*)[^.;]{0,180}\b(?:сп|гост|снип|фз|пуэ)\b", window_low)
++            )
++            if not adoption_cue:
++                continue
++            if "перечень нормативной документации" in window_low and not re.search(
++                r"\b(?:согласно|руководствоват\w*|в\s+соответствии\s+с)\b", window_low
++            ):
++                continue
++            distinctive = [term for term in all_terms if term in window_low and not any(term in ref for ref in matched_refs)]
++            if len(distinctive) < 2:
++                continue
++            score = 58 + len(matched_refs) * 18 + min(24, len(distinctive) * 3)
++            adoption_ranked.append((score, page, matched_refs, distinctive, window))
+@@ -886,7 +900,7 @@
+-    selected_adoption: list[tuple[int, dict[str, Any], list[str], list[str]]] = []
++    selected_adoption: list[tuple[int, dict[str, Any], list[str], list[str], str]] = []
+@@ -911,13 +925,13 @@
+-    for score, page, matched_refs, distinctive in selected_adoption:
++    for score, page, matched_refs, distinctive, adoption_window in selected_adoption:
+         evidence_rows.append({
+@@
+-            "context": _context(page.get("text") or "", matched_refs + distinctive, radius=560),
++            "context": adoption_window[:1100],
+
+--- tests/core25/test_coverage_breakthrough_252.py
++++ tests/core25/test_coverage_breakthrough_252.py
+@@
++def test_volume_parser_does_not_treat_space_planning_adjective_as_volume_metric():
++    from core.assignment_compliance import _parameter
++    assert _parameter('Требования к объемно-планировочным и конструктивным решениям') == ('', None, '')
++    code, value, unit = _parameter('Проектный объем 1,0 м3')
++    assert code == 'VOLUME'
++    assert value == 1.0
++    assert unit in {'м3', 'м³'}
++
++def test_normative_ids_include_pue_and_bibliography_does_not_prove_adoption():
++    from core.assignment_verification_kernel import _normative_ids, verify_assignment_requirement
++    text=('Проектные решения должны соответствовать СП 18.13330.2019, '
++          'СП 4.13130.2013, ПУЭ, СП 37.13330.2012')
++    refs=_normative_ids(text)
++    assert 'пуэ' in refs
++    assert len(refs)==4
++    req={
++        'requirement_type':'NORMATIVE_COMPLIANCE',
++        'source_row_title':'Требования к схеме планировочной организации земельного участка',
++        'requirement_text':text,
++        'evidence_contract_v2':{'expected_sections':['ПЗУ']},
++    }
++    corpus=[
++        {'document':'ПЗУ.pdf','document_type':'ПЗУ','page':10,'text':'Проектом предусмотрена планировочная организация территории и сеть проездов.'},
++        {'document':'ПЗУ.pdf','document_type':'ПЗУ','page':70,'text':'Перечень нормативной документации: СП 18.13330.2019; СП 4.13130.2013; СП 37.13330.2012.'},
++        {'document':'ПЗУ.pdf','document_type':'ПЗУ','page':30,'text':'Согласно СП 37.13330.2012 ширина проезжей части принята 7,5 м.'},
++        {'document':'ПЗУ.pdf','document_type':'ПЗУ','page':29,'text':'Расположение проездов выполнено в соответствии с противопожарными нормами согласно СП 4.13130.2013.'},
++    ]
++    result=verify_assignment_requirement(req,corpus)
++    assert result is None or result.get('status')!='Соответствует заданию'

@@ -565,14 +565,25 @@ def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict
     for page in _candidate_pages(page_corpus, sections):
         low = _norm(page.get("text") or "")
         hits = [term for term in terms if term in low]
+        structured_duration = False
         if construction_duration:
-            duration_value = re.search(r"\b\d+(?:[,.]\d+)?\s*(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", low)
+            duration_value = (
+                re.search(r"\b\d+(?:[,.]\d+)?\s*(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", low)
+                or re.search(r"\b(?:мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\s*[:=\-]?\s*\d+(?:[,.]\d+)?\b", low)
+            )
             duration_subject = ("срок" in low and "строитель" in low) or ("продолжительност" in low and "строитель" in low)
-            if not (duration_value and duration_subject):
+            structured_duration = bool(
+                "сведени" in low
+                and "срок" in low
+                and "проведен" in low
+                and "работ" in low
+                and re.search(r"продолжительност\w*\s+работ\w*[^\d]{0,40}\d+(?:[,.]\d+)?", low)
+            )
+            if not (duration_value and (duration_subject or structured_duration)):
                 continue
         elif len(hits) < min(3, len(terms)):
             continue
-        if not any(marker in low for marker in DESIGN_MARKERS):
+        if not structured_duration and not any(marker in low for marker in DESIGN_MARKERS):
             continue
         score = 48 + len(hits) * 10 + (12 if sections else 0)
         ranked.append((score, page, hits))
@@ -581,12 +592,32 @@ def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict
         return None
     score, page, hits = ranked[0]
     snippet = _context(page.get("text") or "", hits, radius=520)
+    observed_value = None
+    observed_unit = ""
+    selected_low = _norm(page.get("text") or "")
+    if construction_duration:
+        value_match = (
+            re.search(r"\b(\d+(?:[,.]\d+)?)\s*(мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\b", selected_low)
+            or re.search(r"\b(мес(?:яц\w*)?|дн(?:ей|я)?|сут(?:ок)?|год(?:а|ов)?)\s*[:=\-]?\s*(\d+(?:[,.]\d+)?)\b", selected_low)
+        )
+        if value_match:
+            groups = value_match.groups()
+            if groups[0] and re.match(r"\d", groups[0]):
+                observed_value = float(groups[0].replace(",", "."))
+                observed_unit = groups[1]
+            else:
+                observed_unit = groups[0]
+                observed_value = float(groups[1].replace(",", "."))
     evidence = {
         "evidence_kind": "QUALIFIED_DESIGN_DETERMINED",
         "evidence_state": "verified_candidate",
         "document": page.get("document"), "document_type": page.get("document_type"),
         "page": page.get("page"), "context": snippet,
         "score": min(100, score), "matched_terms": hits,
+        "design_determined_subject": "CONSTRUCTION_DURATION" if construction_duration else "",
+        "structured_project_fact": bool(construction_duration and "сведени" in selected_low and "продолжительност" in selected_low),
+        "observed_value": observed_value,
+        "observed_unit": observed_unit,
     }
     return {
         "status": "Соответствует заданию",
@@ -596,6 +627,131 @@ def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict
         "match_confidence": min(0.95, score / 100),
         "decision_basis": "Параметр, оставленный Заданием на определение проектом, найден в адресном проектном решении.",
         "verification_kernel": "DESIGN_DETERMINED_EXECUTOR",
+    }
+
+
+
+def _lightning_grounding_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    text = str(requirement.get("requirement_text") or "")
+    low_req = _norm(text)
+    title = _norm(requirement.get("source_row_title") or "")
+    if not (
+        ("молниезащит" in low_req and "зазем" in low_req)
+        or ("молниезащит" in title and "зазем" in title)
+    ):
+        return None
+
+    pages = _candidate_pages(page_corpus, ("ИОС1",))
+    slots: dict[str, tuple[dict[str, Any], str] | None] = {
+        "grounding_device": None,
+        "lightning_masts": None,
+        "building_metal": None,
+        "rd_adoption": None,
+        "so_adoption": None,
+    }
+
+    for page in pages:
+        raw = str(page.get("text") or "")
+        low = _norm(raw)
+        checks = {
+            "grounding_device": (
+                "заземляющ" in low
+                and "устройств" in low
+                and any(x in low for x in ("предусматривает", "предусмотрен", "предусмотрено", "предусматривается"))
+            ),
+            "lightning_masts": (
+                "молниезащит" in low
+                and "молниеприем" in low
+                and "мачт" in low
+                and "освещен" in low
+                and any(x in low for x in ("выполняется", "предусматривается", "установлен"))
+            ),
+            "building_metal": (
+                "молниезащит" in low
+                and "здани" in low
+                and "вне зон" in low
+                and "металлическ" in low
+                and "конструкц" in low
+                and any(x in low for x in ("осуществляется", "выполняется", "предусматривается"))
+            ),
+            "rd_adoption": (
+                "рд 34.21.122-87" in low
+                and "молниезащит" in low
+                and any(x in low for x in ("в соответствии", "согласно"))
+            ),
+            "so_adoption": (
+                "со 153-34.21.122-2003" in low
+                and "молниезащит" in low
+                and any(x in low for x in ("в соответствии", "согласно", "удовлетворяют требованиям"))
+            ),
+        }
+        for key, ok in checks.items():
+            if ok and slots[key] is None:
+                anchors = {
+                    "grounding_device": ("заземляющ", "устройств"),
+                    "lightning_masts": ("молниеприем", "мачт"),
+                    "building_metal": ("вне зон", "металлическ"),
+                    "rd_adoption": ("рд 34.21.122-87",),
+                    "so_adoption": ("со 153-34.21.122-2003",),
+                }[key]
+                slots[key] = (page, _context(raw, anchors, radius=430))
+
+    labels = {
+        "grounding_device": "защитное заземляющее устройство",
+        "lightning_masts": "молниеприёмники на мачтах освещения",
+        "building_metal": "молниезащита зданий вне зоны мачт металлическими конструкциями",
+        "rd_adoption": "адресное применение РД 34.21.122-87",
+        "so_adoption": "адресное применение СО 153-34.21.122-2003",
+    }
+    proven = [key for key, value in slots.items() if value is not None]
+    missing = [key for key, value in slots.items() if value is None]
+    evidence_rows = []
+    rendered = []
+    all_proven = not missing
+
+    for key in proven:
+        page, snippet = slots[key]  # type: ignore[misc]
+        row = {
+            "evidence_kind": "QUALIFIED_LIGHTNING_GROUNDING_COMPOSITE",
+            "evidence_state": "verified_candidate" if all_proven else "candidate",
+            "document": page.get("document"),
+            "document_type": page.get("document_type"),
+            "page": page.get("page"),
+            "context": snippet,
+            "score": 98 if all_proven else 82,
+            "condition_id": key,
+            "condition_label": labels[key],
+        }
+        evidence_rows.append(row)
+        rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
+
+    return {
+        "status": "Соответствует заданию" if all_proven else "Требует проверки",
+        "evidence": rendered,
+        "evidence_candidates": evidence_rows,
+        "verification_evidence": evidence_rows,
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE" if all_proven else "CANDIDATE_EVIDENCE",
+        "match_confidence": 0.98 if all_proven else (0.80 if proven else 0.0),
+        "decision_basis": (
+            "Все обязательные условия по заземлению и молниезащите подтверждены адресными проектными решениями ИОС1."
+            if all_proven else
+            "Требование подтверждено частично; отсутствуют обязательные условия: "
+            + ", ".join(labels[key] for key in missing)
+        ),
+        "verification_kernel": "LIGHTNING_GROUNDING_COMPOSITE_EXECUTOR",
+        "condition_matrix": [
+            {
+                "condition_id": key,
+                "condition_label": labels[key],
+                "proven": slots[key] is not None,
+            }
+            for key in slots
+        ],
+        "condition_summary": {
+            "proven": len(proven),
+            "total": len(slots),
+            "missing": [labels[key] for key in missing],
+        },
     }
 
 
@@ -671,6 +827,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _negative_applicability_check,
         _normative_assertion_check,
         _design_determined_check,
+        _lightning_grounding_check,
     )
     for checker in checkers:
         result = checker(requirement, page_corpus)

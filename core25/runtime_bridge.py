@@ -127,6 +127,12 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
                     "matched_terms": tuple(candidate.get("matched_terms") or ()),
                     "concept": candidate.get("concept"),
+                    "design_determined_subject": candidate.get("design_determined_subject"),
+                    "structured_project_fact": candidate.get("structured_project_fact"),
+                    "observed_value": candidate.get("observed_value"),
+                    "observed_unit": candidate.get("observed_unit"),
+                    "condition_id": candidate.get("condition_id"),
+                    "condition_label": candidate.get("condition_label"),
                 },
             )
         )

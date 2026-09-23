@@ -260,6 +260,47 @@ def _presence_proof(
     )
 
 
+
+def _design_determined_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    selected: list[tuple[Evidence25, Binding25]] = []
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        kind = str(metadata.get("legacy_evidence_kind") or "").upper()
+        subject = str(metadata.get("design_determined_subject") or "").upper()
+        if kind != "QUALIFIED_DESIGN_DETERMINED":
+            continue
+        if subject == "CONSTRUCTION_DURATION":
+            value = numeric_value(metadata.get("observed_value"))
+            unit = normalize_unit(metadata.get("observed_unit"))
+            if value is None or not unit:
+                continue
+        if not (_has_project_assertion(evidence_item.fragment) or metadata.get("structured_project_fact") is True):
+            continue
+        selected.append((evidence_item, binding))
+
+    if not selected:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="DESIGN_DETERMINED_VALUE_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(item.evidence_id for item, _ in selected)
+    binding_ids = tuple(binding.binding_id for _, binding in selected)
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="ASSIGNMENT_DESIGN_VALUE_CONFIRMED",
+    )
+
+
 _NEGATIVE_ASSERTION_MARKERS = (
     "не требуется",
     "не предусматривается",
@@ -455,6 +496,8 @@ def build_proof(
         return _negative_assertion_proof(requirement, route, pairs)
     if route.kind == "NORMATIVE_ASSERTION":
         return _normative_assertion_proof(requirement, route, pairs)
+    if route.kind == "DESIGN_DETERMINED":
+        return _design_determined_proof(requirement, route, pairs)
 
     return _insufficient(
         requirement,

@@ -343,3 +343,101 @@ def test_construction_duration_design_determined_requires_actual_duration_value(
     }]
     result = verify_assignment_requirement(requirement, actual)
     assert result and result.get("status") == "Соответствует заданию"
+
+
+def test_core25_design_determined_structured_duration_can_close():
+    req = {
+        "requirement_id": "REQ-DURATION-STRUCTURED",
+        "requirement_text": "Определить проектной документацией",
+        "requirement_type": "DESIGN_DETERMINED",
+        "requirement_scope": "PROJECT_GLOBAL",
+        "expected_sections": ["ПЗ"],
+        "directed_evidence_candidates": [{
+            "evidence_state": "verified_candidate",
+            "evidence_kind": "QUALIFIED_DESIGN_DETERMINED",
+            "document": "Раздел ПД №1_ПЗ.pdf",
+            "document_type": "ПЗ",
+            "page": 27,
+            "context": "Сведения о сроках проведения работ. Продолжительность работ, месяц: 12.",
+            "score": 98,
+            "design_determined_subject": "CONSTRUCTION_DURATION",
+            "structured_project_fact": True,
+            "observed_value": 12,
+            "observed_unit": "месяц",
+        }],
+    }
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["core25_reason_code"] == "ASSIGNMENT_DESIGN_VALUE_CONFIRMED"
+
+
+def test_secondary_determine_clause_does_not_reclassify_primary_presence():
+    from core.assignment_compliance import TYPE_PRESENCE, _requirement_type
+
+    text = (
+        "Предусмотреть ограждение территории с воротами и калитками. "
+        "Размеры определить проектом."
+    )
+    assert _requirement_type(text, "Ограждение", "", None) == TYPE_PRESENCE
+
+
+def test_lightning_grounding_composite_requires_all_conditions():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Молниезащита и заземление",
+        "requirement_text": (
+            "Для защиты людей предусмотреть заземляющее устройство. "
+            "Молниезащиту выполнить молниеприемниками на мачтах освещения, "
+            "для зданий вне зоны защиты — металлическими конструкциями, "
+            "в соответствии с РД 34.21.122-87 и СО 153-34.21.122-2003."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ИОС1"]},
+    }
+    complete = [{
+        "document": "Раздел ПД №5_ИОС1.1.pdf",
+        "document_type": "ИОС1",
+        "page": 21,
+        "text": (
+            "Для защиты людей от поражения электрическим током и защиты электрооборудования "
+            "предусматривается заземляющее устройство. "
+            "Молниезащита сооружений технологического комплекса выполняется по II категории "
+            "в соответствии с РД 34.21.122-87. "
+            "Объект классифицируется согласно СО 153-34.21.122-2003. "
+            "Молниезащита технологического комплекса выполняется с помощью молниеприемников "
+            "установленных на мачтах освещения. "
+            "Молниезащита зданий вне зоны защиты мачт освещения осуществляется с помощью "
+            "металлических конструкций этих зданий. Конструктивные элементы зданий "
+            "удовлетворяют требованиям к естественным молниеприемникам в соответствии "
+            "с п. 3.2.1.2 СО 153-34.21.122-2003."
+        ),
+    }]
+    result = verify_assignment_requirement(requirement, complete)
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["condition_summary"]["proven"] == 5
+    assert result["condition_summary"]["total"] == 5
+    assert all(
+        item["evidence_state"] == "verified_candidate"
+        for item in result["verification_evidence"]
+    )
+
+    incomplete = [{
+        **complete[0],
+        "text": (
+            "Для защиты людей от поражения электрическим током и защиты электрооборудования "
+            "предусматривается заземляющее устройство. "
+            "Молниезащита технологического комплекса выполняется с помощью молниеприемников "
+            "установленных на мачтах освещения."
+        ),
+    }]
+    result = verify_assignment_requirement(requirement, incomplete)
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 2
+    assert all(
+        item["evidence_state"] == "candidate"
+        for item in result["verification_evidence"]
+    )
+

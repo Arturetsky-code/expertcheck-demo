@@ -321,7 +321,12 @@ def _requirement_type(text:str,row_title:str,code:str,value:float|None)->str:
     if any(x in low for x in ("графическ","на чертеже","нанести","показать на")): return TYPE_DRAWING
     if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low) or "нормативн" in low: return TYPE_NORMATIVE
     if code and value is not None: return TYPE_VALUE
-    if "определить проект" in low: return TYPE_DESIGN
+    if "определить проект" in low:
+        determine_pos = low.find("определить проект")
+        primary_actions = ("предусмотреть", "выполнить", "обеспечить", "установить", "принять")
+        earlier_actions = [low.find(x) for x in primary_actions if 0 <= low.find(x) < determine_pos]
+        if not earlier_actions:
+            return TYPE_DESIGN
     if any(v in low for v in REQ_VERBS): return TYPE_PRESENCE
     return TYPE_SEMANTIC
 

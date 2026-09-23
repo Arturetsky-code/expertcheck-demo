@@ -25,8 +25,8 @@ Not accepted as categorical:
 
 ## Validation of accepted checkpoint
 
-- `tests/core25/test_coverage_breakthrough_252.py`: **23/23 passed**
-- Core25 suite: **102 passed / 1 blocked by missing historical XLSX fixture**
+- `tests/core25/test_coverage_breakthrough_252.py`: **25/25 passed**
+- Core25 suite: **104 passed / 1 blocked by missing historical XLSX fixture**
 - The blocked test still requires `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx`; this is not a code failure.
 - Historical Assignment pipeline test requiring `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` cannot run because that fixture is absent from the source snapshot; this is not a code failure.
 
@@ -54,6 +54,18 @@ Requirement 12 is now categorically confirmed by `NORMATIVE_DESIGN_ADOPTION_EXEC
 - proof metadata explicitly records that full normative compliance itself was **not** assessed. That remains a separate NTD-contour task.
 
 This executor must not close a requirement from a normative citation alone: both an addressable design solution and adoption of every required cited norm are required.
+
+## Safety hardening at the 19/56 checkpoint
+
+The 19/56 count is unchanged, but the checkpoint is stronger:
+
+- fixed false metric extraction: the adjective `объёмно-планировочный` no longer creates a false `VOLUME` parameter;
+- requirement 13 now routes correctly to `ПЗУ`;
+- `ПУЭ` is recognized as a mandatory normative reference by Assignment normative-adoption checks;
+- a normative bibliography/list is not accepted as proof that a standard was adopted by the design;
+- normative adoption must be local to the cited norm and contain an explicit adoption/application cue;
+- requirement 13 therefore remains `Требует проверки`: SP 4 and SP 37 have addressable application evidence, while SP 18 is only listed in the bibliography and PUE is not found in the PZU evidence set;
+- requirement 12 remains safely categorical because its design solution and SP 45.13330.2017 adoption are both addressably proven.
 
 ## Current development priority
 

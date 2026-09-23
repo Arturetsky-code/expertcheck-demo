@@ -2,17 +2,17 @@
 
 Updated: 2026-09-23
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated checkpoint commit: `e37a7e805fd4e3c3a674944e81e2fa5462aa71e0`
+Latest validated checkpoint commit: `1dd1d1bac61489a1957e0bf4b94ac04907e0935e`
 
 ## Official accepted local checkpoint
 
 Assignment compliance / Test 78 / AI off:
 
 - Requirements: 56
-- `Соответствует заданию`: 18
+- `Соответствует заданию`: 19
 - Proven deviations: 2
-- `Требует проверки`: 36
-- Strict categorical coverage: **20/56 = 35.7%**
+- `Требует проверки`: 35
+- Strict categorical coverage: **21/56 = 37.5%**
 - Admission diagnostics include **PROFILE_SECTION_ABSENT**
 - Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
 
@@ -20,13 +20,23 @@ Accepted categorical deviations:
 - Requirement 22: loader identity/quantity mismatch.
 - Requirement 3: Appendix 1 identification responsibility mismatch for exact GP position **4.25 “Навес системы подачи извести”**: Assignment **КС-2, γn=1.0** vs KR **КС-3, γn=1.1**.
 
-New accepted compliance since 18/56:
-- Requirement 12 via `NORMATIVE_DESIGN_ADOPTION_EXECUTOR`: the Assignment-mandated СП 45.13330.2017 is addressably adopted in the project design chain. This is only an Assignment→PD verdict and does not substitute for full normative compliance checking.
+New accepted compliance at 21/56:
+- Requirement 10 / “Срок строительства объекта”: Assignment says “Определить проектной документацией”; PZ page 27 contains the structured project fact **“Сведения о сроках проведении работ: Продолжительность работ, месяц: 12”**.
+- Core25 now has a separate `DESIGN_DETERMINED` route/proof so structured project values are not forced through ordinary PRESENCE wording.
+- Secondary clauses such as “Размеры определить проектом” no longer reclassify a composite engineering requirement (e.g. fencing/gates/wickets) away from PRESENCE.
+
+Safety retained:
+- TOC/header text alone still cannot prove construction duration.
+- The duration proof requires addressable profile evidence and a positive structured value/project assertion.
+- Existing fencing result remains categorical; no coverage was gained by weakening its gate.
 
 Validation:
-- `tests/core25/test_coverage_breakthrough_252.py`: **27/27 passed**
-- Other available Core25 tests: **106 passed**
-- One historical test remains blocked only because `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` is absent from the source snapshot.
+- `tests/core25/test_coverage_breakthrough_252.py`: **29/29 passed**
+- Other available Core25 tests: **79/79 passed**
+- One historical Assignment pipeline test is deselected/blocked only because `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` is absent from the source snapshot.
+
+Recovery:
+- Start from the validated 20/56 checkpoint and apply `checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch`.
 
 ## Missing-profile-section policy
 

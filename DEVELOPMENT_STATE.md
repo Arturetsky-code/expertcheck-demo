@@ -8,10 +8,10 @@ Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
 Assignment compliance / Test 78 / AI off:
 
 - Requirements: 56
-- `Соответствует заданию`: 17
+- `Соответствует заданию`: 18
 - Proven deviations: 1
-- `Требует проверки`: 38
-- Strict categorical coverage: **18/56 = 32.1%**
+- `Требует проверки`: 37
+- Strict categorical coverage: **19/56 = 33.9%**
 - Admission diagnostics include **PROFILE_SECTION_ABSENT**
 - Current Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
 
@@ -25,8 +25,9 @@ Not accepted as categorical:
 
 ## Validation of accepted checkpoint
 
-- `tests/core25/test_coverage_breakthrough_252.py`: **20/20 passed**
-- Other locally available Core25 tests: **96/96 passed**
+- `tests/core25/test_coverage_breakthrough_252.py`: **23/23 passed**
+- Core25 suite: **102 passed / 1 blocked by missing historical XLSX fixture**
+- The blocked test still requires `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx`; this is not a code failure.
 - Historical Assignment pipeline test requiring `validation_reports_150a2/ExpertCheck_Отчёт_ГИПа_15.0A2.xlsx` cannot run because that fixture is absent from the source snapshot; this is not a code failure.
 
 ## Missing-profile-section policy
@@ -43,6 +44,16 @@ Examples in Test 78:
 - ИОС5 absent -> cellular/radio/video requirements stay review-only;
 - ИОС6 absent -> gasification requirement stays review-only;
 - OOS/PB/EE/ODI/POS requirements are likewise marked by missing expected sections where those sections are not in the 12-file package.
+
+## Validated improvement after 18/56
+
+Requirement 12 is now categorically confirmed by `NORMATIVE_DESIGN_ADOPTION_EXECUTOR`:
+- PZU provides an addressable engineering-preparation solution;
+- KR/PZU provide addressable adoption of the same `СП 45.13330.2017` for the corresponding earthwork/foundation work;
+- Core25 proof reason: `ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED`;
+- proof metadata explicitly records that full normative compliance itself was **not** assessed. That remains a separate NTD-contour task.
+
+This executor must not close a requirement from a normative citation alone: both an addressable design solution and adoption of every required cited norm are required.
 
 ## Current development priority
 

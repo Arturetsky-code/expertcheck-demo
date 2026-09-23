@@ -20,12 +20,14 @@ jobs:
           ref: codex/expertcheck-25.2-coverage-breakthrough
           fetch-depth: 0
 
-      - name: Apply validated recovery deltas
+      - name: Reconstruct validated recovery chain
         shell: bash
         run: |
           set -euo pipefail
+
           apply_idempotent() {
             local patch="$1"
+            echo "Checking $patch"
             if git apply --check "$patch"; then
               git apply "$patch"
               echo "Applied: $patch"
@@ -37,9 +39,22 @@ jobs:
             fi
           }
 
+          base64 -d checkpoints/252_18of56/RECOVERY_252_18OF56_PROFILE.patch.gz.b64 | gzip -dc > /tmp/18.patch
+          apply_idempotent /tmp/18.patch
+
+          cat checkpoints/252_19of56/increment.part00.patch checkpoints/252_19of56/increment.part01.patch > /tmp/19.patch
+          apply_idempotent /tmp/19.patch
+
+          sed -E             -e 's#^--- (.+) \(19of56 pre-safety\)$#--- a/\1#'             -e 's#^\+\+\+ (.+) \(19of56 safety\)$#+++ b/\1#'             checkpoints/252_19of56/safety_increment.patch > /tmp/19-safety.patch
+          apply_idempotent /tmp/19-safety.patch
+
+          base64 -d checkpoints/252_20of56/RECOVERY_252_20OF56_INCREMENT.patch.gz.b64 | gzip -dc > /tmp/20.patch
+          apply_idempotent /tmp/20.patch
+
           apply_idempotent checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch
-          base64 -d checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64 | gzip -dc > /tmp/condition_matrix.patch
-          apply_idempotent /tmp/condition_matrix.patch
+
+          base64 -d checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64 | gzip -dc > /tmp/21-conditions.patch
+          apply_idempotent /tmp/21-conditions.patch
 
       - name: Validate recovered checkpoint
         shell: bash
@@ -60,5 +75,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add core core25 studio tests
-          git commit -m "restore: materialize validated 25.2 source from recovery deltas"
+          git commit -m "restore: materialize validated 25.2 source from recovery chain"
           git push origin HEAD:codex/expertcheck-25.2-coverage-breakthrough

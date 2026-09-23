@@ -1,0 +1,163 @@
++def _water_supply_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    required_markers = ("водоснабжен", "хозяйственно-питьев", "противопожар")
++    if not all(marker in low_req for marker in required_markers):
++        return None
++    # This executor is deliberately strict: every material condition from the
++    # Assignment must be supported by addressable project text.
++    slots = {
++        "systems": None,
++        "delivered_water": None,
++        "bottled_water": None,
++        "module_tanks": None,
++        "module_tanks_factory_supply": None,
++    }
++    for page in _candidate_pages(page_corpus, ("ИОС2", "ПЗ")):
++        raw = str(page.get("text") or "")
++        low = _norm(raw)
++        if slots["systems"] is None and "хозяйственно-питьев" in low and "противопожар" in low:
++            slots["systems"] = page
++        if slots["delivered_water"] is None and "привозн" in low and "автоцистер" in low:
++            slots["delivered_water"] = page
++        if slots["bottled_water"] is None and "бутилирован" in low and ("пить" in low or "вод" in low):
++            slots["bottled_water"] = page
++        if slots["module_tanks"] is None and "блочно-модульн" in low and any(x in low for x in ("бак", "емкост", "ёмкост")) and "привозн" in low:
++            slots["module_tanks"] = page
++        if slots["module_tanks_factory_supply"] is None:
++            # Do not borrow the factory-supply phrase from fire-water reservoirs.
++            # It must occur in a local household/module-tank clause.
++            lines=[re.sub(r"\s+", " ", x).strip() for x in raw.splitlines() if x.strip()]
++            for i,line in enumerate(lines):
++                clause=" ".join(lines[max(0,i-2):min(len(lines),i+3)])
++                clow=_norm(clause)
++                if (
++                    any(x in clow for x in ("комплектной поставк", "завод-изготов", "завода-изготов", "заводом изготов"))
++                    and any(x in clow for x in ("бак", "емкост", "ёмкост"))
++                    and any(x in clow for x in ("блочно-модульн", "хозяйственно-питьев"))
++                    and "противопожар" not in clow
++                ):
++                    slots["module_tanks_factory_supply"] = page
++                    break
++    if not all(slots.values()):
++        return None
++    seen=set(); evidence=[]
++    anchors = {
++        "systems": ("хозяйственно-питьев", "противопожар"),
++        "delivered_water": ("привозн", "автоцистер"),
++        "bottled_water": ("бутилирован",),
++        "module_tanks": ("блочно-модульн", "бак"),
++        "module_tanks_factory_supply": ("комплектной поставк", "бак"),
++    }
++    for key,page in slots.items():
++        ident=(page.get("document"), page.get("page"))
++        if ident in seen:
++            continue
++        seen.add(ident)
++        snippet=_context(page.get("text") or "", anchors[key], radius=520)
++        evidence.append({
++            "evidence_kind":"WATER_SUPPLY_SYSTEM_CHAIN",
++            "evidence_state":"verified_candidate",
++            "document":page.get("document"),
++            "document_type":page.get("document_type"),
++            "page":page.get("page"),
++            "context":snippet,
++            "score":97,
++            "proof_slot":key,
++        })
++    return {
++        "status":"Соответствует заданию",
++        "evidence":[f"{e['document']}, стр. {e['page']}: {e['context']}" for e in evidence],
++        "evidence_candidates":evidence,
++        "verification_evidence":evidence,
++        "evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE",
++        "match_confidence":0.97,
++        "decision_basis":"Все ключевые условия по водоснабжению подтверждены адресными фрагментами профильного раздела: системы хозяйственно-питьевого и противопожарного водоснабжения, привозная вода автоцистернами, бутилированная питьевая вода и ёмкости блочно-модульных зданий.",
++        "verification_kernel":"WATER_SUPPLY_EXECUTOR",
++    }
++
++def _site_lighting_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    """Verify the site-lighting chain from addressable electrical-design passages.
++
++    The Assignment requirement is composite: LED luminaires, mast lighting for the
++    production complex, luminaires on supports for the remaining territory, and
++    illuminance levels tied to SP 52.13330.2016.  A bare normative-reference hit is
++    not enough; all engineering slots must be present in the profile section.
++    """
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    if not all(token in low_req for token in ("светодиод", "освещ", "мачт")):
++        return None
++    if not any(token in low_req for token in ("консольн", "опор")):
++        return None
++
++    slots = {"led": None, "masts": None, "supports": None, "norm": None}
++    for page in _candidate_pages(page_corpus, ("ИОС1",)):
++        raw = str(page.get("text") or "")
++        low = _norm(raw)
++        if slots["led"] is None and "светодиод" in low and "светильник" in low:
++            slots["led"] = page
++        if slots["masts"] is None and "осветительн" in low and "мачт" in low:
++            slots["masts"] = page
++        if slots["supports"] is None and "наружн" in low and "светильник" in low and "опор" in low:
++            slots["supports"] = page
++        if slots["norm"] is None and "сп 52.13330.2016" in low:
++            slots["norm"] = page
++    if not all(slots.values()):
++        return None
++
++    anchors = {
++        "led": ("светодиод", "светильник"),
++        "masts": ("осветительн", "мачт"),
++        "supports": ("наружн", "опор"),
++        "norm": ("сп 52.13330.2016",),
++    }
++    evidence=[]; seen=set()
++    for key,page in slots.items():
++        ident=(page.get("document"),page.get("page"))
++        if ident in seen:
++            continue
++        seen.add(ident)
++        snippet=_context(raw=page.get("text") or "", anchors=anchors[key], radius=560) if False else _context(page.get("text") or "", anchors[key], radius=560)
++        evidence.append({
++            "evidence_kind":"SITE_LIGHTING_SYSTEM_CHAIN",
++            "evidence_state":"verified_candidate",
++            "document":page.get("document"),
++            "document_type":page.get("document_type"),
++            "page":page.get("page"),
++            "context":snippet,
++            "score":98,
++            "proof_slot":key,
++        })
++    return {
++        "status":"Соответствует заданию",
++        "evidence":[f"{e['document']}, стр. {e['page']}: {e['context']}" for e in evidence],
++        "evidence_candidates":evidence,
++        "verification_evidence":evidence,
++        "evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE",
++        "match_confidence":0.98,
++        "decision_basis":"Система электроосвещения подтверждена профильным разделом: светодиодные светильники, наружное освещение на опорах, осветительные мачты и нормирование по СП 52.13330.2016.",
++        "verification_kernel":"SITE_LIGHTING_EXECUTOR",
++    }
++
++def _open_canopy_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    """Prove an explicitly open canopy from an addressable profile passage.
++
++    This is deliberately narrow: it only applies when the Assignment itself
++    requires a canopy to be open and the project passage names the same canopy
++    and explicitly states that it is open. A drawing/title mention alone is not
++    sufficient.
++    """
++    text = str(requirement.get("requirement_text") or "")
++    low = _norm(text)
++    if "навес" not in low or "открыт" not in low:
++        return None
++    target_terms = ("навес", "извест") if "извест" in low else ("навес",)
++    ranked: list[tuple[int, dict[str, Any], str]] = []
++    for page in _candidate_pages(page_corpus, ("АР", "КР", "ПЗ")):
++        raw = str(page.get("text") or "")
++        page_low = _norm(raw)
++        if not all(term in page_low for term in target_terms):
++            continue
++        if "открыт" not in page_low:
++            continue

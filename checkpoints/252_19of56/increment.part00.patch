@@ -1,0 +1,232 @@
+--- a/core/assignment_verification_kernel.py
++++ b/core/assignment_verification_kernel.py
+@@ -827,6 +827,119 @@
+     return bool(NORMATIVE_REF_RE.search(text) and any(marker in low for marker in material_markers))
+ 
+ 
++def _normative_design_adoption_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
++    """Prove that an Assignment-mandated norm was actually adopted by the PD.
++
++    This is intentionally NOT a normative-compliance verdict. It proves only the
++    Assignment question: the requested design subject is developed and the same
++    cited norm is used in addressable profile design clauses. Full compliance
++    with the norm remains the responsibility of the separate NTD contour.
++    """
++    if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
++        return None
++    text = str(requirement.get("requirement_text") or "")
++    low_req = _norm(text)
++    action_markers = ("предусмотреть", "выполнить", "разработать", "должны соответствовать", "проектные решения")
++    if not any(marker in low_req for marker in action_markers):
++        return None
++    required_refs = _normative_ids(text)
++    if not required_refs:
++        return None
++    sections = list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
++    if not sections:
++        return None
++
++    # The obligation subject is the engineering phrase before the normative link.
++    subject = re.split(r"\b(?:в соответствии с|согласно)\b", text, maxsplit=1, flags=re.I)[0]
++    subject_terms = [term for term in _significant_terms(subject) if term not in {"соответст"}]
++    if len(subject_terms) < 2:
++        return None
++
++    solution_ranked: list[tuple[int, dict[str, Any], list[str]]] = []
++    adoption_ranked: list[tuple[int, dict[str, Any], list[str], list[str]]] = []
++    all_terms = _significant_terms(text)
++    for page in _candidate_pages(page_corpus, sections):
++        raw = str(page.get("text") or "")
++        low = _norm(raw)
++        subject_hits = [term for term in subject_terms if term in low]
++        if len(subject_hits) >= min(2, len(subject_terms)) and any(marker in low for marker in DESIGN_MARKERS):
++            score = 55 + len(subject_hits) * 9
++            if str(page.get("document_type") or "").upper().startswith("ПЗУ"):
++                score += 12
++            solution_ranked.append((score, page, subject_hits))
++
++        matched_refs = [ref for ref in required_refs if ref in low]
++        if not matched_refs:
++            continue
++        distinctive = [term for term in all_terms if term in low and not any(term in ref for ref in matched_refs)]
++        # The normative clause must be more than a bibliography occurrence.
++        if len(distinctive) < 2:
++            continue
++        if not any(marker in low for marker in ("руководствоваться", "в соответствии", "выполня", "производств", "предусмотр")):
++            continue
++        score = 58 + len(matched_refs) * 18 + min(24, len(distinctive) * 3)
++        adoption_ranked.append((score, page, matched_refs, distinctive))
++
++    if not solution_ranked or not adoption_ranked:
++        return None
++    solution_ranked.sort(key=lambda item: item[0], reverse=True)
++    adoption_ranked.sort(key=lambda item: item[0], reverse=True)
++
++    covered_refs: set[str] = set()
++    selected_adoption: list[tuple[int, dict[str, Any], list[str], list[str]]] = []
++    for item in adoption_ranked:
++        new_refs = [ref for ref in item[2] if ref not in covered_refs]
++        if not new_refs:
++            continue
++        selected_adoption.append(item)
++        covered_refs.update(new_refs)
++        if all(ref in covered_refs for ref in required_refs):
++            break
++    if not all(ref in covered_refs for ref in required_refs):
++        return None
++
++    sol_score, sol_page, sol_hits = solution_ranked[0]
++    evidence_rows = [{
++        "evidence_kind": "NORMATIVE_DESIGN_ADOPTION",
++        "evidence_state": "verified_candidate",
++        "document": sol_page.get("document"), "document_type": sol_page.get("document_type"),
++        "page": sol_page.get("page"),
++        "context": _context(sol_page.get("text") or "", sol_hits, radius=560),
++        "score": min(100, sol_score),
++        "proof_slot": "DESIGN_SOLUTION",
++        "matched_terms": sol_hits,
++        "required_normative_refs": required_refs,
++        "normative_design_adoption": True,
++    }]
++    for score, page, matched_refs, distinctive in selected_adoption:
++        evidence_rows.append({
++            "evidence_kind": "NORMATIVE_DESIGN_ADOPTION",
++            "evidence_state": "verified_candidate",
++            "document": page.get("document"), "document_type": page.get("document_type"),
++            "page": page.get("page"),
++            "context": _context(page.get("text") or "", matched_refs + distinctive, radius=560),
++            "score": min(100, score),
++            "proof_slot": "NORMATIVE_ADOPTION",
++            "matched_normative_refs": matched_refs,
++            "matched_terms": distinctive,
++            "required_normative_refs": required_refs,
++            "normative_design_adoption": True,
++        })
++    return {
++        "status": "Соответствует заданию",
++        "evidence": [f"{row.get('document')}, стр. {row.get('page')}: {row.get('context')}" for row in evidence_rows],
++        "evidence_candidates": evidence_rows,
++        "verification_evidence": evidence_rows,
++        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
++        "match_confidence": 0.97,
++        "decision_basis": (
++            "Требуемое Заданием проектное решение разработано в профильном разделе, а указанная в Задании норма адресно принята для соответствующих проектных работ. "
++            "Это подтверждает перенос требования Задания в ПД, но не заменяет отдельную проверку соответствия самой норме."
++        ),
++        "verification_kernel": "NORMATIVE_DESIGN_ADOPTION_EXECUTOR",
++    }
++
++
+ def _normative_assertion_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+     if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
+         return None
+@@ -1177,6 +1290,7 @@
+         _equipment_check,
+         _capacity_topology_check,
+         _negative_applicability_check,
++        _normative_design_adoption_check,
+         _normative_assertion_check,
+         _design_determined_check,
+     )
+--- a/core/requirement_contracts.py
++++ b/core/requirement_contracts.py
+@@ -100,6 +100,14 @@
+     for markers, sections in title_routes:
+         if any(marker in title for marker in markers):
+             return list(sections)
++    # Site-planning Assignment rows belong to PZU. Engineering preparation is
++    # intentionally allowed to use KR as a supporting profile source because
++    # detailed earthwork/foundation execution clauses may live there while PZU
++    # carries the site-wide engineering-preparation solution.
++    if any(marker in title for marker in ('схеме планировочной организации земельного участка','планировочной организации земельного участка','генеральн план')):
++        if 'инженерн' in text and 'подготов' in text:
++            return ['ПЗУ','КР']
++        return ['ПЗУ']
+     # Explicit site-layout features belong first to PZU even when their wording
+     # also contains generic technology words such as «оборудование».
+     if (
+--- a/core25/runtime_bridge.py
++++ b/core25/runtime_bridge.py
+@@ -50,6 +50,8 @@
+         item["verification_kind"] = "EQUIPMENT_IDENTITY"
+     elif executor == "PROJECT_COMPOSITION_EXECUTOR":
+         item["verification_kind"] = "PROJECT_COMPOSITION"
++    elif executor == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
++        item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
+     return item
+ 
+ 
+@@ -139,7 +141,10 @@
+                     "coverage_executor": candidate.get("coverage_executor"),
+                     "negative_assertion": candidate.get("negative_assertion"),
+                     "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
++                    "required_normative_refs": tuple(candidate.get("required_normative_refs") or ()),
+                     "matched_terms": tuple(candidate.get("matched_terms") or ()),
++                    "proof_slot": candidate.get("proof_slot"),
++                    "normative_design_adoption": candidate.get("normative_design_adoption"),
+                     "concept": candidate.get("concept"),
+                     "equipment_role": candidate.get("equipment_role"),
+                     "equipment_role_match": candidate.get("equipment_role_match"),
+--- a/core25/routing.py
++++ b/core25/routing.py
+@@ -26,6 +26,7 @@
+     # become categorical.
+     "NEGATIVE_ASSERTION": "NEGATIVE_ASSERTION",
+     "NORMATIVE_ASSERTION": "NORMATIVE_ASSERTION",
++    "NORMATIVE_DESIGN_ADOPTION": "NORMATIVE_DESIGN_ADOPTION",
+     "EQUIPMENT_IDENTITY": "EQUIPMENT_IDENTITY",
+     "PROJECT_COMPOSITION": "PROJECT_COMPOSITION",
+ }
+--- a/core25/proof.py
++++ b/core25/proof.py
+@@ -340,6 +340,50 @@
+ 
+ 
+ 
++def _normative_design_adoption_proof(
++    requirement: Requirement25,
++    route: VerificationRoute,
++    pairs: tuple[tuple[Evidence25, Binding25], ...],
++) -> Proof25:
++    accepted: list[tuple[Evidence25, Binding25]] = []
++    has_solution = False
++    matched_refs: set[str] = set()
++    required_refs: set[str] = set()
++    for evidence_item, binding in pairs:
++        metadata = dict(evidence_item.metadata or {})
++        kind = str(metadata.get("legacy_evidence_kind") or "").upper()
++        if kind != "NORMATIVE_DESIGN_ADOPTION" or metadata.get("normative_design_adoption") is not True:
++            continue
++        slot = str(metadata.get("proof_slot") or "").upper()
++        required_refs.update(str(x) for x in (metadata.get("required_normative_refs") or ()) if str(x))
++        if slot == "DESIGN_SOLUTION" and tuple(metadata.get("matched_terms") or ()):
++            has_solution = True
++            accepted.append((evidence_item, binding))
++        elif slot == "NORMATIVE_ADOPTION":
++            refs = {str(x) for x in (metadata.get("matched_normative_refs") or ()) if str(x)}
++            terms = tuple(metadata.get("matched_terms") or ())
++            if refs and len(terms) >= 2:
++                matched_refs.update(refs)
++                accepted.append((evidence_item, binding))
++    if not has_solution or not required_refs or not required_refs <= matched_refs:
++        return _insufficient(
++            requirement,
++            route,
++            reason_code="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_NOT_PROVEN",
++        )
++    evidence_ids = tuple(dict.fromkeys(item.evidence_id for item, _ in accepted))
++    binding_ids = tuple(dict.fromkeys(binding.binding_id for _, binding in accepted))
++    return Proof25(
++        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
++        requirement_id=requirement.requirement_id,
++        state=ProofState.PROVEN_MATCH,
++        evidence_ids=evidence_ids,
++        binding_ids=binding_ids,
++        reason_code="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED",
++        metadata={"normative_compliance_not_assessed": True},
++    )
++
++
+ def _project_composition_proof(
+     requirement: Requirement25,
+     route: VerificationRoute,

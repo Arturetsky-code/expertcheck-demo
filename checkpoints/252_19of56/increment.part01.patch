@@ -1,0 +1,66 @@
+@@ -564,6 +608,8 @@
+         return _negative_assertion_proof(requirement, route, pairs)
+     if route.kind == "NORMATIVE_ASSERTION":
+         return _normative_assertion_proof(requirement, route, pairs)
++    if route.kind == "NORMATIVE_DESIGN_ADOPTION":
++        return _normative_design_adoption_proof(requirement, route, pairs)
+     if route.kind == "EQUIPMENT_IDENTITY":
+         return _equipment_identity_proof(requirement, route, pairs)
+     if route.kind == "PROJECT_COMPOSITION":
+--- a/tests/core25/test_coverage_breakthrough_252.py
++++ b/tests/core25/test_coverage_breakthrough_252.py
+@@ -432,3 +432,54 @@
+     ]
+     for requirement, expected in cases:
+         assert infer_expected_sections(requirement) == expected
++
++
++def test_site_planning_normative_routing_prefers_pzu_and_allows_kr_for_engineering_preparation():
++    from core.requirement_contracts import infer_expected_sections
++    req={
++        'source_row_title':'Требования к схеме планировочной организации земельного участка',
++        'requirement_text':'Инженерную подготовку территории предусмотреть в соответствии с СП 45.13330.2017 «Земляные сооружения, основания и фундаменты»',
++    }
++    assert infer_expected_sections(req)==['ПЗУ','КР']
++
++
++def test_normative_design_adoption_requires_solution_and_same_norm_and_survives_core25():
++    from core.assignment_verification_kernel import verify_assignment_requirement
++    from core.coverage_breakthrough import attach_coverage_executor_evidence
++    from core25.runtime_bridge import run_assignment_runtime
++    req={
++        'requirement_id':'R-NORM-ADOPT',
++        'source_row_title':'Требования к схеме планировочной организации земельного участка',
++        'requirement_text':'Инженерную подготовку территории предусмотреть в соответствии с СП 45.13330.2017 «Земляные сооружения, основания и фундаменты»',
++        'requirement_type':'NORMATIVE_COMPLIANCE',
++        'requirement_scope':'SITE_SPECIFIC',
++        'evidence_contract_v2':{
++            'scope':'SITE_SPECIFIC','expected_sections':['ПЗУ','КР'],
++            'check_method':'NORMATIVE_LINK','critical_qualifiers':[],
++        },
++    }
++    corpus=[
++        {'document':'ПЗУ.pdf','document_type':'ПЗУ1','page':24,'text':'Инженерная подготовка территории включает вертикальную планировку, отвод поверхностных вод и устройство нагорного канала. Проектной документацией предусматривается изъятие слабоуплотненного грунта.'},
++        {'document':'КР.pdf','document_type':'КР','page':10,'text':'При производстве земляных работ и устройстве оснований и фундаментов руководствоваться требованиями СП 45.13330.2017 «Земляные сооружения, основания и фундаменты».'},
++    ]
++    direct=verify_assignment_requirement(req,corpus)
++    assert direct and direct.get('status')=='Соответствует заданию'
++    assert direct.get('verification_kernel')=='NORMATIVE_DESIGN_ADOPTION_EXECUTOR'
++    attach_coverage_executor_evidence([req],corpus)
++    out=run_assignment_runtime([req],object_registry=[])
++    row=out['rows'][0]
++    assert row['status']=='Соответствует заданию'
++    assert row['core25_reason_code']=='ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED'
++
++
++def test_normative_design_adoption_does_not_close_from_norm_reference_without_design_solution():
++    from core.assignment_verification_kernel import verify_assignment_requirement
++    req={
++        'requirement_type':'NORMATIVE_COMPLIANCE',
++        'source_row_title':'Требования к схеме планировочной организации земельного участка',
++        'requirement_text':'Инженерную подготовку территории предусмотреть в соответствии с СП 45.13330.2017 «Земляные сооружения, основания и фундаменты»',
++        'evidence_contract_v2':{'expected_sections':['ПЗУ','КР']},
++    }
++    corpus=[{'document':'КР.pdf','document_type':'КР','page':10,'text':'При производстве земляных работ и устройстве оснований и фундаментов руководствоваться требованиями СП 45.13330.2017.'}]
++    result=verify_assignment_requirement(req,corpus)
++    assert result is None or result.get('status')!='Соответствует заданию'

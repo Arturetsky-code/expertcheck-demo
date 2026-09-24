@@ -883,6 +883,129 @@ def _lighting_composite_check(requirement: dict[str, Any], page_corpus: list[dic
     }
 
 
+def _normative_design_adoption_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Prove transfer of an Assignment-named norm into an addressable design solution.
+
+    This does not assert full compliance with the norm. It proves only that the
+    required engineering subject is developed and that every norm explicitly
+    cited by the Assignment is addressably adopted for that subject.
+    """
+    if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
+        return None
+    text=str(requirement.get("requirement_text") or "")
+    low_req=_norm(text)
+    if not any(marker in low_req for marker in (
+        "предусмотреть","выполнить","разработать","должны соответствовать","проектные решения",
+    )):
+        return None
+    required_refs=_normative_ids(text)
+    if not required_refs:
+        return None
+    sections=list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
+    if not sections:
+        return None
+
+    subject=re.split(r"\\b(?:в соответствии с|согласно)\\b",text,maxsplit=1,flags=re.I)[0]
+    subject_terms=[term for term in _significant_terms(subject) if term not in {"соответст"}]
+    if len(subject_terms)<2:
+        return None
+
+    solution_ranked=[]
+    adoption_ranked=[]
+    all_terms=_significant_terms(text)
+    for page in _candidate_pages(page_corpus,sections):
+        raw=str(page.get("text") or "")
+        low=_norm(raw)
+        subject_hits=[term for term in subject_terms if term in low]
+        if (
+            len(subject_hits)>=min(2,len(subject_terms))
+            and any(marker in low for marker in DESIGN_MARKERS)
+        ):
+            score=55+len(subject_hits)*9
+            if str(page.get("document_type") or "").upper().startswith("ПЗУ"):
+                score+=12
+            solution_ranked.append((score,page,subject_hits))
+
+        matched_refs=[ref for ref in required_refs if ref in low]
+        if not matched_refs:
+            continue
+        distinctive=[
+            term for term in all_terms
+            if term in low and not any(term in ref for ref in matched_refs)
+        ]
+        if len(distinctive)<2:
+            continue
+        if not any(marker in low for marker in (
+            "руководствоваться","в соответствии","в строгом соответствии",
+            "выполня","производств","предусмотр",
+        )):
+            continue
+        score=58+len(matched_refs)*18+min(24,len(distinctive)*3)
+        adoption_ranked.append((score,page,matched_refs,distinctive))
+
+    if not solution_ranked or not adoption_ranked:
+        return None
+    solution_ranked.sort(key=lambda item:item[0],reverse=True)
+    adoption_ranked.sort(key=lambda item:item[0],reverse=True)
+
+    covered=set()
+    selected=[]
+    for item in adoption_ranked:
+        new_refs=[ref for ref in item[2] if ref not in covered]
+        if not new_refs:
+            continue
+        selected.append(item)
+        covered.update(new_refs)
+        if all(ref in covered for ref in required_refs):
+            break
+    if not all(ref in covered for ref in required_refs):
+        return None
+
+    sol_score,sol_page,sol_hits=solution_ranked[0]
+    evidence_rows=[{
+        "evidence_kind":"NORMATIVE_DESIGN_ADOPTION",
+        "evidence_state":"verified_candidate",
+        "document":sol_page.get("document"),
+        "document_type":sol_page.get("document_type"),
+        "page":sol_page.get("page"),
+        "context":_context(sol_page.get("text") or "",sol_hits,radius=560),
+        "score":min(100,sol_score),
+        "proof_slot":"DESIGN_SOLUTION",
+        "matched_terms":sol_hits,
+        "required_normative_refs":required_refs,
+        "normative_design_adoption":True,
+    }]
+    for score,page,matched_refs,distinctive in selected:
+        evidence_rows.append({
+            "evidence_kind":"NORMATIVE_DESIGN_ADOPTION",
+            "evidence_state":"verified_candidate",
+            "document":page.get("document"),
+            "document_type":page.get("document_type"),
+            "page":page.get("page"),
+            "context":_context(page.get("text") or "",matched_refs+distinctive,radius=560),
+            "score":min(100,score),
+            "proof_slot":"NORMATIVE_ADOPTION",
+            "matched_normative_refs":matched_refs,
+            "matched_terms":distinctive,
+            "required_normative_refs":required_refs,
+            "normative_design_adoption":True,
+        })
+    return {
+        "status":"Соответствует заданию",
+        "evidence":[f"{row.get('document')}, стр. {row.get('page')}: {row.get('context')}" for row in evidence_rows],
+        "evidence_candidates":evidence_rows,
+        "verification_evidence":evidence_rows,
+        "evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE",
+        "match_confidence":0.97,
+        "decision_basis":(
+            "Требуемое Заданием проектное решение разработано в профильном разделе, "
+            "а все прямо названные в Задании нормы адресно приняты для соответствующих работ. "
+            "Полное соответствие нормам этим выводом не оценивается."
+        ),
+        "verification_kernel":"NORMATIVE_DESIGN_ADOPTION_EXECUTOR",
+    }
+
+
 def _normative_assertion_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
         return None
@@ -1351,6 +1474,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _open_canopy_drawing_check,
         _lighting_composite_check,
         _lightning_grounding_check,
+        _normative_design_adoption_check,
         _normative_assertion_check,
         _landscaping_design_determined_check,
         _design_determined_check,

@@ -894,3 +894,105 @@ def test_open_canopy_executor_does_not_intercept_composite_lime_requirement():
     ]
     result = verify_assignment_requirement(requirement, pages)
     assert result is None or result.get("verification_kernel") != "OPEN_CANOPY_DRAWING_EXECUTOR"
+
+
+
+def _fencing_requirement():
+    return {
+        "requirement_id": "ASSIGN-FENCING-COMPOSITE",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Требования к схеме планировочной организации земельного участка",
+        "requirement_text": (
+            "Предусмотреть ограждение части площадки с расположенными технологическим оборудованием, "
+            "зданиями и сооружениями. Для проезда и прохода персонала предусмотреть ворота и калитки. "
+            "Размеры определить проектом исходя из габаритов техники и требований нормативной документации. "
+            "Ограждение принять заводского изготовления"
+        ),
+        "requirement_scope": "SITE_SPECIFIC",
+        "evidence_contract_v2": {"scope": "SITE_SPECIFIC", "expected_sections": ["ПЗУ"]},
+    }
+
+
+def _fencing_pages(*, factory=True, wicket=True):
+    pzu_main = (
+        "Территория площадки ДСК ограждается панелями FENSYS по металлическим столбам высотой 2,0 м. "
+        "В ограждении в местах заезда автотранспорта устанавливаются ворота: распашные серии PROM-UM "
+        "шириной 4,5 м и откатные серии GS-FENCE шириной 4,5 м."
+    )
+    pzu_drawing = (
+        "Условные обозначения. Ограждение проектное. Ворота откатные. Ворота распашные. "
+        + ("Калитка." if wicket else "")
+    )
+    pzu_transport = (
+        "Согласно СП 37.13330.2012 ширина проезжей части принята 7,5 м. "
+        "За расчетный автомобиль приняты самосвалы HOWO T5G 30 т и 50 т."
+    )
+    kr_text = (
+        "Ограждение. Конструктивное решение периметрального ограждения выполнено из сетчатых металлических "
+        + ("панелей заводского изготовления. " if factory else "панелей. ")
+        + ("Калитка 1500х2500(h) комплектной поставки. " if wicket else "")
+        + "Ворота распашные 4500х2500(h) комплектной поставки."
+    )
+    return [
+        {"document":"ПЗУ1.pdf","document_type":"ПЗУ","page":27,"text":pzu_main},
+        {"document":"ПЗУ2.pdf","document_type":"ПЗУ","page":5,"text":pzu_drawing},
+        {"document":"ПЗУ1.pdf","document_type":"ПЗУ","page":30,"text":pzu_transport},
+        {"document":"КР1.pdf","document_type":"КР","page":68,"text":kr_text},
+    ]
+
+
+def test_fencing_composite_requires_all_six_conditions():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(_fencing_requirement(), _fencing_pages())
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_kernel"] == "FENCING_COMPOSITE_EXECUTOR"
+    assert result["condition_summary"]["proven"] == 6
+    assert result["condition_summary"]["total"] == 6
+    assert len(result["verification_evidence"]) == 1
+    assert result["verification_evidence"][0]["evidence_state"] == "verified_candidate"
+
+
+def test_fencing_composite_stays_review_without_factory_manufacture():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _fencing_requirement(),
+        _fencing_pages(factory=False),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 5
+    assert "ограждение заводского изготовления" in result["condition_summary"]["missing"]
+    assert all(item["evidence_state"] == "candidate" for item in result["verification_evidence"])
+
+
+def test_fencing_composite_stays_review_without_wicket_and_dimension():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _fencing_requirement(),
+        _fencing_pages(wicket=False),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 4
+    assert "калитки для прохода персонала" in result["condition_summary"]["missing"]
+    assert "проектные размеры ворот и калиток" in result["condition_summary"]["missing"]
+
+
+def test_fencing_composite_reaches_core25_presence_proof():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = _fencing_requirement()
+    legacy = verify_assignment_requirement(requirement, _fencing_pages())
+    assert legacy is not None
+    assert legacy["status"] == "Соответствует заданию"
+
+    runtime_req = dict(requirement)
+    runtime_req["directed_evidence_candidates"] = legacy["verification_evidence"]
+    row = run_assignment_runtime([runtime_req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"

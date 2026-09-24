@@ -1246,3 +1246,113 @@ def test_named_norm_design_adoption_requires_every_assignment_norm():
     ]
     result=verify_assignment_requirement(req,corpus)
     assert result is None or result.get("verification_kernel")!="NORMATIVE_DESIGN_ADOPTION_EXECUTOR"
+
+
+
+def _dynamic_foundation_requirement():
+    return {
+        "requirement_id":"ASSIGN-DYNAMIC-FOUNDATION",
+        "requirement_type":"NORMATIVE_COMPLIANCE",
+        "requirement_scope":"UNRESOLVED",
+        "source_row_title":"Требования к конструктивным решениям",
+        "requirement_text":(
+            "Основания для установки технологического оборудования дробильного комплекса "
+            "выполнить согласно нормативным требованиям к основаниям технологического "
+            "оборудования с динамическими нагрузками"
+        ),
+        "evidence_contract_v2":{
+            "scope":"UNRESOLVED",
+            "expected_sections":["ТХ","КР"],
+            "check_method":"NORMATIVE_LINK",
+        },
+    }
+
+
+def _dynamic_foundation_pages(*, drawing=True, calculation=True, observed="0,1", limit="0,3", bibliography_only=False):
+    if bibliography_only:
+        engineering=(
+            "Перечень нормативных документов. СП 26.13330.2012 "
+            "«Фундаменты машин с динамическими нагрузками»."
+        )
+    else:
+        engineering=(
+            "Оборудование технологического комплекса (4.2.1). Под две модульных установки "
+            "конусной дробилки в рамках раздела КР разработке подлежали только фундаменты. "
+            "Принятые конструктивные решения конструкций фундаментов удовлетворяют требованиям "
+            "расчета СП 26.13330.2012 «Фундаменты машин с динамическими нагрузками». "
+            "Фундаментная плита под первую модульную установку моделируется совместно с грунтовым основанием. "
+            + (
+                f"Расчетное значение амплитуды колебаний фундамента - {observed} мм, "
+                f"что не превышает предельно допустимых {limit} мм в соответствии с разделом 6 "
+                "СП 26.13330.2012."
+                if calculation else ""
+            )
+        )
+    pages=[{"document":"КР1.pdf","document_type":"КР","page":74,"text":engineering}]
+    if drawing:
+        pages.append({
+            "document":"КР2.pdf","document_type":"КР","page":31,
+            "text":(
+                "Схема расположения фундаментных плит ФПм1, ФПм2, ФПм3. "
+                "Фундаментная плита ФПм1. Фундаментная плита ФПм2. Фундаментная плита ФПм3. "
+                "Оборудование дробильного комплекса (4.2.1)."
+            ),
+        })
+    return pages
+
+
+def test_dynamic_foundation_normative_requires_calculation_and_drawing():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    requirement=_dynamic_foundation_requirement()
+    pages=_dynamic_foundation_pages()
+    direct=verify_assignment_requirement(requirement,pages)
+    assert direct is not None
+    assert direct["status"]=="Соответствует заданию"
+    assert direct["verification_kernel"]=="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"
+    assert direct["condition_summary"]=={"proven":4,"total":4,"missing":[]}
+    assert {x["proof_slot"] for x in direct["verification_evidence"]}=={
+        "ENGINEERING_CALCULATION","DRAWING_CORROBORATION"
+    }
+
+    attach_coverage_executor_evidence([requirement],pages)
+    row=run_assignment_runtime([requirement])["rows"][0]
+    assert row["final_verification_kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="PROVEN_MATCH"
+    assert row["core25_reason_code"]=="ASSIGNMENT_DYNAMIC_FOUNDATION_NORMATIVE_CONFIRMED"
+
+
+def test_dynamic_foundation_normative_rejects_bibliography_reference():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result=verify_assignment_requirement(
+        _dynamic_foundation_requirement(),
+        _dynamic_foundation_pages(bibliography_only=True),
+    )
+    assert result is None or result.get("verification_kernel")!="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"
+
+
+def test_dynamic_foundation_normative_rejects_missing_drawing_or_calculation():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    no_drawing=verify_assignment_requirement(
+        _dynamic_foundation_requirement(),
+        _dynamic_foundation_pages(drawing=False),
+    )
+    no_calc=verify_assignment_requirement(
+        _dynamic_foundation_requirement(),
+        _dynamic_foundation_pages(calculation=False),
+    )
+    assert no_drawing is None or no_drawing.get("verification_kernel")!="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"
+    assert no_calc is None or no_calc.get("verification_kernel")!="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"
+
+
+def test_dynamic_foundation_normative_rejects_excess_vibration():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result=verify_assignment_requirement(
+        _dynamic_foundation_requirement(),
+        _dynamic_foundation_pages(observed="0,5",limit="0,3"),
+    )
+    assert result is None or result.get("verification_kernel")!="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"

@@ -82,3 +82,23 @@ def test_real_ar2_golden_if_available():
     assert by_pos['4.13']['total_matches_rows'] is True
     vent=[r for r in by_pos['4.13']['rows'] if r['room_name']=='Венткамера'][0]
     assert vent['area']==32.6
+
+
+
+def test_title_block_recovers_owner_before_project_company_designation():
+    text = """
+Навес системы подачи извести
+Площадка производственного комплекса
+ООО "Проектировщик"
+RAM-0207.4-ЗД-ПД-4.25-АР2
+Фасады. Разрез 1-1
+2
+1
+П
+А2
+"""
+    title = parse_title_block(text)
+    assert title["resolved"] is True
+    assert title["position"] == "4.25"
+    assert title["object_name"] == "Навес системы подачи извести"
+    assert title["binding_method"] == "TITLE_BLOCK_BEFORE_DESIGNATION"

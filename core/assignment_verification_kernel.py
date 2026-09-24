@@ -12,6 +12,7 @@ from .metric_semantics import (
     capacity_levels_equivalent,
     capacity_semantic_level,
 )
+from .drawing_intelligence_v2 import open_canopy_drawing_fact
 
 
 DESIGN_MARKERS = (
@@ -499,6 +500,99 @@ def _normative_factual_requirement(text: str) -> bool:
     return bool(NORMATIVE_REF_RE.search(text) and any(marker in low for marker in material_markers))
 
 
+def _open_canopy_drawing_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Prove an explicitly open canopy only from owner-bound drawing semantics.
+
+    The word "навес" is never sufficient. The drawing layer must prove the
+    open-frame facade/section semantics and independently corroborate the frame
+    in KR. If the drawing proof is incomplete, this checker deliberately stops
+    the requirement at review instead of falling through to a weak text match.
+    """
+    text=str(requirement.get("requirement_text") or "")
+    low=_norm(text)
+    if "навес" not in low or "открыт" not in low:
+        return None
+
+    fact=open_canopy_drawing_fact(text, page_corpus or [])
+    proven=bool(fact and fact.get("proven"))
+    evidence_rows=[]
+    rendered=[]
+
+    if proven and fact:
+        context=str(fact.get("context") or "").strip()
+        row={
+            "evidence_kind":"QUALIFIED_DRAWING_PROJECT_FACT",
+            "evidence_state":"verified_candidate",
+            "source_kind":"DRAWING_EVIDENCE",
+            "document":fact.get("document"),
+            "document_type":"АР",
+            "page":fact.get("page"),
+            "context":context,
+            "exact_clause":context,
+            "score":99,
+            "structured_project_fact":True,
+            "drawing_fact_code":"OPEN_CANOPY",
+            "drawing_owner_name":fact.get("owner_name"),
+            "drawing_owner_binding":fact.get("owner_binding"),
+            "drawing_required_position":fact.get("required_position"),
+            "drawing_facade_views":list(fact.get("facade_views") or []),
+            "drawing_facade_view_count":int(fact.get("facade_view_count") or 0),
+            "drawing_roof_proven":fact.get("roof_proven") is True,
+            "drawing_structural_frame_corroborated":fact.get("structural_frame_corroborated") is True,
+            "drawing_enclosure_conflict":fact.get("enclosure_conflict") is True,
+            "drawing_corroborating_document":fact.get("corroborating_document"),
+            "drawing_corroborating_page":fact.get("corroborating_page"),
+        }
+        evidence_rows.append(row)
+        rendered.append(
+            f"{fact.get('document')}, стр. {fact.get('page')}: {context}"
+        )
+
+    return {
+        "status":"Соответствует заданию" if proven else "Требует проверки",
+        "evidence":rendered,
+        "evidence_candidates":evidence_rows,
+        "verification_evidence":evidence_rows,
+        "evidence_quality_state":"VERIFIED_DRAWING_EVIDENCE" if proven else "DRAWING_PROOF_INCOMPLETE",
+        "match_confidence":0.99 if proven else 0.0,
+        "decision_basis":(
+            "Открытый характер навеса подтверждён owner-bound фасадами/разрезом АР "
+            "и независимой схемой открытого несущего каркаса КР."
+            if proven else
+            "Требование об открытом навесе не закрыто: отсутствует полный owner-bound "
+            "комплект фасадного и конструктивного доказательства."
+        ),
+        "verification_kernel":"OPEN_CANOPY_DRAWING_EXECUTOR",
+        "condition_matrix":[
+            {
+                "condition_id":"ar_facade_semantics",
+                "condition_label":"АР: фасады/разрез открытого каркаса с кровельным решением",
+                "proven":bool(fact and fact.get("ar_facade_semantics", proven)),
+            },
+            {
+                "condition_id":"kr_frame_corroboration",
+                "condition_label":"КР: колонны/связи и балки/прогоны покрытия",
+                "proven":bool(fact and fact.get("kr_frame_corroboration", proven)),
+            },
+        ],
+        "condition_summary":{
+            "proven":2 if proven else sum((
+                bool(fact and fact.get("ar_facade_semantics")),
+                bool(fact and fact.get("kr_frame_corroboration")),
+            )),
+            "total":2,
+            "missing":[] if proven else [
+                label for ok,label in (
+                    (bool(fact and fact.get("ar_facade_semantics")),
+                     "АР: фасады/разрез открытого каркаса"),
+                    (bool(fact and fact.get("kr_frame_corroboration")),
+                     "КР: несущий открытый каркас"),
+                ) if not ok
+            ],
+        },
+    }
+
+
 def _lighting_composite_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Verify the composite Assignment requirement for electrical lighting.
 
@@ -977,6 +1071,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _equipment_check,
         _capacity_topology_check,
         _negative_applicability_check,
+        _open_canopy_drawing_check,
         _lighting_composite_check,
         _lightning_grounding_check,
         _normative_assertion_check,

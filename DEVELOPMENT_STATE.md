@@ -702,3 +702,44 @@ Do not revisit:
 - block-modular characteristics per manufacturer documentation — sufficient project-side declaration not found.
 
 Continue with the next genuinely review-only `PROFILE_SECTION_PRESENT` requirement and preserve the same A/B + false-positive audit discipline.
+
+
+## Test78 deterministic A/B automation — ready, secret activation pending
+
+A dedicated workflow now exists at:
+`.github/workflows/test78-ab.yml`.
+
+Runner:
+`tools/run_test78_ab.py`.
+
+Security model:
+- repository visibility is **public**;
+- the real Test78 fixture is therefore stored only as AES-256-CBC + PBKDF2 encrypted ciphertext chunks under `knowledge/benchmarks/private/`;
+- plaintext project-page text, source PDFs and the decryption key are not committed;
+- workflow output contains only counts, changed requirement IDs and Core25 reason/executor identifiers.
+
+Fixed encrypted fixture baseline:
+- Test78 denominator: **56** requirements;
+- baseline Core25: **24 VERIFIED_OK / 32 REVIEW_QUESTION**;
+- separately audited proven deviations: **2**;
+- official strict categorical baseline: **26/56 = 46.4%**;
+- baseline source SHA: `647291933d2b48fe84318891a2845c5e4cb01008`.
+
+A local encrypted-fixture smoke test reproduced:
+- fixture decrypt exact-match: **yes**;
+- classification: `NO_CHANGE`;
+- current Core25: **24 VERIFIED_OK / 32 REVIEW_QUESTION**;
+- changed requirements: **0**.
+
+Workflow behavior:
+- `NO_CHANGE`: no benchmark state change;
+- `SINGLE_GAIN`: exactly one review-only requirement became VERIFIED_OK;
+- `MULTI_CHANGE_AUDIT_REQUIRED`: multiple changes require manual evidence audit;
+- `REGRESSION`: workflow fails closed;
+- `REQUIREMENT_SET_CHANGED`: workflow fails closed.
+
+Activation requirement:
+repository Actions secret `TEST78_FIXTURE_KEY` must be configured once.
+Until then the workflow completes successfully but deliberately skips decryption/benchmark execution.
+
+After activation, development A/B no longer requires downloading source ZIP artifacts or rebuilding the 12-PDF page corpus for each iteration.

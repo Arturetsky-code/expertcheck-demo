@@ -172,3 +172,70 @@ Repository integrity note:
 - checkpoint/recovery files remain as disaster-recovery history only and are no longer required as the normal runtime source.
 
 No new runtime/code changes were accepted on 2026-09-23 after the 21/56 checkpoint.
+
+
+## WIP checkpoint — 2026-09-24 strict composite proof routing
+
+Official accepted benchmark remains **Test 78 = 21/56 (37.5%)** until a fresh full regression/benchmark reproduction is completed.
+
+### Lightning and grounding — strong candidate for 22/56
+
+Requirement row 40 has been manually audited against IOS1 and all five mandatory conditions are addressably proven:
+1. protective grounding device;
+2. lightning receptors on lighting masts;
+3. metallic building structures for buildings outside mast protection zones;
+4. addressable adoption of RD 34.21.122-87;
+5. addressable adoption of SO 153-34.21.122-2003.
+
+The specialized `LIGHTNING_GROUNDING_COMPOSITE_EXECUTOR` now:
+- runs before the generic normative checker;
+- requires 5/5 conditions before any evidence becomes `verified_candidate`;
+- emits qualified normative evidence only after the full composite gate is closed;
+- supports both the legacy presence route and a normative route without weakening either generic proof rule.
+
+Regression coverage was extended with split-page IOS1 evidence and Core25 admission tests.
+
+### Electrical lighting — deliberately held at 4/5
+
+Requirement row 39 is now handled by `LIGHTING_COMPOSITE_EXECUTOR` with five independent conditions:
+1. LED fixtures;
+2. floodlights on lighting masts;
+3. console fixtures on supports;
+4. explicit proof that the remaining territory is illuminated by console fixtures on supports;
+5. addressable adoption of SP 52.13330.2016 for artificial-lighting levels.
+
+Current Test 78 evidence proves conditions 1, 2, 3 and 5. The project text/graphics show masts in the central area and console fixtures on supports, but do not textually prove that **all remaining territory** is covered by that solution. Therefore row 39 must remain review-only at **4/5** until a spatial/drawing proof is available.
+
+This is an intentional false-positive safeguard.
+
+### Power supply — diagnostic correction
+
+The previous 5/8 audit was too conservative because IOS1.2 graphical evidence explicitly shows overhead-line supports on concrete footings. Current evidence status is therefore **6/8**.
+
+The requirement remains review-only because:
+- DGS is addressably tied to the special group of category I (plus administrative buildings), not proven for the Assignment's broader category-I formulation;
+- PUE has addressable application evidence;
+- FNP No. 505 is still found only in the normative bibliography, not in an addressable engineering-adoption statement.
+
+### Other audited candidates
+
+- DSK 500 t/h + two lines: two parallel/identical lines are proven, but an addressable project value of total 500 t/h has not been found; do not infer it from individual equipment capacities.
+- Assignment transport wording (SinoTrack 42 t / 32 m3): current TH contains SINOTRUK/HOWO transport references, but the exact 42 t / 32 m3 characteristics were not addressably recovered from the benchmark source; no new deviation is accepted.
+- Lime-supply canopy pos. 4.25: the canopy itself is proven, but the explicit **open** characteristic has not yet been textually proven; do not close the requirement from the word `навес` alone.
+
+### Validation infrastructure
+
+A direct branch validation workflow was added at `.github/workflows/validate-252.yml`.
+It is designed to run:
+- `pytest -q tests/core25/test_coverage_breakthrough_252.py`;
+- `pytest -q tests/core25 --ignore=tests/core25/test_assignment_pipeline.py`;
+
+and persist the validated source SHA into `checkpoints/252_validation/LAST_GREEN.md` after success.
+
+At this checkpoint the marker has not appeared through connector-generated pushes, so no green CI result is claimed. An isolated logic harness reproduces the intended safety behavior (row 39 = 4/5, row 40 = 5/5), but this does **not** replace the required full repository regression.
+
+### Next step
+
+1. obtain a full regression/benchmark execution on the current branch;
+2. if green and Test 78 reproduces row 40 as categorical with no regressions, promote the baseline from 21/56 to 22/56;
+3. then continue with the next `PROFILE_SECTION_PRESENT` candidate, prioritizing simple addressable requirements before larger composite/NTD cases.

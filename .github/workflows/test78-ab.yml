@@ -1,4 +1,5 @@
 name: Test78 deterministic A/B
+# Secret-enabled smoke trigger
 
 on:
   workflow_dispatch:

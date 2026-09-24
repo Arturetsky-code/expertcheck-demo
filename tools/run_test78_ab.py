@@ -174,6 +174,37 @@ def _private_review_frontier(rows: list[dict], limit: int = 8) -> list[dict]:
     return result
 
 
+
+def _apply_baseline_manifest(fixture: dict, manifest: dict | None) -> tuple[list[dict], dict]:
+    rows = [dict(row) for row in (fixture.get("baseline_rows") or [])]
+    meta = {
+        "baseline_label": fixture.get("baseline_label"),
+        "baseline_source_sha": fixture.get("baseline_source_sha"),
+        "proven_deviations": int(fixture.get("proven_deviations") or 0),
+    }
+    if not manifest:
+        return rows, meta
+
+    by_id = {str(row.get("requirement_id") or ""): row for row in rows}
+    for override in manifest.get("row_overrides") or []:
+        requirement_id = str(override.get("requirement_id") or "")
+        if not requirement_id or requirement_id not in by_id:
+            raise ValueError(f"Unknown Test78 baseline override requirement: {requirement_id or '<empty>'}")
+        allowed = {
+            "final_verification_kind", "proof_state", "core25_reason_code", "coverage_executor"
+        }
+        for key, value in override.items():
+            if key in allowed:
+                by_id[requirement_id][key] = value
+
+    if manifest.get("baseline_label"):
+        meta["baseline_label"] = manifest["baseline_label"]
+    if manifest.get("baseline_source_sha"):
+        meta["baseline_source_sha"] = manifest["baseline_source_sha"]
+    if manifest.get("proven_deviations") is not None:
+        meta["proven_deviations"] = int(manifest["proven_deviations"])
+    return rows, meta
+
 def _counts(rows: list[dict], proven_deviations: int) -> dict:
     kinds = Counter(row.get("final_verification_kind") for row in rows)
     verified = int(kinds.get("VERIFIED_OK", 0))
@@ -187,7 +218,7 @@ def _counts(rows: list[dict], proven_deviations: int) -> dict:
     }
 
 
-def run(fixture: dict) -> dict:
+def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
     requirements = copy.deepcopy(list(fixture.get("requirements") or []))
     corpus = list(fixture.get("page_corpus") or [])
     project_corpus = [page for page in corpus if not is_assignment_source(page)]
@@ -198,7 +229,7 @@ def run(fixture: dict) -> dict:
     runtime_rows = list(runtime.get("rows") or [])
     current_rows = [_row_summary(row) for row in runtime_rows]
 
-    baseline_rows = list(fixture.get("baseline_rows") or [])
+    baseline_rows, baseline_meta = _apply_baseline_manifest(fixture, baseline_manifest)
     before = {row["requirement_id"]: row for row in baseline_rows}
     after = {row["requirement_id"]: row for row in current_rows}
     before_ids = set(before)
@@ -247,12 +278,12 @@ def run(fixture: dict) -> dict:
     else:
         classification = "CHANGE_AUDIT_REQUIRED"
 
-    proven_deviations = int(fixture.get("proven_deviations") or 0)
+    proven_deviations = int(baseline_meta["proven_deviations"])
     return {
         "schema_version": 1,
         "benchmark": fixture.get("benchmark") or "Test78",
-        "baseline_label": fixture.get("baseline_label"),
-        "baseline_source_sha": fixture.get("baseline_source_sha"),
+        "baseline_label": baseline_meta.get("baseline_label"),
+        "baseline_source_sha": baseline_meta.get("baseline_source_sha"),
         "classification": classification,
         "baseline": _counts(baseline_rows, proven_deviations),
         "current": _counts(current_rows, proven_deviations),
@@ -319,10 +350,20 @@ def main() -> None:
     parser.add_argument("--fixture", required=True)
     parser.add_argument("--out-dir", default="benchmark_out")
     parser.add_argument("--private-out", default="")
+    parser.add_argument(
+        "--baseline-manifest",
+        default="knowledge/benchmarks/test78_baseline_overrides.json",
+    )
     args = parser.parse_args()
 
     fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
-    result = run(fixture)
+    baseline_path = Path(args.baseline_manifest) if args.baseline_manifest else None
+    baseline_manifest = (
+        json.loads(baseline_path.read_text(encoding="utf-8"))
+        if baseline_path and baseline_path.exists()
+        else None
+    )
+    result = run(fixture, baseline_manifest=baseline_manifest)
     private_frontier = result.pop("_private_review_frontier", [])
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

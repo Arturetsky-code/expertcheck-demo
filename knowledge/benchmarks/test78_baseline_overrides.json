@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "benchmark": "Test78",
+  "baseline_label": "25/56",
+  "baseline_source_sha": "af9b1d6cf73e9dbfb176b85287b9de76ace63533",
+  "proven_deviations": 2,
+  "row_overrides": [
+    {
+      "requirement_id": "ASSIGN-4F91A035979A30",
+      "final_verification_kind": "REVIEW_QUESTION",
+      "proof_state": "INSUFFICIENT_EVIDENCE",
+      "core25_reason_code": "NO_BOUND_CANONICAL_EVIDENCE",
+      "coverage_executor": "SOURCE_LOCKED_RETRIEVAL"
+    }
+  ],
+  "audit_note": "Corrected a false positive caused by stale numeric VOLUME retrieval on a non-value presence requirement. The fixed encrypted corpus remains unchanged; only non-sensitive validated baseline state is overridden here."
+}

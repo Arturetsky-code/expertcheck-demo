@@ -2,17 +2,18 @@
 
 Updated: 2026-09-24
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `a1855a657fcf069a6ab377578248edde2da61647`\nGreen validation marker commit: `aab7ac19d96e163e5cad6e4bfda33aea2723510b`
+Latest validated source commit: `647291933d2b48fe84318891a2845c5e4cb01008`
+Green validation marker commit: `ecfb2e432e2b0c43e545d268643793c07562468b`
 
 ## Official accepted local checkpoint
 
 Assignment compliance / Test 78 / AI off:
 
 - Requirements: 56
-- `Соответствует заданию`: 19
+- `Соответствует заданию`: 24
 - Proven deviations: 2
-- `Требует проверки`: 35
-- Strict categorical coverage: **21/56 = 37.5%**
+- `Требует проверки`: 30
+- Strict categorical coverage: **26/56 = 46.4%**
 - Admission diagnostics include **PROFILE_SECTION_ABSENT**
 - Test 78 count at PROFILE_SECTION_ABSENT: **15 requirements**
 
@@ -607,3 +608,97 @@ Current evidence is strong:
 
 Because the Assignment does not name a specific norm, this requirement must use a stricter generic-normative proof than the named-norm executor above.
 
+
+
+## Validated checkpoint — 26/56 dynamic machine foundations
+
+Accepted Test 78 / Assignment compliance / AI off baseline is now **26/56 = 46.4%**:
+
+- requirements: **56**;
+- `Соответствует заданию`: **24**;
+- proven deviations: **2**;
+- `Требует проверки`: **30**.
+
+### New accepted categorical requirement
+
+Requirement `ASSIGN-38E7D1D078444D`:
+`Основания для установки технологического оборудования дробильного комплекса выполнить согласно нормативным требованиям к основаниям технологического оборудования с динамическими нагрузками`.
+
+Previous state: `REVIEW_QUESTION`.
+Validated state: `VERIFIED_OK`.
+
+Executor:
+`DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR`.
+
+Core25:
+- proof state: `PROVEN_MATCH`;
+- reason: `ASSIGNMENT_DYNAMIC_FOUNDATION_NORMATIVE_CONFIRMED`.
+
+### Four-condition proof gate
+
+Categorical proof requires all four independent elements:
+
+1. the PD actually develops foundations for crushing-process equipment;
+2. the PD addressably adopts the specialized `СП 26.13330.2012 «Фундаменты машин с динамическими нагрузками»`;
+3. a quantitative dynamic calculation proves the calculated vibration amplitude does not exceed the stated allowable limit;
+4. KR graphical documentation independently shows the corresponding foundation plates.
+
+Real Test 78 evidence:
+- KR1 page 74: foundations for modular crushing installations are developed;
+- KR1 page 74: SP 26.13330.2012 is addressably applied;
+- KR1 page 74: calculated foundation vibration amplitude **0.1 mm** does not exceed allowable **0.3 mm**;
+- KR2 page 31: foundation-plate layout `ФПм1 / ФПм2 / ФПм3` for crushing-complex equipment.
+
+### A/B benchmark
+
+Using the same cached real Test 78 page corpus and the same 56 extracted Assignment requirements:
+
+- validated 25/56 baseline: **23 VERIFIED_OK / 33 REVIEW_QUESTION**;
+- dynamic-foundation source: **24 VERIFIED_OK / 32 REVIEW_QUESTION**.
+
+Exactly one requirement changed state:
+- `ASSIGN-38E7D1D078444D`: `REVIEW_QUESTION -> VERIFIED_OK`.
+
+The two previously accepted proven deviations are unchanged. Therefore official strict coverage moves from:
+- **23 compliant + 2 deviations = 25/56**
+to:
+- **24 compliant + 2 deviations = 26/56**.
+
+### False-positive safeguards
+
+The proof remains fail-closed:
+- SP 26 appearing only in a bibliography / normative list is insufficient;
+- a foundation solution without a quantitative dynamic calculation is insufficient;
+- a calculation without an addressable foundation drawing is insufficient;
+- a drawing without the calculation is insufficient;
+- calculated vibration exceeding the stated allowable limit cannot produce compliance;
+- full compliance with every clause of SP 26.13330.2012 is **not** asserted by this Assignment proof.
+
+### Validation
+
+Validated source commit:
+`647291933d2b48fe84318891a2845c5e4cb01008`.
+
+Green validation marker:
+`ecfb2e432e2b0c43e545d268643793c07562468b`.
+
+Passed:
+- direct coverage-breakthrough regression;
+- full Core25 regression package;
+- Core25 Quality Leap tests;
+- Core20 regression;
+- baseline full diagnostic;
+- mandatory focused regressions;
+- legacy full repository suite against baseline allowlist;
+- Core25 compile.
+
+### Continue from here
+
+Official next baseline is **26/56**.
+
+Do not revisit:
+- stockpile-to-technological-complex access — already covered by `PERSONNEL_AND_VEHICLE_ACCESS`;
+- climate II4 — no project-side II4 evidence in the 12-file benchmark;
+- block-modular characteristics per manufacturer documentation — sufficient project-side declaration not found.
+
+Continue with the next genuinely review-only `PROFILE_SECTION_PRESENT` requirement and preserve the same A/B + false-positive audit discipline.

@@ -391,6 +391,53 @@ def _normative_assertion_proof(
     )
 
 
+def _normative_design_adoption_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    accepted: list[tuple[Evidence25, Binding25]] = []
+    has_solution = False
+    matched_refs: set[str] = set()
+    required_refs: set[str] = set()
+
+    for evidence_item, binding in pairs:
+        metadata=dict(evidence_item.metadata or {})
+        kind=str(metadata.get("legacy_evidence_kind") or "").upper()
+        if kind != "NORMATIVE_DESIGN_ADOPTION" or metadata.get("normative_design_adoption") is not True:
+            continue
+        slot=str(metadata.get("proof_slot") or "").upper()
+        required_refs.update(str(x) for x in (metadata.get("required_normative_refs") or ()) if str(x))
+        if slot == "DESIGN_SOLUTION" and tuple(metadata.get("matched_terms") or ()):
+            has_solution=True
+            accepted.append((evidence_item,binding))
+        elif slot == "NORMATIVE_ADOPTION":
+            refs={str(x) for x in (metadata.get("matched_normative_refs") or ()) if str(x)}
+            terms=tuple(metadata.get("matched_terms") or ())
+            if refs and len(terms)>=2:
+                matched_refs.update(refs)
+                accepted.append((evidence_item,binding))
+
+    if not has_solution or not required_refs or not required_refs <= matched_refs:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_NOT_PROVEN",
+        )
+
+    evidence_ids=tuple(dict.fromkeys(item.evidence_id for item,_ in accepted))
+    binding_ids=tuple(dict.fromkeys(binding.binding_id for _,binding in accepted))
+    return Proof25(
+        proof_id=_proof_id(requirement,route,evidence_ids,binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED",
+        metadata={"normative_compliance_not_assessed":True},
+    )
+
+
 def _reserve_topology_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -508,6 +555,8 @@ def build_proof(
         return _negative_assertion_proof(requirement, route, pairs)
     if route.kind == "NORMATIVE_ASSERTION":
         return _normative_assertion_proof(requirement, route, pairs)
+    if route.kind == "NORMATIVE_DESIGN_ADOPTION":
+        return _normative_design_adoption_proof(requirement, route, pairs)
     if route.kind == "DESIGN_DETERMINED":
         return _design_determined_proof(requirement, route, pairs)
 

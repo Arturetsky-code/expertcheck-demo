@@ -996,3 +996,18 @@ def test_fencing_composite_reaches_core25_presence_proof():
     assert row["final_verification_kind"] == "VERIFIED_OK"
     assert row["proof_state"] == "PROVEN_MATCH"
     assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"
+
+
+
+def test_fencing_composite_classifier_ignores_secondary_generic_normative_phrase():
+    from core.assignment_compliance import _requirement_type
+
+    text = (
+        "Предусмотреть ограждение части площадки. Для проезда и прохода персонала "
+        "предусмотреть ворота и калитки. Размеры определить проектом исходя из габаритов "
+        "техники и требований нормативной документации. Ограждение принять заводского изготовления."
+    )
+    assert _requirement_type(text, "Требования к схеме планировочной организации земельного участка", "", None) == "PRESENCE_REQUIREMENT"
+
+    truly_normative = "Основания оборудования выполнить согласно нормативным требованиям к фундаментам машин с динамическими нагрузками"
+    assert _requirement_type(truly_normative, "Требования к конструктивным решениям", "", None) == "NORMATIVE_COMPLIANCE"

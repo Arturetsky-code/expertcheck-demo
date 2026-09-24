@@ -1356,3 +1356,41 @@ def test_dynamic_foundation_normative_rejects_excess_vibration():
         _dynamic_foundation_pages(observed="0,5",limit="0,3"),
     )
     assert result is None or result.get("verification_kernel")!="DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR"
+
+
+def test_non_value_requirement_cannot_emit_directed_numeric_evidence_from_stale_parameter_code():
+    from core.directed_evidence import directed_candidates
+
+    requirement = {
+        "requirement_text": "Предусмотреть подпорную стену для площадки временного хранения руды.",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "parameter_code": "VOLUME",
+        "requirement_scope": "SITE_SPECIFIC",
+        "evidence_contract_v2": {"scope": "SITE_SPECIFIC", "expected_sections": ["ПЗУ"]},
+    }
+    corpus = [{
+        "document": "ИОС2.pdf",
+        "page": 10,
+        "text": "Проектом предусмотрен противопожарный резервуар объемом 100 м3.",
+    }]
+
+    assert directed_candidates(requirement, corpus) == []
+
+
+def test_presence_contract_ignores_secondary_numeric_parameter_when_routing_sections():
+    from core.requirement_contracts import build_contract
+
+    requirement = {
+        "requirement_text": (
+            "Для формирования площадки временного хранения и перегрузки руды "
+            "предусмотреть подпорную стену. Объем склада принять по решениям проекта."
+        ),
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "object_name": "Подпорная стена",
+        "parameter_code": "VOLUME",
+        "source_row_title": "Требования к конструктивным решениям",
+    }
+
+    contract = build_contract(requirement)
+    assert contract["scope"] == "SITE_SPECIFIC"
+    assert contract["expected_sections"] == ["ПЗУ"]

@@ -177,7 +177,11 @@ def build_contract(requirement:dict[str,Any])->dict[str,Any]:
     rtype=str(requirement.get('requirement_type') or 'SEMANTIC_ENGINEERING')
     code=canonical_parameter_code(requirement.get('parameter_code'))
     scope=infer_scope(requirement)
-    sections=infer_expected_sections(requirement,code)
+    # A parameter inherited from a secondary clause must not override the semantic
+    # section route of a presence/normative requirement. Parameter-first routing is
+    # valid only when the atom itself is a value comparison.
+    section_code=code if rtype=='VALUE_COMPARISON' else ''
+    sections=infer_expected_sections(requirement,section_code)
     if rtype=='SET_COMPARISON':
         method='SET_COMPARISON'; evidence=['Реестр объектов проекта','Приложение/перечень объектов Задания']
     elif rtype=='VALUE_COMPARISON':

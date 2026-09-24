@@ -167,6 +167,13 @@ def build_page_corpus(
 
 def directed_candidates(requirement: dict[str,Any], corpus: list[dict[str,Any]], limit: int=8) -> list[dict[str,Any]]:
     contract=requirement.get('evidence_contract_v2') or {}
+    requirement_type=str(requirement.get('requirement_type') or '').strip().upper()
+    # Numeric directed evidence is admissible only for an explicit value-comparison
+    # requirement. Atomisation can legitimately leave a secondary parameter_code on
+    # presence/normative atoms; letting that stale code drive retrieval creates
+    # unrelated numeric evidence and can become a false-positive proof downstream.
+    if requirement_type != 'VALUE_COMPARISON':
+        return []
     code=canonical_parameter_code(requirement.get('parameter_code'))
     if not code or code not in METRIC_PATTERNS:
         return []

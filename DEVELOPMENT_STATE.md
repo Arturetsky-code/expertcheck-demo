@@ -1,8 +1,8 @@
 # ExpertCheck development state
 
-Updated: 2026-09-23
+Updated: 2026-09-24
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated checkpoint commit: `b8cad2b66364f13802b682318da1b7ce7d5732d3`
+Latest validated source commit: `a1855a657fcf069a6ab377578248edde2da61647`\nGreen validation marker commit: `aab7ac19d96e163e5cad6e4bfda33aea2723510b`
 
 ## Official accepted local checkpoint
 
@@ -20,7 +20,7 @@ Accepted categorical deviations:
 - Requirement 22: loader identity/quantity mismatch.
 - Requirement 3: Appendix 1 identification responsibility mismatch for exact GP position **4.25 “Навес системы подачи извести”**: Assignment **КС-2, γn=1.0** vs KR **КС-3, γn=1.1**.
 
-New accepted compliance at 21/56:
+Previously accepted compliance at 21/56:
 - Requirement 10 / “Срок строительства объекта”: Assignment says “Определить проектной документацией”; PZ page 27 contains the structured project fact **“Сведения о сроках проведении работ: Продолжительность работ, месяц: 12”**.
 - Core25 now has a separate `DESIGN_DETERMINED` route/proof so structured project values are not forced through ordinary PRESENCE wording.
 - Secondary clauses such as “Размеры определить проектом” no longer reclassify a composite engineering requirement (e.g. fencing/gates/wickets) away from PRESENCE.
@@ -245,4 +245,87 @@ binding; the word “навес” alone must never prove openness.
 
 The larger lime-supply-system requirement remains review-only because the Assignment
 requires MКР volume 1 m3 while the project currently proves 1000 kg, not 1 m3.
+
+\n\n## Validated checkpoint — 22/56 open-canopy drawing proof
+
+Accepted Test 78 / Assignment compliance / AI off baseline is now **22/56 = 39.3%**:
+
+- requirements: **56**;
+- `Соответствует заданию`: **20**;
+- proven deviations: **2**;
+- `Требует проверки`: **34**.
+
+### New accepted categorical requirement
+
+Requirement `ASSIGN-618EAB7B243E86`:
+`Навес системы подачи извести (поз. 4.25) выполнить открытым`.
+
+Previous state: `REVIEW_QUESTION`.
+Validated state: `VERIFIED_OK`.
+Core25 proof: `PROVEN_MATCH / ASSIGNMENT_PRESENCE_CONFIRMED`.
+Executor: `OPEN_CANOPY_DRAWING_EXECUTOR`.
+
+Addressable drawing evidence:
+- AR2, page 33, exact owner `Навес системы подачи извести`, position **4.25**;
+- three facade directions plus section view;
+- profiled roof decking is explicitly present;
+- KR2, page 172 independently corroborates columns / vertical bracing and roof beams / purlins.
+
+### A/B benchmark
+
+The same cached Test 78 page corpus and the same 56 extracted Assignment requirements were run through the deterministic Assignment evidence/admission/Core25 contour.
+
+Control source before the open-canopy experiment:
+- **19 VERIFIED_OK / 37 REVIEW_QUESTION**.
+
+Validated open-canopy source:
+- **20 VERIFIED_OK / 36 REVIEW_QUESTION**.
+
+Exactly one requirement changed state:
+- `ASSIGN-618EAB7B243E86`: `REVIEW_QUESTION -> VERIFIED_OK`.
+
+The two previously accepted categorical deviations are unchanged, so official strict categorical coverage moves from:
+- **19 compliant + 2 deviations = 21/56**
+to:
+- **20 compliant + 2 deviations = 22/56**.
+
+### False-positive safeguards
+
+The new drawing proof is fail-closed:
+- the word `навес` alone never proves openness;
+- exact drawing position and title-block owner are required;
+- the title-block owner must also be explicitly named by the Assignment requirement;
+- drawing index / `Ведомость документов графической части` pages are excluded from proof;
+- sheet titles such as `Фасады`, `Разрез`, `План`, `Схема` cannot become object owners;
+- explicit wall/enclosure markers such as wall panels / sandwich panels block the open-canopy proof;
+- AR facade/section semantics require at least three facade directions plus a section and roof solution;
+- independent KR frame corroboration is mandatory;
+- the executor runs only for atomic `PRESENCE_REQUIREMENT` rows and cannot intercept the larger composite lime-supply requirement.
+
+### Validation
+
+Validated source/control commit:
+`a1855a657fcf069a6ab377578248edde2da61647`.
+
+Direct validation:
+- coverage-breakthrough regression: **passed**;
+- Core25 regression package: **passed**;
+- green marker commit: `aab7ac19d96e163e5cad6e4bfda33aea2723510b`.
+
+Core25 Quality Leap:
+- Core25 tests: **passed**;
+- Core20 regression: **passed**;
+- mandatory focused regressions: **passed**;
+- legacy full repository suite against baseline allowlist: **passed**;
+- Core25 compile: **passed**.
+
+### Unchanged near candidates
+
+- Electrical lighting remains **4/5** and review-only.
+- Power supply remains **6/8** and review-only.
+- The larger lime-supply-system requirement remains review-only because the Assignment requires MКР volume **1 m3**, while the project currently proves **1000 kg**, not the required volume.
+
+### Next step
+
+Continue only from the **22/56** baseline. Prioritize the next `PROFILE_SECTION_PRESENT` requirement where an addressable project fact exists but the proof route is missing. Do not weaken partial-condition gates to chase coverage.
 

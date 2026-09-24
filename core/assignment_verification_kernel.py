@@ -499,6 +499,148 @@ def _normative_factual_requirement(text: str) -> bool:
     return bool(NORMATIVE_REF_RE.search(text) and any(marker in low for marker in material_markers))
 
 
+def _lighting_composite_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Verify the composite Assignment requirement for electrical lighting.
+
+    The requirement mixes several engineering decisions with a normative
+    adoption clause.  It is categorical only when every required condition is
+    addressably proven in IOS1 text/graphics.  Partial evidence is retrieval
+    evidence only and must remain review-only.
+    """
+    text = str(requirement.get("requirement_text") or "")
+    title = _norm(requirement.get("source_row_title") or "")
+    low_req = _norm(text)
+    if "электроосвещ" not in title:
+        return None
+    if not (
+        "светодиод" in low_req
+        and "мачт" in low_req
+        and "светильник" in low_req
+        and "сп 52.13330.2016" in low_req
+    ):
+        return None
+
+    pages = _candidate_pages(page_corpus, ("ИОС1",))
+    slots: dict[str, tuple[dict[str, Any], str] | None] = {
+        "led_fixtures": None,
+        "floodlight_masts": None,
+        "console_fixtures": None,
+        "territorial_layout": None,
+        "sp52_adoption": None,
+    }
+
+    for page in pages:
+        raw = str(page.get("text") or "")
+        low = _norm(raw)
+        checks = {
+            "led_fixtures": (
+                "светодиод" in low
+                and "светильник" in low
+                and any(x in low for x in ("применен", "применяются", "принят", "устанавливается"))
+            ),
+            "floodlight_masts": (
+                "прожектор" in low
+                and "мачт" in low
+                and any(x in low for x in ("устанавливается", "установлен", "с прожектор", "прожекторн"))
+            ),
+            "console_fixtures": (
+                "светильник" in low
+                and "консольн" in low
+                and any(x in low for x in ("опор", "кронштейн"))
+            ),
+            "territorial_layout": (
+                "наружн" in low
+                and "освещ" in low
+                and "центральн" in low
+                and "мачт" in low
+                and "опор" in low
+                and any(x in low for x in ("проезд", "стоянк", "территори"))
+            ),
+            "sp52_adoption": (
+                "сп 52.13330.2016" in low
+                and "уровн" in low
+                and "освещ" in low
+                and any(x in low for x in ("принят", "в соответствии"))
+            ),
+        }
+        for key, ok in checks.items():
+            if ok and slots[key] is None:
+                anchors = {
+                    "led_fixtures": ("светодиод", "светильник"),
+                    "floodlight_masts": ("прожектор", "мачт"),
+                    "console_fixtures": ("консольн", "кронштейн"),
+                    "territorial_layout": ("центральн", "мачт", "опор"),
+                    "sp52_adoption": ("сп 52.13330.2016", "уровн", "освещ"),
+                }[key]
+                slots[key] = (page, _context(raw, anchors, radius=460))
+
+    labels = {
+        "led_fixtures": "светодиодные светильники",
+        "floodlight_masts": "прожекторы на осветительных мачтах",
+        "console_fixtures": "консольные светильники на опорах",
+        "territorial_layout": "разделение наружного освещения: центральная часть — мачты, остальная территория — светильники на опорах",
+        "sp52_adoption": "адресное применение СП 52.13330.2016 к уровням искусственного освещения",
+    }
+    proven = [key for key, value in slots.items() if value is not None]
+    missing = [key for key, value in slots.items() if value is None]
+    all_proven = not missing
+    evidence_rows = []
+    rendered = []
+
+    for key in proven:
+        page, snippet = slots[key]  # type: ignore[misc]
+        normative_slot = key == "sp52_adoption"
+        row = {
+            "evidence_kind": (
+                "QUALIFIED_NORMATIVE_ASSERTION"
+                if normative_slot and all_proven
+                else "QUALIFIED_LIGHTING_COMPOSITE"
+            ),
+            "evidence_state": "verified_candidate" if all_proven else "candidate",
+            "document": page.get("document"),
+            "document_type": page.get("document_type"),
+            "page": page.get("page"),
+            "context": snippet,
+            "score": 98 if all_proven else 82,
+            "condition_id": key,
+            "condition_label": labels[key],
+        }
+        if normative_slot:
+            row["matched_normative_refs"] = ["сп 52.13330.2016"]
+            row["matched_terms"] = ["уровн", "освещ"]
+        evidence_rows.append(row)
+        rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
+
+    return {
+        "status": "Соответствует заданию" if all_proven else "Требует проверки",
+        "evidence": rendered,
+        "evidence_candidates": evidence_rows,
+        "verification_evidence": evidence_rows,
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE" if all_proven else "CANDIDATE_EVIDENCE",
+        "match_confidence": 0.98 if all_proven else (0.80 if proven else 0.0),
+        "decision_basis": (
+            "Все обязательные условия по электроосвещению подтверждены адресными решениями ИОС1."
+            if all_proven else
+            "Требование подтверждено частично; отсутствуют обязательные условия: "
+            + ", ".join(labels[key] for key in missing)
+        ),
+        "verification_kernel": "LIGHTING_COMPOSITE_EXECUTOR",
+        "condition_matrix": [
+            {
+                "condition_id": key,
+                "condition_label": labels[key],
+                "proven": slots[key] is not None,
+            }
+            for key in slots
+        ],
+        "condition_summary": {
+            "proven": len(proven),
+            "total": len(slots),
+            "missing": [labels[key] for key in missing],
+        },
+    }
+
+
 def _normative_assertion_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     if str(requirement.get("requirement_type") or "") != "NORMATIVE_COMPLIANCE":
         return None
@@ -825,6 +967,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _equipment_check,
         _capacity_topology_check,
         _negative_applicability_check,
+        _lighting_composite_check,
         _normative_assertion_check,
         _design_determined_check,
         _lightning_grounding_check,

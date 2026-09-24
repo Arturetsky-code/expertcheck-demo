@@ -83,7 +83,7 @@ def _owner_candidate(line: str, *, allow_sheet_title: bool = False) -> str:
         return ""
     if any(x in low for x in (
         "разраб", "провер", "нач. отд", "н. контр", "главный инженер проекта", "гип",
-        "ооо ", "ао ", "пао ", "площадка дробильно", "объект строительства",
+        "ооо ", "ао ", "пао ", "объект строительства",
     )):
         return ""
     if re.fullmatch(r"\d+",candidate) or _PERMISSION_RE.fullmatch(candidate):
@@ -126,22 +126,35 @@ def parse_title_block(text: str) -> dict[str, Any]:
         method="TITLE_BLOCK_AFTER_DESIGNATION"
 
     else:
-        # Alternate layout seen in real AR/KR sheets:
+        # Alternate layout seen in CAD title blocks:
         # object -> project/site -> company -> designation -> sheet title.
-        before=[]
-        for j in range(i-1,max(-1,i-10),-1):
-            candidate=_owner_candidate(lines[j])
-            if candidate:
-                before.append(candidate)
+        # Anchor on the organisation row instead of project-specific wording.
+        organisation_index=None
+        for j in range(i-1,max(-1,i-7),-1):
+            low=normalize_text(lines[j])
+            if any(low.startswith(prefix) for prefix in ("ооо ", "ао ", "пао ")):
+                organisation_index=j
                 break
-        if len(before)!=1:
+
+        owner=""
+        if organisation_index is not None and organisation_index-2 >= 0:
+            owner=_owner_candidate(lines[organisation_index-2])
+        if not owner:
+            before=[]
+            for j in range(i-1,max(-1,i-10),-1):
+                candidate=_owner_candidate(lines[j])
+                if candidate:
+                    before.append(candidate)
+                    break
+            owner=before[0] if len(before)==1 else ""
+
+        if not owner:
             return {
                 "resolved":False,
                 "designation":code,
                 "position":_position(code),
                 "reason":"наименование владельца листа не разрешено однозначно",
             }
-        owner=before[0]
         method="TITLE_BLOCK_BEFORE_DESIGNATION"
 
     return {
@@ -259,7 +272,16 @@ def open_canopy_drawing_fact(
         "corroborating_document":kr["page"].get("document"),
         "corroborating_page":kr["page"].get("page"),
         "enclosure_conflict":False,
-        "context":re.sub(r"\s+"," ",str(page.get("text") or "")).strip()[:1600],
+        "context":"; ".join(
+            line for line in _clean_lines(str(page.get("text") or ""))
+            if (
+                "навес" in normalize_text(line)
+                or "фасад" in normalize_text(line)
+                or "разрез" in normalize_text(line)
+                or "профилированный настил" in normalize_text(line)
+                or str(ar["title"].get("designation") or "") in line
+            )
+        )[:1800],
     }
 
 

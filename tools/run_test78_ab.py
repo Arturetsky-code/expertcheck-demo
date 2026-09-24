@@ -120,6 +120,60 @@ def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
     ]
 
 
+def _private_review_frontier(rows: list[dict], limit: int = 8) -> list[dict]:
+    review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
+    review.sort(
+        key=lambda row: (
+            int(row.get("core25_verified_candidate_count") or 0),
+            int(row.get("core25_qualified_evidence_count") or 0),
+            int(row.get("core25_raw_candidate_count") or 0),
+            bool(row.get("coverage_executor")),
+        ),
+        reverse=True,
+    )
+    result = []
+    for row in review[:limit]:
+        candidates = []
+        for item in row.get("directed_evidence_candidates") or []:
+            if not isinstance(item, dict):
+                continue
+            candidates.append({
+                "evidence_state": item.get("evidence_state"),
+                "evidence_kind": item.get("evidence_kind"),
+                "document": item.get("document"),
+                "document_type": item.get("document_type"),
+                "page": item.get("page"),
+                "context": item.get("context") or item.get("exact_clause") or item.get("source_trace"),
+                "score": item.get("score"),
+                "object": item.get("object"),
+                "owner_match": item.get("owner_match"),
+                "parameter_code": item.get("parameter_code"),
+                "value": item.get("value"),
+                "unit": item.get("unit"),
+                "matched_terms": item.get("matched_terms") or [],
+                "matched_normative_refs": item.get("matched_normative_refs") or [],
+                "condition_id": item.get("condition_id"),
+                "condition_label": item.get("condition_label"),
+            })
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "requirement_text": row.get("requirement_text"),
+            "source_row_title": row.get("source_row_title"),
+            "requirement_type": row.get("requirement_type"),
+            "requirement_scope": row.get("requirement_scope"),
+            "expected_sections": row.get("expected_sections") or [],
+            "evidence_contract_v2": row.get("evidence_contract_v2") or {},
+            "coverage_executor": row.get("coverage_executor"),
+            "coverage_executor_status": row.get("coverage_executor_status"),
+            "core25_reason_code": row.get("core25_reason_code"),
+            "core25_admission_stage": row.get("core25_admission_stage"),
+            "core25_binding_counts": row.get("core25_binding_counts") or {},
+            "core25_binding_reason_codes": row.get("core25_binding_reason_codes") or {},
+            "candidates": candidates,
+        })
+    return result
+
+
 def _counts(rows: list[dict], proven_deviations: int) -> dict:
     kinds = Counter(row.get("final_verification_kind") for row in rows)
     verified = int(kinds.get("VERIFIED_OK", 0))
@@ -141,7 +195,8 @@ def run(fixture: dict) -> dict:
     attach_directed_evidence(requirements, project_corpus)
     coverage = attach_coverage_executor_evidence(requirements, project_corpus)
     runtime = run_assignment_runtime(requirements, object_registry=[])
-    current_rows = [_row_summary(row) for row in runtime.get("rows") or []]
+    runtime_rows = list(runtime.get("rows") or [])
+    current_rows = [_row_summary(row) for row in runtime_rows]
 
     baseline_rows = list(fixture.get("baseline_rows") or [])
     before = {row["requirement_id"]: row for row in baseline_rows}
@@ -207,6 +262,7 @@ def run(fixture: dict) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
             "current": _archetype_summary(current_rows),
@@ -262,16 +318,30 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", required=True)
     parser.add_argument("--out-dir", default="benchmark_out")
+    parser.add_argument("--private-out", default="")
     args = parser.parse_args()
 
     fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
     result = run(fixture)
+    private_frontier = result.pop("_private_review_frontier", [])
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "test78_ab.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     (out_dir / "test78_ab.md").write_text(markdown(result), encoding="utf-8")
+    if args.private_out:
+        private_path = Path(args.private_out)
+        private_path.parent.mkdir(parents=True, exist_ok=True)
+        private_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "benchmark": result.get("benchmark"),
+                "baseline_source_sha": result.get("baseline_source_sha"),
+                "frontier": private_frontier,
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     print(json.dumps({
         "classification": result["classification"],
         "baseline": result["baseline"],

@@ -45,6 +45,8 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
         "PRESENCE_REQUIREMENT": "PRESENCE",
     }
     item["verification_kind"] = aliases.get(kind, kind)
+    if _text(item.get("coverage_executor")) == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
+        item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
     return item
 
 
@@ -125,7 +127,10 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "coverage_executor": candidate.get("coverage_executor"),
                     "negative_assertion": candidate.get("negative_assertion"),
                     "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
+                    "required_normative_refs": tuple(candidate.get("required_normative_refs") or ()),
                     "matched_terms": tuple(candidate.get("matched_terms") or ()),
+                    "proof_slot": candidate.get("proof_slot"),
+                    "normative_design_adoption": candidate.get("normative_design_adoption"),
                     "concept": candidate.get("concept"),
                     "design_determined_subject": candidate.get("design_determined_subject"),
                     "structured_project_fact": candidate.get("structured_project_fact"),

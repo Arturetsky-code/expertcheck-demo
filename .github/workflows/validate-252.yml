@@ -32,10 +32,12 @@ jobs:
           python -m pip install -q pytest "PyMuPDF>=1.24,<2" "openpyxl>=3.1,<4"
 
       - name: Run Core25 coverage-breakthrough regression
-        run: pytest -q tests/core25/test_coverage_breakthrough_252.py
+        working-directory: tests
+        run: python -m pytest -q core25/test_coverage_breakthrough_252.py --rootdir=.
 
       - name: Run Core25 regression package
-        run: pytest -q tests/core25 --ignore=tests/core25/test_assignment_pipeline.py
+        working-directory: tests
+        run: python -m pytest -q core25 --ignore=core25/test_assignment_pipeline.py --rootdir=.
 
       - name: Persist green validation marker
         shell: bash

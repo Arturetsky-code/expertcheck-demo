@@ -70,12 +70,39 @@ def _drawing_kinds(text: str) -> list[str]:
     return kinds or ["drawing"]
 
 
-def parse_title_block(text: str) -> dict[str, Any]:
-    """Resolve the sheet owner from its title block rather than nearest text.
+_SHEET_TITLE_MARKERS = (
+    "фасад", "разрез", "план ", "план.", "схема ", "схемы ",
+    "узел ", "узлы ", "ведомость ", "экспликация ", "спецификация ",
+)
 
-    This intentionally uses the last AR designation on a normal drawing sheet;
-    references inside notes may appear earlier. If ownership is ambiguous the
-    result is marked unresolved and must not be guessed downstream.
+
+def _owner_candidate(line: str, *, allow_sheet_title: bool = False) -> str:
+    candidate=str(line or "").strip(" .;:-")
+    low=normalize_text(candidate)
+    if not candidate or low in _SKIP_OBJECT_LINES:
+        return ""
+    if any(x in low for x in (
+        "разраб", "провер", "нач. отд", "н. контр", "главный инженер проекта", "гип",
+        "ооо ", "ао ", "пао ", "площадка дробильно", "объект строительства",
+    )):
+        return ""
+    if re.fullmatch(r"\d+",candidate) or _PERMISSION_RE.fullmatch(candidate):
+        return ""
+    if len(candidate) < 3:
+        return ""
+    if not allow_sheet_title and any(low.startswith(marker) for marker in _SHEET_TITLE_MARKERS):
+        return ""
+    return candidate
+
+
+def parse_title_block(text: str) -> dict[str, Any]:
+    """Resolve drawing-sheet ownership from the title block.
+
+    Some CAD/PDF exports place the object name after the designation, while
+    others place the sheet title after it and the object name immediately
+    before the project/site/company lines.  Sheet titles such as "Фасады",
+    "Разрез", "План" and "Схема" must never be promoted to object owners.
+    Ambiguous bindings remain withheld.
     """
     lines=_clean_lines(text)
     code_hits=[]
@@ -84,29 +111,155 @@ def parse_title_block(text: str) -> dict[str, Any]:
             code_hits.append((i,m.group(1)))
     if not code_hits:
         return {"resolved":False,"reason":"обозначение листа АР не найдено"}
+
     i,code=code_hits[-1]
-    candidates=[]
+
+    # Preferred layout: designation -> exact object name.
+    after=[]
     for j in range(i+1,min(len(lines),i+7)):
-        candidate=lines[j].strip(" .;:-")
-        low=normalize_text(candidate)
-        if not candidate or low in _SKIP_OBJECT_LINES:
-            continue
-        if any(x in low for x in ("разраб", "провер", "нач. отд", "н. контр", "главный инженер проекта", "гип", "ооо ", "ао ", "пао ")):
-            continue
-        if re.fullmatch(r"\d+",candidate) or _PERMISSION_RE.fullmatch(candidate):
-            continue
-        if len(candidate) < 3:
-            continue
-        candidates.append(candidate)
-        break
-    if len(candidates)!=1:
-        return {"resolved":False,"designation":code,"position":_position(code),"reason":"наименование владельца листа не разрешено однозначно"}
+        candidate=_owner_candidate(lines[j])
+        if candidate:
+            after.append(candidate)
+            break
+    if len(after)==1:
+        owner=after[0]
+        method="TITLE_BLOCK_AFTER_DESIGNATION"
+
+    else:
+        # Alternate layout seen in real AR/KR sheets:
+        # object -> project/site -> company -> designation -> sheet title.
+        before=[]
+        for j in range(i-1,max(-1,i-10),-1):
+            candidate=_owner_candidate(lines[j])
+            if candidate:
+                before.append(candidate)
+                break
+        if len(before)!=1:
+            return {
+                "resolved":False,
+                "designation":code,
+                "position":_position(code),
+                "reason":"наименование владельца листа не разрешено однозначно",
+            }
+        owner=before[0]
+        method="TITLE_BLOCK_BEFORE_DESIGNATION"
+
     return {
         "resolved":True,
         "designation":code,
         "position":_position(code),
-        "object_name":candidates[0],
-        "binding_method":"TITLE_BLOCK_EXACT",
+        "object_name":owner,
+        "binding_method":method,
+    }
+
+
+_REQ_POSITION_RE = re.compile(r"(?:поз(?:иция)?\.?\s*)(\d+(?:\.\d+)*)", re.I)
+_FACADE_VIEW_RE = re.compile(r"\bфасад\s+([0-9A-ZА-ЯЁ]+\s*[-–—]\s*[0-9A-ZА-ЯЁ]+(?:\s*[;/]\s*[0-9A-ZА-ЯЁ]+\s*[-–—]\s*[0-9A-ZА-ЯЁ]+)?)", re.I)
+_ENCLOSURE_MARKERS = (
+    "стеновая панель", "панель типа сэндвич", 'панель типа "сэндвич"',
+    "сэндвич-панель", "сэндвич панель", "наружная стена", "обшивка стен",
+)
+
+
+def open_canopy_drawing_fact(
+    requirement_text: str,
+    page_corpus: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Return a fail-closed structured drawing fact for an explicitly open canopy.
+
+    The fact is not inferred from the word "навес" or from missing wall text.
+    It requires an owner/position-bound AR facade+section sheet with multiple
+    facade directions and roof material, independently corroborated by a KR
+    open-frame structural sheet (columns/bracing + roof beams/purlins).
+    Explicit wall/enclosure markers block the proof.
+    """
+    req_low=normalize_text(requirement_text)
+    if "навес" not in req_low or "открыт" not in req_low:
+        return None
+
+    m=_REQ_POSITION_RE.search(str(requirement_text or ""))
+    required_position=m.group(1) if m else ""
+    ar_hits=[]
+    kr_hits=[]
+
+    for page in page_corpus or []:
+        section=canonical_section(str(page.get("document_type") or page.get("document") or ""))
+        if section not in {"АР","КР"}:
+            continue
+        raw=str(page.get("text") or "")
+        low=normalize_text(raw)
+        if "навес" not in low:
+            continue
+        title=parse_title_block(raw)
+        if not title.get("resolved"):
+            continue
+        position=str(title.get("position") or "")
+        if required_position and position != required_position:
+            continue
+        owner=normalize_text(title.get("object_name") or "")
+        if "навес" not in owner:
+            continue
+
+        if section=="АР":
+            kinds=_drawing_kinds(raw)
+            views=tuple(dict.fromkeys(
+                re.sub(r"\s+","",x.upper().replace("–","-").replace("—","-"))
+                for x in _FACADE_VIEW_RE.findall(raw)
+            ))
+            roof=any(x in low for x in ("профилированный настил","профнастил","план кровли"))
+            conflicts=tuple(marker for marker in _ENCLOSURE_MARKERS if marker in low)
+            if (
+                "facade" in kinds
+                and "section_view" in kinds
+                and len(views) >= 3
+                and roof
+                and not conflicts
+            ):
+                ar_hits.append({
+                    "page":page,
+                    "title":title,
+                    "facade_views":views,
+                    "roof_proven":True,
+                    "enclosure_conflicts":conflicts,
+                })
+
+        if section=="КР":
+            frame=(
+                "схема расположения колонн" in low
+                and "вертикальных связей" in low
+                and "балок и прогонов покрытия" in low
+            )
+            if frame:
+                kr_hits.append({"page":page,"title":title})
+
+    if not ar_hits or not kr_hits:
+        return {
+            "proven":False,
+            "required_position":required_position,
+            "ar_facade_semantics":bool(ar_hits),
+            "kr_frame_corroboration":bool(kr_hits),
+        }
+
+    ar=ar_hits[0]
+    kr=kr_hits[0]
+    page=ar["page"]
+    return {
+        "proven":True,
+        "fact_code":"OPEN_CANOPY",
+        "required_position":required_position,
+        "owner_name":ar["title"].get("object_name"),
+        "owner_binding":ar["title"].get("binding_method"),
+        "document":page.get("document"),
+        "document_type":"АР",
+        "page":page.get("page"),
+        "facade_views":ar["facade_views"],
+        "facade_view_count":len(ar["facade_views"]),
+        "roof_proven":True,
+        "structural_frame_corroborated":True,
+        "corroborating_document":kr["page"].get("document"),
+        "corroborating_page":kr["page"].get("page"),
+        "enclosure_conflict":False,
+        "context":re.sub(r"\s+"," ",str(page.get("text") or "")).strip()[:1600],
     }
 
 

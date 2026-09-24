@@ -463,3 +463,113 @@ def test_lightning_grounding_scope_precedes_inherited_dsk_equipment_owner():
     }
     assert infer_scope(equipment) == SCOPE_EQUIPMENT
 
+
+
+
+def test_lightning_grounding_composite_accumulates_realistic_split_page_evidence():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Молниезащита и заземление",
+        "requirement_text": (
+            "Для защиты людей от поражения электрическим током и защиты электрооборудования "
+            "предусматривается заземляющее устройство. Молниезащиту площадки ДСК выполнить "
+            "с помощью молниеприемников на мачтах освещения. Молниезащиту зданий вне зоны "
+            "защиты мачт выполнить с помощью металлических конструкций зданий. "
+            "Молниезащиту выполнить в соответствии с РД 34.21.122-87 и СО 153-34.21.122-2003."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ИОС1"]},
+    }
+    pages = [
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 20,
+            "text": (
+                "Система защитного заземления. Для защиты людей от поражения электрическим током "
+                "и защиты электрооборудования предусматривается заземляющее устройство."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 21,
+            "text": (
+                "Молниезащита сооружений технологического комплекса выполняется по II категории "
+                "в соответствии с РД 34.21.122-87. Объект классифицируется как обычное промышленное "
+                "предприятие согласно СО 153-34.21.122-2003. Молниезащита технологического комплекса "
+                "выполняется с помощью молниеприемников установленных на мачтах освещения. "
+                "Молниезащита зданий вне зоны защиты мачт освещения осуществляется с помощью "
+                "металлических конструкций этих зданий. Конструктивные элементы зданий удовлетворяют "
+                "требованиям к естественным молниеприемникам в соответствии с п. 3.2.1.2 "
+                "СО 153-34.21.122-2003."
+            ),
+        },
+    ]
+
+    result = verify_assignment_requirement(requirement, pages)
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_kernel"] == "LIGHTNING_GROUNDING_COMPOSITE_EXECUTOR"
+    assert result["condition_summary"]["proven"] == 5
+    assert result["condition_summary"]["total"] == 5
+    assert {item["page"] for item in result["verification_evidence"]} == {20, 21}
+    assert all(item["evidence_state"] == "verified_candidate" for item in result["verification_evidence"])
+
+
+def test_lightning_grounding_composite_reaches_core25_verified_ok():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    legacy_requirement = {
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Молниезащита и заземление",
+        "requirement_text": (
+            "Предусмотреть заземляющее устройство; молниезащиту выполнить молниеприемниками "
+            "на мачтах освещения и металлическими конструкциями зданий вне зоны защиты; "
+            "применить РД 34.21.122-87 и СО 153-34.21.122-2003."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ИОС1"]},
+    }
+    pages = [
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 20,
+            "text": (
+                "Для защиты людей от поражения электрическим током и защиты электрооборудования "
+                "предусматривается заземляющее устройство."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 21,
+            "text": (
+                "Молниезащита сооружений технологического комплекса выполняется по II категории "
+                "в соответствии с РД 34.21.122-87. Объект классифицируется как обычное промышленное "
+                "предприятие согласно СО 153-34.21.122-2003. Молниезащита технологического комплекса "
+                "выполняется с помощью молниеприемников установленных на мачтах освещения. "
+                "Молниезащита зданий вне зоны защиты мачт освещения осуществляется с помощью "
+                "металлических конструкций этих зданий. Конструктивные элементы зданий удовлетворяют "
+                "требованиям к естественным молниеприемникам в соответствии с п. 3.2.1.2 "
+                "СО 153-34.21.122-2003."
+            ),
+        },
+    ]
+    legacy = verify_assignment_requirement(legacy_requirement, pages)
+    assert legacy is not None
+    assert legacy["status"] == "Соответствует заданию"
+
+    req = {
+        "requirement_id": "ASSIGN-LIGHTNING-GROUNDING",
+        "requirement_text": legacy_requirement["requirement_text"],
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC",
+        "expected_sections": ["ИОС1"],
+        "directed_evidence_candidates": legacy["verification_evidence"],
+    }
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"

@@ -116,14 +116,24 @@ def parse_title_block(text: str) -> dict[str, Any]:
 
     i,code=code_hits[-1]
 
-    # Preferred layout: designation -> exact object name.
+    # Preferred layout: designation -> exact object name. If the first
+    # semantic row is a drawing title (Scheme/Facade/Plan/Section), do not skip
+    # into its wrapped continuation and accidentally bind that as an owner.
     after=[]
+    after_is_sheet_title=False
     for j in range(i+1,min(len(lines),i+7)):
+        raw_candidate=_owner_candidate(lines[j], allow_sheet_title=True)
+        if not raw_candidate:
+            continue
+        low_candidate=normalize_text(raw_candidate)
+        if any(low_candidate.startswith(marker) for marker in _SHEET_TITLE_MARKERS):
+            after_is_sheet_title=True
+            break
         candidate=_owner_candidate(lines[j])
         if candidate:
             after.append(candidate)
             break
-    if len(after)==1:
+    if len(after)==1 and not after_is_sheet_title:
         owner=after[0]
         method="TITLE_BLOCK_AFTER_DESIGNATION"
 
@@ -204,6 +214,8 @@ def open_canopy_drawing_fact(
         raw=str(page.get("text") or "")
         low=normalize_text(raw)
         if "навес" not in low:
+            continue
+        if "ведомость документов графической части" in low:
             continue
         title=parse_title_block(raw)
         if not title.get("resolved"):

@@ -15,6 +15,8 @@ except Exception:  # optional runtime dependency
 
 _CODE_RE = re.compile(r"([A-ZА-Я0-9][A-ZА-Я0-9._-]{5,}-\d+(?:\.\d+)*-АР\d*)", re.I)
 _POSITION_RE = re.compile(r"-(\d+(?:\.\d+)*)-АР\d*$", re.I)
+_TITLE_CODE_RE = re.compile(r"([A-ZА-Я0-9][A-ZА-Я0-9._-]{5,}-\d+(?:\.\d+)*-(?:АР|КР)\d*)", re.I)
+_TITLE_POSITION_RE = re.compile(r"-(\d+(?:\.\d+)*)-(?:АР|КР)\d*$", re.I)
 _AREA_RE = re.compile(r"^([+-]?\d+(?:[.,]\d+)?)\s*(?:м[²2])?$", re.I)
 _CATEGORY_RE = re.compile(r"^[А-ЕA-EВГД]\s*\d?[а-яa-z]?$", re.I)
 _PERMISSION_RE = re.compile(r"\b\d{2,4}/\d{2}\b")
@@ -107,7 +109,7 @@ def parse_title_block(text: str) -> dict[str, Any]:
     lines=_clean_lines(text)
     code_hits=[]
     for i,line in enumerate(lines):
-        for m in _CODE_RE.finditer(line):
+        for m in _TITLE_CODE_RE.finditer(line):
             code_hits.append((i,m.group(1)))
     if not code_hits:
         return {"resolved":False,"reason":"обозначение листа АР не найдено"}
@@ -152,7 +154,7 @@ def parse_title_block(text: str) -> dict[str, Any]:
             return {
                 "resolved":False,
                 "designation":code,
-                "position":_position(code),
+                "position":(_TITLE_POSITION_RE.search(code).group(1) if _TITLE_POSITION_RE.search(code) else ""),
                 "reason":"наименование владельца листа не разрешено однозначно",
             }
         method="TITLE_BLOCK_BEFORE_DESIGNATION"
@@ -160,7 +162,7 @@ def parse_title_block(text: str) -> dict[str, Any]:
     return {
         "resolved":True,
         "designation":code,
-        "position":_position(code),
+        "position":(_TITLE_POSITION_RE.search(code).group(1) if _TITLE_POSITION_RE.search(code) else ""),
         "object_name":owner,
         "binding_method":method,
     }

@@ -934,6 +934,134 @@ def _normative_assertion_check(requirement: dict[str, Any], page_corpus: list[di
     }
 
 
+def _landscaping_design_determined_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Verify a generic Assignment instruction to determine landscaping during design.
+
+    This route is intentionally narrow: the source row must be about landscaping,
+    the requirement must explicitly defer the solution to project development, and
+    PZU must contain both a textual landscaping solution and a graphic landscaping
+    plan with concrete surface/pedestrian/small-form elements.
+    """
+    if str(requirement.get("requirement_type") or "") != "DESIGN_DETERMINED":
+        return None
+    title=_norm(requirement.get("source_row_title") or "")
+    text=_norm(requirement.get("requirement_text") or "")
+    if "благоустрой" not in title:
+        return None
+    if "определить при разработке документации" not in text:
+        return None
+
+    pages=_candidate_pages(page_corpus, ("ПЗУ",))
+    text_solution: tuple[dict[str, Any], str] | None = None
+    graphic_plan: tuple[dict[str, Any], str] | None = None
+    concrete_elements: tuple[dict[str, Any], str] | None = None
+
+    for page in pages:
+        raw=str(page.get("text") or "")
+        low=_norm(raw)
+        if text_solution is None and (
+            "описание решений по благоустройству территории" in low
+            and "территор" in low
+            and "благоустраивается" in low
+        ):
+            text_solution=(page,_context(raw,("описание решений по благоустройству территории","благоустраивается"),radius=520))
+
+        if graphic_plan is None and (
+            "план благоустройства" in low
+            and ("схема планировочной организации" in low or "м 1:1000" in low)
+        ):
+            graphic_plan=(page,_context(raw,("план благоустройства",),radius=520))
+
+        small_forms=(
+            ("урна" in low and "скам" in low)
+            or "ведомость малых архитектурных форм" in low
+        )
+        pedestrian=(
+            "пешеходн" in low
+            and ("дорожк" in low or "проход" in low)
+        )
+        surfaces=(
+            "ведомость покрытий" in low
+            or ("покрыт" in low and "проезд" in low and "площад" in low)
+        )
+        if concrete_elements is None and small_forms and pedestrian and surfaces:
+            concrete_elements=(page,_context(raw,("урна","скам","пешеходн","покрыт"),radius=520))
+
+    slots={
+        "text_solution":text_solution,
+        "graphic_plan":graphic_plan,
+        "concrete_elements":concrete_elements,
+    }
+    labels={
+        "text_solution":"текстовое проектное решение по благоустройству территории",
+        "graphic_plan":"графический план благоустройства",
+        "concrete_elements":"конкретные покрытия, пешеходные дорожки и малые архитектурные формы",
+    }
+    proven=[key for key,value in slots.items() if value is not None]
+    missing=[key for key,value in slots.items() if value is None]
+    all_proven=not missing
+    evidence_rows=[]
+    rendered=[]
+
+    if all_proven:
+        page,snippet=text_solution  # type: ignore[misc]
+        evidence_rows.append({
+            "evidence_kind":"QUALIFIED_DESIGN_DETERMINED",
+            "evidence_state":"verified_candidate",
+            "document":page.get("document"),
+            "document_type":page.get("document_type"),
+            "page":page.get("page"),
+            "context":snippet,
+            "score":99,
+            "design_determined_subject":"LANDSCAPING",
+            "structured_project_fact":True,
+            "condition_ids":tuple(slots.keys()),
+        })
+        rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
+    else:
+        for key in proven:
+            page,snippet=slots[key]  # type: ignore[misc]
+            evidence_rows.append({
+                "evidence_kind":"QUALIFIED_DESIGN_DETERMINED",
+                "evidence_state":"candidate",
+                "document":page.get("document"),
+                "document_type":page.get("document_type"),
+                "page":page.get("page"),
+                "context":snippet,
+                "score":84,
+                "design_determined_subject":"LANDSCAPING",
+                "structured_project_fact":False,
+                "condition_id":key,
+                "condition_label":labels[key],
+            })
+            rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
+
+    return {
+        "status":"Соответствует заданию" if all_proven else "Требует проверки",
+        "evidence":rendered,
+        "evidence_candidates":evidence_rows,
+        "verification_evidence":evidence_rows,
+        "evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE" if all_proven else "CANDIDATE_EVIDENCE",
+        "match_confidence":0.99 if all_proven else (0.82 if proven else 0.0),
+        "decision_basis":(
+            "Требование «определить при разработке документации» выполнено: ПЗУ содержит текстовое решение, план благоустройства и конкретные элементы."
+            if all_proven else
+            "Проектное решение по благоустройству подтверждено частично; отсутствуют обязательные доказательства: "
+            + ", ".join(labels[key] for key in missing)
+        ),
+        "verification_kernel":"LANDSCAPING_DESIGN_DETERMINED_EXECUTOR",
+        "condition_matrix":[
+            {"condition_id":key,"condition_label":labels[key],"proven":slots[key] is not None}
+            for key in slots
+        ],
+        "condition_summary":{
+            "proven":len(proven),
+            "total":len(slots),
+            "missing":[labels[key] for key in missing],
+        },
+    }
+
+
 def _design_determined_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     if str(requirement.get("requirement_type") or "") != "DESIGN_DETERMINED":
         return None
@@ -1224,6 +1352,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _lighting_composite_check,
         _lightning_grounding_check,
         _normative_assertion_check,
+        _landscaping_design_determined_check,
         _design_determined_check,
     )
     for checker in checkers:

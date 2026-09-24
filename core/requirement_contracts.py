@@ -123,6 +123,18 @@ def infer_scope(requirement:dict[str,Any])->str:
     )
     if lightning_grounding_system:
         return SCOPE_SYSTEM
+    # Electrical lighting is likewise a system-level requirement. Atomisation
+    # may inherit the site/DSK owner name, but the requirement governs the
+    # lighting system across the site rather than a single capital object.
+    electrical_lighting_system = (
+        "электроосвещ" in title
+        or (
+            "освещен" in title
+            and any(marker in text for marker in ("светильник", "прожектор", "мачт"))
+        )
+    )
+    if electrical_lighting_system:
+        return SCOPE_SYSTEM
     if obj:
         if any(x in text for x in ('автосамосвал','погрузчик','оборудован','агрегат','насос','трансформатор')):
             return SCOPE_EQUIPMENT

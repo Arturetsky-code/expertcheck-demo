@@ -530,6 +530,8 @@ def _open_canopy_drawing_check(requirement: dict[str, Any], page_corpus: list[di
             "document":fact.get("document"),
             "document_type":"АР",
             "page":fact.get("page"),
+            "object":fact.get("owner_name"),
+            "owner_match":True,
             "context":context,
             "exact_clause":context,
             "score":99,

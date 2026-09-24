@@ -573,3 +573,154 @@ def test_lightning_grounding_composite_reaches_core25_verified_ok():
     assert row["final_verification_kind"] == "VERIFIED_OK"
     assert row["proof_state"] == "PROVEN_MATCH"
     assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"
+
+
+
+def test_lighting_composite_requires_all_five_conditions():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "NORMATIVE_COMPLIANCE",
+        "source_row_title": "Электроосвещение",
+        "requirement_text": (
+            "Для электроосвещения предусмотреть светодиодные светильники. "
+            "Освещение площадки дробильно-сортировочного комплекса выполнить с помощью "
+            "прожекторных мачт. Остальную территорию осветить с помощью консольных "
+            "светильников, устанавливаемых на опорах. Уровни искусственного освещения "
+            "принять в соответствии с СП 52.13330.2016."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ИОС1"]},
+    }
+    complete = [
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 24,
+            "text": (
+                "Выбор количества и мощности осветительных устройств выполнен исходя из "
+                "нормированных уровней освещенности. Уровни искусственного освещения "
+                "приняты в соответствии с СП 52.13330.2016."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 26,
+            "text": (
+                "Наружное освещение. Светильники наружного освещения устанавливаются на "
+                "опорах вдоль проездов и площадок стоянки автотранспорта. Для освещения "
+                "центральной части производственного комплекса применяются осветительные "
+                "мачты. В качестве источников света приняты современные светодиодные светильники."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.2.pdf",
+            "document_type": "ИОС1",
+            "page": 15,
+            "text": (
+                "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту "
+                "на высоте 20 м. Схема установки светильника на опоре. Светильник "
+                "консольный. Кронштейн, угол 15°."
+            ),
+        },
+    ]
+    result = verify_assignment_requirement(requirement, complete)
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_kernel"] == "LIGHTING_COMPOSITE_EXECUTOR"
+    assert result["condition_summary"]["proven"] == 5
+    assert result["condition_summary"]["total"] == 5
+    assert all(item["evidence_state"] == "verified_candidate" for item in result["verification_evidence"])
+
+    incomplete = [complete[0], complete[1], {
+        **complete[2],
+        "text": "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту на высоте 20 м.",
+    }]
+    result = verify_assignment_requirement(requirement, incomplete)
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 4
+    assert result["condition_summary"]["total"] == 5
+    assert "консольные светильники на опорах" in result["condition_summary"]["missing"]
+    assert all(item["evidence_state"] == "candidate" for item in result["verification_evidence"])
+
+
+def test_lighting_composite_reaches_core25_only_after_full_gate():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    legacy_requirement = {
+        "requirement_type": "NORMATIVE_COMPLIANCE",
+        "source_row_title": "Электроосвещение",
+        "requirement_text": (
+            "Для электроосвещения предусмотреть светодиодные светильники. "
+            "Освещение площадки ДСК выполнить с помощью прожекторных мачт. "
+            "Остальную территорию осветить с помощью консольных светильников на опорах. "
+            "Уровни искусственного освещения принять в соответствии с СП 52.13330.2016."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ИОС1"]},
+    }
+    pages = [
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 24,
+            "text": (
+                "Уровни искусственного освещения приняты в соответствии с СП 52.13330.2016."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.1.pdf",
+            "document_type": "ИОС1",
+            "page": 26,
+            "text": (
+                "Наружное освещение. Светильники наружного освещения устанавливаются на "
+                "опорах вдоль проездов и площадок стоянки автотранспорта. Для освещения "
+                "центральной части производственного комплекса применяются осветительные "
+                "мачты. В качестве источников света приняты современные светодиодные светильники."
+            ),
+        },
+        {
+            "document": "Раздел ПД №5_ИОС1.2.pdf",
+            "document_type": "ИОС1",
+            "page": 15,
+            "text": (
+                "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту "
+                "на высоте 20 м. Схема установки светильника на опоре. Светильник "
+                "консольный. Кронштейн, угол 15°."
+            ),
+        },
+    ]
+    legacy = verify_assignment_requirement(legacy_requirement, pages)
+    assert legacy is not None
+    assert legacy["status"] == "Соответствует заданию"
+    assert sum(
+        item["evidence_kind"] == "QUALIFIED_NORMATIVE_ASSERTION"
+        for item in legacy["verification_evidence"]
+    ) == 1
+
+    req = {
+        "requirement_id": "ASSIGN-LIGHTING",
+        "requirement_text": legacy_requirement["requirement_text"],
+        "requirement_type": "NORMATIVE_COMPLIANCE",
+        "requirement_scope": "SYSTEM_SPECIFIC",
+        "expected_sections": ["ИОС1"],
+        "directed_evidence_candidates": legacy["verification_evidence"],
+    }
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "FACTUAL_NORMATIVE_ASSERTION_CONFIRMED"
+
+
+def test_electrical_lighting_routes_to_system_scope():
+    from core.requirement_contracts import SCOPE_SYSTEM, infer_scope
+
+    requirement = {
+        "source_row_title": "Электроосвещение",
+        "requirement_text": (
+            "Для электроосвещения предусмотреть светодиодные светильники. "
+            "Освещение площадки ДСК выполнить с помощью прожекторных мачт."
+        ),
+        "object_name": "ДСК",
+    }
+    assert infer_scope(requirement) == SCOPE_SYSTEM

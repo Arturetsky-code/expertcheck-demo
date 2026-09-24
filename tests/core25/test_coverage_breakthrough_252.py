@@ -1394,3 +1394,93 @@ def test_presence_contract_ignores_secondary_numeric_parameter_when_routing_sect
     contract = build_contract(requirement)
     assert contract["scope"] == "SITE_SPECIFIC"
     assert contract["expected_sections"] == ["ПЗУ"]
+
+def test_equipment_register_quantity_mismatch_reaches_core25_project_finding():
+    req = {
+        "requirement_id": "REQ-EQUIPMENT-MISMATCH",
+        "requirement_text": (
+            "Подача руды осуществляется двумя погрузчиками SHANTUI L76-C5 "
+            "с объёмом ковша 4,5 м3"
+        ),
+        "requirement_type": "VALUE_COMPARISON",
+        "requirement_scope": "EQUIPMENT_SPECIFIC",
+        "object_id": "REQ-LOADER",
+        "object_name": "Погрузчик SHANTUI L76-C5",
+        "parameter_code": "BUCKET_VOLUME",
+        "required_value": 4.5,
+        "unit": "м3",
+        "expected_sections": ["ТХ"],
+        "coverage_executor": "EQUIPMENT_IDENTITY_AND_QUANTITY",
+        "directed_evidence_candidates": [{
+            "evidence_state": "verified_candidate",
+            "evidence_kind": "EQUIPMENT_REGISTER_COMPARISON",
+            "document": "Раздел ПД №6_ТХ1.pdf",
+            "document_type": "ТХ",
+            "page": 37,
+            "context": "фронтальный погрузчик ARKTOS L76-C5 - 4 шт.;",
+            "object": "Погрузчик SHANTUI L76-C5",
+            "owner_match": False,
+            "comparison_subject_match": True,
+            "equipment_class": "погрузчик",
+            "verified_difference": True,
+            "mismatch_fields": ["manufacturer", "quantity"],
+            "task_brand": "SHANTUI",
+            "project_brand": "ARKTOS",
+            "task_models": ["L76C5"],
+            "project_models": ["L76C5"],
+            "task_quantity": 2,
+            "project_quantity": 4,
+            "parameter_code": "BUCKET_VOLUME",
+            "unit": "м3",
+            "score": 100,
+        }],
+    }
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_state"] == "PROVEN_MISMATCH"
+    assert row["core25_reason_code"] == "EQUIPMENT_IDENTITY_OR_QUANTITY_MISMATCH"
+    assert row["core25_binding_counts"]["BOUND"] == 1
+
+
+def test_equipment_brand_spelling_difference_alone_stays_review_only():
+    req = {
+        "requirement_id": "REQ-EQUIPMENT-BRAND-ONLY",
+        "requirement_text": "Подвоз руды осуществляется автосамосвалами SinoTrack.",
+        "requirement_type": "VALUE_COMPARISON",
+        "requirement_scope": "EQUIPMENT_SPECIFIC",
+        "object_id": "REQ-TRUCK",
+        "object_name": "Автосамосвал SinoTrack",
+        "parameter_code": "BODY_VOLUME",
+        "required_value": 32,
+        "unit": "м3",
+        "expected_sections": ["ТХ"],
+        "coverage_executor": "EQUIPMENT_IDENTITY_AND_QUANTITY",
+        "directed_evidence_candidates": [{
+            "evidence_state": "verified_candidate",
+            "evidence_kind": "EQUIPMENT_REGISTER_COMPARISON",
+            "document": "Раздел ПД №6_ТХ1.pdf",
+            "document_type": "ТХ",
+            "page": 37,
+            "context": "карьерный самосвал SINOTRUK HOWO ZZ5707V3840CJ - рабочий парк 11 шт.;",
+            "object": "Автосамосвал SinoTrack",
+            "owner_match": False,
+            "comparison_subject_match": True,
+            "equipment_class": "самосвал",
+            "verified_difference": True,
+            "mismatch_fields": ["manufacturer"],
+            "task_brand": "SINOTRACK",
+            "project_brand": "SINOTRUK",
+            "task_quantity": None,
+            "project_quantity": 11,
+            "parameter_code": "BODY_VOLUME",
+            "unit": "м3",
+            "score": 100,
+        }],
+    }
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+    assert row["proof_state"] == "INSUFFICIENT"
+    assert row["core25_reason_code"] == "EQUIPMENT_IDENTITY_MISMATCH_NOT_PROVEN"
+

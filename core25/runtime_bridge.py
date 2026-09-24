@@ -48,6 +48,8 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
     executor=_text(item.get("coverage_executor"))
     if executor == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
         item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
+    elif executor == "EQUIPMENT_IDENTITY_AND_QUANTITY":
+        item["verification_kind"] = "EQUIPMENT_IDENTITY_COMPARISON"
     elif executor == "DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR":
         item["verification_kind"] = "DYNAMIC_FOUNDATION_NORMATIVE"
         if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
@@ -92,7 +94,15 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
             continue
         if _text(candidate.get("evidence_state")).lower() != "verified_candidate":
             continue
-        if scope in {"OBJECT_SPECIFIC", "EQUIPMENT_SPECIFIC"} and candidate.get("owner_match") is not True:
+        comparison_subject_match = bool(
+            candidate.get("comparison_subject_match") is True
+            and _text(candidate.get("evidence_kind")).upper() == "EQUIPMENT_REGISTER_COMPARISON"
+        )
+        if (
+            scope in {"OBJECT_SPECIFIC", "EQUIPMENT_SPECIFIC"}
+            and candidate.get("owner_match") is not True
+            and not comparison_subject_match
+        ):
             continue
 
         document = _text(candidate.get("document"))
@@ -130,6 +140,18 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "unit_compatible": candidate.get("unit_compatible"),
                     "legacy_evidence_kind": candidate.get("evidence_kind"),
                     "coverage_executor": candidate.get("coverage_executor"),
+                    "comparison_subject_match": candidate.get("comparison_subject_match"),
+                    "equipment_class": candidate.get("equipment_class"),
+                    "verified_difference": candidate.get("verified_difference"),
+                    "mismatch_fields": tuple(candidate.get("mismatch_fields") or ()),
+                    "task_brand": candidate.get("task_brand"),
+                    "project_brand": candidate.get("project_brand"),
+                    "brand_similarity": candidate.get("brand_similarity"),
+                    "same_model": candidate.get("same_model"),
+                    "task_models": tuple(candidate.get("task_models") or ()),
+                    "project_models": tuple(candidate.get("project_models") or ()),
+                    "task_quantity": candidate.get("task_quantity"),
+                    "project_quantity": candidate.get("project_quantity"),
                     "negative_assertion": candidate.get("negative_assertion"),
                     "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
                     "required_normative_refs": tuple(candidate.get("required_normative_refs") or ()),

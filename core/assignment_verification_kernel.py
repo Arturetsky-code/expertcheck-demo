@@ -295,22 +295,34 @@ def _equipment_check(requirement: dict[str, Any], page_corpus: list[dict[str, An
     same_model = bool(task_models and any(model in project_models for model in task_models))
     brand_similarity = SequenceMatcher(None, task_brand, project_brand).ratio() if task_brand and project_brand else 0.0
     differences: list[str] = []
+    mismatch_fields: list[str] = []
     if task_brand and project_brand and task_brand != project_brand and brand_similarity < 0.90:
         differences.append(f"обозначение изготовителя/марки: в Задании {task_brand}, в ПД {project_brand}")
+        mismatch_fields.append("manufacturer")
     if task_qty is not None and project_qty is not None and task_qty != project_qty:
         differences.append(f"количество: в Задании {task_qty}, в ПД {project_qty}")
+        mismatch_fields.append("quantity")
     if task_models and project_models and not same_model:
         differences.append("модель оборудования не совпала")
+        mismatch_fields.append("model")
     source_is_register = bool(
         str(page.get("document_type") or "").upper().startswith("ТХ")
         and re.search(r"[-–—]\s*\d{1,3}\s*шт", snippet, re.I)
         and project_brand
     )
-    verified_difference = bool(differences) and source_is_register
+    comparison_subject_match = bool(source_is_register and equipment in _norm(snippet))
+    verified_difference = bool(differences) and comparison_subject_match
     evidence = {
         "evidence_kind": "EQUIPMENT_REGISTER_COMPARISON", "evidence_state": "verified_candidate",
         "document": page.get("document"), "document_type": page.get("document_type"), "page": page.get("page"),
         "context": snippet, "score": min(100, ranked[0][0] + 15),
+        "equipment_class": equipment,
+        "comparison_subject_match": comparison_subject_match,
+        "verified_difference": verified_difference,
+        "mismatch_fields": mismatch_fields,
+        "task_brand": task_brand, "project_brand": project_brand,
+        "brand_similarity": brand_similarity,
+        "same_model": same_model,
         "task_models": task_models, "project_models": project_models,
         "task_quantity": task_qty, "project_quantity": project_qty,
     }

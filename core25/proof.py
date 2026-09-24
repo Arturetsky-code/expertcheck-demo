@@ -503,6 +503,90 @@ def _dynamic_foundation_normative_proof(
     )
 
 
+def _equipment_identity_comparison_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    """Prove a structured equipment mismatch without relaxing owner integrity.
+
+    Brand spelling alone is deliberately insufficient for a categorical
+    deviation. A trusted equipment-register comparison must prove the same
+    equipment role and at least one strong mismatch dimension: model or
+    quantity.
+    """
+    accepted: list[tuple[Evidence25, Binding25]] = []
+    proven_fields: set[str] = set()
+
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        if str(metadata.get("legacy_evidence_kind") or "").upper() != "EQUIPMENT_REGISTER_COMPARISON":
+            continue
+        if metadata.get("comparison_subject_match") is not True:
+            continue
+        if metadata.get("verified_difference") is not True:
+            continue
+
+        fields = {
+            str(item or "").strip().lower()
+            for item in (metadata.get("mismatch_fields") or ())
+            if str(item or "").strip()
+        }
+        strong_fields: set[str] = set()
+
+        if "quantity" in fields:
+            task_quantity = numeric_value(metadata.get("task_quantity"))
+            project_quantity = numeric_value(metadata.get("project_quantity"))
+            if (
+                task_quantity is not None
+                and project_quantity is not None
+                and task_quantity != project_quantity
+            ):
+                strong_fields.add("quantity")
+
+        if "model" in fields:
+            task_models = {
+                _norm_text(item)
+                for item in (metadata.get("task_models") or ())
+                if _norm_text(item)
+            }
+            project_models = {
+                _norm_text(item)
+                for item in (metadata.get("project_models") or ())
+                if _norm_text(item)
+            }
+            if task_models and project_models and task_models.isdisjoint(project_models):
+                strong_fields.add("model")
+
+        # Manufacturer/brand differences are useful diagnostics but are not
+        # categorical on their own because spelling/transliteration aliases are
+        # common in equipment documentation.
+        if not strong_fields:
+            continue
+
+        accepted.append((evidence_item, binding))
+        proven_fields.update(strong_fields)
+
+    if not accepted:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="EQUIPMENT_IDENTITY_MISMATCH_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(dict.fromkeys(item.evidence_id for item, _ in accepted))
+    binding_ids = tuple(dict.fromkeys(binding.binding_id for _, binding in accepted))
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MISMATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="EQUIPMENT_IDENTITY_OR_QUANTITY_MISMATCH",
+        metadata={"mismatch_fields": tuple(sorted(proven_fields))},
+    )
+
+
 def _reserve_topology_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -626,6 +710,8 @@ def build_proof(
         return _dynamic_foundation_normative_proof(requirement, route, pairs)
     if route.kind == "DESIGN_DETERMINED":
         return _design_determined_proof(requirement, route, pairs)
+    if route.kind == "EQUIPMENT_IDENTITY_COMPARISON":
+        return _equipment_identity_comparison_proof(requirement, route, pairs)
 
     return _insufficient(
         requirement,

@@ -108,10 +108,15 @@ def bind_evidence(
         or (requirement.metadata or {}).get("target_object")
         or ""
     ).strip()
+    comparison_subject_match = bool(
+        metadata.get("comparison_subject_match") is True
+        and str(metadata.get("legacy_evidence_kind") or "").strip().upper()
+        == "EQUIPMENT_REGISTER_COMPARISON"
+    )
     if (
         target_owner
         and explicit_owner_name
-        and metadata.get("owner_match") is True
+        and (metadata.get("owner_match") is True or comparison_subject_match)
         and _norm(explicit_owner_name) == _norm(requirement_owner_name)
     ):
         resolved_owner = target_owner

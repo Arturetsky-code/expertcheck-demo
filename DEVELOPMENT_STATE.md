@@ -839,3 +839,77 @@ Do not force a new categorical result merely to restore **26/56**.
    never solely to close one Test78 sentence.
 4. Preserve fail-closed evidence rules and accept a lower benchmark percentage when it
    removes a false positive.
+
+## Validated checkpoint — native Core25 equipment mismatch proof
+
+The strict Test78 baseline remains **25/56 = 44.6%**, but one of the two
+previously external/manual deviations is now proven inside the Core25 pipeline.
+
+### Runtime result
+
+Requirement `ASSIGN-F53C5BA692BD3F`:
+`Подача руды в приёмный бункер осуществляется двумя погрузчиками SHANTUI L76-С5 ...`
+
+Previous Core25 state:
+- `REVIEW_QUESTION / INSUFFICIENT`;
+- the legacy deterministic executor already reported a deviation, but Core25 rejected
+  the evidence because exact owner equality was required before mismatch proof.
+
+Validated Core25 state:
+- `PROJECT_FINDING`;
+- proof: `PROVEN_MISMATCH`;
+- reason: `EQUIPMENT_IDENTITY_OR_QUANTITY_MISMATCH`;
+- executor/archetype: `EQUIPMENT_IDENTITY_AND_QUANTITY`.
+
+The project equipment register proves **4 loaders** while the Assignment requires
+**2 loaders**. This strong quantity mismatch is sufficient for a categorical deviation.
+The differing manufacturer/brand is retained as diagnostic evidence but is not required
+for the categorical result.
+
+### Universal false-positive guard
+
+The new route is not tied to DSK or to a concrete model name.
+
+Core25 may bind a mismatch candidate to the requirement comparison subject only when:
+1. the candidate comes from the trusted `EQUIPMENT_REGISTER_COMPARISON` route;
+2. the equipment role itself is proven;
+3. the evidence is addressable/canonical;
+4. a strong mismatch is proven in **model or quantity**.
+
+A manufacturer/brand spelling difference by itself is deliberately insufficient.
+The neighbouring SinoTrack / SINOTRUK truck requirement therefore remains
+`REVIEW_QUESTION`.
+
+### Deterministic Test78 A/B
+
+Source commit:
+`7cd5779af03e1939cb89381aeed7dbf04fc2b5b0`.
+
+Exactly one requirement changed:
+- `ASSIGN-F53C5BA692BD3F`: `REVIEW_QUESTION -> PROJECT_FINDING`.
+
+No `VERIFIED_OK` requirement regressed and no second requirement became categorical.
+
+### Baseline accounting
+
+The baseline manifest now treats the loader finding as a native Core25 result:
+- `VERIFIED_OK`: **23**;
+- native `PROJECT_FINDING`: **1**;
+- separately audited external deviations: **1**;
+- `REVIEW_QUESTION`: **32**;
+- strict categorical coverage: **25/56**.
+
+This is not a percentage gain. It is an architectural quality gain: one manually
+maintained exception has been replaced by a reusable auditable proof route.
+
+### Continue from here
+
+Continue from the review frontier. Prefer:
+- reusable routing/binding/proof defects;
+- native migration of the remaining external deviation when a general proof pattern
+  can be established;
+- genuine new archetypes only when the current corpus contains complete addressable
+  evidence.
+
+Do not promote brand-only equipment differences or incomplete composite requirements.
+

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "benchmark": "Test78",
   "baseline_label": "25/56",
-  "baseline_source_sha": "af9b1d6cf73e9dbfb176b85287b9de76ace63533",
-  "proven_deviations": 2,
+  "baseline_source_sha": "7cd5779af03e1939cb89381aeed7dbf04fc2b5b0",
+  "proven_deviations": 1,
   "row_overrides": [
     {
       "requirement_id": "ASSIGN-4F91A035979A30",
@@ -11,7 +11,14 @@
       "proof_state": "INSUFFICIENT_EVIDENCE",
       "core25_reason_code": "NO_BOUND_CANONICAL_EVIDENCE",
       "coverage_executor": "SOURCE_LOCKED_RETRIEVAL"
+    },
+    {
+      "requirement_id": "ASSIGN-F53C5BA692BD3F",
+      "final_verification_kind": "PROJECT_FINDING",
+      "proof_state": "PROVEN_MISMATCH",
+      "core25_reason_code": "EQUIPMENT_IDENTITY_OR_QUANTITY_MISMATCH",
+      "coverage_executor": "EQUIPMENT_IDENTITY_AND_QUANTITY"
     }
   ],
-  "audit_note": "Corrected a false positive caused by stale numeric VOLUME retrieval on a non-value presence requirement. The fixed encrypted corpus remains unchanged; only non-sensitive validated baseline state is overridden here."
+  "audit_note": "Current 25/56 audited baseline. The stale numeric false positive remains corrected. The previously external loader identity/quantity deviation is now proven natively by Core25 as PROJECT_FINDING, so only one separately audited external deviation remains."
 }

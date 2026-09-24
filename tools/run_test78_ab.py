@@ -57,6 +57,21 @@ def _archetype_summary(rows: list[dict]) -> dict:
     }
 
 
+def _categorical_archetype_summary(rows: list[dict]) -> dict:
+    categorical = [
+        row for row in rows
+        if row.get("final_verification_kind") in {"VERIFIED_OK", "PROJECT_FINDING"}
+    ]
+    counts = Counter(_universal_archetype(row) for row in categorical)
+    unclassified = int(counts.pop("UNCLASSIFIED_VERIFIED", 0))
+    return {
+        "universal_archetypes": len(counts),
+        "categorical_requirements_classified": sum(counts.values()),
+        "categorical_requirements_unclassified": unclassified,
+        "archetypes": dict(sorted(counts.items())),
+    }
+
+
 def _row_summary(row: dict) -> dict:
     return {
         "requirement_id": row.get("requirement_id"),
@@ -208,13 +223,19 @@ def _apply_baseline_manifest(fixture: dict, manifest: dict | None) -> tuple[list
 def _counts(rows: list[dict], proven_deviations: int) -> dict:
     kinds = Counter(row.get("final_verification_kind") for row in rows)
     verified = int(kinds.get("VERIFIED_OK", 0))
+    project_findings = int(kinds.get("PROJECT_FINDING", 0))
     review = int(kinds.get("REVIEW_QUESTION", 0))
+    external_deviations = int(proven_deviations)
     return {
         "requirements": len(rows),
         "VERIFIED_OK": verified,
+        "PROJECT_FINDING": project_findings,
         "REVIEW_QUESTION": review,
-        "proven_deviations": int(proven_deviations),
-        "strict_categorical_if_deviations_unchanged": verified + int(proven_deviations),
+        "external_proven_deviations": external_deviations,
+        "proven_deviations": project_findings + external_deviations,
+        "strict_categorical_if_deviations_unchanged": (
+            verified + project_findings + external_deviations
+        ),
     }
 
 
@@ -298,6 +319,10 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
             "baseline": _archetype_summary(baseline_rows),
             "current": _archetype_summary(current_rows),
         },
+        "categorical_archetype_coverage": {
+            "baseline": _categorical_archetype_summary(baseline_rows),
+            "current": _categorical_archetype_summary(current_rows),
+        },
         "coverage_summary": {
             "executor_hits": coverage.get("executor_hits"),
             "with_candidates": coverage.get("with_candidates"),
@@ -320,6 +345,7 @@ def markdown(result: dict) -> str:
         f"- Changed requirements: **{len(result['changed_requirements'])}**",
         f"- Universal archetypes (current VERIFIED_OK): **{result['archetype_coverage']['current']['universal_archetypes']}**",
         f"- VERIFIED_OK not yet mapped to a universal archetype: **{result['archetype_coverage']['current']['verified_requirements_unclassified']}**",
+        f"- Universal archetypes (all categorical results): **{result['categorical_archetype_coverage']['current']['universal_archetypes']}**",
         "",
     ]
     if result["changed_requirements"]:
@@ -389,6 +415,7 @@ def main() -> None:
         "current": result["current"],
         "changed_ids": [row["requirement_id"] for row in result["changed_requirements"]],
         "archetype_coverage": result["archetype_coverage"]["current"],
+        "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
     }, ensure_ascii=False))
 

@@ -78,6 +78,9 @@ def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
     if direct:
         return direct
     text=normalize_text(requirement.get('requirement_text') or '')
+    title=normalize_text(requirement.get('source_row_title') or '')
+    if 'благоустрой' in title:
+        return ['ПЗУ']
     # Explicit site-layout features belong first to PZU even when their wording
     # also contains generic technology words such as «оборудование».
     if (

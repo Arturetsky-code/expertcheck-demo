@@ -12,6 +12,51 @@ from core.page_evidence_store import is_assignment_source
 from core25.runtime_bridge import run_assignment_runtime
 
 
+_ARCHETYPE_BY_EXECUTOR = {
+    "GENERIC_PRESENCE_EXECUTOR": "PRESENCE",
+    "FENCING_COMPOSITE_EXECUTOR": "COMPOSITE_PRESENCE",
+    "OPEN_CANOPY_DRAWING_EXECUTOR": "PRESENCE_PLUS_GRAPHIC_CONFIRMATION",
+    "LIGHTING_COMPOSITE_EXECUTOR": "COMPOSITE_ENGINEERING",
+    "LIGHTNING_GROUNDING_COMPOSITE_EXECUTOR": "COMPOSITE_ENGINEERING",
+    "NEGATIVE_APPLICABILITY_EXECUTOR": "NEGATIVE_APPLICABILITY",
+    "DESIGN_DETERMINED_EXECUTOR": "DESIGN_DETERMINED",
+    "LANDSCAPING_DESIGN_DETERMINED_EXECUTOR": "DESIGN_DETERMINED_MULTI_EVIDENCE",
+    "NORMATIVE_ASSERTION_EXECUTOR": "NORMATIVE_ASSERTION",
+    "NORMATIVE_DESIGN_ADOPTION_EXECUTOR": "NORMATIVE_DESIGN_ADOPTION",
+    "DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR": "NORMATIVE_CALCULATION_GRAPHIC",
+    "EQUIPMENT_IDENTITY_AND_QUANTITY": "EQUIPMENT_IDENTITY_QUANTITY",
+    "CAPACITY_AND_PROCESS_TOPOLOGY": "CAPACITY_PROCESS_TOPOLOGY",
+}
+
+_ARCHETYPE_BY_REASON = {
+    "TYPED_VALUE_MATCH": "TYPED_VALUE_COMPARISON",
+    "ASSIGNMENT_PRESENCE_CONFIRMED": "PRESENCE",
+    "ASSIGNMENT_DESIGN_VALUE_CONFIRMED": "DESIGN_DETERMINED",
+    "FACTUAL_NORMATIVE_ASSERTION_CONFIRMED": "NORMATIVE_ASSERTION",
+    "NEGATIVE_APPLICABILITY_CONFIRMED": "NEGATIVE_APPLICABILITY",
+    "ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED": "NORMATIVE_DESIGN_ADOPTION",
+    "ASSIGNMENT_DYNAMIC_FOUNDATION_NORMATIVE_CONFIRMED": "NORMATIVE_CALCULATION_GRAPHIC",
+}
+
+
+def _universal_archetype(row: dict) -> str:
+    executor = str(row.get("coverage_executor") or "")
+    reason = str(row.get("core25_reason_code") or "")
+    return _ARCHETYPE_BY_EXECUTOR.get(executor) or _ARCHETYPE_BY_REASON.get(reason) or "UNCLASSIFIED_VERIFIED"
+
+
+def _archetype_summary(rows: list[dict]) -> dict:
+    verified = [row for row in rows if row.get("final_verification_kind") == "VERIFIED_OK"]
+    counts = Counter(_universal_archetype(row) for row in verified)
+    unclassified = int(counts.pop("UNCLASSIFIED_VERIFIED", 0))
+    return {
+        "universal_archetypes": len(counts),
+        "verified_requirements_classified": sum(counts.values()),
+        "verified_requirements_unclassified": unclassified,
+        "archetypes": dict(sorted(counts.items())),
+    }
+
+
 def _row_summary(row: dict) -> dict:
     return {
         "requirement_id": row.get("requirement_id"),
@@ -108,6 +153,10 @@ def run(fixture: dict) -> dict:
         "gains": gains,
         "regressions": regressions,
         "other_changes": other_changes,
+        "archetype_coverage": {
+            "baseline": _archetype_summary(baseline_rows),
+            "current": _archetype_summary(current_rows),
+        },
         "coverage_summary": {
             "executor_hits": coverage.get("executor_hits"),
             "with_candidates": coverage.get("with_candidates"),
@@ -128,6 +177,8 @@ def markdown(result: dict) -> str:
         f"- Current: **{c['VERIFIED_OK']} VERIFIED_OK / {c['REVIEW_QUESTION']} REVIEW**",
         f"- Strict categorical (if the separately audited deviations are unchanged): **{c['strict_categorical_if_deviations_unchanged']}/56**",
         f"- Changed requirements: **{len(result['changed_requirements'])}**",
+        f"- Universal archetypes (current VERIFIED_OK): **{result['archetype_coverage']['current']['universal_archetypes']}**",
+        f"- VERIFIED_OK not yet mapped to a universal archetype: **{result['archetype_coverage']['current']['verified_requirements_unclassified']}**",
         "",
     ]
     if result["changed_requirements"]:

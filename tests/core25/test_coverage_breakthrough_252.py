@@ -522,7 +522,7 @@ def test_lightning_grounding_composite_reaches_core25_verified_ok():
     from core.assignment_verification_kernel import verify_assignment_requirement
 
     legacy_requirement = {
-        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_type": "NORMATIVE_COMPLIANCE",
         "source_row_title": "Молниезащита и заземление",
         "requirement_text": (
             "Предусмотреть заземляющее устройство; молниезащиту выполнить молниеприемниками "
@@ -560,11 +560,15 @@ def test_lightning_grounding_composite_reaches_core25_verified_ok():
     legacy = verify_assignment_requirement(legacy_requirement, pages)
     assert legacy is not None
     assert legacy["status"] == "Соответствует заданию"
+    assert sum(
+        item["evidence_kind"] == "QUALIFIED_NORMATIVE_ASSERTION"
+        for item in legacy["verification_evidence"]
+    ) == 2
 
     req = {
         "requirement_id": "ASSIGN-LIGHTNING-GROUNDING",
         "requirement_text": legacy_requirement["requirement_text"],
-        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_type": "NORMATIVE_COMPLIANCE",
         "requirement_scope": "SYSTEM_SPECIFIC",
         "expected_sections": ["ИОС1"],
         "directed_evidence_candidates": legacy["verification_evidence"],
@@ -572,7 +576,7 @@ def test_lightning_grounding_composite_reaches_core25_verified_ok():
     row = run_assignment_runtime([req])["rows"][0]
     assert row["final_verification_kind"] == "VERIFIED_OK"
     assert row["proof_state"] == "PROVEN_MATCH"
-    assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"
+    assert row["core25_reason_code"] == "FACTUAL_NORMATIVE_ASSERTION_CONFIRMED"
 
 
 

@@ -71,6 +71,19 @@ def _row_summary(row: dict) -> dict:
         "core25_raw_candidate_count": int(row.get("core25_raw_candidate_count") or 0),
         "core25_verified_candidate_count": int(row.get("core25_verified_candidate_count") or 0),
         "core25_qualified_evidence_count": int(row.get("core25_qualified_evidence_count") or 0),
+        "core25_binding_counts": dict(row.get("core25_binding_counts") or {}),
+        "core25_binding_reason_codes": dict(row.get("core25_binding_reason_codes") or {}),
+        "candidate_kind_counts": dict(Counter(
+            str(item.get("evidence_kind") or "")
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict)
+        )),
+        "max_matched_terms": max(
+            [len(item.get("matched_terms") or []) for item in (row.get("directed_evidence_candidates") or []) if isinstance(item, dict)] or [0]
+        ),
+        "max_matched_normative_refs": max(
+            [len(item.get("matched_normative_refs") or []) for item in (row.get("directed_evidence_candidates") or []) if isinstance(item, dict)] or [0]
+        ),
     }
 
 
@@ -96,6 +109,12 @@ def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
             "verified_candidates": int(row.get("core25_verified_candidate_count") or 0),
             "qualified_evidence": int(row.get("core25_qualified_evidence_count") or 0),
             "coverage_executor": row.get("coverage_executor"),
+            "proof_reason": row.get("core25_reason_code"),
+            "binding_counts": row.get("core25_binding_counts") or {},
+            "binding_reason_codes": row.get("core25_binding_reason_codes") or {},
+            "candidate_kind_counts": row.get("candidate_kind_counts") or {},
+            "max_matched_terms": int(row.get("max_matched_terms") or 0),
+            "max_matched_normative_refs": int(row.get("max_matched_normative_refs") or 0),
         }
         for row in review[:limit]
     ]

@@ -64,7 +64,41 @@ def _row_summary(row: dict) -> dict:
         "proof_state": row.get("proof_state"),
         "core25_reason_code": row.get("core25_reason_code"),
         "coverage_executor": row.get("coverage_executor"),
+        "requirement_type": row.get("requirement_type"),
+        "requirement_scope": row.get("requirement_scope"),
+        "expected_sections": list(row.get("expected_sections") or []),
+        "core25_admission_stage": row.get("core25_admission_stage"),
+        "core25_raw_candidate_count": int(row.get("core25_raw_candidate_count") or 0),
+        "core25_verified_candidate_count": int(row.get("core25_verified_candidate_count") or 0),
+        "core25_qualified_evidence_count": int(row.get("core25_qualified_evidence_count") or 0),
     }
+
+
+def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
+    review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
+    review.sort(
+        key=lambda row: (
+            int(row.get("core25_verified_candidate_count") or 0),
+            int(row.get("core25_qualified_evidence_count") or 0),
+            int(row.get("core25_raw_candidate_count") or 0),
+            bool(row.get("coverage_executor")),
+        ),
+        reverse=True,
+    )
+    return [
+        {
+            "requirement_id": row.get("requirement_id"),
+            "requirement_type": row.get("requirement_type"),
+            "requirement_scope": row.get("requirement_scope"),
+            "expected_sections": row.get("expected_sections") or [],
+            "admission_stage": row.get("core25_admission_stage"),
+            "raw_candidates": int(row.get("core25_raw_candidate_count") or 0),
+            "verified_candidates": int(row.get("core25_verified_candidate_count") or 0),
+            "qualified_evidence": int(row.get("core25_qualified_evidence_count") or 0),
+            "coverage_executor": row.get("coverage_executor"),
+        }
+        for row in review[:limit]
+    ]
 
 
 def _counts(rows: list[dict], proven_deviations: int) -> dict:
@@ -153,6 +187,7 @@ def run(fixture: dict) -> dict:
         "gains": gains,
         "regressions": regressions,
         "other_changes": other_changes,
+        "review_frontier": _review_frontier(current_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
             "current": _archetype_summary(current_rows),
@@ -185,7 +220,7 @@ def markdown(result: dict) -> str:
         lines.extend(["## Changed requirement IDs", ""])
         for row in result["changed_requirements"]:
             lines.append(
-                f"- \`{row['requirement_id']}\`: \`{row['before_kind']}\` → \`{row['after_kind']}\` "
+                f"- `{row['requirement_id']}`: `{row['before_kind']}` → `{row['after_kind']}` "
                 f"({row.get('after_reason') or '—'}; {row.get('after_executor') or '—'})"
             )
         lines.append("")
@@ -223,6 +258,8 @@ def main() -> None:
         "baseline": result["baseline"],
         "current": result["current"],
         "changed_ids": [row["requirement_id"] for row in result["changed_requirements"]],
+        "archetype_coverage": result["archetype_coverage"]["current"],
+        "review_frontier": result["review_frontier"][:8],
     }, ensure_ascii=False))
 
 

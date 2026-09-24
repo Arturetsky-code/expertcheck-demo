@@ -329,3 +329,96 @@ Core25 Quality Leap:
 
 Continue only from the **22/56** baseline. Prioritize the next `PROFILE_SECTION_PRESENT` requirement where an addressable project fact exists but the proof route is missing. Do not weaken partial-condition gates to chase coverage.
 
+
+
+## Validated checkpoint — 23/56 fencing composite proof
+
+Accepted Test 78 / Assignment compliance / AI off baseline is now **23/56 = 41.1%**:
+
+- requirements: **56**;
+- `Соответствует заданию`: **21**;
+- proven deviations: **2**;
+- `Требует проверки`: **33**.
+
+### New accepted categorical requirement
+
+Requirement `ASSIGN-D068822E25D0D3`:
+`Предусмотреть ограждение части площадки ... ворота и калитки ... размеры определить проектом ... ограждение принять заводского изготовления`.
+
+Previous state: `REVIEW_QUESTION`.
+Validated state: `VERIFIED_OK`.
+Core25 proof: `PROVEN_MATCH / ASSIGNMENT_PRESENCE_CONFIRMED`.
+Executor: `FENCING_COMPOSITE_EXECUTOR`.
+
+The atom is now correctly classified as `PRESENCE_REQUIREMENT`; the secondary phrase
+`требований нормативной документации` no longer reroutes the whole engineering requirement
+to `NORMATIVE_COMPLIANCE`.
+
+### Six-condition proof gate
+
+Categorical proof requires all six conditions:
+
+1. DSK territory is fenced;
+2. vehicle gates are provided;
+3. personnel wickets are provided;
+4. gate/wicket dimensions are defined by the project;
+5. the transport/normative sizing basis is present (design vehicle + SP 37.13330.2012 / carriageway sizing);
+6. the fencing is factory-manufactured.
+
+Addressable evidence:
+- PZU1 page 27: DSK fencing, vehicle gates and 4.5 m gate widths;
+- PZU2 page 5: wicket is explicitly present in the plan legend;
+- PZU1 page 30: SP 37.13330.2012 carriageway sizing and the design HOWO T5G 30/50 t vehicles;
+- KR1 page 68: mesh metal fencing panels are explicitly **factory-manufactured**;
+- KR2 page 168: wicket 1500x2500 and gates are explicitly marked as complete-supply items.
+
+### A/B benchmark
+
+The same 56 Test 78 requirements and cached page corpus were run through the deterministic
+Assignment evidence/admission/Core25 contour.
+
+Before fencing work:
+- **20 VERIFIED_OK / 36 REVIEW_QUESTION**.
+
+Validated fencing source:
+- **21 VERIFIED_OK / 35 REVIEW_QUESTION**.
+
+Exactly one requirement changed state:
+- `ASSIGN-D068822E25D0D3`: `REVIEW_QUESTION -> VERIFIED_OK`.
+
+The two previously accepted deviations are unchanged, so official strict categorical coverage moves:
+- **20 compliant + 2 deviations = 22/56**
+to:
+- **21 compliant + 2 deviations = 23/56**.
+
+### False-positive safeguards
+
+- the generic word `нормативн...` is not globally downgraded; the classifier exception is limited to
+  composite fencing atoms containing fencing + gates + wickets;
+- truly normative requirements such as dynamic-load foundation requirements remain
+  `NORMATIVE_COMPLIANCE`;
+- partial fencing evidence never becomes `verified_candidate`;
+- missing factory-manufacture evidence keeps the result review-only;
+- missing wicket or wicket dimension keeps the result review-only;
+- the transport/normative basis is a separate required slot rather than inferred from gate width alone.
+
+### Validation
+
+Validated source commit:
+`5af8867756b8edd025f3bd30f55c6e64b820eadb`.
+
+Green validation marker:
+`3f2d0dead0e7bedd8f70754467a19265a7bdca48`.
+
+CI:
+- `Core20 quality gates`: **success**;
+- `Core25 Quality Leap gates`: **success**;
+- `Validate ExpertCheck 25.2 branch`: **success**;
+- source snapshot: **success**.
+
+### Continue from here
+
+Official next baseline is **23/56**.
+Do not revisit the fencing result unless a regression appears.
+Continue with the next `PROFILE_SECTION_PRESENT` review-only requirement using the same
+rule: complete material-condition proof first, categorical admission only second.

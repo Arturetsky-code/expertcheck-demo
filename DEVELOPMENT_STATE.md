@@ -516,3 +516,94 @@ CI:
 Official next baseline is **24/56**.
 Continue with the next review-only requirement only after an addressable evidence audit;
 do not weaken the known water / automation / power / lighting condition gates.
+
+
+## Validated checkpoint — 25/56 named-norm design adoption
+
+Accepted Test 78 / Assignment compliance / AI off baseline is now **25/56 = 44.6%**:
+
+- requirements: **56**;
+- `Соответствует заданию`: **23**;
+- proven deviations: **2**;
+- `Требует проверки`: **31**.
+
+### New accepted categorical requirement
+
+Requirement `ASSIGN-6D099E6177F344`:
+`Инженерную подготовку территории предусмотреть в соответствии с СП 45.13330.2017 ...`
+
+Previous state: `REVIEW_QUESTION`.
+Validated state: `VERIFIED_OK`.
+Core25 proof:
+- `PROVEN_MATCH`;
+- `ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED`;
+- executor `NORMATIVE_DESIGN_ADOPTION_EXECUTOR`.
+
+Proof is intentionally two-slot:
+1. **DESIGN_SOLUTION** — PZU contains an addressable engineering-preparation solution for the site;
+2. **NORMATIVE_ADOPTION** — the same Assignment-named norm is addressably adopted for the relevant earthwork/foundation works.
+
+This proves transfer of the Assignment requirement into the PD. It does **not** assert full technical compliance with SP 45.13330.2017; that remains an NTD-contour task.
+
+### A/B benchmark
+
+Using the same cached real Test 78 page corpus and the same 56 extracted Assignment requirements:
+
+- validated 24/56 baseline: **22 VERIFIED_OK / 34 REVIEW_QUESTION**;
+- new source: **23 VERIFIED_OK / 33 REVIEW_QUESTION**.
+
+Exactly one requirement changed categorical state:
+- `ASSIGN-6D099E6177F344`: `REVIEW_QUESTION -> VERIFIED_OK`.
+
+No other requirement changed state.
+
+### False-positive safeguards
+
+- a normative citation alone cannot close the requirement;
+- a design solution without the Assignment-named norm cannot close it;
+- all norms explicitly named by the Assignment must be addressably covered;
+- generic bibliography/reference-list occurrences are insufficient;
+- the project solution and normative adoption remain separate proof slots;
+- Core25 requires both slots before categorical admission;
+- full normative compliance is explicitly marked as **not assessed** by this proof.
+
+### Validation
+
+Validated source commit:
+`fded177104b8527978ea7431873e9b99b3a7a768`.
+
+Green direct-validation marker:
+`9e82f3fbd66bc005164a380eeece825507624928`.
+
+Passed:
+- coverage-breakthrough regression;
+- full Core25 regression package;
+- Core25 Quality Leap tests;
+- Core20 regression;
+- baseline full diagnostic;
+- mandatory focused regressions;
+- legacy full repository suite against baseline allowlist;
+- Core25 compile.
+
+### Rejected WIP immediately before this checkpoint
+
+A separate `STOCKPILE_COMPLEX_ACCESS_EXECUTOR` experiment was removed.
+The stockpile-to-technological-complex access requirement was already
+`VERIFIED_OK` at the 24/56 baseline via the existing
+`PERSONNEL_AND_VEHICLE_ACCESS` executor. A/B showed **zero** benchmark gain,
+and the duplicate route caused competing tests. The experiment was therefore
+reverted rather than retained as architectural clutter.
+
+### Next candidate
+
+Requirement `ASSIGN-38E7D1D078444D`:
+`Основания для установки технологического оборудования дробильного комплекса выполнить согласно нормативным требованиям к основаниям технологического оборудования с динамическими нагрузками`.
+
+Current evidence is strong:
+- KR1 develops foundations for the crushing equipment;
+- KR1 explicitly applies SP 26.13330.2012 `Фундаменты машин с динамическими нагрузками`;
+- KR1 provides calculated vibration amplitude **0.1 mm** versus allowable **0.3 mm**;
+- KR2 contains the corresponding foundation layouts.
+
+Because the Assignment does not name a specific norm, this requirement must use a stricter generic-normative proof than the named-norm executor above.
+

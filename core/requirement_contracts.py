@@ -81,6 +81,18 @@ def infer_expected_sections(requirement:dict[str,Any], code:str='')->list[str]:
     title=normalize_text(requirement.get('source_row_title') or '')
     if 'благоустрой' in title:
         return ['ПЗУ']
+    # Site-planning engineering preparation is developed at PZU level while
+    # detailed earthwork/foundation adoption clauses may be carried by KR.
+    if (
+        any(marker in title for marker in (
+            'схеме планировочной организации земельного участка',
+            'планировочной организации земельного участка',
+            'генеральн план',
+        ))
+        and 'инженерн' in text
+        and 'подготов' in text
+    ):
+        return ['ПЗУ','КР']
     # Explicit site-layout features belong first to PZU even when their wording
     # also contains generic technology words such as «оборудование».
     if (

@@ -872,3 +872,26 @@ RAM-0207.4-ЗД-ПД-4.25-КР2
     assert result is not None
     assert result["status"] == "Требует проверки"
     assert result["verification_evidence"] == []
+
+
+
+def test_open_canopy_executor_does_not_intercept_composite_lime_requirement():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = {
+        "requirement_type": "NORMATIVE_COMPLIANCE",
+        "source_row_title": "Требования к технологическим решениям",
+        "requirement_text": (
+            "Известь ГОСТ 9179-2018 подаётся в два бункера-дозатора. "
+            "Подвоз предусмотреть в МКР объемом 1 м3. Для защиты от осадков "
+            "предусмотреть открытый навес. Предусмотреть кран-балку 3,2 т."
+        ),
+        "evidence_contract_v2": {"expected_sections": ["ТХ", "КР", "АР"]},
+    }
+    pages = [
+        {"document": "АР2.pdf", "document_type": "АР", "page": 33, "text": _open_canopy_ar_text()},
+        {"document": "КР2.pdf", "document_type": "КР", "page": 172, "text": _open_canopy_kr_text()},
+    ]
+    result = verify_assignment_requirement(requirement, pages)
+    assert result is not None
+    assert result.get("verification_kernel") != "OPEN_CANOPY_DRAWING_EXECUTOR"

@@ -166,10 +166,9 @@ Manual evidence audit completed before ending the session:
 
 Repository integrity note:
 - all validated 21/56 work is preserved in GitHub;
-- the accepted state is still reconstructed from the branch source plus checkpoint/recovery deltas:
-  - `checkpoints/252_21of56/CHECKPOINT_252_21OF56_INCREMENT.patch`;
-  - `checkpoints/252_21of56/RECOVERY_252_21OF56_CONDITION_MATRIX.patch.gz.b64`.
-- The main Python sources on the branch do not yet contain every condition-matrix checker from the recovery delta. This is intentional only as a preserved recovery state, not as the desired long-term branch layout.
-- **First task next session:** materialize the validated 21/56 recovery deltas into the normal source tree, rerun the Core25/Test 78 regression package, then create a self-contained validated checkpoint commit before further coverage work.
+- the recovery chain 18→21/56 has now been materialized into the normal source tree by `.github/workflows/recover-252.yml`;
+- the workflow validates `tests/core25/test_coverage_breakthrough_252.py` and the Core25 regression package before committing recovered source;
+- the current branch contains the materialized Core/Core25/test changes, so the branch is self-contained for further development;
+- checkpoint/recovery files remain as disaster-recovery history only and are no longer required as the normal runtime source.
 
 No new runtime/code changes were accepted on 2026-09-23 after the 21/56 checkpoint.

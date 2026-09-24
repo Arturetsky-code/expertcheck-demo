@@ -226,6 +226,10 @@ def open_canopy_drawing_fact(
         owner=normalize_text(title.get("object_name") or "")
         if "навес" not in owner:
             continue
+        # The title-block owner must be explicitly named by the requirement;
+        # position alone is not enough to establish semantic ownership.
+        if owner not in req_low:
+            continue
 
         if section=="АР":
             kinds=_drawing_kinds(raw)

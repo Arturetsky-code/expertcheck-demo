@@ -438,6 +438,71 @@ def _normative_design_adoption_proof(
     )
 
 
+def _dynamic_foundation_normative_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    engineering: list[tuple[Evidence25, Binding25]] = []
+    drawings: list[tuple[Evidence25, Binding25]] = []
+
+    for evidence_item, binding in pairs:
+        metadata=dict(evidence_item.metadata or {})
+        kind=str(metadata.get("legacy_evidence_kind") or "").upper()
+        if kind != "DYNAMIC_FOUNDATION_NORMATIVE" or metadata.get("dynamic_foundation_normative") is not True:
+            continue
+
+        slot=str(metadata.get("proof_slot") or "").upper()
+        if slot == "ENGINEERING_CALCULATION":
+            refs={_norm_text(x) for x in (metadata.get("matched_normative_refs") or ()) if str(x)}
+            observed=numeric_value(metadata.get("observed_value"))
+            limit=numeric_value(metadata.get("limit_value"))
+            observed_unit=normalize_unit(metadata.get("observed_unit"))
+            limit_unit=normalize_unit(metadata.get("limit_unit"))
+            if not (
+                metadata.get("foundation_solution") is True
+                and metadata.get("specialized_norm_adoption") is True
+                and metadata.get("dynamic_calculation") is True
+                and "сп 26.13330.2012" in refs
+                and observed is not None
+                and limit is not None
+                and observed_unit
+                and observed_unit == limit_unit
+                and observed <= limit
+            ):
+                continue
+            engineering.append((evidence_item,binding))
+
+        elif slot == "DRAWING_CORROBORATION":
+            fragment=_norm_text(evidence_item.fragment)
+            if (
+                metadata.get("dynamic_foundation_drawing") is True
+                and "фундамент" in fragment
+                and "оборудован" in fragment
+            ):
+                drawings.append((evidence_item,binding))
+
+    if not engineering or not drawings:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="ASSIGNMENT_DYNAMIC_FOUNDATION_NORMATIVE_NOT_PROVEN",
+        )
+
+    accepted=engineering+drawings
+    evidence_ids=tuple(dict.fromkeys(item.evidence_id for item,_ in accepted))
+    binding_ids=tuple(dict.fromkeys(binding.binding_id for _,binding in accepted))
+    return Proof25(
+        proof_id=_proof_id(requirement,route,evidence_ids,binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="ASSIGNMENT_DYNAMIC_FOUNDATION_NORMATIVE_CONFIRMED",
+        metadata={"normative_compliance_not_fully_assessed":True},
+    )
+
+
 def _reserve_topology_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -557,6 +622,8 @@ def build_proof(
         return _normative_assertion_proof(requirement, route, pairs)
     if route.kind == "NORMATIVE_DESIGN_ADOPTION":
         return _normative_design_adoption_proof(requirement, route, pairs)
+    if route.kind == "DYNAMIC_FOUNDATION_NORMATIVE":
+        return _dynamic_foundation_normative_proof(requirement, route, pairs)
     if route.kind == "DESIGN_DETERMINED":
         return _design_determined_proof(requirement, route, pairs)
 

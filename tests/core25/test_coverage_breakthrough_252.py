@@ -734,3 +734,120 @@ def test_electrical_lighting_routes_to_system_scope():
         "object_name": "ДСК",
     }
     assert infer_scope(requirement) == SCOPE_SYSTEM
+
+
+
+def _open_canopy_requirement():
+    return {
+        "requirement_id": "ASSIGN-OPEN-CANOPY",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "source_row_title": "Требования к конструктивным решениям",
+        "requirement_text": "Навес системы подачи извести (поз. 4.25) выполнить открытым",
+        "object_name": "Навес",
+        "object_id": "OBJ-CANOPY",
+        "requirement_scope": "OBJECT_SPECIFIC",
+        "evidence_contract_v2": {
+            "scope": "OBJECT_SPECIFIC",
+            "expected_sections": ["АР", "ПЗ"],
+        },
+    }
+
+
+def _open_canopy_ar_text(extra=""):
+    return f"""
+Разрез 1-1
+Профилированный настил
+Фасад 1-3
+Фасад 3-1
+Фасад А-Б; Б-А
+{extra}
+Навес системы подачи извести
+Площадка производственного комплекса
+ООО "Проектировщик"
+RAM-0207.4-ЗД-ПД-4.25-АР2
+Фасады. Разрез 1-1
+"""
+
+
+def _open_canopy_kr_text(position="4.25"):
+    return f"""
+Схема расположения колонн и вертикальных связей на отм. +0,400
+Схема расположения балок и прогонов покрытия
+Навес системы подачи извести
+Площадка производственного комплекса
+ООО "Проектировщик"
+RAM-0207.4-ЗД-ПД-{position}-КР2
+Схема расположения колонн и вертикальных связей
+"""
+
+
+def test_open_canopy_drawing_fact_requires_facades_frame_and_no_wall_conflict():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    pages = [
+        {"document": "АР2.pdf", "document_type": "АР", "page": 33, "text": _open_canopy_ar_text()},
+        {"document": "КР2.pdf", "document_type": "КР", "page": 172, "text": _open_canopy_kr_text()},
+    ]
+    result = verify_assignment_requirement(_open_canopy_requirement(), pages)
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_kernel"] == "OPEN_CANOPY_DRAWING_EXECUTOR"
+    assert len(result["verification_evidence"]) == 1
+    evidence = result["verification_evidence"][0]
+    assert evidence["evidence_kind"] == "QUALIFIED_DRAWING_PROJECT_FACT"
+    assert evidence["evidence_state"] == "verified_candidate"
+    assert evidence["drawing_facade_view_count"] >= 3
+    assert evidence["drawing_structural_frame_corroborated"] is True
+    assert evidence["drawing_enclosure_conflict"] is False
+
+
+def test_open_canopy_drawing_fact_rejects_explicit_wall_enclosure():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    pages = [
+        {
+            "document": "АР2.pdf",
+            "document_type": "АР",
+            "page": 33,
+            "text": _open_canopy_ar_text('Стеновая панель типа "Сэндвич"'),
+        },
+        {"document": "КР2.pdf", "document_type": "КР", "page": 172, "text": _open_canopy_kr_text()},
+    ]
+    result = verify_assignment_requirement(_open_canopy_requirement(), pages)
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_evidence"] == []
+
+
+def test_open_canopy_drawing_fact_rejects_wrong_position():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    ar = _open_canopy_ar_text().replace("4.25-АР2", "4.24-АР2")
+    pages = [
+        {"document": "АР2.pdf", "document_type": "АР", "page": 33, "text": ar},
+        {"document": "КР2.pdf", "document_type": "КР", "page": 172, "text": _open_canopy_kr_text("4.24")},
+    ]
+    result = verify_assignment_requirement(_open_canopy_requirement(), pages)
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_evidence"] == []
+
+
+def test_open_canopy_structured_drawing_fact_reaches_core25():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = _open_canopy_requirement()
+    pages = [
+        {"document": "Раздел ПД №3_АР2.pdf", "document_type": "АР", "page": 33, "text": _open_canopy_ar_text()},
+        {"document": "Раздел ПД №4_КР2.pdf", "document_type": "КР", "page": 172, "text": _open_canopy_kr_text()},
+    ]
+    legacy = verify_assignment_requirement(requirement, pages)
+    assert legacy is not None
+    assert legacy["status"] == "Соответствует заданию"
+
+    runtime_req = dict(requirement)
+    runtime_req["directed_evidence_candidates"] = legacy["verification_evidence"]
+    row = run_assignment_runtime([runtime_req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"

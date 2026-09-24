@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+from collections import Counter
+from pathlib import Path
+
+from core.coverage_breakthrough import attach_coverage_executor_evidence
+from core.directed_evidence import attach_directed_evidence
+from core.page_evidence_store import is_assignment_source
+from core25.runtime_bridge import run_assignment_runtime
+
+
+def _row_summary(row: dict) -> dict:
+    return {
+        "requirement_id": row.get("requirement_id"),
+        "final_verification_kind": row.get("final_verification_kind"),
+        "proof_state": row.get("proof_state"),
+        "core25_reason_code": row.get("core25_reason_code"),
+        "coverage_executor": row.get("coverage_executor"),
+    }
+
+
+def _counts(rows: list[dict], proven_deviations: int) -> dict:
+    kinds = Counter(row.get("final_verification_kind") for row in rows)
+    verified = int(kinds.get("VERIFIED_OK", 0))
+    review = int(kinds.get("REVIEW_QUESTION", 0))
+    return {
+        "requirements": len(rows),
+        "VERIFIED_OK": verified,
+        "REVIEW_QUESTION": review,
+        "proven_deviations": int(proven_deviations),
+        "strict_categorical_if_deviations_unchanged": verified + int(proven_deviations),
+    }
+
+
+def run(fixture: dict) -> dict:
+    requirements = copy.deepcopy(list(fixture.get("requirements") or []))
+    corpus = list(fixture.get("page_corpus") or [])
+    project_corpus = [page for page in corpus if not is_assignment_source(page)]
+
+    attach_directed_evidence(requirements, project_corpus)
+    coverage = attach_coverage_executor_evidence(requirements, project_corpus)
+    runtime = run_assignment_runtime(requirements, object_registry=[])
+    current_rows = [_row_summary(row) for row in runtime.get("rows") or []]
+
+    baseline_rows = list(fixture.get("baseline_rows") or [])
+    before = {row["requirement_id"]: row for row in baseline_rows}
+    after = {row["requirement_id"]: row for row in current_rows}
+    before_ids = set(before)
+    after_ids = set(after)
+
+    missing_ids = sorted(before_ids - after_ids)
+    added_ids = sorted(after_ids - before_ids)
+    changed = []
+    for requirement_id in sorted(before_ids & after_ids):
+        b = before[requirement_id]
+        a = after[requirement_id]
+        if b.get("final_verification_kind") == a.get("final_verification_kind"):
+            continue
+        changed.append({
+            "requirement_id": requirement_id,
+            "before_kind": b.get("final_verification_kind"),
+            "after_kind": a.get("final_verification_kind"),
+            "before_proof": b.get("proof_state"),
+            "after_proof": a.get("proof_state"),
+            "before_reason": b.get("core25_reason_code"),
+            "after_reason": a.get("core25_reason_code"),
+            "before_executor": b.get("coverage_executor"),
+            "after_executor": a.get("coverage_executor"),
+        })
+
+    gains = [
+        row for row in changed
+        if row["before_kind"] != "VERIFIED_OK" and row["after_kind"] == "VERIFIED_OK"
+    ]
+    regressions = [
+        row for row in changed
+        if row["before_kind"] == "VERIFIED_OK" and row["after_kind"] != "VERIFIED_OK"
+    ]
+    other_changes = [row for row in changed if row not in gains and row not in regressions]
+
+    if missing_ids or added_ids:
+        classification = "REQUIREMENT_SET_CHANGED"
+    elif regressions:
+        classification = "REGRESSION"
+    elif len(changed) == 0:
+        classification = "NO_CHANGE"
+    elif len(gains) == 1 and len(changed) == 1:
+        classification = "SINGLE_GAIN"
+    elif len(changed) > 1:
+        classification = "MULTI_CHANGE_AUDIT_REQUIRED"
+    else:
+        classification = "CHANGE_AUDIT_REQUIRED"
+
+    proven_deviations = int(fixture.get("proven_deviations") or 0)
+    return {
+        "schema_version": 1,
+        "benchmark": fixture.get("benchmark") or "Test78",
+        "baseline_label": fixture.get("baseline_label"),
+        "baseline_source_sha": fixture.get("baseline_source_sha"),
+        "classification": classification,
+        "baseline": _counts(baseline_rows, proven_deviations),
+        "current": _counts(current_rows, proven_deviations),
+        "requirement_set": {"missing_ids": missing_ids, "added_ids": added_ids},
+        "changed_requirements": changed,
+        "gains": gains,
+        "regressions": regressions,
+        "other_changes": other_changes,
+        "coverage_summary": {
+            "executor_hits": coverage.get("executor_hits"),
+            "with_candidates": coverage.get("with_candidates"),
+            "verified_candidates": coverage.get("verified_candidates"),
+            "executors": coverage.get("executors") or {},
+        },
+    }
+
+
+def markdown(result: dict) -> str:
+    b = result["baseline"]
+    c = result["current"]
+    lines = [
+        "# Test78 deterministic A/B",
+        "",
+        f"- Classification: **{result['classification']}**",
+        f"- Baseline: **{b['VERIFIED_OK']} VERIFIED_OK / {b['REVIEW_QUESTION']} REVIEW**",
+        f"- Current: **{c['VERIFIED_OK']} VERIFIED_OK / {c['REVIEW_QUESTION']} REVIEW**",
+        f"- Strict categorical (if the separately audited deviations are unchanged): **{c['strict_categorical_if_deviations_unchanged']}/56**",
+        f"- Changed requirements: **{len(result['changed_requirements'])}**",
+        "",
+    ]
+    if result["changed_requirements"]:
+        lines.extend(["## Changed requirement IDs", ""])
+        for row in result["changed_requirements"]:
+            lines.append(
+                f"- \`{row['requirement_id']}\`: \`{row['before_kind']}\` → \`{row['after_kind']}\` "
+                f"({row.get('after_reason') or '—'}; {row.get('after_executor') or '—'})"
+            )
+        lines.append("")
+    if result["requirement_set"]["missing_ids"] or result["requirement_set"]["added_ids"]:
+        lines.extend([
+            "## Requirement-set drift",
+            "",
+            f"- Missing IDs: {', '.join(result['requirement_set']['missing_ids']) or 'none'}",
+            f"- Added IDs: {', '.join(result['requirement_set']['added_ids']) or 'none'}",
+            "",
+        ])
+    lines.extend([
+        "> Fixed 56-requirement denominator; project page text is never emitted to logs or output artifacts.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fixture", required=True)
+    parser.add_argument("--out-dir", default="benchmark_out")
+    args = parser.parse_args()
+
+    fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
+    result = run(fixture)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "test78_ab.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (out_dir / "test78_ab.md").write_text(markdown(result), encoding="utf-8")
+    print(json.dumps({
+        "classification": result["classification"],
+        "baseline": result["baseline"],
+        "current": result["current"],
+        "changed_ids": [row["requirement_id"] for row in result["changed_requirements"]],
+    }, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

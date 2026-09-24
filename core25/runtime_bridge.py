@@ -45,8 +45,13 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
         "PRESENCE_REQUIREMENT": "PRESENCE",
     }
     item["verification_kind"] = aliases.get(kind, kind)
-    if _text(item.get("coverage_executor")) == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
+    executor=_text(item.get("coverage_executor"))
+    if executor == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
         item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
+    elif executor == "DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR":
+        item["verification_kind"] = "DYNAMIC_FOUNDATION_NORMATIVE"
+        if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
+            item["requirement_scope"] = "PROJECT_GLOBAL"
     return item
 
 
@@ -131,6 +136,13 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "matched_terms": tuple(candidate.get("matched_terms") or ()),
                     "proof_slot": candidate.get("proof_slot"),
                     "normative_design_adoption": candidate.get("normative_design_adoption"),
+                    "dynamic_foundation_normative": candidate.get("dynamic_foundation_normative"),
+                    "foundation_solution": candidate.get("foundation_solution"),
+                    "specialized_norm_adoption": candidate.get("specialized_norm_adoption"),
+                    "dynamic_calculation": candidate.get("dynamic_calculation"),
+                    "dynamic_foundation_drawing": candidate.get("dynamic_foundation_drawing"),
+                    "limit_value": candidate.get("limit_value"),
+                    "limit_unit": candidate.get("limit_unit"),
                     "concept": candidate.get("concept"),
                     "design_determined_subject": candidate.get("design_determined_subject"),
                     "structured_project_fact": candidate.get("structured_project_fact"),

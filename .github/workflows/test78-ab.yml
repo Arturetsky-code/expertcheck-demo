@@ -1,0 +1,105 @@
+name: Test78 deterministic A/B
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/expertcheck-25.2-coverage-breakthrough
+    paths:
+      - .github/workflows/test78-ab.yml
+      - tools/run_test78_ab.py
+      - core/**
+      - core25/**
+      - knowledge/benchmarks/private/test78_fixture_26of56.enc.b64.part.*
+
+permissions:
+  contents: read
+
+jobs:
+  test78-ab:
+    runs-on: ubuntu-latest
+    env:
+      TEST78_FIXTURE_KEY: ${{ secrets.TEST78_FIXTURE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check private fixture key
+        id: guard
+        shell: bash
+        run: |
+          if [ -z "$TEST78_FIXTURE_KEY" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "## Test78 deterministic A/B" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped: repository secret `TEST78_FIXTURE_KEY` is not configured." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        if: steps.guard.outputs.enabled == 'true'
+        run: |
+          python -m pip install -q -r requirements.txt
+
+      - name: Decrypt fixed Test78 fixture
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .test78_private benchmark_out
+          cat knowledge/benchmarks/private/test78_fixture_26of56.enc.b64.part.* > .test78_private/fixture.enc.b64
+          base64 --decode .test78_private/fixture.enc.b64 > .test78_private/fixture.enc
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in .test78_private/fixture.enc \
+            -out .test78_private/fixture.json.gz \
+            -pass env:TEST78_FIXTURE_KEY
+          gzip -dc .test78_private/fixture.json.gz > .test78_private/fixture.json
+
+      - name: Run deterministic Test78 A/B
+        if: steps.guard.outputs.enabled == 'true'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python tools/run_test78_ab.py \
+            --fixture .test78_private/fixture.json \
+            --out-dir benchmark_out
+          cat benchmark_out/test78_ab.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload compact A/B result
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test78-ab-result
+          path: |
+            benchmark_out/test78_ab.json
+            benchmark_out/test78_ab.md
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Fail closed on regression or denominator drift
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path("benchmark_out/test78_ab.json").read_text(encoding="utf-8"))
+          classification = result.get("classification")
+          if classification in {"REGRESSION", "REQUIREMENT_SET_CHANGED"}:
+              raise SystemExit(f"Test78 A/B rejected: {classification}")
+          print(f"Test78 A/B accepted for audit: {classification}")
+          PY
+
+      - name: Remove decrypted fixture
+        if: always() && steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: rm -rf .test78_private

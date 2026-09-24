@@ -1,0 +1,56 @@
+name: Validate ExpertCheck 25.2 branch
+
+on:
+  push:
+    branches:
+      - codex/expertcheck-25.2-coverage-breakthrough
+    paths:
+      - .github/workflows/validate-252.yml
+      - core/**
+      - core25/**
+      - tests/core25/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/expertcheck-25.2-coverage-breakthrough
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: python -m pip install -q -r requirements.txt
+
+      - name: Run Core25 coverage-breakthrough regression
+        run: pytest -q tests/core25/test_coverage_breakthrough_252.py
+
+      - name: Run Core25 regression package
+        run: pytest -q tests/core25 --ignore=tests/core25/test_assignment_pipeline.py
+
+      - name: Persist green validation marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p checkpoints/252_validation
+          cat > checkpoints/252_validation/LAST_GREEN.md <<EOF
+          # ExpertCheck 25.2 branch validation
+
+          Validated source commit: `${GITHUB_SHA}`
+
+          Successful checks:
+
+          - `pytest -q tests/core25/test_coverage_breakthrough_252.py`
+          - `pytest -q tests/core25 --ignore=tests/core25/test_assignment_pipeline.py`
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add checkpoints/252_validation/LAST_GREEN.md
+          git commit -m "ci: record green 25.2 regression at ${GITHUB_SHA}" || exit 0
+          git push origin HEAD:codex/expertcheck-25.2-coverage-breakthrough

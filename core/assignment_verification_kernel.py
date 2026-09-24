@@ -510,6 +510,9 @@ def _open_canopy_drawing_check(requirement: dict[str, Any], page_corpus: list[di
     """
     text=str(requirement.get("requirement_text") or "")
     low=_norm(text)
+    rtype=str(requirement.get("requirement_type") or "").upper()
+    if rtype != "PRESENCE_REQUIREMENT":
+        return None
     if "навес" not in low or "открыт" not in low:
         return None
 

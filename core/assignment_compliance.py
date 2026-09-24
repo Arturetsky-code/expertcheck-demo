@@ -331,8 +331,13 @@ def _requirement_type(text:str,row_title:str,code:str,value:float|None)->str:
         return TYPE_PRESENCE
     if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low) or "нормативн" in low: return TYPE_NORMATIVE
     if code and value is not None: return TYPE_VALUE
-    if "определить проект" in low:
-        determine_pos = low.find("определить проект")
+    design_determine_markers = (
+        "определить проект",
+        "определить при разработке документации",
+    )
+    determine_positions = [low.find(marker) for marker in design_determine_markers if marker in low]
+    if determine_positions:
+        determine_pos = min(determine_positions)
         primary_actions = ("предусмотреть", "выполнить", "обеспечить", "установить", "принять")
         earlier_actions = [low.find(x) for x in primary_actions if 0 <= low.find(x) < determine_pos]
         if not earlier_actions:

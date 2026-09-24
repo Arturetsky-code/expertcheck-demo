@@ -743,3 +743,99 @@ repository Actions secret `TEST78_FIXTURE_KEY` must be configured once.
 Until then the workflow completes successfully but deliberately skips decryption/benchmark execution.
 
 After activation, development A/B no longer requires downloading source ZIP artifacts or rebuilding the 12-PDF page corpus for each iteration.
+
+
+## Current validated checkpoint — 25/56 after false-positive correction
+
+This section supersedes the previous **26/56** checkpoint as the current accepted
+Test78 / Assignment compliance / AI-off baseline. The earlier checkpoint remains above
+as development history.
+
+Current strict categorical baseline:
+- requirements: **56**;
+- `VERIFIED_OK`: **23**;
+- separately audited proven deviations: **2**;
+- `REVIEW_QUESTION`: **33**;
+- official strict categorical coverage: **25/56 = 44.6%**.
+
+### Why the baseline decreased from 26/56
+
+A false-positive proof was found for requirement `ASSIGN-4F91A035979A30`.
+The requirement is a non-numeric `PRESENCE_REQUIREMENT`, but atomisation had retained
+a secondary `parameter_code=VOLUME`. The generic directed-value retriever therefore
+admitted unrelated project volume values as evidence for the presence requirement.
+
+The correction is intentionally universal:
+- numeric directed evidence is now produced only for explicit `VALUE_COMPARISON`
+  requirements;
+- inherited secondary parameter codes no longer override semantic section routing for
+  presence/normative atoms;
+- two regression tests protect both behaviours.
+
+Exactly one Test78 requirement changed during the correction:
+- `ASSIGN-4F91A035979A30`: `VERIFIED_OK -> REVIEW_QUESTION`.
+
+The other **55/56** requirement states remained unchanged. This is an accepted quality
+correction, not a capability gain/loss experiment.
+
+### Universal-archetype coverage
+
+The validated `VERIFIED_OK` set is currently explained by **11 reusable requirement
+archetypes**:
+- **23/23** verified requirements are mapped to a universal archetype;
+- **0** verified requirements remain unclassified.
+
+This metric is now reported by deterministic Test78 alongside categorical coverage.
+Development must prefer improving/reusing an archetype over adding a one-off executor
+for a single benchmark sentence.
+
+### Test78 automation state
+
+The GitHub Actions secret is configured and the deterministic workflow is **active**.
+The previous “secret activation pending” note is historical.
+
+The fixed encrypted Test78 corpus remains private ciphertext in the public repository.
+Validated baseline state is now separated from the encrypted corpus through:
+`knowledge/benchmarks/test78_baseline_overrides.json`.
+
+This avoids rebuilding/re-encrypting the 956-page corpus for every audited baseline
+correction while keeping project text out of public Git history.
+
+An encrypted private review-frontier artifact is also produced for diagnostics.
+The public compact A/B result contains only non-sensitive counts, requirement IDs,
+structural diagnostics and reason/executor identifiers.
+
+### Validation
+
+Quality correction commit:
+`af9b1d6cf73e9dbfb176b85287b9de76ace63533`.
+
+Corrected Test78 baseline commit:
+`3cfd66be54bd4eae187752a6bd80618ed06f387b`.
+
+GitHub validation at the corrected baseline:
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Core20 quality gates: **success**;
+- Core25 Quality Leap gates: **success**;
+- Source Snapshot Artifact: **success**.
+
+### Review-frontier finding
+
+The strongest remaining review candidates were audited without weakening proof gates.
+Several are evidence-limited by the current 12-document benchmark rather than by a
+missing executor. Examples include partial multi-condition normative, lighting,
+water/sewer, equipment-parameter and cross-document requirements.
+
+Do not force a new categorical result merely to restore **26/56**.
+
+### Continue from here
+
+1. Treat **25/56** as the only current accepted Test78 baseline.
+2. Use the review frontier to distinguish:
+   - an existing archetype with a routing/admission defect;
+   - a genuinely new reusable archetype;
+   - a requirement that cannot be proven from the current corpus.
+3. Add a new executor only when it represents a reusable engineering proof pattern,
+   never solely to close one Test78 sentence.
+4. Preserve fail-closed evidence rules and accept a lower benchmark percentage when it
+   removes a false positive.

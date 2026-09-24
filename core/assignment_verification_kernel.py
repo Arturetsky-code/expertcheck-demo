@@ -500,6 +500,149 @@ def _normative_factual_requirement(text: str) -> bool:
     return bool(NORMATIVE_REF_RE.search(text) and any(marker in low for marker in material_markers))
 
 
+def _fencing_composite_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Verify the composite site-fencing requirement without treating generic
+    normative wording as a normative-compliance route.
+
+    Categorical proof requires six independent conditions across PZU/KR:
+    site fencing, vehicle gates, personnel wickets, project-defined opening
+    dimensions, transport/normative sizing basis, and factory manufacture.
+    """
+    text=str(requirement.get("requirement_text") or "")
+    low_req=_norm(text)
+    if str(requirement.get("requirement_type") or "") != "PRESENCE_REQUIREMENT":
+        return None
+    if not ("огражден" in low_req and "ворот" in low_req and "калит" in low_req):
+        return None
+
+    pzu_pages=_candidate_pages(page_corpus, ("ПЗУ",))
+    kr_pages=_candidate_pages(page_corpus, ("КР",))
+    slots: dict[str, tuple[dict[str, Any], str] | None] = {
+        "site_fencing": None,
+        "vehicle_gates": None,
+        "personnel_wickets": None,
+        "opening_dimensions": None,
+        "transport_normative_basis": None,
+        "factory_manufacture": None,
+    }
+
+    for page in pzu_pages:
+        raw=str(page.get("text") or "")
+        low=_norm(raw)
+        if slots["site_fencing"] is None and (
+            "территор" in low and "дск" in low and "ограждается" in low and "панел" in low
+        ):
+            slots["site_fencing"]=(page,_context(raw,("ограждается","панел"),radius=470))
+        if slots["vehicle_gates"] is None and (
+            "заезд" in low and "автотранспорт" in low and "ворот" in low
+        ):
+            slots["vehicle_gates"]=(page,_context(raw,("заезд","автотранспорт","ворот"),radius=470))
+        if slots["personnel_wickets"] is None and "калитк" in low:
+            slots["personnel_wickets"]=(page,_context(raw,("калитк",),radius=360))
+        if slots["opening_dimensions"] is None and (
+            "ворот" in low
+            and re.search(r"ширин\w*\s+4[,.]5\s*м", low)
+            and ("калитк" in low or any("калитк" in _norm(str(p.get("text") or "")) for p in pzu_pages))
+        ):
+            slots["opening_dimensions"]=(page,_context(raw,("ворот","ширин"),radius=470))
+        if slots["transport_normative_basis"] is None and (
+            "расчетн" in low
+            and "автомобил" in low
+            and "сп 37.13330.2012" in low
+            and "ширин" in low
+            and "проезж" in low
+        ):
+            slots["transport_normative_basis"]=(page,_context(raw,("сп 37.13330.2012","расчетн","автомобил"),radius=520))
+
+    kr_wicket_dimension=False
+    for page in kr_pages:
+        raw=str(page.get("text") or "")
+        low=_norm(raw)
+        if "калитк" in low and re.search(r"калитк\w*\s+1[,.]?5?00\s*[xх×]\s*2[,.]?5?00", low):
+            kr_wicket_dimension=True
+            if slots["personnel_wickets"] is None:
+                slots["personnel_wickets"]=(page,_context(raw,("калитк","комплектн"),radius=400))
+        if slots["factory_manufacture"] is None and (
+            "огражден" in low
+            and "панел" in low
+            and "заводск" in low
+            and "изготовлен" in low
+        ):
+            slots["factory_manufacture"]=(page,_context(raw,("панел","заводск","изготовлен"),radius=470))
+
+    if slots["opening_dimensions"] is not None and not kr_wicket_dimension:
+        slots["opening_dimensions"]=None
+
+    labels = {
+        "site_fencing":"ограждение территории ДСК",
+        "vehicle_gates":"ворота для заезда автотранспорта",
+        "personnel_wickets":"калитки для прохода персонала",
+        "opening_dimensions":"проектные размеры ворот и калиток",
+        "transport_normative_basis":"расчётный транспорт и нормативная база для размеров проездов",
+        "factory_manufacture":"ограждение заводского изготовления",
+    }
+    proven=[key for key,value in slots.items() if value is not None]
+    missing=[key for key,value in slots.items() if value is None]
+    all_proven=not missing
+
+    evidence_rows=[]
+    rendered=[]
+    if all_proven:
+        primary_page,primary_context=slots["site_fencing"]  # type: ignore[misc]
+        evidence_rows.append({
+            "evidence_kind":"QUALIFIED_FENCING_COMPOSITE",
+            "evidence_state":"verified_candidate",
+            "document":primary_page.get("document"),
+            "document_type":primary_page.get("document_type"),
+            "page":primary_page.get("page"),
+            "context":primary_context,
+            "score":99,
+            "structured_project_fact":True,
+            "condition_ids":tuple(slots.keys()),
+        })
+        rendered.append(f"{primary_page.get('document')}, стр. {primary_page.get('page')}: {primary_context}")
+    else:
+        for key in proven:
+            page,snippet=slots[key]  # type: ignore[misc]
+            evidence_rows.append({
+                "evidence_kind":"QUALIFIED_FENCING_COMPOSITE",
+                "evidence_state":"candidate",
+                "document":page.get("document"),
+                "document_type":page.get("document_type"),
+                "page":page.get("page"),
+                "context":snippet,
+                "score":84,
+                "condition_id":key,
+                "condition_label":labels[key],
+            })
+            rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
+
+    return {
+        "status":"Соответствует заданию" if all_proven else "Требует проверки",
+        "evidence":rendered,
+        "evidence_candidates":evidence_rows,
+        "verification_evidence":evidence_rows,
+        "evidence_quality_state":"VERIFIED_ENGINEERING_EVIDENCE" if all_proven else "CANDIDATE_EVIDENCE",
+        "match_confidence":0.99 if all_proven else (0.82 if proven else 0.0),
+        "decision_basis":(
+            "Все обязательные условия по ограждению, воротам, калиткам, размерам и заводскому исполнению подтверждены."
+            if all_proven else
+            "Требование по ограждению подтверждено частично; отсутствуют обязательные условия: "
+            + ", ".join(labels[key] for key in missing)
+        ),
+        "verification_kernel":"FENCING_COMPOSITE_EXECUTOR",
+        "condition_matrix":[
+            {"condition_id":key,"condition_label":labels[key],"proven":slots[key] is not None}
+            for key in slots
+        ],
+        "condition_summary":{
+            "proven":len(proven),
+            "total":len(slots),
+            "missing":[labels[key] for key in missing],
+        },
+    }
+
+
 def _open_canopy_drawing_check(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Prove an explicitly open canopy only from owner-bound drawing semantics.
 
@@ -1076,6 +1219,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _equipment_check,
         _capacity_topology_check,
         _negative_applicability_check,
+        _fencing_composite_check,
         _open_canopy_drawing_check,
         _lighting_composite_check,
         _lightning_grounding_check,

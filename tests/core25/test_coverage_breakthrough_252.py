@@ -1011,3 +1011,128 @@ def test_fencing_composite_classifier_ignores_secondary_generic_normative_phrase
 
     truly_normative = "Основания оборудования выполнить согласно нормативным требованиям к фундаментам машин с динамическими нагрузками"
     assert _requirement_type(truly_normative, "Требования к конструктивным решениям", "", None) == "NORMATIVE_COMPLIANCE"
+
+
+
+def _landscaping_requirement():
+    return {
+        "requirement_id": "ASSIGN-LANDSCAPING-DESIGN",
+        "requirement_type": "DESIGN_DETERMINED",
+        "source_row_title": (
+            "Требования к решениям по благоустройству прилегающей территории, "
+            "к малым архитектурным формам и к планировочной организации земельного участка"
+        ),
+        "requirement_text": "Определить при разработке документации",
+        "requirement_scope": "SITE_SPECIFIC",
+        "evidence_contract_v2": {
+            "scope": "SITE_SPECIFIC",
+            "expected_sections": ["ПЗУ"],
+        },
+    }
+
+
+def _landscaping_pages(*, include_plan=True, include_elements=True):
+    pages = [{
+        "document": "ПЗУ1.pdf",
+        "document_type": "ПЗУ",
+        "page": 27,
+        "text": (
+            "7 Описание решений по благоустройству территории. "
+            "Для обеспечения нормальных санитарных, функциональных и санитарно-гигиенических условий "
+            "территория дробильно-сортировочного комплекса благоустраивается. "
+            "Озеленение не предусматривается; решаются вопросы удобства и безопасности движения людей "
+            "и транспорта, а также ухода за территорией."
+        ),
+    }]
+    if include_plan:
+        text = (
+            "Схема планировочной организации земельного участка. План благоустройства М 1:1000. "
+        )
+        if include_elements:
+            text += (
+                "Ведомость покрытий проездов, площадок, дорожек. Пешеходные дорожки. "
+                "Ведомость малых архитектурных форм и переносного оборудования. "
+                "Урна для мусора. Скамья."
+            )
+        pages.append({
+            "document": "ПЗУ2.pdf",
+            "document_type": "ПЗУ",
+            "page": 5,
+            "text": text,
+        })
+    return pages
+
+
+def test_landscaping_design_determined_requires_text_plan_and_elements():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(_landscaping_requirement(), _landscaping_pages())
+    assert result is not None
+    assert result["status"] == "Соответствует заданию"
+    assert result["verification_kernel"] == "LANDSCAPING_DESIGN_DETERMINED_EXECUTOR"
+    assert result["condition_summary"]["proven"] == 3
+    assert result["condition_summary"]["total"] == 3
+    assert len(result["verification_evidence"]) == 1
+    assert result["verification_evidence"][0]["evidence_state"] == "verified_candidate"
+    assert result["verification_evidence"][0]["design_determined_subject"] == "LANDSCAPING"
+
+
+def test_landscaping_design_determined_stays_review_without_graphic_plan():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _landscaping_requirement(),
+        _landscaping_pages(include_plan=False),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 1
+    assert "графический план благоустройства" in result["condition_summary"]["missing"]
+
+
+def test_landscaping_design_determined_stays_review_without_concrete_elements():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _landscaping_requirement(),
+        _landscaping_pages(include_elements=False),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["condition_summary"]["proven"] == 2
+    assert any("покрытия" in item for item in result["condition_summary"]["missing"])
+
+
+def test_landscaping_design_determined_reaches_core25():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement = _landscaping_requirement()
+    legacy = verify_assignment_requirement(requirement, _landscaping_pages())
+    assert legacy is not None
+    assert legacy["status"] == "Соответствует заданию"
+
+    runtime_req = dict(requirement)
+    runtime_req["directed_evidence_candidates"] = legacy["verification_evidence"]
+    row = run_assignment_runtime([runtime_req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_DESIGN_VALUE_CONFIRMED"
+
+
+def test_development_determined_classifier_and_landscaping_route_are_narrow():
+    from core.assignment_compliance import _requirement_type
+    from core.requirement_contracts import infer_expected_sections
+
+    title = (
+        "Требования к решениям по благоустройству прилегающей территории, "
+        "к малым архитектурным формам"
+    )
+    text = "Определить при разработке документации"
+    assert _requirement_type(text, title, "", None) == "DESIGN_DETERMINED"
+    assert infer_expected_sections({
+        "source_row_title": title,
+        "requirement_text": text,
+    }) == ["ПЗУ"]
+
+    ordinary = "Предусмотреть ограждение территории и определить размеры проектом"
+    assert _requirement_type(ordinary, "Требования к ПЗУ", "", None) == "PRESENCE_REQUIREMENT"

@@ -71,8 +71,30 @@ jobs:
         run: |
           python tools/run_test78_ab.py \
             --fixture .test78_private/fixture.json \
-            --out-dir benchmark_out
+            --out-dir benchmark_out \
+            --private-out benchmark_out/test78_frontier_private.json
           cat benchmark_out/test78_ab.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Encrypt private frontier diagnostic
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gzip -c benchmark_out/test78_frontier_private.json > .test78_private/frontier.json.gz
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
+            -in .test78_private/frontier.json.gz \
+            -out benchmark_out/test78_frontier_private.json.gz.enc \
+            -pass env:TEST78_FIXTURE_KEY
+          rm -f benchmark_out/test78_frontier_private.json
+
+      - name: Upload encrypted private frontier
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test78-frontier-private-encrypted
+          path: benchmark_out/test78_frontier_private.json.gz.enc
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload compact A/B result
         if: steps.guard.outputs.enabled == 'true'

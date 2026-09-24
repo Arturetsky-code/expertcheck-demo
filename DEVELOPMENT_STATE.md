@@ -422,3 +422,97 @@ Official next baseline is **23/56**.
 Do not revisit the fencing result unless a regression appears.
 Continue with the next `PROFILE_SECTION_PRESENT` review-only requirement using the same
 rule: complete material-condition proof first, categorical admission only second.
+
+
+## Validated checkpoint — 24/56 landscaping design proof
+
+Accepted Test 78 / Assignment compliance / AI off baseline is now **24/56 = 42.9%**:
+
+- requirements: **56**;
+- `Соответствует заданию`: **22**;
+- proven deviations: **2**;
+- `Требует проверки`: **32**.
+
+### New accepted categorical requirement
+
+Requirement `ASSIGN-B52474791A34FB`:
+source row 48 / landscaping and site-planning requirements.
+Assignment instruction: `Определить при разработке документации`.
+
+Previous state: `REVIEW_QUESTION`.
+Validated state: `VERIFIED_OK`.
+Type: `DESIGN_DETERMINED`.
+Core25 proof: `PROVEN_MATCH / ASSIGNMENT_DESIGN_VALUE_CONFIRMED`.
+Executor: `LANDSCAPING_DESIGN_DETERMINED_EXECUTOR`.
+
+### Three-condition proof gate
+
+Categorical proof requires all three independent PZU conditions:
+
+1. textual project solution:
+   `Описание решений по благоустройству территории` and an explicit statement that the DSK territory is landscaped;
+2. graphical project solution:
+   `План благоустройства М 1:1000`;
+3. concrete implemented elements:
+   surfacing / pedestrian paths plus small architectural forms (bins / benches).
+
+Addressable evidence:
+- PZU1 page 27: dedicated landscaping-solutions section and explicit project statement;
+- PZU2 page 5: landscaping plan, surface schedule, pedestrian paths, small architectural forms, bins and benches.
+
+### Classification / route correction
+
+`Определить при разработке документации` is now treated as a true design-determined instruction
+when it is not preceded by a primary engineering action.
+The landscaping source-row title routes expected evidence to `ПЗУ`.
+
+This does not change composite requirements where an earlier primary action exists
+(e.g. `Предусмотреть ... определить размеры проектом` stays PRESENCE).
+
+### A/B benchmark
+
+The same cached Test 78 page corpus and the same 56 extracted Assignment requirements were used.
+
+Before landscaping work:
+- **21 VERIFIED_OK / 35 REVIEW_QUESTION**.
+
+Validated landscaping source:
+- **22 VERIFIED_OK / 34 REVIEW_QUESTION**.
+
+Exactly one requirement changed state:
+- `ASSIGN-B52474791A34FB`: `REVIEW_QUESTION -> VERIFIED_OK`.
+
+The two accepted deviations are unchanged, so official strict categorical coverage moves:
+- **21 compliant + 2 deviations = 23/56**
+to:
+- **22 compliant + 2 deviations = 24/56**.
+
+### False-positive safeguards
+
+- a generic mention of landscaping is insufficient;
+- textual PZU evidence alone is insufficient;
+- a drawing title alone is insufficient;
+- categorical admission requires text + graphic plan + concrete project elements;
+- partial 1/3 or 2/3 evidence remains candidate-only;
+- only the explicit development-determined instruction is reclassified;
+- ordinary composite engineering requirements remain on their original route.
+
+### Validation
+
+Validated source commit:
+`0013ba07a409cef81f117ececcb5489130f50722`.
+
+Green validation marker:
+`f817001a295a29dcb07d847565870a94fad3ff9c`.
+
+CI:
+- `Core20 quality gates`: **success**;
+- `Core25 Quality Leap gates`: **success**;
+- `Validate ExpertCheck 25.2 branch`: **success**;
+- source snapshot: **success**.
+
+### Continue from here
+
+Official next baseline is **24/56**.
+Continue with the next review-only requirement only after an addressable evidence audit;
+do not weaken the known water / automation / power / lighting condition gates.

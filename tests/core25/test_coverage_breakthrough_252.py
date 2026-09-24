@@ -1136,3 +1136,127 @@ def test_development_determined_classifier_and_landscaping_route_are_narrow():
 
     ordinary = "Предусмотреть ограждение территории и определить размеры проектом"
     assert _requirement_type(ordinary, "Требования к ПЗУ", "", None) == "PRESENCE_REQUIREMENT"
+
+
+
+def _stockpile_access_requirement():
+    return {
+        "requirement_id":"ASSIGN-STOCKPILE-ACCESS",
+        "requirement_type":"PRESENCE_REQUIREMENT",
+        "source_row_title":"Требования к схеме планировочной организации земельного участка",
+        "requirement_text":(
+            "Предусмотреть возможность проезда техники и прохода персонала с площадки склада "
+            "недробленой руды до площадки технологического комплекса"
+        ),
+        "requirement_scope":"SITE_SPECIFIC",
+        "evidence_contract_v2":{"scope":"SITE_SPECIFIC","expected_sections":["ПЗУ","ТХ"]},
+    }
+
+
+def _stockpile_access_pages(*, pedestrian_drawing=True, vehicle_drawing=True):
+    pzu_topology = (
+        "Площадка ДСК разделена на два уровня, основным связующим элементом которых является "
+        "технологический комплекс. На верхнем уровне размещается склад недробленой руды, который "
+        "вместе с технологическим комплексом является объектом основного назначения."
+    )
+    pzu_pedestrian = (
+        "Движение пешеходов по площадке ДСК происходит по проездам и пешеходным дорожкам. "
+        "Пешеходная связь между верхней площадкой с рудным складом и нижней с инфраструктурой "
+        "осуществляется посредством двух металлических лестниц, расположенных с двух сторон "
+        "от технологического комплекса. Пешеходная связь двух уровней выполняется по металлическим лестницам."
+    )
+    pzu_drawing = (
+        "Схема планировочной организации земельного участка. План благоустройства. "
+        + ("Металлическая лестница. Склад недробленой руды. 4.2 Технологический комплекс." if pedestrian_drawing else
+           "Склад недробленой руды. 4.2 Технологический комплекс.")
+    )
+    th_text = (
+        "При задержке карьерного транспорта производится отгрузка рудного склада фронтальным "
+        "погрузчиком Arctos L76-C5. Решения по загрузке приемного бункера с помощью транспорта "
+        "показаны на чертеже."
+    )
+    th_drawing = (
+        "Схема отгрузки склада и погрузки в бункер ДСК. Колесный погрузчик Arctos L76-C5. Бункер."
+        if vehicle_drawing else
+        "Технологический план ДСК. Колесный погрузчик Arctos L76-C5."
+    )
+    return [
+        {"document":"ПЗУ1.pdf","document_type":"ПЗУ","page":27,"text":pzu_topology},
+        {"document":"ПЗУ1.pdf","document_type":"ПЗУ","page":27,"text":pzu_pedestrian},
+        {"document":"ПЗУ2.pdf","document_type":"ПЗУ","page":5,"text":pzu_drawing},
+        {"document":"ТХ1.pdf","document_type":"ТХ","page":11,"text":th_text},
+        {"document":"ТХ2.pdf","document_type":"ТХ","page":42,"text":th_drawing},
+    ]
+
+
+def test_stockpile_complex_access_requires_all_five_conditions():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result=verify_assignment_requirement(_stockpile_access_requirement(),_stockpile_access_pages())
+    assert result is not None
+    assert result["status"]=="Соответствует заданию"
+    assert result["verification_kernel"]=="STOCKPILE_COMPLEX_ACCESS_EXECUTOR"
+    assert result["condition_summary"]["proven"]==5
+    assert result["condition_summary"]["total"]==5
+    assert all(item["evidence_state"]=="verified_candidate" for item in result["verification_evidence"])
+
+
+def test_stockpile_complex_access_stays_review_without_pedestrian_drawing():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result=verify_assignment_requirement(
+        _stockpile_access_requirement(),
+        _stockpile_access_pages(pedestrian_drawing=False),
+    )
+    assert result is not None
+    assert result["status"]=="Требует проверки"
+    assert result["condition_summary"]["proven"]==4
+    assert any("графическое подтверждение" in x for x in result["condition_summary"]["missing"])
+
+
+def test_stockpile_complex_access_stays_review_without_vehicle_drawing():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result=verify_assignment_requirement(
+        _stockpile_access_requirement(),
+        _stockpile_access_pages(vehicle_drawing=False),
+    )
+    assert result is not None
+    assert result["status"]=="Требует проверки"
+    assert result["condition_summary"]["proven"]==4
+    assert any("графическая схема отгрузки" in x for x in result["condition_summary"]["missing"])
+
+
+def test_generic_roads_and_walkways_cannot_prove_endpoint_connection():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    pages=[
+        {
+            "document":"ПЗУ1.pdf","document_type":"ПЗУ","page":29,
+            "text":"Внутриплощадочные проезды предусмотрены. Движение пешеходов происходит по пешеходным дорожкам."
+        },
+        {
+            "document":"ТХ1.pdf","document_type":"ТХ","page":11,
+            "text":"На площадке работает фронтальный погрузчик."
+        },
+    ]
+    result=verify_assignment_requirement(_stockpile_access_requirement(),pages)
+    assert result is not None
+    assert result["status"]=="Требует проверки"
+    assert result["condition_summary"]["proven"]==0
+
+
+def test_stockpile_complex_access_reaches_core25_presence_proof():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    requirement=_stockpile_access_requirement()
+    legacy=verify_assignment_requirement(requirement,_stockpile_access_pages())
+    assert legacy is not None
+    assert legacy["status"]=="Соответствует заданию"
+
+    runtime_req=dict(requirement)
+    runtime_req["directed_evidence_candidates"]=legacy["verification_evidence"]
+    row=run_assignment_runtime([runtime_req])["rows"][0]
+    assert row["final_verification_kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="PROVEN_MATCH"
+    assert row["core25_reason_code"]=="ASSIGNMENT_PRESENCE_CONFIRMED"

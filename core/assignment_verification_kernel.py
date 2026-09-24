@@ -853,8 +853,13 @@ def _lightning_grounding_check(requirement: dict[str, Any], page_corpus: list[di
 
     for key in proven:
         page, snippet = slots[key]  # type: ignore[misc]
+        normative_slot = key in {"rd_adoption", "so_adoption"}
         row = {
-            "evidence_kind": "QUALIFIED_LIGHTNING_GROUNDING_COMPOSITE",
+            "evidence_kind": (
+                "QUALIFIED_NORMATIVE_ASSERTION"
+                if normative_slot and all_proven
+                else "QUALIFIED_LIGHTNING_GROUNDING_COMPOSITE"
+            ),
             "evidence_state": "verified_candidate" if all_proven else "candidate",
             "document": page.get("document"),
             "document_type": page.get("document_type"),
@@ -864,6 +869,11 @@ def _lightning_grounding_check(requirement: dict[str, Any], page_corpus: list[di
             "condition_id": key,
             "condition_label": labels[key],
         }
+        if normative_slot:
+            row["matched_normative_refs"] = [
+                "рд 34.21.122-87" if key == "rd_adoption" else "со 153-34.21.122-2003"
+            ]
+            row["matched_terms"] = ["молниезащит", "сооружен" if key == "rd_adoption" else "здани"]
         evidence_rows.append(row)
         rendered.append(f"{page.get('document')}, стр. {page.get('page')}: {snippet}")
 
@@ -968,9 +978,9 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _capacity_topology_check,
         _negative_applicability_check,
         _lighting_composite_check,
+        _lightning_grounding_check,
         _normative_assertion_check,
         _design_determined_check,
-        _lightning_grounding_check,
     )
     for checker in checkers:
         result = checker(requirement, page_corpus)

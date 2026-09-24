@@ -620,7 +620,8 @@ def test_lighting_composite_requires_all_five_conditions():
             "text": (
                 "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту "
                 "на высоте 20 м. Схема установки светильника на опоре. Светильник "
-                "консольный. Кронштейн, угол 15°."
+                "консольный. Кронштейн, угол 15°. Остальная территория освещается "
+                "консольными светильниками, устанавливаемыми на опорах."
             ),
         },
     ]
@@ -634,14 +635,18 @@ def test_lighting_composite_requires_all_five_conditions():
 
     incomplete = [complete[0], complete[1], {
         **complete[2],
-        "text": "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту на высоте 20 м.",
+        "text": (
+            "Светодиодный прожектор 600 Вт. Устанавливается на осветительную мачту "
+            "на высоте 20 м. Схема установки светильника на опоре. Светильник "
+            "консольный. Кронштейн, угол 15°."
+        ),
     }]
     result = verify_assignment_requirement(requirement, incomplete)
     assert result is not None
     assert result["status"] == "Требует проверки"
     assert result["condition_summary"]["proven"] == 4
     assert result["condition_summary"]["total"] == 5
-    assert "консольные светильники на опорах" in result["condition_summary"]["missing"]
+    assert any("остальная территория" in item for item in result["condition_summary"]["missing"])
     assert all(item["evidence_state"] == "candidate" for item in result["verification_evidence"])
 
 

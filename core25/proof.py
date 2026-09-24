@@ -236,11 +236,23 @@ def _presence_proof(
     route: VerificationRoute,
     pairs: tuple[tuple[Evidence25, Binding25], ...],
 ) -> Proof25:
-    selected = tuple(
-        (evidence_item, binding)
-        for evidence_item, binding in pairs
-        if _has_project_assertion(evidence_item.fragment)
-    )
+    selected_items = []
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        legacy_kind = str(metadata.get("legacy_evidence_kind") or "").upper()
+        drawing_open_canopy = (
+            legacy_kind == "QUALIFIED_DRAWING_PROJECT_FACT"
+            and str(metadata.get("drawing_fact_code") or "").upper() == "OPEN_CANOPY"
+            and metadata.get("structured_project_fact") is True
+            and int(metadata.get("drawing_facade_view_count") or 0) >= 3
+            and metadata.get("drawing_roof_proven") is True
+            and metadata.get("drawing_structural_frame_corroborated") is True
+            and metadata.get("drawing_enclosure_conflict") is not True
+            and bool(str(metadata.get("drawing_owner_binding") or "").strip())
+        )
+        if _has_project_assertion(evidence_item.fragment) or drawing_open_canopy:
+            selected_items.append((evidence_item, binding))
+    selected = tuple(selected_items)
     if not selected:
         return _insufficient(
             requirement,

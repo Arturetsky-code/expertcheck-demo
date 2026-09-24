@@ -905,7 +905,7 @@ def _normative_design_adoption_check(requirement: dict[str, Any], page_corpus: l
     if not sections:
         return None
 
-    subject=re.split(r"\\b(?:в соответствии с|согласно)\\b",text,maxsplit=1,flags=re.I)[0]
+    subject=re.split(r"\b(?:в соответствии с|согласно)\b",text,maxsplit=1,flags=re.I)[0]
     subject_terms=[term for term in _significant_terms(subject) if term not in {"соответст"}]
     if len(subject_terms)<2:
         return None

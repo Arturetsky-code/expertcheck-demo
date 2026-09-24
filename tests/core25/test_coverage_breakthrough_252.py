@@ -851,3 +851,24 @@ def test_open_canopy_structured_drawing_fact_reaches_core25():
     assert row["final_verification_kind"] == "VERIFIED_OK"
     assert row["proof_state"] == "PROVEN_MATCH"
     assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"
+
+
+
+def test_open_canopy_drawing_index_cannot_corroborate_frame():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    drawing_index = """
+Ведомость документов графической части
+RAM-0207.4-ЗД-ПД-4.25-КР2
+Навес системы подачи извести
+Лист 2 - Схема расположения колонн и вертикальных связей на отм. +0,400.
+Схемы расположения балок и прогонов покрытия
+"""
+    pages = [
+        {"document": "АР2.pdf", "document_type": "АР", "page": 33, "text": _open_canopy_ar_text()},
+        {"document": "КР2.pdf", "document_type": "КР", "page": 10, "text": drawing_index},
+    ]
+    result = verify_assignment_requirement(_open_canopy_requirement(), pages)
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_evidence"] == []

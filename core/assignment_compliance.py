@@ -319,6 +319,16 @@ def _requirement_type(text:str,row_title:str,code:str,value:float|None)->str:
     if _primary_negative_requirement(text): return TYPE_PROHIBITION
     if "расчет" in low or "расчёт" in low: return TYPE_CALCULATION
     if any(x in low for x in ("графическ","на чертеже","нанести","показать на")): return TYPE_DRAWING
+    # Composite fencing requirements are engineering-presence contracts even
+    # when a secondary sizing clause mentions generic normative documentation.
+    # Do not let that generic phrase reroute the whole atom to NORMATIVE.
+    fencing_composite = (
+        "огражден" in low
+        and "ворот" in low
+        and "калит" in low
+    )
+    if fencing_composite:
+        return TYPE_PRESENCE
     if re.search(r"\b(?:сп|гост|снип|фз|постановлен)\b",low) or "нормативн" in low: return TYPE_NORMATIVE
     if code and value is not None: return TYPE_VALUE
     if "определить проект" in low:

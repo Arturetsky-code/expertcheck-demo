@@ -549,12 +549,12 @@ def _lighting_composite_check(requirement: dict[str, Any], page_corpus: list[dic
                 and any(x in low for x in ("опор", "кронштейн"))
             ),
             "territorial_layout": (
-                "наружн" in low
-                and "освещ" in low
-                and "центральн" in low
-                and "мачт" in low
+                "остальн" in low
+                and "территори" in low
+                and "консольн" in low
+                and "светильник" in low
                 and "опор" in low
-                and any(x in low for x in ("проезд", "стоянк", "территори"))
+                and any(x in low for x in ("освещается", "осветить", "предусмотр"))
             ),
             "sp52_adoption": (
                 "сп 52.13330.2016" in low
@@ -569,7 +569,7 @@ def _lighting_composite_check(requirement: dict[str, Any], page_corpus: list[dic
                     "led_fixtures": ("светодиод", "светильник"),
                     "floodlight_masts": ("прожектор", "мачт"),
                     "console_fixtures": ("консольн", "кронштейн"),
-                    "territorial_layout": ("центральн", "мачт", "опор"),
+                    "territorial_layout": ("остальн", "территори", "консольн", "опор"),
                     "sp52_adoption": ("сп 52.13330.2016", "уровн", "освещ"),
                 }[key]
                 slots[key] = (page, _context(raw, anchors, radius=460))

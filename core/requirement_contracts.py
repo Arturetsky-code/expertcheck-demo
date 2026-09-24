@@ -140,7 +140,7 @@ def infer_scope(requirement:dict[str,Any])->str:
         return SCOPE_PROJECT
     if any(x in title for x in ('схеме планировочной','земельного участка','генеральн')):
         return SCOPE_SITE
-    if any(x in title for x in ('водоснабжен','канализац','электроснабжен','отоплен','вентиляц','связ')):
+    if any(x in title for x in ('водоснабжен','канализац','электроснабжен','электроосвещ','освещен','отоплен','вентиляц','связ')):
         return SCOPE_SYSTEM
     if any(x in title for x in ('состав проектной документации','графическим материал')):
         return SCOPE_DOCUMENT

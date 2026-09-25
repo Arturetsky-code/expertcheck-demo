@@ -1589,4 +1589,52 @@ def test_identification_attribute_match_does_not_claim_full_set_compliance():
     attach_coverage_executor_evidence([req], matching)
     row = run_assignment_runtime([req])["rows"][0]
     assert row["final_verification_kind"] == "REVIEW_QUESTION"
+def test_identification_attributes_do_not_cross_bind_adjacent_table_rows():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-ID-ATTR-ADJACENT-GUARD",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [{
+            "position": "4.25",
+            "name": "Навес системы подачи реагента",
+            "responsibility_class": "КС-2",
+            "reliability_coefficient": 1.0,
+        }],
+    }
+    adjacent_rows = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 22,
+        "text": (
+            "4.24 Насосная станция Класс сооружения КС-3 коэффициент надежности γn=1,1\\n"
+            "4.25 Навес системы подачи реагента Класс сооружения КС-2 коэффициент надежности γn=1,0\\n"
+            "4.26 Компрессорная Класс сооружения КС-1 коэффициент надежности γn=0,95"
+        ),
+    }]
+
+    attach_coverage_executor_evidence([req], adjacent_rows)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+
+
+def test_identification_attributes_flat_table_stop_at_next_position():
+    from core.identification_attributes import identity_context, extract_identification_attributes
+
+    flat = (
+        "4.24 Насосная станция Класс сооружения КС-3 коэффициент надежности γn=1,1 "
+        "4.25 Навес системы подачи реагента Класс сооружения КС-2 коэффициент надежности γn=1,0 "
+        "4.26 Компрессорная Класс сооружения КС-1 коэффициент надежности γn=0,95"
+    )
+    context = identity_context(
+        flat,
+        position="4.25",
+        object_name="Навес системы подачи реагента",
+    )
+    attrs = extract_identification_attributes(context)
+    assert attrs["responsibility_class"] == "КС-2"
+    assert attrs["reliability_coefficient"] == 1.0
 

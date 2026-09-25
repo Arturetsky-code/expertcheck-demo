@@ -9,7 +9,7 @@ from pathlib import Path
 from core.coverage_breakthrough import attach_coverage_executor_evidence
 from core.directed_evidence import attach_directed_evidence
 from core.page_evidence_store import is_assignment_source
-from core.identification_attributes import enrich_identification_requirements
+from core.identification_attributes import enrich_identification_requirements, identity_context
 from core25.runtime_bridge import run_assignment_runtime
 
 
@@ -226,6 +226,55 @@ def _identification_frontier(rows: list[dict]) -> list[dict]:
         for row in selected
     ]
 
+
+def _safe_identification_layout_diagnostics(
+    requirements: list[dict],
+    assignment_corpus: list[dict],
+) -> list[dict]:
+    diagnostics: list[dict] = []
+    generic = {"объект", "здание", "сооружение", "площадка", "комплекс", "система", "установка", "проектируемый", "проектируемая", "проектируемое", "поз"}
+    for requirement in requirements or []:
+        if not isinstance(requirement, dict):
+            continue
+        if str(requirement.get("requirement_type") or "").upper() != "SET_COMPARISON":
+            continue
+        title = str(requirement.get("source_row_title") or "").replace("ё", "е").casefold()
+        if "идентификацион" not in title:
+            continue
+        for item in requirement.get("expected_objects") or []:
+            if not isinstance(item, dict):
+                continue
+            position = str(item.get("position") or item.get("genplan_position") or "").strip()
+            object_name = str(item.get("name") or item.get("object_name") or "").strip()
+            source_page = item.get("page")
+            if not position or not object_name:
+                continue
+            pages = [p for p in assignment_corpus if source_page in (None, "", 0) or p.get("page") == source_page] or list(assignment_corpus)
+            position_hits = 0
+            owner_page_match = False
+            local_record_found = False
+            for page in pages:
+                raw = str(page.get("text") or "")
+                position_hits += len(re.findall(rf"(?<![\\d.]){re.escape(position)}(?![\\d.])", raw.replace(",", ".")))
+                normalized = " ".join(raw.replace("ё", "е").casefold().split())
+                tokens = [tok for tok in re.findall(r"[a-zа-я0-9-]{4,}", object_name.replace("ё", "е").casefold()) if tok not in generic]
+                if tokens:
+                    hits = sum(tok in normalized for tok in tokens)
+                    minimum = 1 if len(tokens) == 1 else 2
+                    owner_page_match = owner_page_match or (hits >= minimum and hits / len(tokens) >= 0.60)
+                if identity_context(raw, position=position, object_name=object_name):
+                    local_record_found = True
+                    break
+            diagnostics.append({
+                "position": position,
+                "source_page": source_page,
+                "exact_position_hits": position_hits,
+                "owner_page_match": owner_page_match,
+                "local_record_found": local_record_found,
+                "enriched_responsibility_class": item.get("responsibility_class"),
+                "enriched_reliability_coefficient": item.get("reliability_coefficient"),
+            })
+    return diagnostics
 
 def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
     review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
@@ -452,6 +501,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "review_frontier": _review_frontier(current_rows),
         "identification_frontier": _identification_frontier(current_rows),
         "identification_enrichment": identification_enrichment,
+        "identification_layout_diagnostics": _safe_identification_layout_diagnostics(requirements, assignment_corpus),
         "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
@@ -557,6 +607,7 @@ def main() -> None:
         "review_frontier": result["review_frontier"][:8],
         "identification_frontier": result["identification_frontier"],
         "identification_enrichment": result["identification_enrichment"],
+        "identification_layout_diagnostics": result["identification_layout_diagnostics"],
     }, ensure_ascii=False))
 
 

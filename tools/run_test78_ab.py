@@ -161,6 +161,22 @@ def _row_summary(row: dict) -> dict:
             for item in (row.get("directed_evidence_candidates") or [])
             if isinstance(item, dict)
         ),
+        "identification_mismatch_fingerprints": [
+            {
+                "position": item.get("position"),
+                "mismatch_fields": list(item.get("mismatch_fields") or []),
+                "required_responsibility_class": item.get("required_responsibility_class"),
+                "observed_responsibility_class": item.get("observed_responsibility_class"),
+                "required_reliability_coefficient": item.get("required_reliability_coefficient"),
+                "observed_reliability_coefficient": item.get("observed_reliability_coefficient"),
+            }
+            for item in (row.get("directed_evidence_candidates") or [])
+            if (
+                isinstance(item, dict)
+                and str(item.get("evidence_kind") or "").upper() == "IDENTIFICATION_ATTRIBUTE_COMPARISON"
+                and item.get("verified_difference") is True
+            )
+        ],
     }
 
 
@@ -188,6 +204,7 @@ def _identification_frontier(rows: list[dict]) -> list[dict]:
             "proof_state": row.get("proof_state"),
             "proof_reason": row.get("core25_reason_code"),
             "coverage_executor": row.get("coverage_executor"),
+            "identification_mismatch_fingerprints": row.get("identification_mismatch_fingerprints") or [],
         }
         for row in selected
     ]

@@ -89,6 +89,15 @@ def _row_summary(row: dict) -> dict:
             "приложен" in str(row.get("requirement_text") or "").replace("ё", "е").casefold()
             or "приложен" in str(row.get("source_row_title") or "").replace("ё", "е").casefold()
         ),
+        "set_contract_kind": (
+            "IDENTIFICATION_ATTRIBUTES"
+            if "идентификацион" in str(row.get("source_row_title") or "").replace("ё", "е").casefold()
+            else "OBJECT_COMPOSITION"
+            if "состав объект" in (
+                str(row.get("source_row_title") or "") + " " + str(row.get("requirement_text") or "")
+            ).replace("ё", "е").casefold()
+            else ""
+        ),
         "core25_admission_stage": row.get("core25_admission_stage"),
         "core25_raw_candidate_count": int(row.get("core25_raw_candidate_count") or 0),
         "core25_verified_candidate_count": int(row.get("core25_verified_candidate_count") or 0),
@@ -162,6 +171,7 @@ def _identification_frontier(rows: list[dict]) -> list[dict]:
             "source_row": row.get("source_row"),
             "expected_objects_count": int(row.get("expected_objects_count") or 0),
             "has_appendix_reference": bool(row.get("has_appendix_reference")),
+            "set_contract_kind": row.get("set_contract_kind") or "",
             "final_verification_kind": row.get("final_verification_kind"),
             "proof_state": row.get("proof_state"),
             "proof_reason": row.get("core25_reason_code"),

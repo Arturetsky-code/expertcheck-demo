@@ -79,6 +79,7 @@ def _row_summary(row: dict) -> dict:
         "proof_state": row.get("proof_state"),
         "core25_reason_code": row.get("core25_reason_code"),
         "coverage_executor": row.get("coverage_executor"),
+        "coverage_executor_status": row.get("coverage_executor_status"),
         "requirement_type": row.get("requirement_type"),
         "requirement_scope": row.get("requirement_scope"),
         "expected_sections": list(row.get("expected_sections") or []),
@@ -98,6 +99,42 @@ def _row_summary(row: dict) -> dict:
         ),
         "max_matched_normative_refs": max(
             [len(item.get("matched_normative_refs") or []) for item in (row.get("directed_evidence_candidates") or []) if isinstance(item, dict)] or [0]
+        ),
+        "capacity_required_levels": sorted({
+            str(item.get("capacity_required_level") or "")
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict) and item.get("capacity_required_level")
+        }),
+        "capacity_observed_levels": sorted({
+            str(item.get("capacity_observed_level") or "")
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict) and item.get("capacity_observed_level")
+        }),
+        "capacity_level_compatible": any(
+            item.get("capacity_level_compatible") is True
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict)
+        ),
+        "capacity_verified_difference": any(
+            item.get("capacity_verified_difference") is True
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict)
+        ),
+        "capacity_exact_match": any(
+            item.get("capacity_exact_match") is True
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict)
+        ),
+        "capacity_summary_value_count": max(
+            [int(item.get("capacity_summary_value_count") or 0) for item in (row.get("directed_evidence_candidates") or []) if isinstance(item, dict)] or [0]
+        ),
+        "capacity_candidate_value_count": max(
+            [int(item.get("capacity_candidate_value_count") or 0) for item in (row.get("directed_evidence_candidates") or []) if isinstance(item, dict)] or [0]
+        ),
+        "capacity_line_count_present": any(
+            item.get("capacity_line_count_present") is True
+            for item in (row.get("directed_evidence_candidates") or [])
+            if isinstance(item, dict)
         ),
     }
 
@@ -124,12 +161,21 @@ def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
             "verified_candidates": int(row.get("core25_verified_candidate_count") or 0),
             "qualified_evidence": int(row.get("core25_qualified_evidence_count") or 0),
             "coverage_executor": row.get("coverage_executor"),
+            "coverage_executor_status": row.get("coverage_executor_status"),
             "proof_reason": row.get("core25_reason_code"),
             "binding_counts": row.get("core25_binding_counts") or {},
             "binding_reason_codes": row.get("core25_binding_reason_codes") or {},
             "candidate_kind_counts": row.get("candidate_kind_counts") or {},
             "max_matched_terms": int(row.get("max_matched_terms") or 0),
             "max_matched_normative_refs": int(row.get("max_matched_normative_refs") or 0),
+            "capacity_required_levels": row.get("capacity_required_levels") or [],
+            "capacity_observed_levels": row.get("capacity_observed_levels") or [],
+            "capacity_level_compatible": bool(row.get("capacity_level_compatible")),
+            "capacity_verified_difference": bool(row.get("capacity_verified_difference")),
+            "capacity_exact_match": bool(row.get("capacity_exact_match")),
+            "capacity_summary_value_count": int(row.get("capacity_summary_value_count") or 0),
+            "capacity_candidate_value_count": int(row.get("capacity_candidate_value_count") or 0),
+            "capacity_line_count_present": bool(row.get("capacity_line_count_present")),
         }
         for row in review[:limit]
     ]

@@ -406,6 +406,11 @@ def _capacity_topology_check(requirement: dict[str, Any], page_corpus: list[dict
         "capacity_required_level": required_level,
         "capacity_observed_level": observed_level,
         "capacity_level_compatible": comparable_level,
+        "capacity_verified_difference": verified_difference,
+        "capacity_exact_match": exact,
+        "capacity_summary_value_count": len(summary_values),
+        "capacity_candidate_value_count": len(values),
+        "capacity_line_count_present": line_count is not None,
     }
     return {
         "status": "Выявлено отклонение" if verified_difference else "Требует проверки",

@@ -59,7 +59,7 @@ def _owner_present(name: str, text: str) -> bool:
     return hits >= minimum and hits / len(tokens) >= 0.60
 
 
-_ANY_POSITION_RE = re.compile(r"(?<![\\d.])(\\d{1,3}(?:\\.\\d{1,3}){1,5})(?![\\d.])")
+_ANY_POSITION_RE = re.compile(r"(?<![\d.])(\d{1,3}(?:\.\d{1,3}){1,5})(?![\d.])")
 
 
 def _attribute_value_sets(text: str) -> tuple[set[str], set[float]]:
@@ -116,7 +116,7 @@ def _position_record(text: str, *, position: str, object_name: str) -> str:
                     if attrs and _record_is_unambiguous(candidate):
                         return candidate
 
-    flat = re.sub(r"\\s+", " ", raw).strip()
+    flat = re.sub(r"\s+", " ", raw).strip()
     matches = list(pattern.finditer(flat))
     for match in matches:
         end = len(flat)

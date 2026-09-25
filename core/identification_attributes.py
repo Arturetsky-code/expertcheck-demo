@@ -398,6 +398,122 @@ def enrich_identification_requirements(
     return stats
 
 
+def _exact_normalized_name_positions(name: str, normalized_page: str) -> list[int]:
+    normalized_name = " ".join(_norm(name).split())
+    if not normalized_name:
+        return []
+    return [match.start() for match in re.finditer(re.escape(normalized_name), normalized_page)]
+
+
+def _project_columnar_responsibility_evidence(
+    expected_objects: list[dict[str, Any]],
+    project_pages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return strict row-vector mismatches from canonical KR identification tables.
+
+    This fallback is deliberately fail-closed. It is used only when plain-text
+    extraction has separated positions, owners and responsibility classes into
+    page-level columns. A page is admissible only when exact positions and exact
+    full owner names are unique, their orders agree, and the responsibility-class
+    vector has exactly the same cardinality as the matched rows.
+    """
+    evidence: list[dict[str, Any]] = []
+
+    for page in project_pages:
+        document_type = str(page.get("document_type") or "").strip().upper()
+        if not document_type.startswith("КР"):
+            continue
+
+        raw = str(page.get("text") or "")
+        if not raw:
+            continue
+        normalized = " ".join(_norm(raw).split())
+        if not (
+            "класс сооружен" in normalized
+            or "класс ответствен" in normalized
+            or "ответственност" in normalized
+        ):
+            continue
+
+        matched: list[tuple[int, int, dict[str, Any]]] = []
+        for item in expected_objects:
+            position = str(item.get("position") or item.get("genplan_position") or "").strip()
+            name = str(item.get("name") or item.get("object_name") or "").strip()
+            pattern = _position_pattern(position)
+            if not position or not name or pattern is None:
+                continue
+
+            position_occurrences = list(pattern.finditer(raw.replace(",", ".")))
+            if len(position_occurrences) != 1:
+                continue
+            owner_occurrences = _exact_normalized_name_positions(name, normalized)
+            if len(owner_occurrences) != 1:
+                continue
+
+            matched.append((position_occurrences[0].start(), owner_occurrences[0], item))
+
+        if len(matched) < 2:
+            continue
+
+        matched.sort(key=lambda row: row[0])
+        owner_sorted = sorted(matched, key=lambda row: row[1])
+        position_order = [
+            str(row[2].get("position") or row[2].get("genplan_position") or "").strip()
+            for row in matched
+        ]
+        owner_order = [
+            str(row[2].get("position") or row[2].get("genplan_position") or "").strip()
+            for row in owner_sorted
+        ]
+        if owner_order != position_order:
+            continue
+
+        classes = _responsibility_class_sequence(raw)
+        if len(classes) != len(matched):
+            continue
+
+        for index, (_, _, item) in enumerate(matched):
+            if item.get("identification_attributes_addressable") is not True:
+                continue
+            required_class = str(item.get("responsibility_class") or "").strip().upper()
+            if not required_class:
+                continue
+            observed_class = str(classes[index] or "").strip().upper()
+            if not observed_class or observed_class == required_class:
+                continue
+
+            position = str(item.get("position") or item.get("genplan_position") or "").strip()
+            object_name = str(item.get("name") or item.get("object_name") or "").strip()
+            evidence.append({
+                "evidence_kind": "IDENTIFICATION_ATTRIBUTE_COMPARISON",
+                "evidence_state": "verified_candidate",
+                "document": page.get("document"),
+                "document_type": page.get("document_type"),
+                "page": page.get("page"),
+                "source_kind": "STRUCTURED_ROW",
+                "context": (
+                    f"Структурированная строка идентификационной таблицы: "
+                    f"поз. {position}; {object_name}; {observed_class}."
+                ),
+                "score": 100,
+                "object": object_name,
+                "position": position,
+                "exact_position_match": True,
+                "owner_match": True,
+                "verified_difference": True,
+                "mismatch_fields": ["responsibility_class"],
+                "required_responsibility_class": required_class,
+                "observed_responsibility_class": observed_class,
+                "required_reliability_coefficient": item.get("reliability_coefficient"),
+                "observed_reliability_coefficient": None,
+                "identification_mapping_method": "PROJECT_COLUMNAR_PAGE_VECTOR",
+                "columnar_row_count": len(matched),
+                "columnar_class_count": len(classes),
+            })
+
+    return evidence
+
+
 def compare_identification_attributes(
     requirement: dict[str, Any],
     project_pages: Iterable[dict[str, Any]],
@@ -408,10 +524,13 @@ def compare_identification_attributes(
     if "идентификацион" not in title:
         return None
 
-    expected = [
+    all_expected = [
         dict(item) for item in requirement.get("expected_objects") or []
         if isinstance(item, dict)
-        and (
+    ]
+    expected = [
+        item for item in all_expected
+        if (
             item.get("responsibility_class")
             or item.get("reliability_coefficient") is not None
         )
@@ -420,7 +539,9 @@ def compare_identification_attributes(
         return None
 
     pages = [dict(page) for page in project_pages or () if isinstance(page, dict)]
-    evidence: list[dict[str, Any]] = []
+    evidence: list[dict[str, Any]] = _project_columnar_responsibility_evidence(
+        all_expected, pages
+    )
 
     for item in expected:
         position = str(item.get("position") or item.get("genplan_position") or "").strip()

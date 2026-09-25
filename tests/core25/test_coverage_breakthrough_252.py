@@ -1681,3 +1681,102 @@ def test_identification_columnar_vector_fails_closed_on_cardinality_mismatch():
     assert changed == 0
     assert all(row.get("responsibility_class") is None for row in enriched)
 
+def test_identification_project_columnar_vector_proves_exact_responsibility_mismatch():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-ID-PROJECT-COLUMNAR-MISMATCH",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [
+            {
+                "position": "4.24",
+                "name": "Резервуар пожарной воды",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+            {
+                "position": "4.25",
+                "name": "Навес системы подачи реагента",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+            {
+                "position": "4.26",
+                "name": "Компрессорная станция",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+        ],
+    }
+    project_pages = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 47,
+        "text": (
+            "Идентификационные признаки. Класс сооружения по ответственности.\n"
+            "4.24\n4.25\n4.26\n"
+            "Резервуар пожарной воды\n"
+            "Навес системы подачи реагента\n"
+            "Компрессорная станция\n"
+            "КС-2\nКС-3\nКС-2"
+        ),
+    }]
+
+    attach_coverage_executor_evidence([req], project_pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_state"] == "PROVEN_MISMATCH"
+    assert row["core25_reason_code"] == "IDENTIFICATION_ATTRIBUTE_MISMATCH"
+
+
+def test_identification_project_columnar_vector_fails_closed_on_class_cardinality_mismatch():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-ID-PROJECT-COLUMNAR-GUARD",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [
+            {
+                "position": "4.24",
+                "name": "Резервуар пожарной воды",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+            {
+                "position": "4.25",
+                "name": "Навес системы подачи реагента",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+            {
+                "position": "4.26",
+                "name": "Компрессорная станция",
+                "responsibility_class": "КС-2",
+                "identification_attributes_addressable": True,
+            },
+        ],
+    }
+    project_pages = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 47,
+        "text": (
+            "Идентификационные признаки. Класс сооружения по ответственности.\n"
+            "4.24\n4.25\n4.26\n"
+            "Резервуар пожарной воды\n"
+            "Навес системы подачи реагента\n"
+            "Компрессорная станция\n"
+            "КС-2\nКС-3\nКС-2\nКС-1"
+        ),
+    }]
+
+    attach_coverage_executor_evidence([req], project_pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+

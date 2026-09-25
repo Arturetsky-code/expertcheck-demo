@@ -410,9 +410,14 @@ def _safe_identification_project_inventory(
             exact_owner_sequence_complete
             and [position for _, position in owner_order] == matched_positions
         )
+        normalized_low = raw.replace("ё", "е").casefold()
         result.append({
             "document_type": page.get("document_type"),
             "page": page.get("page"),
+            "has_identification_heading": "идентификацион" in normalized_low,
+            "has_responsibility_heading": "ответственност" in normalized_low,
+            "has_reliability_heading": ("надежност" in normalized_low or "надёжност" in raw.casefold()),
+            "has_class_heading": ("класс сооружен" in normalized_low or "класс ответствен" in normalized_low),
             "matched_positions": matched_positions,
             "matched_position_count": len(matched),
             "exact_owner_sequence_complete": exact_owner_sequence_complete,

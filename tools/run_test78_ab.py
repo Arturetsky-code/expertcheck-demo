@@ -161,6 +161,22 @@ def _row_summary(row: dict) -> dict:
             for item in (row.get("directed_evidence_candidates") or [])
             if isinstance(item, dict)
         ),
+        "identification_expected_attribute_fingerprints": [
+            {
+                "position": item.get("position") or item.get("genplan_position"),
+                "responsibility_class": item.get("responsibility_class"),
+                "reliability_coefficient": item.get("reliability_coefficient"),
+                "addressable": bool(item.get("identification_attributes_addressable")),
+            }
+            for item in (row.get("expected_objects") or [])
+            if (
+                isinstance(item, dict)
+                and (
+                    item.get("responsibility_class")
+                    or item.get("reliability_coefficient") is not None
+                )
+            )
+        ],
         "identification_mismatch_fingerprints": [
             {
                 "position": item.get("position"),
@@ -204,6 +220,7 @@ def _identification_frontier(rows: list[dict]) -> list[dict]:
             "proof_state": row.get("proof_state"),
             "proof_reason": row.get("core25_reason_code"),
             "coverage_executor": row.get("coverage_executor"),
+            "identification_expected_attribute_fingerprints": row.get("identification_expected_attribute_fingerprints") or [],
             "identification_mismatch_fingerprints": row.get("identification_mismatch_fingerprints") or [],
         }
         for row in selected

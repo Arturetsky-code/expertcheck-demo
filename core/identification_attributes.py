@@ -59,6 +59,81 @@ def _owner_present(name: str, text: str) -> bool:
     return hits >= minimum and hits / len(tokens) >= 0.60
 
 
+_ANY_POSITION_RE = re.compile(r"(?<![\\d.])(\\d{1,3}(?:\\.\\d{1,3}){1,5})(?![\\d.])")
+
+
+def _attribute_value_sets(text: str) -> tuple[set[str], set[float]]:
+    classes = {
+        f"КС-{match.group(1)}"
+        for match in _RESPONSIBILITY_CLASS_RE.finditer(str(text or ""))
+    }
+    gammas: set[float] = set()
+    for regex in (_GAMMA_DIRECT_RE, _GAMMA_WORD_RE):
+        for match in regex.finditer(str(text or "")):
+            try:
+                value = float(match.group(1).replace(",", "."))
+            except ValueError:
+                continue
+            if 0.5 <= value <= 1.5:
+                gammas.add(round(value, 3))
+    return classes, gammas
+
+
+def _record_is_unambiguous(text: str) -> bool:
+    classes, gammas = _attribute_value_sets(text)
+    return len(classes) <= 1 and len(gammas) <= 1
+
+
+def _position_record(text: str, *, position: str, object_name: str) -> str:
+    """Return the smallest position-bound record that also contains the owner.
+
+    Prefer line records. When PDF extraction flattens a table to one long line,
+    fall back to the span from the exact position to the next distinct dotted
+    position. Attribute ambiguity inside that local record is fail-closed.
+    """
+    raw = str(text or "")
+    pattern = _position_pattern(position)
+    if not raw or pattern is None:
+        return ""
+
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    if len(lines) > 1:
+        for index, line in enumerate(lines):
+            if not pattern.search(line):
+                continue
+            bucket = [line]
+            for nxt in lines[index + 1:index + 5]:
+                other_positions = [
+                    m.group(1).replace(",", ".")
+                    for m in _ANY_POSITION_RE.finditer(nxt)
+                ]
+                if other_positions and any(p != position for p in other_positions):
+                    break
+                bucket.append(nxt)
+                candidate = " ".join(bucket)
+                if _owner_present(object_name, candidate):
+                    attrs = extract_identification_attributes(candidate)
+                    if attrs and _record_is_unambiguous(candidate):
+                        return candidate
+
+    flat = re.sub(r"\\s+", " ", raw).strip()
+    matches = list(pattern.finditer(flat))
+    for match in matches:
+        end = len(flat)
+        for other in _ANY_POSITION_RE.finditer(flat, match.end()):
+            if other.group(1).replace(",", ".") != position:
+                end = other.start()
+                break
+        candidate = flat[match.start():min(end, match.start() + 1200)]
+        if not _owner_present(object_name, candidate):
+            continue
+        if not _record_is_unambiguous(candidate):
+            continue
+        if extract_identification_attributes(candidate):
+            return candidate
+    return ""
+
+
 def extract_identification_attributes(text: str) -> dict[str, Any]:
     raw = str(text or "")
     result: dict[str, Any] = {}
@@ -86,33 +161,14 @@ def identity_context(
     object_name: str,
     radius: int = 700,
 ) -> str:
-    """Return a local fragment only when exact position and owner agree.
+    """Return an exact position/owner record, never a broad neighbour window.
 
-    Exact GP position is the primary key. Owner-name evidence in the same local
-    fragment is mandatory so a drawing number or unrelated position mention
-    cannot bind identification attributes to the wrong object.
+    The radius argument is retained for API compatibility but intentionally
+    ignored. Identification attributes must be bound to the same local record
+    as the exact GP position and object owner.
     """
-    raw = re.sub(r"\s+", " ", str(text or "")).strip()
-    pattern = _position_pattern(position)
-    if not raw or pattern is None:
-        return ""
-
-    best = ""
-    best_hits = -1
-    for match in pattern.finditer(raw):
-        start = max(0, match.start() - radius)
-        end = min(len(raw), match.end() + radius)
-        window = raw[start:end]
-        if not _owner_present(object_name, window):
-            continue
-        hits = sum(token in _norm(window) for token in _name_tokens(object_name))
-        attrs = extract_identification_attributes(window)
-        score = hits * 10 + len(attrs) * 20
-        if score > best_hits:
-            best_hits = score
-            best = window
-    return best
-
+    del radius
+    return _position_record(text, position=position, object_name=object_name)
 
 def enrich_expected_objects_from_pages(
     expected_objects: Iterable[dict[str, Any]],

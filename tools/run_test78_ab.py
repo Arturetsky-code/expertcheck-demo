@@ -277,6 +277,57 @@ def _safe_identification_layout_diagnostics(
             })
     return diagnostics
 
+def _safe_identification_page_inventory(
+    requirements: list[dict],
+    assignment_corpus: list[dict],
+) -> list[dict]:
+    pages: dict[int, dict] = {}
+    for requirement in requirements or []:
+        if not isinstance(requirement, dict):
+            continue
+        if str(requirement.get("requirement_type") or "").upper() != "SET_COMPARISON":
+            continue
+        title = str(requirement.get("source_row_title") or "").replace("ё", "е").casefold()
+        if "идентификацион" not in title:
+            continue
+        for item in requirement.get("expected_objects") or []:
+            if not isinstance(item, dict):
+                continue
+            try:
+                page_no = int(item.get("page"))
+            except (TypeError, ValueError):
+                continue
+            row = pages.setdefault(page_no, {"page": page_no, "expected_positions": []})
+            position = str(item.get("position") or item.get("genplan_position") or "").strip()
+            if position:
+                row["expected_positions"].append(position)
+
+    corpus_by_page = {int(p.get("page")): str(p.get("text") or "") for p in assignment_corpus if p.get("page") is not None}
+    result = []
+    class_re = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9])к\\s*с\\s*[-–—]?\\s*([1-3])(?=$|[^0-9])", re.I)
+    gamma_re = re.compile(r"(?:γ|Γ|гамм[аы]?)(?:\\s*[_\\-]?\\s*n)?\\s*[=:]?\\s*(0[.,]\\d+|1(?:[.,]\\d+)?)", re.I)
+    gamma_word_re = re.compile(r"коэффициент\\w*\\s+(?:надежност|надёжност)\\w*(?:\\s+по\\s+ответственност\\w*)?.{0,80}?(0[.,]\\d+|1(?:[.,]\\d+)?)", re.I | re.S)
+    for page_no, row in sorted(pages.items()):
+        raw = corpus_by_page.get(page_no, "")
+        classes = [f"КС-{m.group(1)}" for m in class_re.finditer(raw)]
+        gamma_matches = list(gamma_re.finditer(raw)) or list(gamma_word_re.finditer(raw))
+        gammas = []
+        for match in gamma_matches:
+            try:
+                gammas.append(float(match.group(1).replace(",", ".")))
+            except ValueError:
+                pass
+        result.append({
+            "page": page_no,
+            "expected_positions": row["expected_positions"],
+            "expected_count": len(row["expected_positions"]),
+            "responsibility_classes": classes,
+            "responsibility_class_count": len(classes),
+            "reliability_coefficients": gammas,
+            "reliability_coefficient_count": len(gammas),
+        })
+    return result
+
 def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
     review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
     review.sort(
@@ -503,6 +554,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "identification_frontier": _identification_frontier(current_rows),
         "identification_enrichment": identification_enrichment,
         "identification_layout_diagnostics": _safe_identification_layout_diagnostics(requirements, assignment_corpus),
+        "identification_page_inventory": _safe_identification_page_inventory(requirements, assignment_corpus),
         "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
@@ -609,6 +661,7 @@ def main() -> None:
         "identification_frontier": result["identification_frontier"],
         "identification_enrichment": result["identification_enrichment"],
         "identification_layout_diagnostics": result["identification_layout_diagnostics"],
+        "identification_page_inventory": result["identification_page_inventory"],
     }, ensure_ascii=False))
 
 

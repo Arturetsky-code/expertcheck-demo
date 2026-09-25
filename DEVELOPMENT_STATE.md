@@ -973,3 +973,70 @@ Next preferred direction:
 3. do not force capacity/topology comparison across incompatible semantic levels;
 4. accept no baseline change without deterministic Test78 A/B and false-positive audit.
 
+## Validated checkpoint — all audited deviations native in Core25
+
+Requirement `ASSIGN-1C2C21F3A4BBF3` is now closed as a native Core25
+`PROJECT_FINDING`.
+
+Validated identification mismatch:
+- exact GP position: **4.25**;
+- Assignment: **КС-2**;
+- project KR identification table: **КС-3**;
+- proof: `PROVEN_MISMATCH`;
+- reason: `IDENTIFICATION_ATTRIBUTE_MISMATCH`;
+- executor/archetype: `IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR`.
+
+The proof does not use broad text windows. It is admitted only after a strict
+columnar-table contract:
+1. canonical KR page;
+2. exact unique GP positions;
+3. exact unique full object names;
+4. identical position and owner ordering;
+5. responsibility-class vector cardinality exactly equals matched row cardinality;
+6. Assignment-side identification attributes were independently addressable;
+7. only the row-level difference is promoted.
+
+For the decisive project page the aligned vector is:
+- 4.24 → КС-2;
+- 4.25 → КС-3;
+- 4.26 → КС-2.
+
+The corresponding Assignment page maps:
+- 4.24 → КС-2;
+- 4.25 → КС-2;
+- 4.26 → КС-2.
+
+Deterministic Test78 A/B at source commit
+`8ec4d92a5346339a92b20ac368eb0048fc634bd9` changed exactly one requirement:
+- `ASSIGN-1C2C21F3A4BBF3`: `REVIEW_QUESTION -> PROJECT_FINDING`.
+
+Validation at that commit:
+- Test78 deterministic A/B: **success / CHANGE_AUDIT_REQUIRED** with exactly one audited change;
+- Core20 quality gates: **success**;
+- Core25 Quality Leap gates: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**.
+
+### Baseline accounting after native migration
+
+The strict score remains **25/56 = 44.6%** because this requirement was already
+counted as the one remaining separately audited external deviation.
+
+New accounting:
+- `VERIFIED_OK`: **23**;
+- native `PROJECT_FINDING`: **2**;
+- separately audited external deviations: **0**;
+- `REVIEW_QUESTION`: **31**;
+- strict categorical coverage: **25/56**;
+- native categorical archetypes: **13**.
+
+This is an architectural gain rather than a percentage gain: the benchmark no longer
+depends on any manually maintained external deviation count.
+
+### Continue from here
+
+The next development cycle starts from a fully native 25/56 baseline.
+Do not compare `NOMINAL_TOTAL_CAPACITY` with `OPERATING_SECTION_THROUGHPUT`.
+Prefer the next review-only requirement where complete addressable evidence exists and
+the improvement extends or reuses a general archetype.
+

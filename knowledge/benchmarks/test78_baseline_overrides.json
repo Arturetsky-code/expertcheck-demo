@@ -2,8 +2,8 @@
   "schema_version": 1,
   "benchmark": "Test78",
   "baseline_label": "25/56",
-  "baseline_source_sha": "7cd5779af03e1939cb89381aeed7dbf04fc2b5b0",
-  "proven_deviations": 1,
+  "baseline_source_sha": "8ec4d92a5346339a92b20ac368eb0048fc634bd9",
+  "proven_deviations": 0,
   "row_overrides": [
     {
       "requirement_id": "ASSIGN-4F91A035979A30",
@@ -18,7 +18,14 @@
       "proof_state": "PROVEN_MISMATCH",
       "core25_reason_code": "EQUIPMENT_IDENTITY_OR_QUANTITY_MISMATCH",
       "coverage_executor": "EQUIPMENT_IDENTITY_AND_QUANTITY"
+    },
+    {
+      "requirement_id": "ASSIGN-1C2C21F3A4BBF3",
+      "final_verification_kind": "PROJECT_FINDING",
+      "proof_state": "PROVEN_MISMATCH",
+      "core25_reason_code": "IDENTIFICATION_ATTRIBUTE_MISMATCH",
+      "coverage_executor": "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR"
     }
   ],
-  "audit_note": "Current 25/56 audited baseline. The stale numeric false positive remains corrected. The previously external loader identity/quantity deviation is now proven natively by Core25 as PROJECT_FINDING, so only one separately audited external deviation remains."
+  "audit_note": "Current 25/56 audited baseline. Both previously external deviations are now proven natively by Core25: equipment identity/quantity mismatch and strict columnar identification-attribute mismatch. No separately audited external deviations remain."
 }

@@ -328,6 +328,74 @@ def _safe_identification_page_inventory(
         })
     return result
 
+def _safe_identification_project_inventory(
+    requirements: list[dict],
+    project_corpus: list[dict],
+) -> list[dict]:
+    expected: list[dict] = []
+    for requirement in requirements or []:
+        if not isinstance(requirement, dict):
+            continue
+        if str(requirement.get("requirement_type") or "").upper() != "SET_COMPARISON":
+            continue
+        title = str(requirement.get("source_row_title") or "").replace("ё", "е").casefold()
+        if "идентификацион" not in title:
+            continue
+        expected.extend(dict(item) for item in requirement.get("expected_objects") or [] if isinstance(item, dict))
+    if not expected:
+        return []
+
+    generic = {"объект", "здание", "сооружение", "площадка", "комплекс", "система", "установка", "проектируемый", "проектируемая", "проектируемое", "поз"}
+    class_re = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9])к\s*с\s*[-–—]?\s*([1-3])(?=$|[^0-9])", re.I)
+    gamma_re = re.compile(r"(?:γ|Γ|гамм[аы]?)(?:\s*[_\-]?\s*n)?\s*[=:]?\s*(0[.,]\d+|1(?:[.,]\d+)?)", re.I)
+    gamma_word_re = re.compile(r"коэффициент\w*\s+(?:надежност|надёжност)\w*(?:\s+по\s+ответственност\w*)?.{0,80}?(0[.,]\d+|1(?:[.,]\d+)?)", re.I | re.S)
+    result: list[dict] = []
+    for page in project_corpus or []:
+        raw = str(page.get("text") or "")
+        normalized = " ".join(raw.replace("ё", "е").casefold().split())
+        matched: list[tuple[int, str]] = []
+        for item in expected:
+            position = str(item.get("position") or item.get("genplan_position") or "").strip()
+            name = str(item.get("name") or item.get("object_name") or "").strip()
+            if not position or not name:
+                continue
+            pattern = re.compile(rf"(?<![\d.]){re.escape(position)}(?![\d.])")
+            occurrences = list(pattern.finditer(raw.replace(",", ".")))
+            if len(occurrences) != 1:
+                continue
+            tokens = [tok for tok in re.findall(r"[a-zа-я0-9-]{4,}", name.replace("ё", "е").casefold()) if tok not in generic]
+            if not tokens:
+                continue
+            hits = sum(tok in normalized for tok in tokens)
+            minimum = 1 if len(tokens) == 1 else 2
+            if hits < minimum or hits / len(tokens) < 0.60:
+                continue
+            matched.append((occurrences[0].start(), position))
+        if not matched:
+            continue
+        classes = [f"КС-{m.group(1)}" for m in class_re.finditer(raw)]
+        gamma_matches = list(gamma_re.finditer(raw)) or list(gamma_word_re.finditer(raw))
+        gammas = []
+        for match in gamma_matches:
+            try:
+                gammas.append(float(match.group(1).replace(",", ".")))
+            except ValueError:
+                pass
+        if not classes and not gammas:
+            continue
+        matched.sort()
+        result.append({
+            "document_type": page.get("document_type"),
+            "page": page.get("page"),
+            "matched_positions": [position for _, position in matched],
+            "matched_position_count": len(matched),
+            "responsibility_classes": classes,
+            "responsibility_class_count": len(classes),
+            "reliability_coefficients": gammas,
+            "reliability_coefficient_count": len(gammas),
+        })
+    return result
+
 def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
     review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
     review.sort(
@@ -555,6 +623,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "identification_enrichment": identification_enrichment,
         "identification_layout_diagnostics": _safe_identification_layout_diagnostics(requirements, assignment_corpus),
         "identification_page_inventory": _safe_identification_page_inventory(requirements, assignment_corpus),
+        "identification_project_inventory": _safe_identification_project_inventory(requirements, project_corpus),
         "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
@@ -662,6 +731,7 @@ def main() -> None:
         "identification_enrichment": result["identification_enrichment"],
         "identification_layout_diagnostics": result["identification_layout_diagnostics"],
         "identification_page_inventory": result["identification_page_inventory"],
+        "identification_project_inventory": result["identification_project_inventory"],
     }, ensure_ascii=False))
 
 

@@ -82,7 +82,13 @@ def _row_summary(row: dict) -> dict:
         "coverage_executor_status": row.get("coverage_executor_status"),
         "requirement_type": row.get("requirement_type"),
         "requirement_scope": row.get("requirement_scope"),
+        "source_row": row.get("source_row"),
         "expected_sections": list(row.get("expected_sections") or []),
+        "expected_objects_count": len(row.get("expected_objects") or []),
+        "has_appendix_reference": (
+            "приложен" in str(row.get("requirement_text") or "").replace("ё", "е").casefold()
+            or "приложен" in str(row.get("source_row_title") or "").replace("ё", "е").casefold()
+        ),
         "core25_admission_stage": row.get("core25_admission_stage"),
         "core25_raw_candidate_count": int(row.get("core25_raw_candidate_count") or 0),
         "core25_verified_candidate_count": int(row.get("core25_verified_candidate_count") or 0),
@@ -137,6 +143,32 @@ def _row_summary(row: dict) -> dict:
             if isinstance(item, dict)
         ),
     }
+
+
+def _identification_frontier(rows: list[dict]) -> list[dict]:
+    selected = [
+        row for row in rows
+        if (
+            str(row.get("requirement_type") or "").upper() == "SET_COMPARISON"
+            or int(row.get("expected_objects_count") or 0) > 0
+            or row.get("has_appendix_reference") is True
+        )
+    ]
+    return [
+        {
+            "requirement_id": row.get("requirement_id"),
+            "requirement_type": row.get("requirement_type"),
+            "requirement_scope": row.get("requirement_scope"),
+            "source_row": row.get("source_row"),
+            "expected_objects_count": int(row.get("expected_objects_count") or 0),
+            "has_appendix_reference": bool(row.get("has_appendix_reference")),
+            "final_verification_kind": row.get("final_verification_kind"),
+            "proof_state": row.get("proof_state"),
+            "proof_reason": row.get("core25_reason_code"),
+            "coverage_executor": row.get("coverage_executor"),
+        }
+        for row in selected
+    ]
 
 
 def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
@@ -360,6 +392,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "identification_frontier": _identification_frontier(current_rows),
         "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
@@ -463,6 +496,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
+        "identification_frontier": result["identification_frontier"],
     }, ensure_ascii=False))
 
 

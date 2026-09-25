@@ -12,6 +12,7 @@ on:
       - core/**
       - core25/**
       - knowledge/benchmarks/private/test78_fixture_26of56.enc.b64.part.*
+      - knowledge/benchmarks/test78_baseline_overrides.json
 
 permissions:
   contents: read

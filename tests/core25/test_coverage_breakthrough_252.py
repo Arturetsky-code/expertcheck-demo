@@ -1638,3 +1638,46 @@ def test_identification_attributes_flat_table_stop_at_next_position():
     assert attrs["responsibility_class"] == "КС-2"
     assert attrs["reliability_coefficient"] == 1.0
 
+def test_identification_columnar_responsibility_vector_maps_when_cardinality_exact():
+    from core.identification_attributes import enrich_expected_objects_from_pages
+
+    expected = [
+        {"position": "4.24", "name": "Резервуар пожарной воды", "page": 16},
+        {"position": "4.25", "name": "Навес системы подачи реагента", "page": 16},
+        {"position": "4.26", "name": "Компрессорная станция", "page": 16},
+    ]
+    page = [{
+        "page": 16,
+        "text": (
+            "4.24\n4.25\n4.26\n"
+            "Резервуар пожарной воды\nНавес системы подачи реагента\nКомпрессорная станция\n"
+            "КС-2\nКС-2\nКС-2\n"
+            "Коэффициент надежности по ответственности 1,0"
+        ),
+    }]
+    enriched, changed = enrich_expected_objects_from_pages(expected, page)
+    assert changed == 3
+    assert [row.get("responsibility_class") for row in enriched] == ["КС-2", "КС-2", "КС-2"]
+    assert all(row.get("identification_mapping_method") == "COLUMNAR_PAGE_VECTOR" for row in enriched)
+    assert all(row.get("reliability_coefficient") is None for row in enriched)
+
+
+def test_identification_columnar_vector_fails_closed_on_cardinality_mismatch():
+    from core.identification_attributes import enrich_expected_objects_from_pages
+
+    expected = [
+        {"position": "4.24", "name": "Резервуар пожарной воды", "page": 16},
+        {"position": "4.25", "name": "Навес системы подачи реагента", "page": 16},
+    ]
+    page = [{
+        "page": 16,
+        "text": (
+            "4.24\n4.25\n"
+            "Резервуар пожарной воды\nНавес системы подачи реагента\n"
+            "КС-1\nКС-2\nКС-3"
+        ),
+    }]
+    enriched, changed = enrich_expected_objects_from_pages(expected, page)
+    assert changed == 0
+    assert all(row.get("responsibility_class") is None for row in enriched)
+

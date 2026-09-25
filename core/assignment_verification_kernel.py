@@ -13,6 +13,7 @@ from .metric_semantics import (
     capacity_semantic_level,
 )
 from .drawing_intelligence_v2 import open_canopy_drawing_fact
+from .identification_attributes import compare_identification_attributes
 
 
 DESIGN_MARKERS = (
@@ -1623,6 +1624,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
     retained as a fallback while a verified generic presence result may win.
     """
     checkers=(
+        compare_identification_attributes,
         _equipment_check,
         _capacity_topology_check,
         _negative_applicability_check,

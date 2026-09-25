@@ -53,8 +53,11 @@ def _normalized_candidate(requirement: dict[str, Any], candidate: dict[str, Any]
     contract = dict(requirement.get("evidence_contract_v2") or {})
     scope = _text(contract.get("scope") or requirement.get("requirement_scope")).upper()
     object_name = _text(requirement.get("object_name"))
+    candidate_object = _text(candidate.get("object"))
     owner_match = True
-    if scope in {SCOPE_OBJECT, SCOPE_EQUIPMENT}:
+    if candidate.get("owner_match") is not None:
+        owner_match = candidate.get("owner_match") is True
+    elif scope in {SCOPE_OBJECT, SCOPE_EQUIPMENT}:
         owner_match = _object_owner_match(object_name, fragment)
 
     item = dict(candidate)
@@ -64,7 +67,7 @@ def _normalized_candidate(requirement: dict[str, Any], candidate: dict[str, Any]
         "context": fragment,
         "exact_clause": _text(candidate.get("exact_clause")) or fragment,
         "source_trace": _text(candidate.get("source_trace")) or fragment,
-        "object": object_name,
+        "object": candidate_object or object_name,
         "owner_match": owner_match,
         "parameter_code": _text(requirement.get("parameter_code")).upper(),
         "unit": _text(candidate.get("unit") or requirement.get("unit")),

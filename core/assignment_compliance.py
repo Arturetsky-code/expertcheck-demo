@@ -13,6 +13,7 @@ from .object_hierarchy import build_hierarchy, group_is_satisfied
 from .directed_evidence import units_compatible
 from .evidence_semantics import promote_candidates
 from .assignment_verification_kernel import verify_assignment_requirement
+from .identification_attributes import enrich_expected_objects_from_pages
 
 ASSIGNMENT_TYPES=("задание на проектирование","техническое задание","тз на проектирование","знп")
 REQ_VERBS=("предусмотреть","предусматривается","должен","должна","должны","необходимо","требуется","обеспечить","принять","выполнить","разработать","представить","определить")
@@ -373,6 +374,12 @@ def _extract_appendix_objects(data:bytes)->list[dict[str,Any]]:
                 key=(pos,normalize_text(name))
                 if key not in seen:
                     seen.add(key);result.append({"position":pos,"name":name,"page":i+1})
+    appendix_pages = [
+        {"page": i + 1, "text": (page.get_text("text") or "")}
+        for i, page in enumerate(doc)
+        if i + 1 >= min([row.get("page") or 10**9 for row in result] or [10**9])
+    ]
+    result, _ = enrich_expected_objects_from_pages(result, appendix_pages)
     return result
 
 

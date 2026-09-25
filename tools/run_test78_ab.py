@@ -9,6 +9,7 @@ from pathlib import Path
 from core.coverage_breakthrough import attach_coverage_executor_evidence
 from core.directed_evidence import attach_directed_evidence
 from core.page_evidence_store import is_assignment_source
+from core.identification_attributes import enrich_identification_requirements
 from core25.runtime_bridge import run_assignment_runtime
 
 
@@ -26,6 +27,7 @@ _ARCHETYPE_BY_EXECUTOR = {
     "DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR": "NORMATIVE_CALCULATION_GRAPHIC",
     "EQUIPMENT_IDENTITY_AND_QUANTITY": "EQUIPMENT_IDENTITY_QUANTITY",
     "CAPACITY_AND_PROCESS_TOPOLOGY": "CAPACITY_PROCESS_TOPOLOGY",
+    "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR": "IDENTIFICATION_ATTRIBUTE_COMPARISON",
 }
 
 _ARCHETYPE_BY_REASON = {
@@ -85,6 +87,14 @@ def _row_summary(row: dict) -> dict:
         "source_row": row.get("source_row"),
         "expected_sections": list(row.get("expected_sections") or []),
         "expected_objects_count": len(row.get("expected_objects") or []),
+        "expected_objects_with_responsibility_class": sum(
+            bool(item.get("responsibility_class"))
+            for item in (row.get("expected_objects") or []) if isinstance(item, dict)
+        ),
+        "expected_objects_with_reliability_coefficient": sum(
+            item.get("reliability_coefficient") is not None
+            for item in (row.get("expected_objects") or []) if isinstance(item, dict)
+        ),
         "has_appendix_reference": (
             "приложен" in str(row.get("requirement_text") or "").replace("ё", "е").casefold()
             or "приложен" in str(row.get("source_row_title") or "").replace("ё", "е").casefold()
@@ -170,6 +180,8 @@ def _identification_frontier(rows: list[dict]) -> list[dict]:
             "requirement_scope": row.get("requirement_scope"),
             "source_row": row.get("source_row"),
             "expected_objects_count": int(row.get("expected_objects_count") or 0),
+            "expected_objects_with_responsibility_class": int(row.get("expected_objects_with_responsibility_class") or 0),
+            "expected_objects_with_reliability_coefficient": int(row.get("expected_objects_with_reliability_coefficient") or 0),
             "has_appendix_reference": bool(row.get("has_appendix_reference")),
             "set_contract_kind": row.get("set_contract_kind") or "",
             "final_verification_kind": row.get("final_verification_kind"),
@@ -330,7 +342,9 @@ def _counts(rows: list[dict], proven_deviations: int) -> dict:
 def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
     requirements = copy.deepcopy(list(fixture.get("requirements") or []))
     corpus = list(fixture.get("page_corpus") or [])
+    assignment_corpus = [page for page in corpus if is_assignment_source(page)]
     project_corpus = [page for page in corpus if not is_assignment_source(page)]
+    identification_enrichment = enrich_identification_requirements(requirements, assignment_corpus)
 
     attach_directed_evidence(requirements, project_corpus)
     coverage = attach_coverage_executor_evidence(requirements, project_corpus)
@@ -403,6 +417,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
         "identification_frontier": _identification_frontier(current_rows),
+        "identification_enrichment": identification_enrichment,
         "_private_review_frontier": _private_review_frontier(runtime_rows),
         "archetype_coverage": {
             "baseline": _archetype_summary(baseline_rows),
@@ -507,6 +522,7 @@ def main() -> None:
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
         "identification_frontier": result["identification_frontier"],
+        "identification_enrichment": result["identification_enrichment"],
     }, ensure_ascii=False))
 
 

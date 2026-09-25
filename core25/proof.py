@@ -587,6 +587,82 @@ def _equipment_identity_comparison_proof(
     )
 
 
+def _identification_attribute_comparison_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    """Prove an object-identification mismatch by exact GP position and owner.
+
+    This aggregate route is intentionally mismatch-only. Missing project
+    attributes never prove noncompliance, while one addressable contradiction is
+    enough to prove that the Assignment identification set is not satisfied.
+    """
+    accepted: list[tuple[Evidence25, Binding25]] = []
+    proven_fields: set[str] = set()
+
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        if str(metadata.get("legacy_evidence_kind") or "").upper() != "IDENTIFICATION_ATTRIBUTE_COMPARISON":
+            continue
+        if metadata.get("exact_position_match") is not True:
+            continue
+        if metadata.get("owner_match") is not True:
+            continue
+        if metadata.get("verified_difference") is not True:
+            continue
+        if not str(metadata.get("position") or "").strip():
+            continue
+
+        fields = {
+            str(value or "").strip().lower()
+            for value in (metadata.get("mismatch_fields") or ())
+            if str(value or "").strip()
+        }
+        strong_fields: set[str] = set()
+
+        if "responsibility_class" in fields:
+            required_class = str(metadata.get("required_responsibility_class") or "").strip().upper()
+            observed_class = str(metadata.get("observed_responsibility_class") or "").strip().upper()
+            if required_class and observed_class and required_class != observed_class:
+                strong_fields.add("responsibility_class")
+
+        if "reliability_coefficient" in fields:
+            required_gamma = numeric_value(metadata.get("required_reliability_coefficient"))
+            observed_gamma = numeric_value(metadata.get("observed_reliability_coefficient"))
+            if (
+                required_gamma is not None
+                and observed_gamma is not None
+                and abs(required_gamma - observed_gamma) > 0.001
+            ):
+                strong_fields.add("reliability_coefficient")
+
+        if not strong_fields:
+            continue
+
+        accepted.append((evidence_item, binding))
+        proven_fields.update(strong_fields)
+
+    if not accepted:
+        return _insufficient(
+            requirement,
+            route,
+            reason_code="IDENTIFICATION_ATTRIBUTE_MISMATCH_NOT_PROVEN",
+        )
+
+    evidence_ids = tuple(dict.fromkeys(item.evidence_id for item, _ in accepted))
+    binding_ids = tuple(dict.fromkeys(binding.binding_id for _, binding in accepted))
+    return Proof25(
+        proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+        requirement_id=requirement.requirement_id,
+        state=ProofState.PROVEN_MISMATCH,
+        evidence_ids=evidence_ids,
+        binding_ids=binding_ids,
+        reason_code="IDENTIFICATION_ATTRIBUTE_MISMATCH",
+        metadata={"mismatch_fields": tuple(sorted(proven_fields))},
+    )
+
+
 def _reserve_topology_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -712,6 +788,8 @@ def build_proof(
         return _design_determined_proof(requirement, route, pairs)
     if route.kind == "EQUIPMENT_IDENTITY_COMPARISON":
         return _equipment_identity_comparison_proof(requirement, route, pairs)
+    if route.kind == "IDENTIFICATION_ATTRIBUTE_COMPARISON":
+        return _identification_attribute_comparison_proof(requirement, route, pairs)
 
     return _insufficient(
         requirement,

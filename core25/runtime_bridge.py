@@ -50,6 +50,9 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
         item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
     elif executor == "EQUIPMENT_IDENTITY_AND_QUANTITY":
         item["verification_kind"] = "EQUIPMENT_IDENTITY_COMPARISON"
+    elif executor == "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR":
+        item["verification_kind"] = "IDENTIFICATION_ATTRIBUTE_COMPARISON"
+        item["requirement_scope"] = "PROJECT_GLOBAL"
     elif executor == "DYNAMIC_FOUNDATION_NORMATIVE_EXECUTOR":
         item["verification_kind"] = "DYNAMIC_FOUNDATION_NORMATIVE"
         if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
@@ -152,6 +155,12 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "project_models": tuple(candidate.get("project_models") or ()),
                     "task_quantity": candidate.get("task_quantity"),
                     "project_quantity": candidate.get("project_quantity"),
+                    "position": candidate.get("position"),
+                    "exact_position_match": candidate.get("exact_position_match"),
+                    "required_responsibility_class": candidate.get("required_responsibility_class"),
+                    "observed_responsibility_class": candidate.get("observed_responsibility_class"),
+                    "required_reliability_coefficient": candidate.get("required_reliability_coefficient"),
+                    "observed_reliability_coefficient": candidate.get("observed_reliability_coefficient"),
                     "negative_assertion": candidate.get("negative_assertion"),
                     "matched_normative_refs": tuple(candidate.get("matched_normative_refs") or ()),
                     "required_normative_refs": tuple(candidate.get("required_normative_refs") or ()),

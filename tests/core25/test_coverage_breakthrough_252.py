@@ -1484,3 +1484,109 @@ def test_equipment_brand_spelling_difference_alone_stays_review_only():
     assert row["proof_state"] == "INSUFFICIENT"
     assert row["core25_reason_code"] == "EQUIPMENT_IDENTITY_MISMATCH_NOT_PROVEN"
 
+def test_identification_attribute_mismatch_is_generic_and_position_bound():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+    from core.identification_attributes import enrich_identification_requirements
+
+    req = {
+        "requirement_id": "REQ-ID-ATTR",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [{
+            "position": "4.25",
+            "name": "Навес системы подачи реагента",
+            "page": 3,
+        }],
+    }
+    assignment_pages = [{
+        "document": "Задание на проектирование.pdf",
+        "document_type": "Задание на проектирование",
+        "page": 3,
+        "text": (
+            "4.25 Навес системы подачи реагента. "
+            "Класс сооружения КС-2. Коэффициент надежности по ответственности γn=1,0."
+        ),
+    }]
+    stats = enrich_identification_requirements([req], assignment_pages)
+    assert stats["objects_enriched"] == 1
+    assert req["expected_objects"][0]["responsibility_class"] == "КС-2"
+    assert req["expected_objects"][0]["reliability_coefficient"] == 1.0
+
+    project_pages = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 21,
+        "text": (
+            "Поз. 4.25 Навес системы подачи реагента. "
+            "Класс сооружения КС-3. Коэффициент надежности по ответственности γn=1,1."
+        ),
+    }]
+    attach_coverage_executor_evidence([req], project_pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "PROJECT_FINDING"
+    assert row["proof_state"] == "PROVEN_MISMATCH"
+    assert row["core25_reason_code"] == "IDENTIFICATION_ATTRIBUTE_MISMATCH"
+    assert row["coverage_executor"] == "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR"
+
+
+def test_identification_attribute_mismatch_requires_exact_position_and_owner():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-ID-ATTR-GUARD",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [{
+            "position": "4.25",
+            "name": "Навес системы подачи реагента",
+            "responsibility_class": "КС-2",
+            "reliability_coefficient": 1.0,
+        }],
+    }
+    wrong_owner = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 22,
+        "text": (
+            "Поз. 4.25 Насосная станция. "
+            "Класс сооружения КС-3. Коэффициент надежности по ответственности γn=1,1."
+        ),
+    }]
+    attach_coverage_executor_evidence([req], wrong_owner)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+
+
+def test_identification_attribute_match_does_not_claim_full_set_compliance():
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-ID-ATTR-MATCH",
+        "requirement_text": "Идентификационные признаки принять согласно Приложению 1.",
+        "source_row_title": "Идентификационные признаки объекта",
+        "requirement_type": "SET_COMPARISON",
+        "requirement_scope": "UNRESOLVED",
+        "expected_objects": [{
+            "position": "4.25",
+            "name": "Навес системы подачи реагента",
+            "responsibility_class": "КС-2",
+            "reliability_coefficient": 1.0,
+        }],
+    }
+    matching = [{
+        "document": "Раздел ПД №4_КР.pdf",
+        "document_type": "КР",
+        "page": 22,
+        "text": (
+            "Поз. 4.25 Навес системы подачи реагента. "
+            "Класс сооружения КС-2. Коэффициент надежности по ответственности γn=1,0."
+        ),
+    }]
+    attach_coverage_executor_evidence([req], matching)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+

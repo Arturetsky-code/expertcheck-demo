@@ -1,0 +1,331 @@
+from __future__ import annotations
+
+import math
+import re
+from typing import Any, Iterable
+
+from .normalization import normalize_text
+
+
+_RESPONSIBILITY_CLASS_RE = re.compile(
+    r"(?<![A-Za-zА-Яа-яЁё0-9])к\s*с\s*[-–—]?\s*([1-3])(?=$|[^0-9])",
+    re.I,
+)
+_GAMMA_DIRECT_RE = re.compile(
+    r"(?:γ|Γ|гамм[аы]?)(?:\s*[_\-]?\s*n)?\s*[=:]?\s*(0[.,]\d+|1(?:[.,]\d+)?)",
+    re.I,
+)
+_GAMMA_WORD_RE = re.compile(
+    r"коэффициент\w*\s+(?:надежност|надёжност)\w*(?:\s+по\s+ответственност\w*)?.{0,80}?"
+    r"(0[.,]\d+|1(?:[.,]\d+)?)",
+    re.I | re.S,
+)
+_GENERIC_NAME_TOKENS = {
+    "объект", "здание", "сооружение", "площадка", "комплекс", "система",
+    "установка", "проектируемый", "проектируемая", "проектируемое", "поз",
+}
+
+
+def _norm(value: Any) -> str:
+    return normalize_text(value).lower().replace("ё", "е")
+
+
+def _position_pattern(position: str) -> re.Pattern[str] | None:
+    pos = str(position or "").strip().replace(",", ".")
+    if not re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){1,5}", pos):
+        return None
+    escaped = re.escape(pos)
+    return re.compile(rf"(?<![\d.]){escaped}(?![\d.])")
+
+
+def _name_tokens(name: str) -> list[str]:
+    words = [
+        word for word in re.findall(r"[a-zа-я0-9-]{4,}", _norm(name), re.I)
+        if word not in _GENERIC_NAME_TOKENS
+    ]
+    return list(dict.fromkeys(words))
+
+
+def _owner_present(name: str, text: str) -> bool:
+    name_norm = _norm(name)
+    text_norm = _norm(text)
+    if name_norm and name_norm in text_norm:
+        return True
+    tokens = _name_tokens(name)
+    if not tokens:
+        return False
+    hits = sum(token in text_norm for token in tokens)
+    minimum = 1 if len(tokens) == 1 else 2
+    return hits >= minimum and hits / len(tokens) >= 0.60
+
+
+def extract_identification_attributes(text: str) -> dict[str, Any]:
+    raw = str(text or "")
+    result: dict[str, Any] = {}
+
+    class_match = _RESPONSIBILITY_CLASS_RE.search(raw)
+    if class_match:
+        result["responsibility_class"] = f"КС-{class_match.group(1)}"
+
+    gamma_match = _GAMMA_DIRECT_RE.search(raw) or _GAMMA_WORD_RE.search(raw)
+    if gamma_match:
+        try:
+            gamma = float(gamma_match.group(1).replace(",", "."))
+        except ValueError:
+            gamma = None
+        if gamma is not None and 0.5 <= gamma <= 1.5:
+            result["reliability_coefficient"] = gamma
+
+    return result
+
+
+def identity_context(
+    text: str,
+    *,
+    position: str,
+    object_name: str,
+    radius: int = 700,
+) -> str:
+    """Return a local fragment only when exact position and owner agree.
+
+    Exact GP position is the primary key. Owner-name evidence in the same local
+    fragment is mandatory so a drawing number or unrelated position mention
+    cannot bind identification attributes to the wrong object.
+    """
+    raw = re.sub(r"\s+", " ", str(text or "")).strip()
+    pattern = _position_pattern(position)
+    if not raw or pattern is None:
+        return ""
+
+    best = ""
+    best_hits = -1
+    for match in pattern.finditer(raw):
+        start = max(0, match.start() - radius)
+        end = min(len(raw), match.end() + radius)
+        window = raw[start:end]
+        if not _owner_present(object_name, window):
+            continue
+        hits = sum(token in _norm(window) for token in _name_tokens(object_name))
+        attrs = extract_identification_attributes(window)
+        score = hits * 10 + len(attrs) * 20
+        if score > best_hits:
+            best_hits = score
+            best = window
+    return best
+
+
+def enrich_expected_objects_from_pages(
+    expected_objects: Iterable[dict[str, Any]],
+    pages: Iterable[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    page_rows = [dict(page) for page in pages or () if isinstance(page, dict)]
+    enriched: list[dict[str, Any]] = []
+    changed = 0
+
+    for raw in expected_objects or ():
+        item = dict(raw)
+        if item.get("responsibility_class") and item.get("reliability_coefficient") is not None:
+            enriched.append(item)
+            continue
+
+        position = str(item.get("position") or item.get("genplan_position") or "").strip()
+        name = str(item.get("name") or item.get("object_name") or "").strip()
+        if not position or not name:
+            enriched.append(item)
+            continue
+
+        source_page = item.get("page")
+        candidate_pages = [
+            page for page in page_rows
+            if source_page in (None, "", 0) or page.get("page") == source_page
+        ] or page_rows
+
+        best_attrs: dict[str, Any] = {}
+        for page in candidate_pages:
+            context = identity_context(
+                str(page.get("text") or ""),
+                position=position,
+                object_name=name,
+            )
+            if not context:
+                continue
+            attrs = extract_identification_attributes(context)
+            if len(attrs) > len(best_attrs):
+                best_attrs = attrs
+            if len(best_attrs) >= 2:
+                break
+
+        before = (
+            item.get("responsibility_class"),
+            item.get("reliability_coefficient"),
+        )
+        if best_attrs.get("responsibility_class"):
+            item["responsibility_class"] = best_attrs["responsibility_class"]
+        if best_attrs.get("reliability_coefficient") is not None:
+            item["reliability_coefficient"] = best_attrs["reliability_coefficient"]
+        after = (
+            item.get("responsibility_class"),
+            item.get("reliability_coefficient"),
+        )
+        if after != before:
+            item["identification_attributes_addressable"] = True
+            changed += 1
+        enriched.append(item)
+
+    return enriched, changed
+
+
+def enrich_identification_requirements(
+    requirements: list[dict[str, Any]],
+    assignment_pages: Iterable[dict[str, Any]],
+) -> dict[str, int]:
+    pages = [dict(page) for page in assignment_pages or () if isinstance(page, dict)]
+    stats = {
+        "requirements": 0,
+        "objects": 0,
+        "objects_enriched": 0,
+        "with_responsibility_class": 0,
+        "with_reliability_coefficient": 0,
+    }
+
+    for requirement in requirements or []:
+        if not isinstance(requirement, dict):
+            continue
+        if str(requirement.get("requirement_type") or "").upper() != "SET_COMPARISON":
+            continue
+        title = _norm(requirement.get("source_row_title"))
+        if "идентификацион" not in title:
+            continue
+
+        expected = [
+            dict(item) for item in requirement.get("expected_objects") or []
+            if isinstance(item, dict)
+        ]
+        if not expected:
+            continue
+
+        stats["requirements"] += 1
+        stats["objects"] += len(expected)
+        enriched, changed = enrich_expected_objects_from_pages(expected, pages)
+        requirement["expected_objects"] = enriched
+        requirement["identification_attribute_contract"] = True
+        stats["objects_enriched"] += changed
+        stats["with_responsibility_class"] += sum(
+            bool(item.get("responsibility_class")) for item in enriched
+        )
+        stats["with_reliability_coefficient"] += sum(
+            item.get("reliability_coefficient") is not None for item in enriched
+        )
+
+    return stats
+
+
+def compare_identification_attributes(
+    requirement: dict[str, Any],
+    project_pages: Iterable[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if str(requirement.get("requirement_type") or "").upper() != "SET_COMPARISON":
+        return None
+    title = _norm(requirement.get("source_row_title"))
+    if "идентификацион" not in title:
+        return None
+
+    expected = [
+        dict(item) for item in requirement.get("expected_objects") or []
+        if isinstance(item, dict)
+        and (
+            item.get("responsibility_class")
+            or item.get("reliability_coefficient") is not None
+        )
+    ]
+    if not expected:
+        return None
+
+    pages = [dict(page) for page in project_pages or () if isinstance(page, dict)]
+    evidence: list[dict[str, Any]] = []
+
+    for item in expected:
+        position = str(item.get("position") or item.get("genplan_position") or "").strip()
+        object_name = str(item.get("name") or item.get("object_name") or "").strip()
+        if not position or not object_name:
+            continue
+
+        required_class = str(item.get("responsibility_class") or "").strip().upper()
+        try:
+            required_gamma = (
+                float(item.get("reliability_coefficient"))
+                if item.get("reliability_coefficient") is not None
+                else None
+            )
+        except (TypeError, ValueError):
+            required_gamma = None
+
+        for page in pages:
+            context = identity_context(
+                str(page.get("text") or ""),
+                position=position,
+                object_name=object_name,
+            )
+            if not context:
+                continue
+            observed = extract_identification_attributes(context)
+            observed_class = str(observed.get("responsibility_class") or "").strip().upper()
+            observed_gamma = observed.get("reliability_coefficient")
+
+            mismatch_fields: list[str] = []
+            if required_class and observed_class and required_class != observed_class:
+                mismatch_fields.append("responsibility_class")
+            if (
+                required_gamma is not None
+                and observed_gamma is not None
+                and not math.isclose(required_gamma, float(observed_gamma), rel_tol=0.0, abs_tol=0.001)
+            ):
+                mismatch_fields.append("reliability_coefficient")
+
+            if not mismatch_fields:
+                continue
+
+            evidence.append({
+                "evidence_kind": "IDENTIFICATION_ATTRIBUTE_COMPARISON",
+                "evidence_state": "verified_candidate",
+                "document": page.get("document"),
+                "document_type": page.get("document_type"),
+                "page": page.get("page"),
+                "context": context,
+                "score": 100,
+                "object": object_name,
+                "position": position,
+                "exact_position_match": True,
+                "owner_match": True,
+                "verified_difference": True,
+                "mismatch_fields": mismatch_fields,
+                "required_responsibility_class": required_class,
+                "observed_responsibility_class": observed_class,
+                "required_reliability_coefficient": required_gamma,
+                "observed_reliability_coefficient": observed_gamma,
+            })
+            break
+
+    if not evidence:
+        return None
+
+    return {
+        "status": "Выявлено отклонение",
+        "evidence": [
+            f"{row.get('document')}, стр. {row.get('page')}: {row.get('context')}"
+            for row in evidence
+        ],
+        "evidence_candidates": evidence,
+        "verification_evidence": evidence,
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
+        "match_confidence": 1.0,
+        "difference": "; ".join(
+            f"{row.get('position')}: {', '.join(row.get('mismatch_fields') or [])}"
+            for row in evidence
+        ),
+        "decision_basis": (
+            "По точной позиции по генплану и наименованию объекта найдено адресное "
+            "несовпадение идентификационных характеристик Задания и проектной документации."
+        ),
+        "verification_kernel": "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR",
+    }

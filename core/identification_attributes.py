@@ -170,39 +170,99 @@ def identity_context(
     del radius
     return _position_record(text, position=position, object_name=object_name)
 
+def _responsibility_class_sequence(text: str) -> list[str]:
+    return [
+        f"КС-{match.group(1)}"
+        for match in _RESPONSIBILITY_CLASS_RE.finditer(str(text or ""))
+    ]
+
+
+def _reliability_coefficient_sequence(text: str) -> list[float]:
+    matches = list(_GAMMA_DIRECT_RE.finditer(str(text or "")))
+    if not matches:
+        matches = list(_GAMMA_WORD_RE.finditer(str(text or "")))
+    values: list[float] = []
+    for match in matches:
+        try:
+            value = float(match.group(1).replace(",", "."))
+        except ValueError:
+            continue
+        if 0.5 <= value <= 1.5:
+            values.append(value)
+    return values
+
+
+def _page_mapping_is_addressable(
+    items: list[dict[str, Any]],
+    page_text: str,
+) -> bool:
+    """Require every expected row to be independently addressable on the page."""
+    for item in items:
+        position = str(item.get("position") or item.get("genplan_position") or "").strip()
+        name = str(item.get("name") or item.get("object_name") or "").strip()
+        pattern = _position_pattern(position)
+        if not position or not name or pattern is None:
+            return False
+        if len(list(pattern.finditer(page_text))) != 1:
+            return False
+        if not _owner_present(name, page_text):
+            return False
+    return True
+
+
+def _vector_alignment_safe(
+    items: list[dict[str, Any]],
+    values: list[Any],
+    field: str,
+) -> bool:
+    if len(values) != len(items) or not values:
+        return False
+    # If every row carries the same value, row order is irrelevant.
+    normalized = {str(value) for value in values}
+    if len(normalized) == 1:
+        return True
+    # Otherwise require at least one exact local-record anchor at the same index.
+    anchored = False
+    for index, item in enumerate(items):
+        existing = item.get(field)
+        if existing in (None, ""):
+            continue
+        anchored = True
+        if field == "reliability_coefficient":
+            try:
+                if not math.isclose(float(existing), float(values[index]), rel_tol=0.0, abs_tol=0.001):
+                    return False
+            except (TypeError, ValueError):
+                return False
+        elif str(existing).strip().upper() != str(values[index]).strip().upper():
+            return False
+    return anchored
+
+
 def enrich_expected_objects_from_pages(
     expected_objects: Iterable[dict[str, Any]],
     pages: Iterable[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], int]:
     page_rows = [dict(page) for page in pages or () if isinstance(page, dict)]
-    enriched: list[dict[str, Any]] = []
-    changed = 0
+    enriched = [dict(raw) for raw in expected_objects or ()]
+    changed_indices: set[int] = set()
 
-    for raw in expected_objects or ():
-        item = dict(raw)
+    # Stage 1: exact position + owner local-record evidence.
+    for index, item in enumerate(enriched):
         if item.get("responsibility_class") and item.get("reliability_coefficient") is not None:
-            enriched.append(item)
             continue
-
         position = str(item.get("position") or item.get("genplan_position") or "").strip()
         name = str(item.get("name") or item.get("object_name") or "").strip()
         if not position or not name:
-            enriched.append(item)
             continue
-
         source_page = item.get("page")
         candidate_pages = [
             page for page in page_rows
             if source_page in (None, "", 0) or page.get("page") == source_page
         ] or page_rows
-
         best_attrs: dict[str, Any] = {}
         for page in candidate_pages:
-            context = identity_context(
-                str(page.get("text") or ""),
-                position=position,
-                object_name=name,
-            )
+            context = identity_context(str(page.get("text") or ""), position=position, object_name=name)
             if not context:
                 continue
             attrs = extract_identification_attributes(context)
@@ -210,26 +270,60 @@ def enrich_expected_objects_from_pages(
                 best_attrs = attrs
             if len(best_attrs) >= 2:
                 break
-
-        before = (
-            item.get("responsibility_class"),
-            item.get("reliability_coefficient"),
-        )
+        before = (item.get("responsibility_class"), item.get("reliability_coefficient"))
         if best_attrs.get("responsibility_class"):
             item["responsibility_class"] = best_attrs["responsibility_class"]
         if best_attrs.get("reliability_coefficient") is not None:
             item["reliability_coefficient"] = best_attrs["reliability_coefficient"]
-        after = (
-            item.get("responsibility_class"),
-            item.get("reliability_coefficient"),
-        )
+        after = (item.get("responsibility_class"), item.get("reliability_coefficient"))
         if after != before:
             item["identification_attributes_addressable"] = True
-            changed += 1
-        enriched.append(item)
+            item["identification_mapping_method"] = "LOCAL_POSITION_RECORD"
+            changed_indices.add(index)
 
-    return enriched, changed
+    # Stage 2: fail-closed columnar PDF fallback. Values are mapped by row order
+    # only when page cardinality is exact and alignment is independently safe.
+    groups: dict[int, list[int]] = {}
+    for index, item in enumerate(enriched):
+        try:
+            page_no = int(item.get("page"))
+        except (TypeError, ValueError):
+            continue
+        groups.setdefault(page_no, []).append(index)
+    page_by_number = {}
+    for page in page_rows:
+        try:
+            page_by_number[int(page.get("page"))] = str(page.get("text") or "")
+        except (TypeError, ValueError):
+            continue
 
+    for page_no, indices in groups.items():
+        page_text = page_by_number.get(page_no, "")
+        items = [enriched[index] for index in indices]
+        if not page_text or not _page_mapping_is_addressable(items, page_text):
+            continue
+
+        classes = _responsibility_class_sequence(page_text)
+        if _vector_alignment_safe(items, classes, "responsibility_class"):
+            for index, value in zip(indices, classes):
+                item = enriched[index]
+                if not item.get("responsibility_class"):
+                    item["responsibility_class"] = value
+                    item["identification_attributes_addressable"] = True
+                    item["identification_mapping_method"] = "COLUMNAR_PAGE_VECTOR"
+                    changed_indices.add(index)
+
+        gammas = _reliability_coefficient_sequence(page_text)
+        if _vector_alignment_safe(items, gammas, "reliability_coefficient"):
+            for index, value in zip(indices, gammas):
+                item = enriched[index]
+                if item.get("reliability_coefficient") is None:
+                    item["reliability_coefficient"] = value
+                    item["identification_attributes_addressable"] = True
+                    item["identification_mapping_method"] = "COLUMNAR_PAGE_VECTOR"
+                    changed_indices.add(index)
+
+    return enriched, len(changed_indices)
 
 def enrich_identification_requirements(
     requirements: list[dict[str, Any]],

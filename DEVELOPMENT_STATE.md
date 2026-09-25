@@ -913,3 +913,63 @@ Continue from the review frontier. Prefer:
 
 Do not promote brand-only equipment differences or incomplete composite requirements.
 
+## Validated quality checkpoint — local identification-record binding
+
+The experimental identification-attribute proof that initially produced a new
+`PROJECT_FINDING` on positions **4.2.1** and **4.4** was not accepted into the
+baseline.
+
+Root cause:
+- `identity_context()` previously used a broad ±700-character window around an exact
+  position;
+- dense identification tables can place several neighbouring object rows inside that
+  window;
+- responsibility class / reliability coefficient could therefore be borrowed from an
+  adjacent row.
+
+Universal correction:
+- identification attributes are now bound to the same local position/object record;
+- multiline tables stop at the next distinct dotted GP position;
+- flattened PDF text falls back to an exact-position span ending at the next distinct
+  position;
+- records containing conflicting identification values are fail-closed;
+- regression tests cover adjacent rows and flattened-table extraction.
+
+Validated correction source:
+`92430eb9612afbe079552fb78d2ed74ae5610aa3`.
+
+Green validation marker:
+`9c581a4dc7bd44e1be588a461e1ea89d2acb22b3`.
+
+Validation:
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- changed requirement IDs: **0**;
+- Core20 quality gates: **success**;
+- Core25 Quality Leap gates: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**.
+
+Current accepted baseline remains:
+- **23 VERIFIED_OK**;
+- **1 native PROJECT_FINDING**;
+- **1 separately audited external deviation**;
+- **32 REVIEW_QUESTION**;
+- strict categorical coverage: **25/56 = 44.6%**;
+- **12** universal archetypes across native categorical results.
+
+The capacity/topology frontier candidate remains review-only by design:
+`NOMINAL_TOTAL_CAPACITY` in the Assignment is not semantically equivalent to the
+project evidence classified as `OPERATING_SECTION_THROUGHPUT`.
+
+### Continue from here
+
+Do not revisit the rejected 4.2.1 / 4.4 identification findings.
+
+Next preferred direction:
+1. preserve the corrected local-record identification binding;
+2. inspect the remaining separately audited identification deviation and determine
+   whether the exact expected/project position record can be represented by the same
+   reusable identification archetype;
+3. do not force capacity/topology comparison across incompatible semantic levels;
+4. accept no baseline change without deterministic Test78 A/B and false-positive audit.
+

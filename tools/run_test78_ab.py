@@ -384,11 +384,39 @@ def _safe_identification_project_inventory(
         if not classes and not gammas:
             continue
         matched.sort()
+        matched_positions = [position for _, position in matched]
+        owner_order: list[tuple[int, str]] = []
+        exact_owner_sequence_complete = True
+        for position in matched_positions:
+            item = next(
+                (
+                    row for row in expected
+                    if str(row.get("position") or row.get("genplan_position") or "").strip() == position
+                ),
+                None,
+            )
+            name = str((item or {}).get("name") or (item or {}).get("object_name") or "").strip()
+            normalized_name = " ".join(name.replace("ё", "е").casefold().split())
+            occurrences = [
+                match.start()
+                for match in re.finditer(re.escape(normalized_name), normalized)
+            ] if normalized_name else []
+            if len(occurrences) != 1:
+                exact_owner_sequence_complete = False
+                break
+            owner_order.append((occurrences[0], position))
+        owner_order.sort()
+        owner_order_consistent = bool(
+            exact_owner_sequence_complete
+            and [position for _, position in owner_order] == matched_positions
+        )
         result.append({
             "document_type": page.get("document_type"),
             "page": page.get("page"),
-            "matched_positions": [position for _, position in matched],
+            "matched_positions": matched_positions,
             "matched_position_count": len(matched),
+            "exact_owner_sequence_complete": exact_owner_sequence_complete,
+            "owner_order_consistent": owner_order_consistent,
             "responsibility_classes": classes,
             "responsibility_class_count": len(classes),
             "reliability_coefficients": gammas,

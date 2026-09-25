@@ -304,9 +304,9 @@ def _safe_identification_page_inventory(
 
     corpus_by_page = {int(p.get("page")): str(p.get("text") or "") for p in assignment_corpus if p.get("page") is not None}
     result = []
-    class_re = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9])к\\s*с\\s*[-–—]?\\s*([1-3])(?=$|[^0-9])", re.I)
-    gamma_re = re.compile(r"(?:γ|Γ|гамм[аы]?)(?:\\s*[_\\-]?\\s*n)?\\s*[=:]?\\s*(0[.,]\\d+|1(?:[.,]\\d+)?)", re.I)
-    gamma_word_re = re.compile(r"коэффициент\\w*\\s+(?:надежност|надёжност)\\w*(?:\\s+по\\s+ответственност\\w*)?.{0,80}?(0[.,]\\d+|1(?:[.,]\\d+)?)", re.I | re.S)
+    class_re = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9])к\s*с\s*[-–—]?\s*([1-3])(?=$|[^0-9])", re.I)
+    gamma_re = re.compile(r"(?:γ|Γ|гамм[аы]?)(?:\s*[_\-]?\s*n)?\s*[=:]?\s*(0[.,]\d+|1(?:[.,]\d+)?)", re.I)
+    gamma_word_re = re.compile(r"коэффициент\w*\s+(?:надежност|надёжност)\w*(?:\s+по\s+ответственност\w*)?.{0,80}?(0[.,]\d+|1(?:[.,]\d+)?)", re.I | re.S)
     for page_no, row in sorted(pages.items()):
         raw = corpus_by_page.get(page_no, "")
         classes = [f"КС-{m.group(1)}" for m in class_re.finditer(raw)]

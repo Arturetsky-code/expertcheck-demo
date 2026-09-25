@@ -84,6 +84,32 @@ def _record_is_unambiguous(text: str) -> bool:
     return len(classes) <= 1 and len(gammas) <= 1
 
 
+def _looks_like_position_only_line(line: str) -> bool:
+    compact = " ".join(str(line or "").split()).replace(",", ".")
+    compact = re.sub(r"^(?:поз\.?\s*)", "", compact, flags=re.I).strip()
+    return bool(re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){1,5}", compact))
+
+
+def _has_columnar_position_block(text: str) -> bool:
+    """Detect PDF table extraction where positions are emitted as a column.
+
+    Two or more consecutive position-only lines mean row semantics are no
+    longer preserved in plain text. Local record binding must then be disabled
+    and only the stricter page-vector mapper may align attributes.
+    """
+    run = 0
+    for line in (line.strip() for line in str(text or "").splitlines()):
+        if not line:
+            continue
+        if _looks_like_position_only_line(line):
+            run += 1
+            if run >= 2:
+                return True
+        else:
+            run = 0
+    return False
+
+
 def _position_record(text: str, *, position: str, object_name: str) -> str:
     """Return the smallest position-bound record that also contains the owner.
 
@@ -94,6 +120,8 @@ def _position_record(text: str, *, position: str, object_name: str) -> str:
     raw = str(text or "")
     pattern = _position_pattern(position)
     if not raw or pattern is None:
+        return ""
+    if _has_columnar_position_block(raw):
         return ""
 
     lines = [line.strip() for line in raw.splitlines() if line.strip()]

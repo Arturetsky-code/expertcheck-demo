@@ -486,6 +486,18 @@ def merge_prepared_packages(
         seen.add(signature)
         files.append(file)
 
+    if len(files) > MAX_ARCHIVE_ENTRIES:
+        raise ValueError(
+            f"Объединённый комплект содержит слишком много файлов: {len(files)} "
+            f"(лимит {MAX_ARCHIVE_ENTRIES})."
+        )
+    aggregate_bytes = sum(file.size for file in files)
+    if aggregate_bytes > MAX_UNCOMPRESSED_BYTES:
+        raise ValueError(
+            "Общий распакованный объём объединённого комплекта превышает "
+            f"{MAX_UNCOMPRESSED_BYTES / 1024 / 1024:.0f} МБ."
+        )
+
     package_warnings, identity_summary = _package_checks(files)
     warnings.extend(package_warnings)
     warnings = list(dict.fromkeys(str(item) for item in warnings if str(item).strip()))

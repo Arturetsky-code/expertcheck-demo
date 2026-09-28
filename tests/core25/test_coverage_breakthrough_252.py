@@ -224,6 +224,100 @@ def test_unresolved_negative_requirement_is_safe_project_global_and_closes():
     assert row["core25_binding_counts"]["BOUND"] == 1
 
 
+def _traceability_corpus(*, project_anchor="RAM-IGI-2026", include_source=True):
+    pages = []
+    if include_source:
+        pages.append({
+            "document": "01_ИГИ.pdf",
+            "document_type": "ИГИ",
+            "page": 12,
+            "text": (
+                "Технический отчет. Шифр RAM-IGI-2026. "
+                "Инженерно-геологические изыскания. Основания зданий: "
+                "расчетные характеристики грунтов установлены по результатам полевых работ."
+            ),
+        })
+    pages.append({
+        "document": "Раздел ПД №1_ПЗ.pdf",
+        "document_type": "ПЗ",
+        "page": 31,
+        "text": (
+            "Проектные решения по основаниям зданий приняты по результатам "
+            "инженерно-геологических изысканий, отчет № "
+            + project_anchor
+            + ". Расчетные характеристики грунтов приняты для проектирования фундаментов."
+        ),
+    })
+    return pages
+
+
+def test_cross_document_trace_checker_builds_two_sided_evidence_from_raw_corpus():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = {
+        "requirement_id": "REQ-TRACE-E2E",
+        "requirement_text": (
+            "Проектные решения по основаниям зданий принять по результатам "
+            "инженерно-геологических изысканий"
+        ),
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED",
+    }
+    pages = _traceability_corpus()
+    direct = verify_assignment_requirement(req, pages)
+    assert direct is not None
+    assert direct["status"] == "Соответствует заданию"
+    assert direct["verification_kernel"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
+    assert {item["proof_slot"] for item in direct["verification_evidence"]} == {
+        "SOURCE_INPUT", "PROJECT_ADOPTION"
+    }
+
+    attach_coverage_executor_evidence([req], pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
+
+
+def test_cross_document_trace_checker_rejects_missing_source_document():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req = {
+        "requirement_text": (
+            "Проектные решения по основаниям зданий принять по результатам "
+            "инженерно-геологических изысканий"
+        ),
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+    }
+    result = verify_assignment_requirement(
+        req,
+        _traceability_corpus(include_source=False),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_kernel"] == "SOURCE_LOCKED_RETRIEVAL"
+
+
+def test_cross_document_trace_checker_rejects_mismatched_explicit_report_anchor():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req = {
+        "requirement_text": (
+            "Проектные решения по основаниям зданий принять по результатам "
+            "инженерно-геологических изысканий"
+        ),
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+    }
+    result = verify_assignment_requirement(
+        req,
+        _traceability_corpus(project_anchor="OTHER-IGI-2026"),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_kernel"] == "SOURCE_LOCKED_RETRIEVAL"
+
+
 def _traceability_requirement():
     return {
         "requirement_id": "REQ-TRACE",

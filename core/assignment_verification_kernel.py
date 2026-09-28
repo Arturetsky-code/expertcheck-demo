@@ -1590,6 +1590,183 @@ def _lightning_grounding_check(requirement: dict[str, Any], page_corpus: list[di
     }
 
 
+_TRACE_SOURCE_MARKERS = (
+    "инженерно-геодез",
+    "инженерно-геолог",
+    "инженерно-гидрометеор",
+    "инженерно-эколог",
+    "инженерн изыскан",
+    "игди",
+    "иги",
+    "игми",
+    "иэи",
+)
+
+_TRACE_ADOPTION_MARKERS = (
+    "по результатам",
+    "на основании",
+    "по данным",
+    "с учетом",
+    "с учётом",
+    "согласно материал",
+)
+
+_TRACE_GENERIC_TERMS = {
+    "инженерн", "изыскан", "результат", "материал", "проектн",
+    "решения", "согласно", "техническ", "отчет", "отчета",
+    "приняты", "основани", "данным",
+}
+
+_TRACE_ANCHOR_RE = re.compile(
+    r"(?:шифр(?:а|ом)?|отч[её]т(?:а|е|у|ом)?\s*№?|№)\s*[:№]?\s*"
+    r"([A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9._/-]{3,})",
+    re.I,
+)
+
+
+def _trace_anchors(text: str) -> list[str]:
+    out: list[str] = []
+    for match in _TRACE_ANCHOR_RE.finditer(str(text or "")):
+        raw = match.group(1).strip(" .,:;")
+        normalized = re.sub(r"\s+", "", raw).upper()
+        if len(normalized) < 4 or not any(ch.isdigit() for ch in normalized):
+            continue
+        if not (any(ch.isalpha() for ch in normalized) or any(ch in "-/._" for ch in normalized)):
+            continue
+        if normalized not in out:
+            out.append(normalized)
+    return out
+
+
+def _trace_source_page(page: dict[str, Any]) -> bool:
+    blob = _norm(
+        f"{page.get('document_type') or ''} {page.get('document') or ''}"
+    )
+    return any(marker in blob for marker in _TRACE_SOURCE_MARKERS)
+
+
+def _cross_document_trace_check(
+    requirement: dict[str, Any],
+    page_corpus: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if str(requirement.get("requirement_type") or "").upper() != "CROSS_DOCUMENT_TRACE":
+        return None
+
+    terms = _significant_terms(_query_text(requirement))
+    subject_terms = [
+        term for term in terms
+        if term not in _TRACE_GENERIC_TERMS
+        and not any(term.startswith(generic) for generic in _TRACE_GENERIC_TERMS)
+    ]
+    if len(subject_terms) < 2:
+        return None
+
+    source_pages: list[tuple[dict[str, Any], list[str], list[str]]] = []
+    design_pages: list[tuple[dict[str, Any], list[str], list[str]]] = []
+    for page in page_corpus or []:
+        if is_assignment_source(page):
+            continue
+        text = str(page.get("text") or "")
+        low = _norm(text)
+        anchors = _trace_anchors(text)
+        if not anchors:
+            continue
+        hits = [term for term in subject_terms if term in low]
+        if len(hits) < 2:
+            continue
+        if _trace_source_page(page):
+            source_pages.append((page, hits, anchors))
+            continue
+        if (
+            any(marker in low for marker in _TRACE_ADOPTION_MARKERS)
+            and any(marker in low for marker in _TRACE_SOURCE_MARKERS)
+            and any(marker in low for marker in DESIGN_MARKERS)
+        ):
+            design_pages.append((page, hits, anchors))
+
+    ranked: list[
+        tuple[
+            int,
+            dict[str, Any], list[str],
+            dict[str, Any], list[str],
+            str,
+        ]
+    ] = []
+    for source_page, source_hits, source_anchors in source_pages:
+        for design_page, design_hits, design_anchors in design_pages:
+            common = sorted(set(source_anchors) & set(design_anchors))
+            if not common:
+                continue
+            score = len(source_hits) + len(design_hits)
+            ranked.append(
+                (
+                    score,
+                    source_page,
+                    source_hits,
+                    design_page,
+                    design_hits,
+                    common[0],
+                )
+            )
+    if not ranked:
+        return None
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    _, source_page, source_hits, design_page, design_hits, anchor = ranked[0]
+    subject_key = "|".join(sorted(subject_terms[:8]))
+
+    source_evidence = {
+        "evidence_kind": "QUALIFIED_CROSS_DOCUMENT_TRACE",
+        "evidence_state": "verified_candidate",
+        "document": source_page.get("document"),
+        "document_type": source_page.get("document_type"),
+        "page": source_page.get("page"),
+        "context": _context(source_page.get("text") or "", [anchor, *source_hits]),
+        "score": 98,
+        "trace_chain": True,
+        "trace_subject_key": subject_key,
+        "trace_anchor": anchor,
+        "proof_slot": "SOURCE_INPUT",
+        "matched_terms": source_hits,
+        "source_input_verified": True,
+        "project_adoption_verified": False,
+    }
+    project_evidence = {
+        "evidence_kind": "QUALIFIED_CROSS_DOCUMENT_TRACE",
+        "evidence_state": "verified_candidate",
+        "document": design_page.get("document"),
+        "document_type": design_page.get("document_type"),
+        "page": design_page.get("page"),
+        "context": _context(design_page.get("text") or "", [anchor, *design_hits]),
+        "score": 98,
+        "trace_chain": True,
+        "trace_subject_key": subject_key,
+        "trace_anchor": anchor,
+        "proof_slot": "PROJECT_ADOPTION",
+        "matched_terms": design_hits,
+        "source_input_verified": False,
+        "project_adoption_verified": True,
+    }
+    evidence = [source_evidence, project_evidence]
+    return {
+        "status": "Соответствует заданию",
+        "evidence": [
+            f"{source_page.get('document')}, стр. {source_page.get('page')}",
+            f"{design_page.get('document')}, стр. {design_page.get('page')}",
+        ],
+        "evidence_candidates": evidence,
+        "verification_evidence": evidence,
+        "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
+        "match_confidence": 0.98,
+        "decision_basis": (
+            "Прослежена адресная цепочка от исходного материала инженерных изысканий "
+            "к проектному решению по общему явному шифру/идентификатору источника."
+        ),
+        "verification_kernel": "CROSS_DOCUMENT_TRACE_EXECUTOR",
+        "trace_anchor": anchor,
+    }
+
+
 def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[dict[str, Any]]) -> dict[str, Any] | None:
     text = str(requirement.get("requirement_text") or "")
     query_text = _query_text(requirement)
@@ -1714,6 +1891,7 @@ def verify_assignment_requirement(requirement: dict[str, Any], page_corpus: list
         _lighting_composite_check,
         _lightning_grounding_check,
         _dynamic_foundation_normative_check,
+        _cross_document_trace_check,
         _normative_design_adoption_check,
         _normative_assertion_check,
         _landscaping_design_determined_check,

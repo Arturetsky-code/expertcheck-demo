@@ -1910,3 +1910,94 @@ Prefer sequential multipart staging:
 
 This can support an aggregate project larger than the single-upload limit without
 holding the whole archive set in browser memory at once.
+
+
+## Validated checkpoint — sequential multipart ZIP staging
+
+Final source commit:
+`ecca1a15c8e35efa17cbc339de30c6c9b1a44fac`
+
+Green regression marker:
+`93b41afeeecd5215cb8efd093e970ffe632a2b7f`
+
+Supporting commits:
+- `63c28222b58d2fe47ae6e3f36df72ba7c9471fa0` — merge staged package parts without rematerialising bytes;
+- `8e3b8f8208aa964928165dffe79d078049500a9f` — sequential ZIP-part UI;
+- `a0ff895f7f19706c47b3d509a7b7af210bf5a86b` — aggregate safety tests/UI handling;
+- `ecca1a15c8e35efa17cbc339de30c6c9b1a44fac` — enforce aggregate limits inside the merge path itself.
+
+### Purpose
+
+The configured Streamlit single-file upload limit remains **500 MB**.
+Rather than raising it to 1+ GB and keeping a giant browser buffer alive, ExpertCheck can
+now assemble one project package from sequential ZIP parts.
+
+### Accepted multipart lifecycle
+
+1. Upload one ZIP part under the existing per-file transport limit.
+2. Prepare/extract it to file-backed staging.
+3. Rotate/remove the uploader widget on rerun.
+4. Keep only the staged package and its temporary-file owners.
+5. Select **Добавить ZIP-часть**.
+6. Upload the next ZIP part.
+7. Prepare it independently and merge metadata/file references into the staged package.
+8. Deduplicate exact cross-part duplicates.
+9. Rerun again to release that uploader buffer.
+10. Repeat as needed, then review the combined inventory and run one analysis.
+
+The editable inventory and **Запустить проверку** are hidden while a new ZIP part is
+being added, so an incomplete assembly cannot be launched accidentally.
+
+### Memory property
+
+Merging packages does not copy staged PDF/XML bytes back into RAM.
+
+The merged result retains the `TemporaryDirectory` owners from every staged part, so
+file-backed members remain readable after intermediate package objects leave scope.
+
+### Aggregate safety
+
+Multipart cannot bypass the original archive safety envelope.
+
+The merged package is rejected when:
+- supported files exceed `MAX_ARCHIVE_ENTRIES = 2500`; or
+- total staged uncompressed PDF/XML bytes exceed
+  `MAX_UNCOMPRESSED_BYTES = 1.5 GiB`.
+
+These limits are checked on the **combined** staged package after deduplication.
+
+Unit tests cover:
+- two staged ZIP parts remain file-backed after merge;
+- temporary backing paths stay alive through the merged result;
+- exact duplicate members across parts are removed;
+- aggregate byte limit is enforced;
+- aggregate file-count limit is enforced.
+
+### CI note
+
+Several first-attempt diagnostic/integrity jobs during this work failed before tests
+because PyPI repeatedly timed out fetching `python-dateutil`.
+Those failed jobs were rerun without source changes and then passed.
+
+### Validation
+
+At final source `ecca1a1...`:
+- Core25 tests: **success**;
+- Core20 regression: **success**;
+- baseline full diagnostic: **success after network retry**;
+- alpha1 release gate: **success**;
+- Core20 quality / results integrity: **success**;
+- Validate ExpertCheck 25.2: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Test78 remains **25 VERIFIED + 2 PROJECT_FINDING + 29 REVIEW = 27/56**;
+- changed IDs: **none**.
+
+### Current readiness statement
+
+Architecture now supports assembling a project larger than the 500 MB single-upload
+limit through sequential ZIP parts while keeping staged members file-backed.
+
+This is **ready for manual browser validation**, not yet a claim that a real 800 MB–1 GB
+package has been proven in production. A real multipart upload should be tested before
+calling the large-package milestone complete.

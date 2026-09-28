@@ -88,11 +88,13 @@ def _normalized_candidate(requirement: dict[str, Any], candidate: dict[str, Any]
     return item
 
 
-def _candidate_key(item: dict[str, Any]) -> tuple[str, int, str]:
+def _candidate_key(item: dict[str, Any]) -> tuple[str, int, str, str, str]:
     return (
         _text(item.get("document")),
         int(item.get("page") or 0),
         normalize_text(item.get("context") or "")[:320],
+        _text(item.get("evidence_kind")).upper(),
+        _text(item.get("proof_slot")).upper(),
     )
 
 

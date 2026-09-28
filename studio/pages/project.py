@@ -96,96 +96,147 @@ def _upload(ctx):
             'extended':'Рекомендуемый режим перед экспертизой: ПД + ИИ + ключевая ИРД.',
             'full':'Максимальная глубина. Для больших комплектов обработка может занимать существенно больше времени.'
         }[mode_code])
-        upload_mode = st.radio(
-            'Способ загрузки комплекта',
-            ['ZIP-архив — рекомендуется', 'Отдельные PDF/XML'],
-            index=0, horizontal=True, key='project_upload_transport_mode',
-            help='Для комплектов из нескольких томов ZIP надёжнее: браузер выполняет одну передачу вместо множества параллельных загрузок.'
-        )
-        if upload_mode.startswith('ZIP'):
-            st.caption('Рекомендуемый режим для полного проекта: упакуйте PDF/XML в один ZIP без пароля. Структура папок внутри архива сохраняется.')
-            zip_upload = st.file_uploader(
-                'Комплект проекта — ZIP', type=['zip'], accept_multiple_files=False,
-                key='project_zip_uploader',
+        # A prepared package is kept across one Streamlit rerun so the original
+        # uploader widget can disappear before expensive engineering analysis.
+        # This is especially important for ZIP mode: extracted members are already
+        # file-backed, while the browser-uploaded ZIP should not remain an active
+        # widget payload during the full analysis.
+        clear_upload_key = st.session_state.pop('_project_upload_clear_key', None)
+        if clear_upload_key:
+            st.session_state.pop(str(clear_upload_key), None)
+
+        staged_package = st.session_state.get('_project_upload_staged_package')
+        package = staged_package
+        uploads = []
+        upload_generation = int(st.session_state.get('_project_upload_generation') or 0)
+
+        if staged_package is not None:
+            staged_summary = staged_package.package_summary
+            staged_storage = staged_summary.get('storage', {})
+            st.success(
+                'Комплект подготовлен и отделён от браузерной загрузки: '
+                f"{int(staged_summary.get('files') or 0)} файлов · "
+                f"{float(staged_summary.get('total_bytes') or 0)/1048576:.1f} МБ."
             )
-            uploads = [zip_upload] if zip_upload is not None else []
+            if int(staged_storage.get('file_backed_files') or 0):
+                st.caption(
+                    'ZIP распакован во временное файловое хранилище; '
+                    'анализ не требует держать распакованные PDF/XML в памяти.'
+                )
+            if st.button('Загрузить другой комплект', key='project_upload_reset_staged'):
+                st.session_state.pop('_project_upload_staged_package', None)
+                st.session_state.pop('studio3_upload_inventory', None)
+                st.session_state.pop('studio3_package_confirmed', None)
+                st.session_state['_project_upload_generation'] = upload_generation + 1
+                st.rerun()
         else:
-            st.caption('Резервный режим. При загрузке большого количества файлов Streamlit/облачный прокси может прервать параллельные передачи. Если появляются красные значки «!», используйте ZIP-режим.')
-            uploads = st.file_uploader(
-                'Комплект проекта — отдельные файлы', type=['pdf', 'xml'],
-                accept_multiple_files=True, key='project_multi_uploader',
-            ) or []
+            upload_mode = st.radio(
+                'Способ загрузки комплекта',
+                ['ZIP-архив — рекомендуется', 'Отдельные PDF/XML'],
+                index=0, horizontal=True, key='project_upload_transport_mode',
+                help='Для комплектов из нескольких томов ZIP надёжнее: браузер выполняет одну передачу вместо множества параллельных загрузок.'
+            )
+            if upload_mode.startswith('ZIP'):
+                st.caption('Рекомендуемый режим для полного проекта: упакуйте PDF/XML в один ZIP без пароля. Структура папок внутри архива сохраняется.')
+                upload_key = f'project_zip_uploader_{upload_generation}'
+                zip_upload = st.file_uploader(
+                    'Комплект проекта — ZIP', type=['zip'], accept_multiple_files=False,
+                    key=upload_key,
+                )
+                uploads = [zip_upload] if zip_upload is not None else []
+            else:
+                st.caption('Резервный режим. При загрузке большого количества файлов Streamlit/облачный прокси может прервать параллельные передачи. Если появляются красные значки «!», используйте ZIP-режим.')
+                upload_key = f'project_multi_uploader_{upload_generation}'
+                uploads = st.file_uploader(
+                    'Комплект проекта — отдельные файлы', type=['pdf', 'xml'],
+                    accept_multiple_files=True, key=upload_key,
+                ) or []
+
+            if uploads:
+                total_upload_bytes=sum(int(getattr(x,'size',0) or 0) for x in uploads)
+                st.caption(f'Получено браузером: {len(uploads)} файлов · {total_upload_bytes/1048576:.1f} МБ')
+                st.progress(100,text=f'Загрузка в приложение: 100% · {len(uploads)} из {len(uploads)} файлов')
+                upload_status = st.status('Подготовка комплекта', expanded=True)
+                upload_status.write('Проверяем архивы, форматы и структуру файлов.')
+                try:
+                    package = prepare_uploads(uploads)
+                except Exception as exc:
+                    upload_status.update(label='Не удалось подготовить комплект', state='error', expanded=True)
+                    st.error(f'Ошибка подготовки загруженных файлов: {type(exc).__name__}: {exc}')
+                    package = None
+                if package is not None:
+                    prepared_now = package.files
+                    upload_status.update(
+                        label=f'Подготовлено файлов: {len(prepared_now)} из {len(uploads)} загруженных элементов',
+                        state='complete' if prepared_now else 'error',
+                        expanded=not bool(prepared_now),
+                    )
+                    for item in package.errors:
+                        st.error(item)
+                    for item in package.warnings:
+                        st.warning(item)
+                    if not prepared_now:
+                        st.error('Ни один PDF/XML не был подготовлен. Проверьте размер файлов, формат ZIP и журналы выше.')
+                    elif not package.errors:
+                        st.session_state['_project_upload_staged_package'] = package
+                        st.session_state['_project_upload_clear_key'] = upload_key
+                        st.session_state['_project_upload_generation'] = upload_generation + 1
+                        # Rerun before any analysis. On the next run the uploader is
+                        # not instantiated and its old widget payload is removed.
+                        st.rerun()
+
         prepared = []
         edited = pd.DataFrame()
         confirmed = False
         errors = []
-        if uploads:
-            total_upload_bytes=sum(int(getattr(x,'size',0) or 0) for x in uploads)
-            st.caption(f'Получено браузером: {len(uploads)} файлов · {total_upload_bytes/1048576:.1f} МБ')
-            st.progress(100,text=f'Загрузка в приложение: 100% · {len(uploads)} из {len(uploads)} файлов')
-            upload_status = st.status('Подготовка комплекта', expanded=True)
-            upload_status.write('Проверяем архивы, форматы и структуру файлов.')
-            try:
-                package = prepare_uploads(uploads)
-            except Exception as exc:
-                upload_status.update(label='Не удалось подготовить комплект', state='error', expanded=True)
-                st.error(f'Ошибка подготовки загруженных файлов: {type(exc).__name__}: {exc}')
-                package = None
-            if package is not None:
-                prepared = package.files
-                errors = package.errors
-                upload_status.update(
-                    label=f'Подготовлено файлов: {len(prepared)} из {len(uploads)} загруженных элементов',
-                    state='complete' if prepared else 'error',
-                    expanded=not bool(prepared),
-                )
-                for item in errors:
-                    st.error(item)
-                for item in package.warnings:
-                    st.warning(item)
-                if not prepared:
-                    st.error('Ни один PDF/XML не был подготовлен. Проверьте размер файлов, формат ZIP и журналы выше.')
-                if prepared:
-                    summary = package.package_summary
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric('Файлов', int(summary.get('files', 0)))
-                    c2.metric('Общий объём', f"{float(summary.get('total_bytes', 0))/1048576:.1f} МБ")
-                    c3.metric('XML', ', '.join(summary.get('identity', {}).get('xml_schemas', [])) or 'нет')
-                    with st.expander('Проверить состав и типы документов', expanded=True):
-                        edited = st.data_editor(
-                            pd.DataFrame(package.inventory),
-                            hide_index=True,
-                            width='stretch',
-                            disabled=['ID', 'Файл', 'Формат', 'Семейство', 'Размер, МБ', 'Источник', 'Статус'],
-                            column_config={
-                                'Предполагаемый раздел': st.column_config.SelectboxColumn(
-                                    'Раздел', options=DOCUMENT_TYPE_OPTIONS, required=True
-                                )
-                            },
-                            key='studio3_upload_inventory',
-                        )
-                        comp = summary.get('completeness', {})
-                        available = comp.get('available_checks', [])
-                        limits = comp.get('limitations', [])
-                        if available:
-                            st.success('Доступно: ' + '; '.join(available))
-                        if limits:
-                            st.info('Ограничения: ' + '; '.join(limits))
-                        trace = summary.get('traceability', {})
-                        trace_counts = trace.get('source_role_counts', {})
-                        survey_count = int(trace_counts.get('SURVEY_REPORT') or 0)
-                        tu_count = int(trace_counts.get('TECHNICAL_CONDITIONS') or 0)
-                        source_data_count = int(trace_counts.get('SOURCE_DATA') or 0)
-                        st.caption(
-                            'Источники для междокументной проверки: '
-                            f'ИИ — {survey_count} · ТУ — {tu_count} · ИРД/исходные данные — {source_data_count}'
-                        )
-                        if not trace.get('traceability_ready'):
-                            st.info(
-                                'В комплекте не распознаны ИИ, ТУ или ИРД. '
-                                'Проверки прослеживаемости «исходный документ → ПД» будут ограничены.'
+        if package is not None:
+            prepared = package.files
+            errors = package.errors
+            for item in errors:
+                st.error(item)
+            for item in package.warnings:
+                st.warning(item)
+            if prepared:
+                summary = package.package_summary
+                c1, c2, c3 = st.columns(3)
+                c1.metric('Файлов', int(summary.get('files', 0)))
+                c2.metric('Общий объём', f"{float(summary.get('total_bytes', 0))/1048576:.1f} МБ")
+                c3.metric('XML', ', '.join(summary.get('identity', {}).get('xml_schemas', [])) or 'нет')
+                with st.expander('Проверить состав и типы документов', expanded=True):
+                    edited = st.data_editor(
+                        pd.DataFrame(package.inventory),
+                        hide_index=True,
+                        width='stretch',
+                        disabled=['ID', 'Файл', 'Формат', 'Семейство', 'Размер, МБ', 'Источник', 'Статус'],
+                        column_config={
+                            'Предполагаемый раздел': st.column_config.SelectboxColumn(
+                                'Раздел', options=DOCUMENT_TYPE_OPTIONS, required=True
                             )
-                    confirmed = st.checkbox('Состав загруженного комплекта проверен', key='studio3_package_confirmed')
+                        },
+                        key='studio3_upload_inventory',
+                    )
+                    comp = summary.get('completeness', {})
+                    available = comp.get('available_checks', [])
+                    limits = comp.get('limitations', [])
+                    if available:
+                        st.success('Доступно: ' + '; '.join(available))
+                    if limits:
+                        st.info('Ограничения: ' + '; '.join(limits))
+                    trace = summary.get('traceability', {})
+                    trace_counts = trace.get('source_role_counts', {})
+                    survey_count = int(trace_counts.get('SURVEY_REPORT') or 0)
+                    tu_count = int(trace_counts.get('TECHNICAL_CONDITIONS') or 0)
+                    source_data_count = int(trace_counts.get('SOURCE_DATA') or 0)
+                    st.caption(
+                        'Источники для междокументной проверки: '
+                        f'ИИ — {survey_count} · ТУ — {tu_count} · ИРД/исходные данные — {source_data_count}'
+                    )
+                    if not trace.get('traceability_ready'):
+                        st.info(
+                            'В комплекте не распознаны ИИ, ТУ или ИРД. '
+                            'Проверки прослеживаемости «исходный документ → ПД» будут ограничены.'
+                        )
+                confirmed = st.checkbox('Состав загруженного комплекта проверен', key='studio3_package_confirmed')
         if st.button(
             'Запустить проверку',
             type='primary',
@@ -279,6 +330,12 @@ def _upload(ctx):
                 else 'Переходим к подтверждению состава объектов',
             )
             _persist_completed_state(ctx)
+            # Analysis is complete; release staged temporary files before the
+            # result-page rerun. The analysis result/snapshot no longer depends
+            # on the original uploaded bytes.
+            st.session_state.pop('_project_upload_staged_package', None)
+            st.session_state.pop('studio3_upload_inventory', None)
+            st.session_state.pop('studio3_package_confirmed', None)
             # The sidebar radio with key 'page' already exists in this run.
             # Defer navigation until the next rerun to comply with Streamlit state rules.
             st.session_state['_navigate_to'] = (

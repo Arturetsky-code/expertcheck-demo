@@ -1040,3 +1040,82 @@ Do not compare `NOMINAL_TOTAL_CAPACITY` with `OPERATING_SECTION_THROUGHPUT`.
 Prefer the next review-only requirement where complete addressable evidence exists and
 the improvement extends or reuses a general archetype.
 
+
+
+## Validated checkpoint — fail-closed unrouted normative adoption (26/56)
+
+Source code commit:
+`ccb749b2477138d846ea5f69f2a5e80fa495076c`
+
+Green regression marker:
+`029975ec36d3ec0b690a00700ae2e644a0dbc897`
+
+### Test78 result
+
+Deterministic Test78 A/B produced **SINGLE_GAIN** with exactly one changed requirement:
+
+- `ASSIGN-016FCF9FBA5CD6`: `REVIEW_QUESTION -> VERIFIED_OK`;
+- proof: `PROVEN_MATCH`;
+- reason: `ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED`;
+- executor/archetype: `NORMATIVE_DESIGN_ADOPTION_EXECUTOR` / `NORMATIVE_DESIGN_ADOPTION`.
+
+New strict categorical accounting:
+- `VERIFIED_OK`: **24**;
+- native `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **30**;
+- external deviations: **0**;
+- strict categorical coverage: **26/56 = 46.4%**;
+- native categorical archetypes: **13**;
+- all 26 categorical rows map to a native archetype.
+
+This gain reuses the existing normative-design-adoption archetype; it does not add a
+requirement-specific executor.
+
+### Universal safeguard
+
+The defect was an admission/routing gap for normative action requirements whose
+`expected_sections` could not be inferred.
+
+The accepted fallback is deliberately fail-closed:
+
+1. when the requirement has no inferred profile sections, evidence may not be
+   assembled from unrelated pages across the project;
+2. one and the same addressable project page must prove the engineering subject and
+   project/design assertion;
+3. that same page must prove adoption of **every** normative reference explicitly named
+   in the Assignment;
+4. split-page evidence without an inferred route remains `REVIEW`;
+5. `NORMATIVE_DESIGN_ADOPTION_EXECUTOR` may resolve an otherwise `UNRESOLVED`
+   non-object scope to project-global only after the deterministic executor has produced
+   the qualified proof package;
+6. different proof roles on the same page are retained separately by including
+   `evidence_kind` and `proof_slot` in both coverage deduplication and Core25 evidence
+   identity.
+
+This prevents a bibliography/reference-only hit or a norm found in one document plus an
+unrelated design statement in another from becoming categorical.
+
+### Validation
+
+At source commit `ccb749b...`:
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **143 passed**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / SINGLE_GAIN**.
+
+### Continue from here
+
+Treat **26/56** as the accepted baseline only after the baseline-manifest recheck returns
+`NO_CHANGE`.
+
+Do not promote:
+- `ASSIGN-E9BD8EC7BDE545` across incompatible capacity semantic levels;
+- `ASSIGN-15C37B5DD8F8C8` from a brand/manufacturer difference alone;
+- `ASSIGN-56D65F62613D01` while the lighting composite remains incomplete.
+
+Preferred next work is another review requirement where complete addressable evidence
+already exists and the fix improves a reusable archetype rather than one Test78 ID.

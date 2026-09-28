@@ -1392,3 +1392,84 @@ cross-document anchor requirement merely to move Test78.
 
 For the current 12-document frontier, continue only with review requirements whose
 complete evidence is actually present in the fixture.
+
+
+## Validated checkpoint — review frontier audit and survey-discipline breadth
+
+Traceability breadth source/test commit:
+`58444629d46cb01d9fb805d0f6849e5bfd983ebb`
+
+Green regression marker:
+`09247d0b32a8da4d5ce96d7ba2f910cc90efc6d5`
+
+### Cross-document trace is not geology-specific
+
+The same deterministic `CROSS_DOCUMENT_TRACE` path is now regression-tested
+end-to-end for four engineering-survey disciplines:
+
+- ИГИ — engineering geology;
+- ИГДИ — engineering geodesy;
+- ИГМИ — engineering hydrometeorology;
+- ИЭИ — engineering ecology.
+
+Every positive test uses the same generic contract:
+1. addressable survey source;
+2. addressable project adoption statement;
+3. shared explicit report/reference anchor;
+4. shared engineering subject;
+5. different source/project documents;
+6. Core25 re-validation through `TRACEABILITY`.
+
+No discipline-specific executor or DSK-specific requirement ID was added.
+
+Validation at `5844462...`:
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- alpha1 release gate: **success**.
+
+### Current 12-document REVIEW frontier audit
+
+The deterministic Test78 baseline remains **27/56 = 48.2%**
+(`25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW`).
+
+The remaining high-priority review candidates were explicitly audited:
+
+- lighting composite `ASSIGN-56D65F62613D01`: only **2/5** slots are actually
+  proven (`led_fixtures`, `sp52_adoption`); `floodlight_masts`,
+  `console_fixtures`, and `territorial_layout` are absent;
+- cross-document trace `ASSIGN-2C7DB91DFF4DA6`: **0** matching survey-source
+  pages exist in the current 12-file fixture;
+- capacity `ASSIGN-E9BD8EC7BDE545`: required
+  `NOMINAL_TOTAL_CAPACITY` cannot be compared to observed
+  `OPERATING_SECTION_THROUGHPUT`;
+- equipment `ASSIGN-15C37B5DD8F8C8`: brand/manufacturer difference alone is
+  insufficient for a categorical mismatch;
+- object composition `ASSIGN-1AAA2D9BDB9338`: the current corpus does not
+  safely prove the complete expected 38-object set;
+- negative/applicability reviews: no candidate provides enough body-level subject
+  agreement for categorical proof. The strongest title-level candidate
+  `ASSIGN-9F6B4A19B43D82` has 2/3 title-term overlap but **0% body-term overlap**,
+  so it correctly remains `REVIEW`;
+- remaining generic presence/normative candidates are partial, owner-unresolved,
+  qualifier-incomplete, or lack the required normative references.
+
+### Development conclusion
+
+Do **not** lower thresholds merely to force Test78 above 27/56.
+
+For the current 12-document fixture, the next percentage gain should be accepted only
+if new addressable evidence is discovered by a genuinely stronger reusable extractor or
+if the benchmark corpus is expanded with the missing source documents.
+
+Preferred architecture direction now:
+1. keep 27/56 as the honest current benchmark;
+2. extend source-to-project traceability beyond engineering surveys to other explicit
+   source documents (e.g. technical conditions / source data) with the same anchor-based
+   fail-closed contract;
+3. later validate against a corpus containing real PD + II + IRD rather than weakening
+   gates on the current reduced fixture.

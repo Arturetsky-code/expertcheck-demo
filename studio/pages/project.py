@@ -7,7 +7,12 @@ from core.ru_labels import ru_label
 import streamlit as st
 from studio.components import hero, card, section, empty, project_status_bar, timeline
 from studio.data import excel_report
-from core.project_upload import DOCUMENT_TYPE_OPTIONS, apply_document_type_overrides, prepare_uploads
+from core.project_upload import (
+    DOCUMENT_TYPE_OPTIONS,
+    apply_document_type_overrides,
+    merge_prepared_packages,
+    prepare_uploads,
+)
 from core.review_profiles import filter_prepared_files, PROFILES
 from core.report_engine import build_decision_report
 from core.ai_gateway import provider_for_role
@@ -109,26 +114,91 @@ def _upload(ctx):
         package = staged_package
         uploads = []
         upload_generation = int(st.session_state.get('_project_upload_generation') or 0)
+        adding_zip_part = bool(st.session_state.get('_project_upload_add_part'))
 
         if staged_package is not None:
             staged_summary = staged_package.package_summary
             staged_storage = staged_summary.get('storage', {})
+            staged_parts = int(staged_summary.get('staged_parts') or 1)
             st.success(
                 'Комплект подготовлен и отделён от браузерной загрузки: '
                 f"{int(staged_summary.get('files') or 0)} файлов · "
-                f"{float(staged_summary.get('total_bytes') or 0)/1048576:.1f} МБ."
+                f"{float(staged_summary.get('total_bytes') or 0)/1048576:.1f} МБ · "
+                f"ZIP-частей/этапов: {staged_parts}."
             )
             if int(staged_storage.get('file_backed_files') or 0):
                 st.caption(
                     'ZIP распакован во временное файловое хранилище; '
                     'анализ не требует держать распакованные PDF/XML в памяти.'
                 )
-            if st.button('Загрузить другой комплект', key='project_upload_reset_staged'):
-                st.session_state.pop('_project_upload_staged_package', None)
-                st.session_state.pop('studio3_upload_inventory', None)
-                st.session_state.pop('studio3_package_confirmed', None)
-                st.session_state['_project_upload_generation'] = upload_generation + 1
-                st.rerun()
+
+            if adding_zip_part:
+                st.info(
+                    'Добавление следующей ZIP-части. Загружайте один архив за раз; '
+                    'после подготовки его браузерный буфер будет освобождён перед следующей частью.'
+                )
+                add_upload_key = f'project_zip_part_uploader_{upload_generation}'
+                zip_part = st.file_uploader(
+                    'Следующая ZIP-часть комплекта',
+                    type=['zip'],
+                    accept_multiple_files=False,
+                    key=add_upload_key,
+                )
+                c_add, c_cancel = st.columns(2)
+                with c_cancel:
+                    if st.button('Отменить добавление части', key='project_upload_cancel_add_part'):
+                        st.session_state['_project_upload_add_part'] = False
+                        st.session_state['_project_upload_clear_key'] = add_upload_key
+                        st.session_state['_project_upload_generation'] = upload_generation + 1
+                        st.rerun()
+                if zip_part is not None:
+                    part_status = st.status('Подготовка ZIP-части', expanded=True)
+                    try:
+                        addition = prepare_uploads([zip_part])
+                    except Exception as exc:
+                        part_status.update(label='Не удалось подготовить ZIP-часть', state='error')
+                        st.error(f'Ошибка подготовки ZIP-части: {type(exc).__name__}: {exc}')
+                        addition = None
+                    if addition is not None:
+                        for item in addition.errors:
+                            st.error(item)
+                        for item in addition.warnings:
+                            st.warning(item)
+                        if addition.files and not addition.errors:
+                            merged = merge_prepared_packages(staged_package, addition)
+                            st.session_state['_project_upload_staged_package'] = merged
+                            st.session_state['_project_upload_add_part'] = False
+                            st.session_state['_project_upload_clear_key'] = add_upload_key
+                            st.session_state['_project_upload_generation'] = upload_generation + 1
+                            st.session_state.pop('studio3_upload_inventory', None)
+                            st.session_state.pop('studio3_package_confirmed', None)
+                            part_status.update(
+                                label=(
+                                    f"ZIP-часть добавлена · файлов в комплекте: "
+                                    f"{int(merged.package_summary.get('files') or 0)}"
+                                ),
+                                state='complete',
+                                expanded=False,
+                            )
+                            st.rerun()
+                        elif not addition.files:
+                            part_status.update(label='В ZIP-части нет поддерживаемых PDF/XML', state='error')
+            else:
+                c_add, c_reset = st.columns(2)
+                with c_add:
+                    if st.button('Добавить ZIP-часть', key='project_upload_add_zip_part', width='stretch'):
+                        st.session_state['_project_upload_add_part'] = True
+                        st.session_state['_project_upload_generation'] = upload_generation + 1
+                        st.session_state.pop('studio3_package_confirmed', None)
+                        st.rerun()
+                with c_reset:
+                    if st.button('Загрузить другой комплект', key='project_upload_reset_staged', width='stretch'):
+                        st.session_state.pop('_project_upload_staged_package', None)
+                        st.session_state.pop('_project_upload_add_part', None)
+                        st.session_state.pop('studio3_upload_inventory', None)
+                        st.session_state.pop('studio3_package_confirmed', None)
+                        st.session_state['_project_upload_generation'] = upload_generation + 1
+                        st.rerun()
         else:
             upload_mode = st.radio(
                 'Способ загрузки комплекта',
@@ -179,6 +249,7 @@ def _upload(ctx):
                         st.error('Ни один PDF/XML не был подготовлен. Проверьте размер файлов, формат ZIP и журналы выше.')
                     elif not package.errors:
                         st.session_state['_project_upload_staged_package'] = package
+                        st.session_state['_project_upload_add_part'] = False
                         st.session_state['_project_upload_clear_key'] = upload_key
                         st.session_state['_project_upload_generation'] = upload_generation + 1
                         # Rerun before any analysis. On the next run the uploader is
@@ -189,7 +260,7 @@ def _upload(ctx):
         edited = pd.DataFrame()
         confirmed = False
         errors = []
-        if package is not None:
+        if package is not None and not adding_zip_part:
             prepared = package.files
             errors = package.errors
             for item in errors:
@@ -334,6 +405,7 @@ def _upload(ctx):
             # result-page rerun. The analysis result/snapshot no longer depends
             # on the original uploaded bytes.
             st.session_state.pop('_project_upload_staged_package', None)
+            st.session_state.pop('_project_upload_add_part', None)
             st.session_state.pop('studio3_upload_inventory', None)
             st.session_state.pop('studio3_package_confirmed', None)
             # The sidebar radio with key 'page' already exists in this run.

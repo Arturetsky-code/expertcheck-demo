@@ -1204,3 +1204,96 @@ Do not promote:
 
 Preferred next work: inspect the remaining review frontier for a reusable evidence
 contract or cross-document trace pattern with complete addressable evidence.
+
+
+## Validated architecture checkpoint — fail-closed cross-document trace
+
+Source code commit:
+`dc62dc0537ec5598afa7861c83817116be5aaed4`
+
+Green regression marker:
+`b76ac0729a686458044da22cfd71389a432c27f7`
+
+### Why this did not change Test78
+
+The remaining Test78 `CROSS_DOCUMENT_TRACE` requirement
+`ASSIGN-2C7DB91DFF4DA6` still correctly remains `REVIEW_QUESTION`.
+
+Safe benchmark diagnostics prove that the current 12-document corpus contains:
+- **0** source/survey pages matching the requirement;
+- many project-design pages, but maximum design-side semantic coverage only **0.357**;
+- therefore no two-sided source-input -> project-adoption chain exists in the fixture.
+
+Test78 after the new route:
+- classification: **NO_CHANGE**;
+- `VERIFIED_OK`: **25**;
+- native `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **29**;
+- strict categorical coverage: **27/56 = 48.2%**;
+- changed IDs: **none**.
+
+### New universal Core25 route
+
+Core25 now supports `TRACEABILITY` instead of forcing all
+`CROSS_DOCUMENT_TRACE` requirements into `REVIEW_ONLY`.
+
+A categorical trace is admitted only when two independent, addressable evidence roles
+are present:
+
+1. `SOURCE_INPUT` — verified source/engineering-survey evidence;
+2. `PROJECT_ADOPTION` — verified project statement showing that the source input was
+   actually adopted.
+
+Both evidence rows must:
+- be `verified_candidate`;
+- use `QUALIFIED_CROSS_DOCUMENT_TRACE`;
+- declare `trace_chain=true`;
+- share the same non-empty `trace_subject_key`;
+- share the same non-empty `trace_anchor`;
+- contain at least two matched semantic terms;
+- come from **different documents**.
+
+Additionally:
+- source evidence must declare `source_input_verified=true`;
+- project evidence must declare `project_adoption_verified=true`;
+- project evidence must contain a project/design assertion.
+
+Only then Core25 emits:
+- `PROVEN_MATCH`;
+- reason `ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED`;
+- universal archetype `CROSS_DOCUMENT_TRACE`.
+
+### Regression guards
+
+Tests cover:
+1. complete two-sided source -> project chain -> `VERIFIED_OK`;
+2. missing source side -> `REVIEW`;
+3. different trace anchors -> `REVIEW`;
+4. same document used for both roles -> `REVIEW`.
+
+### Validation
+
+At source commit `dc62dc0...`:
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- alpha1 release gate: **success**.
+
+### Continue from here
+
+The Test78 benchmark cannot validate the positive trace path until engineering-survey
+source documents are added to a benchmark corpus.
+
+Next development direction should therefore be one of:
+- add a dedicated synthetic/expanded benchmark containing PD + engineering surveys and
+  validate the new `TRACEABILITY` route end-to-end;
+- continue the current 12-document review frontier only where complete evidence is
+  actually present.
+
+Do not turn a project-side statement alone into a cross-document proof.

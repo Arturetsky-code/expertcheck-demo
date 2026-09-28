@@ -17,7 +17,9 @@ MAX_UNCOMPRESSED_BYTES = 1_500 * 1024 * 1024
 DOCUMENT_TYPE_OPTIONS = [
     "Не определён", "ПЗ", "ПЗ XML", "ПЗУ1", "ПЗУ2", "АР1", "АР2", "АР", "КР",
     "ТХ1", "ТХ2", "ТХ", "ИОС1", "ИОС2", "ИОС3", "ИОС4", "ИОС5", "ИОС6", "ИОС7",
-    "ПОС", "ПОД", "ПБ", "ООС", "ОДИ", "ЭЭ", "СМ", "ППО", "ТКР", "ИЛО", "ГОЧС", "ИГДИ", "ИГИ", "ИГМИ", "ИЭИ", "Задание на проектирование", "Прочее",
+    "ПОС", "ПОД", "ПБ", "ООС", "ОДИ", "ЭЭ", "СМ", "ППО", "ТКР", "ИЛО", "ГОЧС",
+    "ИГДИ", "ИГИ", "ИГМИ", "ИЭИ", "ТУ", "ИРД", "Исходные данные",
+    "Задание на проектирование", "Прочее",
 ]
 
 
@@ -102,6 +104,9 @@ def guess_document_type(filename: str) -> str:
         ("ИГИ", ("иги", "геолог")),
         ("ИГМИ", ("игми", "гидрометеорол")),
         ("ИЭИ", ("иэи", "экологическ")),
+        ("ТУ", ("технические условия", "техусловия", " ту ")),
+        ("Исходные данные", ("исходные данные", "исходные материалы")),
+        ("ИРД", ("исходно разрешительная", "исходно-разрешительная", " ирд ")),
         ("Задание на проектирование", ("задание на проектирование", "техническое задание", "тз на проектирование", "знп")),
     ]
     padded = f" {name} "
@@ -129,6 +134,12 @@ def document_family(document_type: str) -> str:
         return "ИОС4"
     if value == "ПЗXML":
         return "ПЗ XML"
+    if value in {"ИГДИ", "ИГИ", "ИГМИ", "ИЭИ"}:
+        return "Инженерные изыскания"
+    if value == "ТУ":
+        return "ТУ"
+    if value in {"ИРД", "ИСХОДНЫЕДАННЫЕ"}:
+        return "ИРД"
     return document_type or "Не определён"
 
 
@@ -275,6 +286,31 @@ def _completeness(files: list[PreparedUpload]) -> dict[str, Any]:
     return {"present": present, "available_checks": available_checks, "limitations": limitations}
 
 
+def _traceability_source_summary(files: list[PreparedUpload]) -> dict[str, Any]:
+    counts = {
+        "SURVEY_REPORT": 0,
+        "TECHNICAL_CONDITIONS": 0,
+        "SOURCE_DATA": 0,
+    }
+    for file in files:
+        dtype = str(file.declared_document_type or "").upper().replace(" ", "")
+        if dtype in {"ИГДИ", "ИГИ", "ИГМИ", "ИЭИ"}:
+            counts["SURVEY_REPORT"] += 1
+        elif dtype == "ТУ":
+            counts["TECHNICAL_CONDITIONS"] += 1
+        elif dtype in {"ИРД", "ИСХОДНЫЕДАННЫЕ"}:
+            counts["SOURCE_DATA"] += 1
+
+    available = [role for role, count in counts.items() if count > 0]
+    missing = [role for role, count in counts.items() if count == 0]
+    return {
+        "source_role_counts": counts,
+        "available_source_roles": available,
+        "missing_source_roles": missing,
+        "traceability_ready": bool(available),
+    }
+
+
 def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
     files: list[PreparedUpload] = []
     warnings: list[str] = []
@@ -326,6 +362,7 @@ def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
         "total_bytes": sum(file.size for file in files),
         "identity": identity_summary,
         "completeness": completeness,
+        "traceability": _traceability_source_summary(files),
     }
     return UploadPreparationResult(files, inventory, warnings, errors, summary)
 

@@ -36,6 +36,42 @@ def test_guess_document_type():
     assert document_family("АР2") == "АР"
 
 
+def test_guess_traceability_source_document_types():
+    assert guess_document_type("ИГИ_Технический_отчет.pdf") == "ИГИ"
+    assert guess_document_type("ТУ_электроснабжение_№15.pdf") == "ТУ"
+    assert guess_document_type("Исходные данные заказчика.pdf") == "Исходные данные"
+    assert guess_document_type("ИРД_перечень.pdf") == "ИРД"
+    assert document_family("ИГМИ") == "Инженерные изыскания"
+    assert document_family("Исходные данные") == "ИРД"
+
+
+def test_traceability_source_summary_counts_real_source_roles():
+    files = [
+        Upload("ИГИ_Технический_отчет.pdf", b"%PDF"),
+        Upload("ТУ_электроснабжение.pdf", b"%PDF"),
+        Upload("Исходные данные заказчика.pdf", b"%PDF"),
+        Upload("Раздел ПД №1_ПЗ.pdf", b"%PDF"),
+    ]
+    result = prepare_uploads(files)
+    trace = result.package_summary["traceability"]
+    assert trace["source_role_counts"] == {
+        "SURVEY_REPORT": 1,
+        "TECHNICAL_CONDITIONS": 1,
+        "SOURCE_DATA": 1,
+    }
+    assert trace["traceability_ready"] is True
+    assert trace["missing_source_roles"] == []
+
+
+def test_traceability_source_summary_reports_missing_sources_without_blocking_upload():
+    result = prepare_uploads([Upload("Раздел ПД №1_ПЗ.pdf", b"%PDF")])
+    trace = result.package_summary["traceability"]
+    assert trace["traceability_ready"] is False
+    assert set(trace["missing_source_roles"]) == {
+        "SURVEY_REPORT", "TECHNICAL_CONDITIONS", "SOURCE_DATA"
+    }
+
+
 def test_prepare_zip_and_ignore_service_files():
     archive = make_zip({
         "project/Раздел ПД №1_ПЗ.pdf": b"%PDF-test",

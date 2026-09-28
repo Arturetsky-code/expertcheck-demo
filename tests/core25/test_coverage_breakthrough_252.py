@@ -280,6 +280,93 @@ def test_cross_document_trace_checker_builds_two_sided_evidence_from_raw_corpus(
     assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
 
 
+def test_cross_document_trace_is_generic_across_engineering_survey_disciplines():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    cases = [
+        {
+            "code": "IGI",
+            "source_type": "ИГИ",
+            "source_name": "01_ИГИ.pdf",
+            "survey": "инженерно-геологических изысканий",
+            "requirement_subject": "основаниям зданий",
+            "source_subject": "Основания зданий и расчетные характеристики грунтов",
+            "project_subject": "основаниям зданий и фундаментам",
+        },
+        {
+            "code": "IGDI",
+            "source_type": "ИГДИ",
+            "source_name": "02_ИГДИ.pdf",
+            "survey": "инженерно-геодезических изысканий",
+            "requirement_subject": "планировочным отметкам территории",
+            "source_subject": "Планировочные отметки территории и высотная основа",
+            "project_subject": "планировочным отметкам территории",
+        },
+        {
+            "code": "IGMI",
+            "source_type": "ИГМИ",
+            "source_name": "03_ИГМИ.pdf",
+            "survey": "инженерно-гидрометеорологических изысканий",
+            "requirement_subject": "водоотводу поверхностного стока",
+            "source_subject": "Поверхностный сток и условия водоотвода",
+            "project_subject": "водоотводу поверхностного стока",
+        },
+        {
+            "code": "IEI",
+            "source_type": "ИЭИ",
+            "source_name": "04_ИЭИ.pdf",
+            "survey": "инженерно-экологических изысканий",
+            "requirement_subject": "мероприятиям по обращению с отходами",
+            "source_subject": "Обращение с отходами и природоохранные мероприятия",
+            "project_subject": "мероприятиям по обращению с отходами",
+        },
+    ]
+
+    for case in cases:
+        anchor_id = f"RAM-{case['code']}-2026"
+        req = {
+            "requirement_id": f"REQ-TRACE-{case['code']}",
+            "requirement_text": (
+                f"Проектные решения по {case['requirement_subject']} принять по результатам "
+                f"{case['survey']}"
+            ),
+            "requirement_type": "CROSS_DOCUMENT_TRACE",
+            "requirement_scope": "UNRESOLVED",
+        }
+        pages = [
+            {
+                "document": case["source_name"],
+                "document_type": case["source_type"],
+                "page": 10,
+                "text": (
+                    f"Технический отчет. Шифр {anchor_id}. "
+                    f"{case['survey'].capitalize()}. {case['source_subject']} определены "
+                    "по результатам выполненных работ."
+                ),
+            },
+            {
+                "document": "Раздел ПД №1_ПЗ.pdf",
+                "document_type": "ПЗ",
+                "page": 30,
+                "text": (
+                    f"Проектом предусмотрены решения по {case['project_subject']}, принятые "
+                    f"по результатам {case['survey']}, отчет № {anchor_id}."
+                ),
+            },
+        ]
+
+        direct = verify_assignment_requirement(req, pages)
+        assert direct is not None, case["code"]
+        assert direct["status"] == "Соответствует заданию", case["code"]
+        assert direct["verification_kernel"] == "CROSS_DOCUMENT_TRACE_EXECUTOR", case["code"]
+
+        attach_coverage_executor_evidence([req], pages)
+        row = run_assignment_runtime([req])["rows"][0]
+        assert row["final_verification_kind"] == "VERIFIED_OK", case["code"]
+        assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED", case["code"]
+
+
 def test_cross_document_trace_checker_rejects_missing_source_document():
     from core.assignment_verification_kernel import verify_assignment_requirement
 

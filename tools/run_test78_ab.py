@@ -436,7 +436,22 @@ def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
     names. It exposes only proof predicates needed to distinguish a missing
     section route from weak semantic evidence.
     """
-    from core.assignment_verification_kernel import DESIGN_MARKERS, _norm
+    from core.assignment_verification_kernel import (
+        DESIGN_MARKERS,
+        _norm,
+        _query_text,
+        _significant_terms,
+    )
+
+    action_markers = (
+        "предусмотреть",
+        "выполнить",
+        "разработать",
+        "принять",
+        "обеспечить",
+        "установить",
+        "предусматривается",
+    )
 
     result = []
     for row in rows:
@@ -446,6 +461,9 @@ def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
             continue
 
         contract = dict(row.get("evidence_contract_v2") or {})
+        requirement_text = str(row.get("requirement_text") or "")
+        query_terms = _significant_terms(_query_text(row))
+        low_requirement = _norm(requirement_text)
         candidates = []
         for item in row.get("directed_evidence_candidates") or []:
             if not isinstance(item, dict):
@@ -457,11 +475,14 @@ def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
                 or ""
             )
             low = _norm(fragment)
+            matched_terms = list(item.get("matched_terms") or [])
             candidates.append({
                 "evidence_kind": item.get("evidence_kind"),
                 "evidence_state": item.get("evidence_state"),
                 "document_type": item.get("document_type"),
-                "matched_term_count": len(item.get("matched_terms") or []),
+                "matched_term_count": len(matched_terms),
+                "query_term_count": len(query_terms),
+                "full_term_coverage": round(len(set(matched_terms)) / max(1, len(query_terms)), 3),
                 "semantic_coverage": item.get("semantic_coverage"),
                 "critical_qualifiers_satisfied": item.get("critical_qualifiers_satisfied") is True,
                 "owner_match": item.get("owner_match") is True,
@@ -476,7 +497,10 @@ def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
             "expected_section_count": len(row.get("expected_sections") or []),
             "contract_expected_section_count": len(contract.get("expected_sections") or []),
             "critical_qualifier_count": len(contract.get("critical_qualifiers") or []),
+            "query_term_count": len(query_terms),
+            "requirement_action_marker": any(marker in low_requirement for marker in action_markers),
             "has_object_id": bool(row.get("object_id") or row.get("target_object_id")),
+            "has_numeric_requirement_value": row.get("required_value") is not None,
             "coverage_executor": row.get("coverage_executor"),
             "admission_stage": row.get("core25_admission_stage"),
             "candidate_diagnostics": candidates,

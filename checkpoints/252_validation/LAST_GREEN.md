@@ -4,7 +4,7 @@ Validated source commit:
 
 Successful checks:
 
-- EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE             [100%]
+- EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE          [100%]
 ==================================== ERRORS ====================================
 ____ ERROR at setup of test_negative_applicability_can_close_through_core25 ____
 
@@ -42,7 +42,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0017c40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6251a7a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -96,7 +96,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -188,7 +188,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0017b00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda755c93a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -244,7 +244,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -336,7 +336,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00163e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6251b100>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -392,7 +392,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -484,7 +484,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0017ce0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda755c8900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -540,7 +540,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -632,7 +632,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3e30bc900>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548180>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -688,7 +688,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -780,7 +780,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0017600>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548a40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -836,7 +836,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -928,7 +928,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00444a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548cc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -984,7 +984,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1076,7 +1076,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00158a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62519bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1132,7 +1132,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1224,7 +1224,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00449a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548e00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1280,7 +1280,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1372,7 +1372,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044900>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548b80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1428,7 +1428,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1520,7 +1520,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044ea0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62549300>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1576,7 +1576,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1668,7 +1668,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda625489a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1724,7 +1724,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1816,7 +1816,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00163e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda755c8720>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -1872,7 +1872,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -1964,7 +1964,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0017b00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda755c8900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2020,7 +2020,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2112,7 +2112,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044ea0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548860>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2168,7 +2168,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2260,7 +2260,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548b80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2316,7 +2316,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2408,7 +2408,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00453a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62549800>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2464,7 +2464,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2556,7 +2556,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044680>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda625491c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2612,7 +2612,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2704,7 +2704,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044b80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548fe0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2760,7 +2760,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -2852,7 +2852,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0045d00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a160>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -2908,7 +2908,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3000,7 +3000,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00451c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62549620>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3056,7 +3056,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3148,7 +3148,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0045440>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda625498a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3204,7 +3204,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3296,7 +3296,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00445e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548c20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3352,7 +3352,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3444,7 +3444,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00460c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a520>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3500,7 +3500,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3592,7 +3592,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00445e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548c20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3648,7 +3648,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3740,7 +3740,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548b80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3796,7 +3796,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -3888,7 +3888,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00445e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548c20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -3944,7 +3944,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4036,7 +4036,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046480>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a8e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4092,7 +4092,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4184,7 +4184,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0045ee0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a340>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4240,7 +4240,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4332,7 +4332,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046660>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254aac0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4388,7 +4388,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4480,7 +4480,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046ac0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254af20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4536,7 +4536,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4628,7 +4628,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0045ee0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a340>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4684,7 +4684,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4776,7 +4776,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00453a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62549800>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4832,7 +4832,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -4924,7 +4924,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0045ee0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a340>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -4980,7 +4980,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5072,7 +5072,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046660>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254aac0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5128,7 +5128,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5220,7 +5220,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044b80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548fe0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5276,7 +5276,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5368,7 +5368,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044ea0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548860>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5424,7 +5424,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5516,7 +5516,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda62548b80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5572,7 +5572,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5664,7 +5664,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046c00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b060>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5720,7 +5720,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5812,7 +5812,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00474c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b920>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -5868,7 +5868,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -5960,7 +5960,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047920>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254bd80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6016,7 +6016,451 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_requires_same_page_self_contained_proof _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b6a0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fda764b58e0>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_resolves_unresolved_scope_after_proof _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254bba0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fda764b58e0>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_rejects_split_page_evidence _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b6a0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6108,7 +6552,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047240>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a200>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6164,7 +6608,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6256,7 +6700,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00479c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda75f4de40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6312,7 +6756,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6404,7 +6848,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047240>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b9c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6460,7 +6904,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6552,7 +6996,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00459e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b7e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6608,7 +7052,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6700,7 +7144,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047240>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e64220>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6756,7 +7200,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6848,7 +7292,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047b00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e645e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -6904,7 +7348,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -6996,7 +7440,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3e3a39e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254b920>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7052,7 +7496,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7144,7 +7588,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047ec0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda75f4de40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7200,7 +7644,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7292,7 +7736,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047600>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254af20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7348,7 +7792,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7440,7 +7884,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d00479c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda6254a200>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7496,7 +7940,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7588,7 +8032,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0044a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e640e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7644,7 +8088,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7736,7 +8180,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3e3a39e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e64e00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7792,7 +8236,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -7884,7 +8328,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0046ac0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e64220>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -7940,7 +8384,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8032,7 +8476,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3d0047ec0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e65300>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8088,7 +8532,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8180,7 +8624,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3cfaf8220>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e64cc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8236,7 +8680,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8328,7 +8772,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3cfaf85e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e65580>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8384,7 +8828,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8476,7 +8920,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3cfaf8cc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e65120>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8532,7 +8976,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8624,7 +9068,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3cfaf8400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e644a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8680,7 +9124,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -8772,7 +9216,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7ff3cfaf9080>
+func = <function call_and_report.<locals>.<lambda> at 0x7fda61e65120>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -8828,7 +9272,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7ff3e4275af0>
+config = <_pytest.config.Config object at 0x7fda764b58e0>
 
     def importtestmodule(
         path: Path,
@@ -9254,6 +9698,33 @@ Traceback:
 __init__.py:2: in <module>
     from .pipeline import analyze_uploaded_core
 E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_requires_same_page_self_contained_proof - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_resolves_unresolved_scope_after_proof - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_rejects_split_page_evidence - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
 ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_does_not_close_from_reference_only - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
@@ -9425,9 +9896,9 @@ Traceback:
 __init__.py:2: in <module>
     from .pipeline import analyze_uploaded_core
 E   ImportError: attempted relative import with no known parent package
-60 errors in 3.14s
-- EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 52%]
-EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE         [100%]
+63 errors in 5.43s
+- EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 51%]
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE      [100%]
 ==================================== ERRORS ====================================
 ________ ERROR at setup of test_wrong_owner_cannot_bind_same_parameter _________
 
@@ -9465,7 +9936,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f940bcb3100>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba103ba60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -9519,7 +9990,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -9611,7 +10082,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c4f560>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109f7e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -9667,7 +10138,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -9759,7 +10230,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c92340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109f920>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -9815,7 +10286,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -9907,7 +10378,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c92ca0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109f6a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -9963,7 +10434,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10055,7 +10526,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c92a20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109f880>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10111,7 +10582,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10203,7 +10674,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c922a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109fce0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10259,7 +10730,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10351,7 +10822,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c92ac0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109f560>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10407,7 +10878,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10499,7 +10970,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8ddf7e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba11eb7e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10555,7 +11026,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10647,7 +11118,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c93740>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba109ed40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10703,7 +11174,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10795,7 +11266,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c93d80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b045e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10851,7 +11322,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -10943,7 +11414,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758040>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -10999,7 +11470,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11091,7 +11562,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c93740>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcbb4a0b4c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11147,7 +11618,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11239,7 +11710,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c04680>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba1010680>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11295,7 +11766,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11387,7 +11858,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c04900>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba1010900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11443,7 +11914,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11535,7 +12006,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758180>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04400>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11591,7 +12062,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11683,7 +12154,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04b80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11739,7 +12210,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11831,7 +12302,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758b80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04d60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -11887,7 +12358,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -11979,7 +12450,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b049a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12035,7 +12506,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12127,7 +12598,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758fe0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04d60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12183,7 +12654,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12275,7 +12746,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758360>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04680>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12331,7 +12802,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12423,7 +12894,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f87594e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04d60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12479,7 +12950,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12571,7 +13042,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758540>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04fe0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12627,7 +13098,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12719,7 +13190,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758ae0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b054e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12775,7 +13246,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -12867,7 +13338,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759620>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04860>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -12923,7 +13394,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13015,7 +13486,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759760>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b05a80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13071,7 +13542,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13163,7 +13634,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759620>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b060c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13219,7 +13690,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13311,7 +13782,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759580>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04ae0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13367,7 +13838,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13459,7 +13930,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759620>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06480>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13515,7 +13986,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13607,7 +14078,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758860>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b058a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13663,7 +14134,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13755,7 +14226,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b062a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13811,7 +14282,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -13903,7 +14374,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b054e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -13959,7 +14430,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14051,7 +14522,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a0c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06a20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14107,7 +14578,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14199,7 +14670,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06160>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14255,7 +14726,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14347,7 +14818,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f87599e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04680>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14403,7 +14874,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14495,7 +14966,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b05c60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14551,7 +15022,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14643,7 +15114,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06700>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14699,7 +15170,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14791,7 +15262,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759620>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04400>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14847,7 +15318,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -14939,7 +15410,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758d60>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06700>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -14995,7 +15466,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15087,7 +15558,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759f80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b063e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15143,7 +15614,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15235,7 +15706,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a700>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06700>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15291,7 +15762,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15383,7 +15854,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759bc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b05580>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15439,7 +15910,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15531,7 +16002,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875aac0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06fc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15587,7 +16058,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15679,7 +16150,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a980>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07380>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15735,7 +16206,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15827,7 +16298,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a2a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b051c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -15883,7 +16354,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -15975,7 +16446,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a980>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b071a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16031,7 +16502,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16123,7 +16594,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759760>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06c00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16179,7 +16650,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16271,7 +16742,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a980>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07b00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16327,7 +16798,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16419,7 +16890,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875b2e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07740>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16475,7 +16946,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16567,7 +17038,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8758a40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b079c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16623,7 +17094,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16715,7 +17186,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bba0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06700>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16771,7 +17242,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -16863,7 +17334,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875b880>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07c40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -16919,7 +17390,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17011,7 +17482,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bba0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06de0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17067,7 +17538,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17159,7 +17630,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875ae80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b051c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17215,7 +17686,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17307,7 +17778,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bba0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07560>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17363,7 +17834,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17455,7 +17926,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759f80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07740>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17511,7 +17982,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17603,7 +18074,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875b560>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b06a20>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17659,7 +18130,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17751,7 +18222,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875a8e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07740>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17807,7 +18278,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -17899,7 +18370,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b04680>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -17955,7 +18426,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18047,7 +18518,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bb00>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07600>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18103,7 +18574,451 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_requires_same_page_self_contained_proof _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff80e0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_resolves_unresolved_scope_after_proof _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff85e0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
+
+    def importtestmodule(
+        path: Path,
+        config: Config,
+    ):
+        # We assume we are only called once per module.
+        importmode = config.getoption("--import-mode")
+        try:
+            mod = import_path(
+                path,
+                mode=importmode,
+                root=config.rootpath,
+                consider_namespace_packages=config.getini("consider_namespace_packages"),
+            )
+        except SyntaxError as e:
+            raise nodes.Collector.CollectError(
+                ExceptionInfo.from_current().getrepr(style="short")
+            ) from e
+        except ImportPathMismatchError as e:
+            raise nodes.Collector.CollectError(
+                "import file mismatch:\n"
+                "imported module {!r} has this __file__ attribute:\n"
+                "  {}\n"
+                "which is not the same as the test file we want to collect:\n"
+                "  {}\n"
+                "HINT: remove __pycache__ / .pyc files and/or use a "
+                "unique basename for your test file modules".format(*e.args)
+            ) from e
+        except ImportError as e:
+            exc_info = ExceptionInfo.from_current()
+            if config.get_verbosity() < 2:
+                exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+            exc_repr = (
+                exc_info.getrepr(style="short")
+                if exc_info.traceback
+                else exc_info.exconly()
+            )
+            formatted_tb = str(exc_repr)
+>           raise nodes.Collector.CollectError(
+                f"ImportError while importing test module '{path}'.\n"
+                "Hint: make sure your test modules/packages have valid Python names.\n"
+                "Traceback:\n"
+                f"{formatted_tb}"
+            ) from e
+E           _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+E           Hint: make sure your test modules/packages have valid Python names.
+E           Traceback:
+E           /usr/lib/python3.12/importlib/__init__.py:90: in import_module
+E               return _bootstrap._gcd_import(name[level:], package, level)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           __init__.py:2: in <module>
+E               from .pipeline import analyze_uploaded_core
+E           E   ImportError: attempted relative import with no known parent package
+
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:538: CollectError
+_ ERROR at setup of test_named_norm_design_adoption_without_route_rejects_split_page_evidence _
+
+name = '__init__', package = None
+
+    def import_module(name, package=None):
+        """Import a module.
+    
+        The 'package' argument is required when performing a relative import. It
+        specifies the package to use as the anchor point from which to resolve the
+        relative import to an absolute import.
+    
+        """
+        level = 0
+        if name.startswith('.'):
+            if not package:
+                raise TypeError("the 'package' argument is required to perform a "
+                                f"relative import for {name!r}")
+            for character in name:
+                if character != '.':
+                    break
+                level += 1
+>       return _bootstrap._gcd_import(name[level:], package, level)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/usr/lib/python3.12/importlib/__init__.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """ExpertCheck Core 2.0: universal, knowledge-driven analysis services."""
+>   from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+
+__init__.py:2: ImportError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8c20>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+../../../.local/lib/python3.12/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:529: in setup
+    raise exc[0].with_traceback(exc[1])
+../../../.local/lib/python3.12/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+../../../.local/lib/python3.12/site-packages/_pytest/python.py:678: in setup
+    init_mod = importtestmodule(self.path / "__init__.py", self.config)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18195,7 +19110,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759f80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8180>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18251,7 +19166,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18343,7 +19258,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bd80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9120>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18399,7 +19314,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18491,7 +19406,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875be20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8a40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18547,7 +19462,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18639,7 +19554,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88247c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff93a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18695,7 +19610,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18787,7 +19702,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824860>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8400>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18843,7 +19758,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -18935,7 +19850,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824540>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8d60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -18991,7 +19906,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19083,7 +19998,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824860>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07c40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19139,7 +20054,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19231,7 +20146,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88249a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b079c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19287,7 +20202,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19379,7 +20294,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824040>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8a40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19435,7 +20350,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19527,7 +20442,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f875bba0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8720>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19583,7 +20498,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19675,7 +20590,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c04680>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff98a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19731,7 +20646,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19823,7 +20738,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8759e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9620>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -19879,7 +20794,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -19971,7 +20886,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88245e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8680>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20027,7 +20942,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20119,7 +21034,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824860>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9620>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20175,7 +21090,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20267,7 +21182,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88253a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9580>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20323,7 +21238,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20415,7 +21330,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825300>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9620>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20471,7 +21386,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20563,7 +21478,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825580>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20619,7 +21534,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20711,7 +21626,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825440>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9800>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20767,7 +21682,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -20859,7 +21774,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825b20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa3e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -20915,7 +21830,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21007,7 +21922,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825800>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8fe0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21063,7 +21978,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21155,7 +22070,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825e40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa7a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21211,7 +22126,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21303,7 +22218,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824f40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8e00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21359,7 +22274,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21451,7 +22366,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825bc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffaac0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21507,7 +22422,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21599,7 +22514,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824f40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa0c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21655,7 +22570,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21747,7 +22662,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8c4dbc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba105e3e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21803,7 +22718,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -21895,7 +22810,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824f40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9800>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -21951,7 +22866,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22043,7 +22958,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb100>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22099,7 +23014,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22191,7 +23106,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824b80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa520>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22247,7 +23162,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22339,7 +23254,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826840>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9580>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22395,7 +23310,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22487,7 +23402,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88262a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa7a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22543,7 +23458,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22635,7 +23550,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826840>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22691,7 +23606,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22783,7 +23698,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826a20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffade0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22839,7 +23754,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -22931,7 +23846,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826840>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -22987,7 +23902,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23079,7 +23994,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88253a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa520>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23135,7 +24050,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23227,7 +24142,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826700>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23283,7 +24198,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23375,7 +24290,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826f20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb2e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23431,7 +24346,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23523,7 +24438,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826b60>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb6a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23579,7 +24494,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23671,7 +24586,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824040>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffba60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23727,7 +24642,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23819,7 +24734,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8825300>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffae80>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -23875,7 +24790,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -23967,7 +24882,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824cc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb880>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24023,7 +24938,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24115,7 +25030,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827100>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff8720>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24171,7 +25086,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24263,7 +25178,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826980>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffbb00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24319,7 +25234,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24411,7 +25326,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827100>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffa980>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24467,7 +25382,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24559,7 +25474,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f88271a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb7e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24615,7 +25530,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24707,7 +25622,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827100>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb6a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24763,7 +25678,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -24855,7 +25770,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824040>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffbba0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -24911,7 +25826,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25003,7 +25918,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827880>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ff9580>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25059,7 +25974,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25151,7 +26066,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826e80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffbf60>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25207,7 +26122,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25299,7 +26214,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827ba0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffb100>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25355,7 +26270,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25447,7 +26362,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826e80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0b07560>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25503,7 +26418,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25595,7 +26510,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826840>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d80e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25651,7 +26566,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25743,7 +26658,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8826e80>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25799,7 +26714,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -25891,7 +26806,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827f60>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d87c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -25947,7 +26862,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26039,7 +26954,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8824cc0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26095,7 +27010,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26187,7 +27102,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827e20>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8220>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26243,7 +27158,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26335,7 +27250,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c040>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8540>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26391,7 +27306,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26483,7 +27398,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9260>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26539,7 +27454,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26631,7 +27546,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894ca40>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9300>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26687,7 +27602,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26779,7 +27694,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c720>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8a40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26835,7 +27750,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -26927,7 +27842,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c540>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8860>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -26983,7 +27898,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27075,7 +27990,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c7c0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d99e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27131,7 +28046,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27223,7 +28138,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c540>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8f40>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27279,7 +28194,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27371,7 +28286,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c400>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d96c0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27427,7 +28342,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27519,7 +28434,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c540>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba0ffbba0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27575,7 +28490,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27667,7 +28582,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c9a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9bc0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27723,7 +28638,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27815,7 +28730,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c220>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d8900>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -27871,7 +28786,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -27963,7 +28878,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f8827880>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d80e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28019,7 +28934,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28111,7 +29026,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894d120>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d94e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28167,7 +29082,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28259,7 +29174,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894d3a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9d00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28315,7 +29230,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28407,7 +29322,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894d440>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9da0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28463,7 +29378,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28555,7 +29470,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894d3a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9d00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28611,7 +29526,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28703,7 +29618,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c5e0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09da200>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28759,7 +29674,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28851,7 +29766,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c860>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9d00>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -28907,7 +29822,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -28999,7 +29914,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894dc60>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d93a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -29055,7 +29970,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -29147,7 +30062,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c9a0>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09d9300>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -29203,7 +30118,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -29295,7 +30210,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894e340>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09da2a0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -29351,7 +30266,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -29443,7 +30358,7 @@ __init__.py:2: ImportError
 The above exception was the direct cause of the following exception:
 
 cls = <class '_pytest.runner.CallInfo'>
-func = <function call_and_report.<locals>.<lambda> at 0x7f93f894c720>
+func = <function call_and_report.<locals>.<lambda> at 0x7fcba09da8e0>
 when = 'setup'
 reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
 
@@ -29499,7 +30414,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 path = PosixPath('/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py')
-config = <_pytest.config.Config object at 0x7f940cdf89b0>
+config = <_pytest.config.Config object at 0x7fcbb4eb5220>
 
     def importtestmodule(
         path: Path,
@@ -30079,6 +30994,33 @@ __init__.py:2: in <module>
     from .pipeline import analyze_uploaded_core
 E   ImportError: attempted relative import with no known parent package
 ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_requires_solution_and_complete_norm_coverage - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_requires_same_page_self_contained_proof - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_resolves_unresolved_scope_after_proof - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+__init__.py:2: in <module>
+    from .pipeline import analyze_uploaded_core
+E   ImportError: attempted relative import with no known parent package
+ERROR tests/core25/test_coverage_breakthrough_252.py::test_named_norm_design_adoption_without_route_rejects_split_page_evidence - _pytest.nodes.Collector.CollectError: ImportError while importing test module '/home/runner/work/expertcheck-demo/expertcheck-demo/__init__.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
@@ -30780,4 +31722,4 @@ Traceback:
 __init__.py:2: in <module>
     from .pipeline import analyze_uploaded_core
 E   ImportError: attempted relative import with no known parent package
-136 errors in 7.19s
+139 errors in 11.43s

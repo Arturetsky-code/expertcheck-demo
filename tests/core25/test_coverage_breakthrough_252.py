@@ -1239,6 +1239,41 @@ def test_named_norm_design_adoption_without_route_requires_same_page_self_contai
     assert row["core25_reason_code"]=="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED"
 
 
+def test_named_norm_design_adoption_without_route_resolves_unresolved_scope_after_proof():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req={
+        "requirement_id":"R-NORM-ADOPT-UNRESOLVED",
+        "source_row_title":"Общие требования",
+        "requirement_text":(
+            "Инженерную подготовку территории предусмотреть в соответствии с "
+            "СП 45.13330.2017 «Земляные сооружения, основания и фундаменты»"
+        ),
+        "requirement_type":"NORMATIVE_COMPLIANCE",
+        "requirement_scope":"UNRESOLVED",
+        "evidence_contract_v2":{"scope":"UNRESOLVED"},
+    }
+    corpus=[{
+        "document":"ПЗУ.pdf","document_type":"ПЗУ","page":24,
+        "text":(
+            "Проектом предусматривается инженерная подготовка территории: вертикальная "
+            "планировка и направленный отвод поверхностных вод. Работы по инженерной "
+            "подготовке территории выполнять в строгом соответствии с СП 45.13330.2017 "
+            "«Земляные сооружения, основания и фундаменты»."
+        ),
+    }]
+    direct=verify_assignment_requirement(req,corpus)
+    assert direct is not None
+    assert direct["verification_kernel"]=="NORMATIVE_DESIGN_ADOPTION_EXECUTOR"
+
+    attach_coverage_executor_evidence([req],corpus)
+    row=run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="PROVEN_MATCH"
+    assert row["core25_reason_code"]=="ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED"
+
+
 def test_named_norm_design_adoption_without_route_rejects_split_page_evidence():
     from core.assignment_verification_kernel import verify_assignment_requirement
 

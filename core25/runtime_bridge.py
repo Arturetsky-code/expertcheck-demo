@@ -48,6 +48,8 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
     executor=_text(item.get("coverage_executor"))
     if executor == "NORMATIVE_DESIGN_ADOPTION_EXECUTOR":
         item["verification_kind"] = "NORMATIVE_DESIGN_ADOPTION"
+        if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
+            item["requirement_scope"] = "PROJECT_GLOBAL"
     elif executor == "EQUIPMENT_IDENTITY_AND_QUANTITY":
         item["verification_kind"] = "EQUIPMENT_IDENTITY_COMPARISON"
     elif executor == "IDENTIFICATION_ATTRIBUTE_COMPARISON_EXECUTOR":

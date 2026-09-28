@@ -720,7 +720,7 @@ def _safe_normative_frontier(rows: list[dict]) -> list[dict]:
     return result
 
 
-def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
+def _review_frontier(rows: list[dict], limit: int = 60) -> list[dict]:
     review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
     review.sort(
         key=lambda row: (
@@ -1054,7 +1054,7 @@ def main() -> None:
         "changed_ids": [row["requirement_id"] for row in result["changed_requirements"]],
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
-        "review_frontier": result["review_frontier"][:8],
+        "review_frontier": result["review_frontier"],
         "composite_frontier_diagnostics": result["composite_frontier_diagnostics"],
         "trace_frontier_diagnostics": result["trace_frontier_diagnostics"],
         "presence_frontier_diagnostics": result["presence_frontier_diagnostics"],

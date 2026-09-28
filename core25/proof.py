@@ -366,11 +366,14 @@ def _traceability_proof(
 ) -> Proof25:
     """Prove a two-sided source-input -> project-adoption chain.
 
-    Upstream retrieval may surface related passages, but Core25 only accepts a
-    categorical trace when both addressable documents carry the same explicit
-    trace subject and anchor, and each role is independently verified.
+    Both roles must share the same engineering subject, explicit source anchor
+    and source-document role. This prevents a survey report from being paired
+    with an unrelated technical-condition reference (or vice versa).
     """
-    grouped: dict[tuple[str, str], dict[str, list[tuple[Evidence25, Binding25]]]] = {}
+    grouped: dict[
+        tuple[str, str, str],
+        dict[str, list[tuple[Evidence25, Binding25]]],
+    ] = {}
 
     for evidence_item, binding in pairs:
         metadata = dict(evidence_item.metadata or {})
@@ -381,8 +384,9 @@ def _traceability_proof(
         slot = str(metadata.get("proof_slot") or "").upper()
         subject = _norm_text(metadata.get("trace_subject_key"))
         anchor = _norm_text(metadata.get("trace_anchor"))
+        source_role = _norm_text(metadata.get("trace_source_role"))
         terms = tuple(metadata.get("matched_terms") or ())
-        if not subject or not anchor or len(terms) < 2:
+        if not subject or not anchor or not source_role or len(terms) < 2:
             continue
 
         if slot == "SOURCE_INPUT":
@@ -396,11 +400,11 @@ def _traceability_proof(
         else:
             continue
 
-        grouped.setdefault((subject, anchor), {}).setdefault(slot, []).append(
+        grouped.setdefault((subject, anchor, source_role), {}).setdefault(slot, []).append(
             (evidence_item, binding)
         )
 
-    for (subject, anchor), slots in grouped.items():
+    for (subject, anchor, source_role), slots in grouped.items():
         sources = slots.get("SOURCE_INPUT") or []
         projects = slots.get("PROJECT_ADOPTION") or []
         for source_pair in sources:
@@ -426,6 +430,7 @@ def _traceability_proof(
                     metadata={
                         "trace_subject_key": subject,
                         "trace_anchor": anchor,
+                        "trace_source_role": source_role,
                     },
                 )
 

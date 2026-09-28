@@ -1590,7 +1590,7 @@ def _lightning_grounding_check(requirement: dict[str, Any], page_corpus: list[di
     }
 
 
-_TRACE_SOURCE_MARKERS = (
+_TRACE_SURVEY_MARKERS = (
     "инженерно-геодез",
     "инженерно-геолог",
     "инженерно-гидрометеор",
@@ -1609,12 +1609,14 @@ _TRACE_ADOPTION_MARKERS = (
     "с учетом",
     "с учётом",
     "согласно материал",
+    "в соответствии с",
+    "согласно",
 )
 
 _TRACE_GENERIC_TERMS = {
     "инженерн", "изыскан", "результат", "материал", "проектн",
     "решения", "согласно", "техническ", "отчет", "отчета",
-    "приняты", "данным",
+    "приняты", "данным", "условиям", "условий", "условия",
 }
 
 _TRACE_ANCHOR_RE = re.compile(
@@ -1638,19 +1640,71 @@ def _trace_anchors(text: str) -> list[str]:
     return out
 
 
-def _trace_source_page(page: dict[str, Any]) -> bool:
-    blob = _norm(
-        f"{page.get('document_type') or ''} {page.get('document') or ''}"
+def _contains_isolated_tu(text: str) -> bool:
+    return bool(re.search(r"(?<![a-zа-я0-9])ту(?![a-zа-я0-9])", _norm(text), re.I))
+
+
+def _trace_requirement_source_role(requirement: dict[str, Any]) -> str:
+    low = _norm(requirement.get("requirement_text") or "")
+    if any(marker in low for marker in _TRACE_SURVEY_MARKERS):
+        return "SURVEY_REPORT"
+    if ("техническ" in low and "услов" in low) or _contains_isolated_tu(low):
+        return "TECHNICAL_CONDITIONS"
+    return ""
+
+
+def _trace_source_role(page: dict[str, Any]) -> str:
+    document_type = _norm(page.get("document_type") or "")
+    document = _norm(page.get("document") or "")
+    descriptor = f"{document_type} {document}".strip()
+    low = _norm(page.get("text") or "")
+
+    if any(marker in descriptor for marker in _TRACE_SURVEY_MARKERS):
+        return "SURVEY_REPORT"
+
+    tu_descriptor = (
+        document_type in {
+            "ту",
+            "ирд",
+            "исходные данные",
+            "исходно-разрешительная документация",
+        }
+        or "техническ услов" in descriptor
+        or _contains_isolated_tu(descriptor)
     )
-    return any(marker in blob for marker in _TRACE_SOURCE_MARKERS)
+    if tu_descriptor and (
+        ("техническ" in low and "услов" in low)
+        or _contains_isolated_tu(low)
+    ):
+        return "TECHNICAL_CONDITIONS"
+    return ""
+
+
+def _trace_project_mentions_source_role(source_role: str, low: str) -> bool:
+    if source_role == "SURVEY_REPORT":
+        return any(marker in low for marker in _TRACE_SURVEY_MARKERS)
+    if source_role == "TECHNICAL_CONDITIONS":
+        return (
+            ("техническ" in low and "услов" in low)
+            or _contains_isolated_tu(low)
+        )
+    return False
 
 
 def _cross_document_trace_check(
     requirement: dict[str, Any],
     page_corpus: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
-    if str(requirement.get("requirement_type") or "").upper() != "CROSS_DOCUMENT_TRACE":
-        return None
+    rtype = str(requirement.get("requirement_type") or "").upper()
+    required_source_role = _trace_requirement_source_role(requirement)
+    if rtype != "CROSS_DOCUMENT_TRACE":
+        # Technical-condition adoption is a cross-document dependency even when
+        # the legacy atom is primarily a PRESENCE/NORMATIVE requirement.
+        if not (
+            required_source_role == "TECHNICAL_CONDITIONS"
+            and rtype in {"PRESENCE_REQUIREMENT", "NORMATIVE_COMPLIANCE", "SEMANTIC_ENGINEERING"}
+        ):
+            return None
 
     terms = _significant_terms(_query_text(requirement))
     subject_terms = [
@@ -1661,8 +1715,8 @@ def _cross_document_trace_check(
     if len(subject_terms) < 2:
         return None
 
-    source_pages: list[tuple[dict[str, Any], list[str], list[str]]] = []
-    design_pages: list[tuple[dict[str, Any], list[str], list[str]]] = []
+    source_pages: list[tuple[dict[str, Any], list[str], list[str], str]] = []
+    design_pages: list[tuple[dict[str, Any], list[str], list[str], str]] = []
     for page in page_corpus or []:
         if is_assignment_source(page):
             continue
@@ -1674,26 +1728,32 @@ def _cross_document_trace_check(
         hits = [term for term in subject_terms if term in low]
         if len(hits) < 2:
             continue
-        if _trace_source_page(page):
-            source_pages.append((page, hits, anchors))
+
+        source_role = _trace_source_role(page)
+        if source_role:
+            if required_source_role and source_role != required_source_role:
+                continue
+            source_pages.append((page, hits, anchors, source_role))
             continue
+
         if (
             any(marker in low for marker in _TRACE_ADOPTION_MARKERS)
-            and any(marker in low for marker in _TRACE_SOURCE_MARKERS)
             and any(marker in low for marker in DESIGN_MARKERS)
         ):
-            design_pages.append((page, hits, anchors))
+            design_pages.append((page, hits, anchors, low))
 
     ranked: list[
         tuple[
             int,
             dict[str, Any], list[str],
             dict[str, Any], list[str],
-            str,
+            str, str,
         ]
     ] = []
-    for source_page, source_hits, source_anchors in source_pages:
-        for design_page, design_hits, design_anchors in design_pages:
+    for source_page, source_hits, source_anchors, source_role in source_pages:
+        for design_page, design_hits, design_anchors, design_low in design_pages:
+            if not _trace_project_mentions_source_role(source_role, design_low):
+                continue
             common = sorted(set(source_anchors) & set(design_anchors))
             if not common:
                 continue
@@ -1706,13 +1766,14 @@ def _cross_document_trace_check(
                     design_page,
                     design_hits,
                     common[0],
+                    source_role,
                 )
             )
     if not ranked:
         return None
 
     ranked.sort(key=lambda item: item[0], reverse=True)
-    _, source_page, source_hits, design_page, design_hits, anchor = ranked[0]
+    _, source_page, source_hits, design_page, design_hits, anchor, source_role = ranked[0]
     subject_key = "|".join(sorted(subject_terms[:8]))
 
     source_evidence = {
@@ -1726,6 +1787,7 @@ def _cross_document_trace_check(
         "trace_chain": True,
         "trace_subject_key": subject_key,
         "trace_anchor": anchor,
+        "trace_source_role": source_role,
         "proof_slot": "SOURCE_INPUT",
         "matched_terms": source_hits,
         "source_input_verified": True,
@@ -1742,6 +1804,7 @@ def _cross_document_trace_check(
         "trace_chain": True,
         "trace_subject_key": subject_key,
         "trace_anchor": anchor,
+        "trace_source_role": source_role,
         "proof_slot": "PROJECT_ADOPTION",
         "matched_terms": design_hits,
         "source_input_verified": False,
@@ -1759,11 +1822,12 @@ def _cross_document_trace_check(
         "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE",
         "match_confidence": 0.98,
         "decision_basis": (
-            "Прослежена адресная цепочка от исходного материала инженерных изысканий "
-            "к проектному решению по общему явному шифру/идентификатору источника."
+            "Прослежена адресная цепочка от исходного документа к проектному решению "
+            "по общему явному шифру/идентификатору источника и совпадающему инженерному предмету."
         ),
         "verification_kernel": "CROSS_DOCUMENT_TRACE_EXECUTOR",
         "trace_anchor": anchor,
+        "trace_source_role": source_role,
     }
 
 

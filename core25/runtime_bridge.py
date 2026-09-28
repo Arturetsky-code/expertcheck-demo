@@ -59,6 +59,10 @@ def _runtime_requirement(raw: Mapping[str, Any]) -> dict[str, Any]:
         item["verification_kind"] = "DYNAMIC_FOUNDATION_NORMATIVE"
         if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
             item["requirement_scope"] = "PROJECT_GLOBAL"
+    elif executor == "CROSS_DOCUMENT_TRACE_EXECUTOR":
+        item["verification_kind"] = "TRACEABILITY"
+        if _text(item.get("requirement_scope")).upper() in {"", "UNRESOLVED"}:
+            item["requirement_scope"] = "PROJECT_GLOBAL"
     return item
 
 
@@ -173,6 +177,7 @@ def _candidate_evidence(requirement: Mapping[str, Any]) -> tuple[Evidence25, ...
                     "trace_chain": candidate.get("trace_chain"),
                     "trace_subject_key": candidate.get("trace_subject_key"),
                     "trace_anchor": candidate.get("trace_anchor"),
+                    "trace_source_role": candidate.get("trace_source_role"),
                     "source_input_verified": candidate.get("source_input_verified"),
                     "project_adoption_verified": candidate.get("project_adoption_verified"),
                     "normative_design_adoption": candidate.get("normative_design_adoption"),

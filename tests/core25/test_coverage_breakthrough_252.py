@@ -367,6 +367,83 @@ def test_cross_document_trace_is_generic_across_engineering_survey_disciplines()
         assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED", case["code"]
 
 
+def _technical_conditions_trace_case(*, source_anchor="TU-EL-2026", project_anchor="TU-EL-2026", include_source=True):
+    req = {
+        "requirement_id": "REQ-TU-TRACE",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": (
+            "Электроснабжение и точку технологического присоединения выполнить "
+            "в соответствии с техническими условиями"
+        ),
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC",
+    }
+    pages = []
+    if include_source:
+        pages.append({
+            "document": "ИРД_ТУ_электроснабжение.pdf",
+            "document_type": "ТУ",
+            "page": 2,
+            "text": (
+                "Технические условия № " + source_anchor + ". "
+                "Электроснабжение объекта. Точка технологического присоединения "
+                "определена на границе земельного участка."
+            ),
+        })
+    pages.append({
+        "document": "Раздел ПД №5_ИОС1.pdf",
+        "document_type": "ИОС1",
+        "page": 18,
+        "text": (
+            "Проектом предусмотрено электроснабжение объекта и принята точка "
+            "технологического присоединения в соответствии с техническими условиями "
+            "№ " + project_anchor + "."
+        ),
+    })
+    return req, pages
+
+
+def test_cross_document_trace_qualifies_technical_conditions_to_project_adoption():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req, pages = _technical_conditions_trace_case()
+    direct = verify_assignment_requirement(req, pages)
+    assert direct is not None
+    assert direct["status"] == "Соответствует заданию"
+    assert direct["verification_kernel"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
+    assert direct["trace_source_role"] == "TECHNICAL_CONDITIONS"
+    assert {
+        item["trace_source_role"] for item in direct["verification_evidence"]
+    } == {"TECHNICAL_CONDITIONS"}
+
+    attach_coverage_executor_evidence([req], pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["verification_kind"] == "TRACEABILITY"
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
+
+
+def test_cross_document_trace_rejects_mismatched_technical_condition_anchor():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req, pages = _technical_conditions_trace_case(project_anchor="TU-OTHER-2026")
+    result = verify_assignment_requirement(req, pages)
+    assert result is not None
+    assert result["verification_kernel"] != "CROSS_DOCUMENT_TRACE_EXECUTOR"
+    assert result["status"] != "Соответствует заданию"
+
+
+def test_cross_document_trace_rejects_tu_reference_without_source_document():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req, pages = _technical_conditions_trace_case(include_source=False)
+    result = verify_assignment_requirement(req, pages)
+    assert result is not None
+    assert result["verification_kernel"] != "CROSS_DOCUMENT_TRACE_EXECUTOR"
+
+
 def test_cross_document_trace_checker_rejects_missing_source_document():
     from core.assignment_verification_kernel import verify_assignment_requirement
 
@@ -432,6 +509,7 @@ def _trace_candidate(slot, document, *, anchor="report-igi-2026", verified=True)
         "trace_chain": True,
         "trace_subject_key": "engineering-geology-input",
         "trace_anchor": anchor,
+        "trace_source_role": "SURVEY_REPORT",
         "proof_slot": slot,
         "matched_terms": ["инженерн", "изыскан", "грунт"],
         "source_input_verified": slot == "SOURCE_INPUT" and verified,

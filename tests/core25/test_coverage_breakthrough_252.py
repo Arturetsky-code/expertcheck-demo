@@ -425,6 +425,83 @@ def test_cross_document_trace_qualifies_technical_conditions_to_project_adoption
     assert row["coverage_executor"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
 
 
+def _source_data_trace_case(*, source_anchor="IRD-WS-2026", project_anchor="IRD-WS-2026", include_source=True):
+    req = {
+        "requirement_id": "REQ-SOURCE-DATA-TRACE",
+        "source_row_title": "Водоснабжение",
+        "requirement_text": (
+            "Схему хозяйственно-питьевого водоснабжения выполнить "
+            "в соответствии с исходными данными заказчика"
+        ),
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC",
+    }
+    pages = []
+    if include_source:
+        pages.append({
+            "document": "ИРД_Исходные_данные_водоснабжение.pdf",
+            "document_type": "ИРД",
+            "page": 4,
+            "text": (
+                "Исходные данные заказчика № " + source_anchor + ". "
+                "Хозяйственно-питьевое водоснабжение объекта: точка подключения "
+                "к существующей сети определена у северной границы участка."
+            ),
+        })
+    pages.append({
+        "document": "Раздел ПД №5_ИОС2.pdf",
+        "document_type": "ИОС2",
+        "page": 22,
+        "text": (
+            "Проектом предусмотрено хозяйственно-питьевое водоснабжение. "
+            "Схема и точка подключения приняты в соответствии с исходными данными "
+            "заказчика № " + project_anchor + "."
+        ),
+    })
+    return req, pages
+
+
+def test_cross_document_trace_qualifies_explicit_source_data_to_project_adoption():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req, pages = _source_data_trace_case()
+    direct = verify_assignment_requirement(req, pages)
+    assert direct is not None
+    assert direct["status"] == "Соответствует заданию"
+    assert direct["verification_kernel"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
+    assert direct["trace_source_role"] == "SOURCE_DATA"
+    assert {
+        item["trace_source_role"] for item in direct["verification_evidence"]
+    } == {"SOURCE_DATA"}
+
+    attach_coverage_executor_evidence([req], pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
+    assert row["coverage_executor"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
+
+
+def test_cross_document_trace_rejects_mismatched_source_data_anchor():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req, pages = _source_data_trace_case(project_anchor="IRD-OTHER-2026")
+    result = verify_assignment_requirement(req, pages)
+    assert result is not None
+    assert result["verification_kernel"] != "CROSS_DOCUMENT_TRACE_EXECUTOR"
+    assert result["status"] != "Соответствует заданию"
+
+
+def test_cross_document_trace_rejects_source_data_reference_without_source_document():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    req, pages = _source_data_trace_case(include_source=False)
+    result = verify_assignment_requirement(req, pages)
+    assert result is not None
+    assert result["verification_kernel"] != "CROSS_DOCUMENT_TRACE_EXECUTOR"
+
+
 def test_cross_document_trace_rejects_mismatched_technical_condition_anchor():
     from core.assignment_verification_kernel import verify_assignment_requirement
 

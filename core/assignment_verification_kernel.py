@@ -1617,6 +1617,7 @@ _TRACE_GENERIC_TERMS = {
     "инженерн", "изыскан", "результат", "материал", "проектн",
     "решения", "согласно", "техническ", "отчет", "отчета",
     "приняты", "данным", "условиям", "условий", "условия",
+    "исходн", "исходные", "данные", "разрешительн",
 }
 
 _TRACE_ANCHOR_RE = re.compile(
@@ -1650,6 +1651,12 @@ def _trace_requirement_source_role(requirement: dict[str, Any]) -> str:
         return "SURVEY_REPORT"
     if ("техническ" in low and "услов" in low) or _contains_isolated_tu(low):
         return "TECHNICAL_CONDITIONS"
+    if (
+        ("исходн" in low and "данн" in low)
+        or "исходно-разрешительн" in low
+        or re.search(r"(?<![a-zа-я0-9])ирд(?![a-zа-я0-9])", low, re.I)
+    ):
+        return "SOURCE_DATA"
     return ""
 
 
@@ -1677,6 +1684,22 @@ def _trace_source_role(page: dict[str, Any]) -> str:
         or _contains_isolated_tu(low)
     ):
         return "TECHNICAL_CONDITIONS"
+
+    source_data_descriptor = (
+        document_type in {
+            "ирд",
+            "исходные данные",
+            "исходно-разрешительная документация",
+            "исходные материалы",
+        }
+        or ("исходн" in descriptor and "данн" in descriptor)
+        or "исходно-разрешительн" in descriptor
+    )
+    if source_data_descriptor and (
+        ("исходн" in low and "данн" in low)
+        or "исходно-разрешительн" in low
+    ):
+        return "SOURCE_DATA"
     return ""
 
 
@@ -1688,6 +1711,11 @@ def _trace_project_mentions_source_role(source_role: str, low: str) -> bool:
             ("техническ" in low and "услов" in low)
             or _contains_isolated_tu(low)
         )
+    if source_role == "SOURCE_DATA":
+        return (
+            ("исходн" in low and "данн" in low)
+            or "исходно-разрешительн" in low
+        )
     return False
 
 
@@ -1698,10 +1726,10 @@ def _cross_document_trace_check(
     rtype = str(requirement.get("requirement_type") or "").upper()
     required_source_role = _trace_requirement_source_role(requirement)
     if rtype != "CROSS_DOCUMENT_TRACE":
-        # Technical-condition adoption is a cross-document dependency even when
-        # the legacy atom is primarily a PRESENCE/NORMATIVE requirement.
+        # Explicit source-document adoption is a cross-document dependency even
+        # when the legacy atom is primarily a PRESENCE/NORMATIVE requirement.
         if not (
-            required_source_role == "TECHNICAL_CONDITIONS"
+            required_source_role in {"TECHNICAL_CONDITIONS", "SOURCE_DATA"}
             and rtype in {"PRESENCE_REQUIREMENT", "NORMATIVE_COMPLIANCE", "SEMANTIC_ENGINEERING"}
         ):
             return None

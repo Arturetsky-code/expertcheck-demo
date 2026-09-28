@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import io
 import re
+import shutil
+import tempfile
 import zipfile
 import hashlib
-from dataclasses import dataclass, replace
-from pathlib import PurePosixPath
+from dataclasses import dataclass, field, replace
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 from xml.etree import ElementTree as ET
 
@@ -26,20 +28,39 @@ DOCUMENT_TYPE_OPTIONS = [
 @dataclass
 class PreparedUpload:
     name: str
-    data: bytes
+    data: bytes | None
     declared_document_type: str = ""
     source_container: str = ""
     relative_path: str = ""
+    backing_path: str = ""
+    backing_size: int = 0
 
     @property
     def size(self) -> int:
-        return len(self.data)
+        if self.data is not None:
+            return len(self.data)
+        if self.backing_size:
+            return int(self.backing_size)
+        if self.backing_path:
+            try:
+                return int(Path(self.backing_path).stat().st_size)
+            except OSError:
+                return 0
+        return 0
+
+    @property
+    def file_backed(self) -> bool:
+        return bool(self.backing_path and self.data is None)
 
     def getvalue(self) -> bytes:
-        return self.data
+        if self.data is not None:
+            return self.data
+        if not self.backing_path:
+            return b""
+        return Path(self.backing_path).read_bytes()
 
     def read(self, *args: Any, **kwargs: Any) -> bytes:
-        return self.data
+        return self.getvalue()
 
     def with_document_type(self, document_type: str) -> "PreparedUpload":
         return replace(self, declared_document_type=document_type or "")
@@ -52,6 +73,7 @@ class UploadPreparationResult:
     warnings: list[str]
     errors: list[str]
     package_summary: dict[str, Any]
+    temp_resources: list[Any] = field(default_factory=list, repr=False)
 
 
 def _clean_path(name: str) -> str:
@@ -146,11 +168,31 @@ def document_family(document_type: str) -> str:
     return document_type or "Не определён"
 
 
-def _extract_zip(uploaded: Any, errors: list[str], warnings: list[str]) -> list[PreparedUpload]:
+def _extract_zip(
+    uploaded: Any,
+    errors: list[str],
+    warnings: list[str],
+    temp_dir: Path,
+) -> list[PreparedUpload]:
+    """Extract supported ZIP members to temporary files instead of RAM.
+
+    Streamlit already holds the uploaded ZIP. Keeping every uncompressed PDF/XML
+    as a second in-memory copy makes large packages peak at roughly ZIP + full
+    uncompressed content. File-backed members keep the prepared package bounded:
+    each downstream analyzer materializes only the file it is currently reading.
+    """
     output: list[PreparedUpload] = []
     archive_name = str(getattr(uploaded, "name", "project.zip"))
     try:
-        with zipfile.ZipFile(io.BytesIO(uploaded.getvalue())) as archive:
+        if hasattr(uploaded, "read") and hasattr(uploaded, "seek"):
+            try:
+                uploaded.seek(0)
+                source = uploaded
+            except Exception:
+                source = io.BytesIO(uploaded.getvalue())
+        else:
+            source = io.BytesIO(uploaded.getvalue())
+        with zipfile.ZipFile(source) as archive:
             infos = [i for i in archive.infolist() if not i.is_dir()]
             if len(infos) > MAX_ARCHIVE_ENTRIES:
                 errors.append(f"Архив {archive_name}: слишком много файлов ({len(infos)}).")
@@ -173,19 +215,28 @@ def _extract_zip(uploaded: Any, errors: list[str], warnings: list[str]) -> list[
                     continue
                 if ext not in SUPPORTED_EXTENSIONS:
                     continue
+                digest = hashlib.blake2b(member.encode("utf-8", "ignore"), digest_size=8).hexdigest()
+                target = temp_dir / f"{len(output):05d}_{digest}{ext}"
                 try:
-                    data = archive.read(info)
+                    with archive.open(info, "r") as src, target.open("wb") as dst:
+                        shutil.copyfileobj(src, dst, length=1024 * 1024)
                 except Exception as exc:
-                    warnings.append(f"Не удалось прочитать {member} из {archive_name}: {exc}")
+                    warnings.append(f"Не удалось извлечь {member} из {archive_name}: {exc}")
+                    try:
+                        target.unlink(missing_ok=True)
+                    except Exception:
+                        pass
                     continue
                 display_name = member
                 output.append(
                     PreparedUpload(
                         name=display_name,
-                        data=data,
+                        data=None,
                         declared_document_type=guess_document_type(display_name),
                         source_container=archive_name,
                         relative_path=member,
+                        backing_path=str(target),
+                        backing_size=int(info.file_size or 0),
                     )
                 )
     except zipfile.BadZipFile:
@@ -213,7 +264,7 @@ def _quick_identity(file: PreparedUpload) -> dict[str, str]:
     result = {"project_code": "", "project_name": "", "year": "", "xml_schema": ""}
     try:
         if _extension(file.name) == ".xml":
-            root = ET.fromstring(file.data)
+            root = ET.fromstring(file.getvalue())
             result["xml_schema"] = str(root.attrib.get("SchemaVersion", ""))
             for tag in ("ExplanatoryNoteNumber", "ProjectDocumentationNumber"):
                 node = root.find(f".//{tag}")
@@ -231,7 +282,7 @@ def _quick_identity(file: PreparedUpload) -> dict[str, str]:
         elif _extension(file.name) == ".pdf":
             try:
                 import fitz  # PyMuPDF
-                doc = fitz.open(stream=file.data, filetype="pdf")
+                doc = fitz.open(stream=file.getvalue(), filetype="pdf")
                 text = "\n".join(page.get_text("text") for page in list(doc)[:2])
                 doc.close()
                 code_match = re.search(r"\b[A-ZА-Я0-9]{2,}(?:[-.–—][A-ZА-Я0-9.№]+){2,}\b", text)
@@ -314,15 +365,39 @@ def _traceability_source_summary(files: list[PreparedUpload]) -> dict[str, Any]:
     }
 
 
+def _content_digest(file: PreparedUpload) -> str:
+    digest = hashlib.blake2b(digest_size=12)
+    if file.data is not None:
+        digest.update(file.data)
+        return digest.hexdigest()
+    if file.backing_path:
+        try:
+            with Path(file.backing_path).open("rb") as stream:
+                while True:
+                    chunk = stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+            return digest.hexdigest()
+        except OSError:
+            return ""
+    return ""
+
+
 def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
     files: list[PreparedUpload] = []
     warnings: list[str] = []
     errors: list[str] = []
+    temp_resources: list[Any] = []
+    zip_temp: tempfile.TemporaryDirectory[str] | None = None
     for uploaded in uploaded_files or []:
         name = str(getattr(uploaded, "name", ""))
         try:
             if _extension(name) == ".zip":
-                files.extend(_extract_zip(uploaded, errors, warnings))
+                if zip_temp is None:
+                    zip_temp = tempfile.TemporaryDirectory(prefix="expertcheck_upload_")
+                    temp_resources.append(zip_temp)
+                files.extend(_extract_zip(uploaded, errors, warnings, Path(zip_temp.name)))
             else:
                 prepared = _direct_upload(uploaded)
                 if prepared:
@@ -337,7 +412,7 @@ def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
     unique: list[PreparedUpload] = []
     seen: set[tuple[str, int, int]] = set()
     for file in files:
-        signature = (file.name.lower(), len(file.data), hashlib.blake2b(file.data, digest_size=12).hexdigest())
+        signature = (file.name.lower(), file.size, _content_digest(file))
         if signature in seen:
             warnings.append(f"Удалён полный дубль: {file.name}")
             continue
@@ -366,8 +441,13 @@ def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
         "identity": identity_summary,
         "completeness": completeness,
         "traceability": _traceability_source_summary(files),
+        "storage": {
+            "file_backed_files": sum(1 for file in files if file.file_backed),
+            "in_memory_files": sum(1 for file in files if not file.file_backed),
+            "file_backed_bytes": sum(file.size for file in files if file.file_backed),
+        },
     }
-    return UploadPreparationResult(files, inventory, warnings, errors, summary)
+    return UploadPreparationResult(files, inventory, warnings, errors, summary, temp_resources)
 
 
 def apply_document_type_overrides(

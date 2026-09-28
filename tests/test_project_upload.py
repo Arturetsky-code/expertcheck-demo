@@ -85,6 +85,33 @@ def test_prepare_zip_and_ignore_service_files():
     assert {x.declared_document_type for x in result.files} == {"ПЗ", "ПЗ XML"}
 
 
+def test_zip_members_are_file_backed_and_readable():
+    payload = b"%PDF-file-backed-test"
+    archive = make_zip({"project/Раздел ПД №1_ПЗ.pdf": payload})
+    result = prepare_uploads([Upload("project.zip", archive)])
+    assert not result.errors
+    assert len(result.files) == 1
+    prepared = result.files[0]
+    assert prepared.data is None
+    assert prepared.file_backed is True
+    assert prepared.backing_path
+    assert prepared.getvalue() == payload
+    assert result.package_summary["storage"]["file_backed_files"] == 1
+    assert result.package_summary["storage"]["in_memory_files"] == 0
+    assert result.package_summary["storage"]["file_backed_bytes"] == len(payload)
+
+
+def test_direct_upload_remains_in_memory():
+    payload = b"%PDF-direct-test"
+    result = prepare_uploads([Upload("Раздел ПД №1_ПЗ.pdf", payload)])
+    assert len(result.files) == 1
+    prepared = result.files[0]
+    assert prepared.data == payload
+    assert prepared.file_backed is False
+    assert prepared.getvalue() == payload
+    assert result.package_summary["storage"]["in_memory_files"] == 1
+
+
 def test_reject_zip_traversal():
     archive = make_zip({"../secret.pdf": b"%PDF-test", "ok/АР1.pdf": b"%PDF-test"})
     result = prepare_uploads([Upload("project.zip", archive)])

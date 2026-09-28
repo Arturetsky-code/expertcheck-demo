@@ -1773,3 +1773,74 @@ upload preparation also materializes extracted PDF/XML members in memory.
 Before claiming full-size package readiness, inspect and reduce this peak-memory path.
 Do not solve it by lowering the 1.5 GB archive safety limit without changing storage
 behaviour.
+
+
+## Validated checkpoint — file-backed ZIP preparation
+
+Source commit:
+`278dd4129b131e6b065883924ccff681cc0907f2`
+
+Green regression marker:
+`6e43e4f74bbce9764c494e018f8b3be7749e88be`
+
+### Problem addressed
+
+The upload path previously retained:
+1. the uploaded ZIP in Streamlit memory;
+2. every extracted PDF/XML member as another in-memory byte array.
+
+For large packages this creates a peak close to **ZIP bytes + full uncompressed corpus**
+before engineering analysis even starts.
+
+### Accepted behavior
+
+Supported ZIP members are now extracted incrementally to a temporary directory:
+
+- `archive.open(...)` streams each member;
+- `shutil.copyfileobj(..., 1 MB chunks)` writes to disk;
+- ZIP-derived `PreparedUpload` objects keep `backing_path/backing_size` instead of
+  uncompressed `data` bytes;
+- downstream code continues to use the same `getvalue()/read()` contract;
+- direct non-ZIP uploads remain in memory;
+- temporary resources are owned by `UploadPreparationResult` so staged files remain
+  valid during the analysis lifecycle;
+- duplicate hashing streams file-backed members in 1 MB chunks;
+- package summary exposes file-backed/in-memory counts and bytes.
+
+### Regression guards
+
+Tests verify:
+- ZIP member is file-backed and readable through the existing contract;
+- direct upload remains in-memory;
+- source-document classification and traceability summaries remain intact.
+
+### Validation
+
+At `278dd412...`:
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Test78 remains **25 VERIFIED + 2 PROJECT_FINDING + 29 REVIEW = 27/56**;
+- changed IDs: **none**.
+
+### Remaining large-package limitation
+
+This does **not** yet make 800 MB–1+ GB browser uploads production-ready.
+
+Current Streamlit configuration still has:
+- `server.maxUploadSize = 500`;
+- `server.maxMessageSize = 500`.
+
+Even after file-backed extraction, Streamlit still owns the original uploaded ZIP buffer.
+Do not simply raise these limits and claim large-package readiness.
+
+Preferred next step:
+- stage the prepared file-backed package across a Streamlit rerun;
+- release/reset the original uploader before expensive analysis;
+- then measure the remaining upload-buffer lifetime and peak-memory path.

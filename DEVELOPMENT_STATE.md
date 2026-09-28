@@ -1571,3 +1571,84 @@ Preferred next direction:
 3. keep Test78 at 27/56 until genuinely complete evidence appears in its fixture;
 4. continue improving universal extractors only when they recover previously hidden,
    addressable evidence rather than infer missing documents.
+
+
+## Validated benchmark — deterministic traceability contract suite
+
+Benchmark commit:
+`44204050841c3b362403b49a936bec195e2a1f23`
+
+Workflow:
+`.github/workflows/traceability-benchmark.yml`
+
+Benchmark definition:
+`knowledge/benchmarks/traceability_contract_v1.json`
+
+Runner:
+`tools/run_traceability_benchmark.py`
+
+### Purpose
+
+This benchmark is intentionally separate from Test78.
+
+Test78 is a reduced 12-document fixture and currently lacks the external source
+documents needed to exercise positive source-to-project traceability. The new benchmark
+therefore measures the `TRACEABILITY` contract directly without changing the Test78
+denominator or relaxing its gates.
+
+It is a **synthetic contract benchmark**, not a substitute for a future real
+PD + engineering-survey + IRD corpus.
+
+### Current cases
+
+Nine deterministic scenarios are included:
+
+1. engineering-survey report -> project adoption, matching anchor -> `VERIFIED_OK`;
+2. survey mismatched anchor -> `REVIEW_QUESTION`;
+3. survey source missing -> `REVIEW_QUESTION`;
+4. technical conditions -> project adoption, matching anchor -> `VERIFIED_OK`;
+5. TU mismatched anchor -> `REVIEW_QUESTION`;
+6. TU source missing -> `REVIEW_QUESTION`;
+7. explicit source data / IRD -> project adoption, matching anchor -> `VERIFIED_OK`;
+8. source-data mismatched anchor -> `REVIEW_QUESTION`;
+9. source-data source missing -> `REVIEW_QUESTION`.
+
+### Validated result
+
+First workflow run:
+- classification: **PASS**;
+- cases: **9**;
+- passed: **9**;
+- failed: **0**.
+
+The same commit also passed:
+- Core25 tests;
+- baseline full diagnostic;
+- Core20 regression;
+- Core20 quality gates;
+- results integrity;
+- Source Snapshot Artifact;
+- alpha1 release gate.
+
+No production logic changed in this benchmark commit.
+
+### Test78 remains unchanged
+
+The production source commit immediately before the benchmark was
+`54c9e57590ca05794018920d569acd34ca40c34b`.
+
+Its Test78 result:
+- **NO_CHANGE**;
+- `25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW`;
+- strict coverage **27/56 = 48.2%**;
+- `changed_ids=[]`.
+
+### Continue from here
+
+The next meaningful traceability milestone is a real external benchmark containing
+PD + engineering surveys + IRD.
+
+Until that corpus is available:
+- keep the synthetic 9/9 contract suite as a regression guard;
+- do not infer missing source documents from project references alone;
+- do not raise Test78 by weakening source/anchor/subject gates.

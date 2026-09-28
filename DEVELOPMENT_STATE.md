@@ -1844,3 +1844,69 @@ Preferred next step:
 - stage the prepared file-backed package across a Streamlit rerun;
 - release/reset the original uploader before expensive analysis;
 - then measure the remaining upload-buffer lifetime and peak-memory path.
+
+
+## Validated checkpoint — uploader staging before analysis
+
+Source commit:
+`9e7a15370afb7ddc1bd193fadde9dbc8358e9d1c`
+
+### Accepted lifecycle
+
+The Project page now separates upload/preparation from heavy analysis across a
+Streamlit rerun:
+
+1. browser uploads one ZIP or a direct PDF/XML batch;
+2. `prepare_uploads()` prepares the package;
+3. the resulting `UploadPreparationResult` is stored only in transient
+   `st.session_state`;
+4. the active uploader widget key is rotated and explicitly removed on the next run;
+5. the next run renders the staged package without recreating the uploader;
+6. analysis uses only staged `PreparedUpload` objects;
+7. after successful analysis, staged package/editor/confirmation state is cleared and
+   temporary files can be released;
+8. after an analysis failure, the staged package remains available for retry.
+
+This is intentionally transient: staged source files are not added to the persisted
+workspace snapshot/database.
+
+### Why this matters
+
+Together with file-backed ZIP members, expensive analysis no longer needs to retain the
+browser ZIP widget plus the full unpacked project corpus at the same time.
+
+This still does not bypass Streamlit's configured per-upload limit of 500 MB.
+
+### Validation
+
+The first release-gate attempt failed **before tests** because PyPI repeatedly timed out
+while resolving `python-dateutil`. The failed release jobs were rerun without changing
+the source code.
+
+On rerun:
+- dependency installation: **success**;
+- focused regressions: **success**;
+- legacy full-suite against allowlist: **success**;
+- Compile Core25: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates / integrity: **success**;
+- Source Snapshot Artifact: **success**.
+
+No Test78 semantics were changed by this UI/lifecycle work.
+
+### Next step
+
+Do not raise `.streamlit/config.toml` to a 1+ GB single-file upload yet.
+
+Prefer sequential multipart staging:
+- each ZIP part stays below the existing 500 MB per-upload limit;
+- extract one part to file-backed staging;
+- release its uploader buffer;
+- add the next ZIP part;
+- merge staged inventories;
+- run one analysis on the combined file-backed project package.
+
+This can support an aggregate project larger than the single-upload limit without
+holding the whole archive set in browser memory at once.

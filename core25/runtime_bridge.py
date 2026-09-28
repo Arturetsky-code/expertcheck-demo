@@ -79,6 +79,8 @@ def _evidence_id(requirement_id: str, candidate: Mapping[str, Any]) -> str:
             _text(candidate.get("page")),
             _text(candidate.get("parameter_code")),
             _text(candidate.get("value")),
+            _text(candidate.get("evidence_kind")),
+            _text(candidate.get("proof_slot")),
             _text(candidate.get("context") or candidate.get("exact_clause")),
         )
     )

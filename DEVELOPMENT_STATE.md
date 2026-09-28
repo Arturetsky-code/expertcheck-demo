@@ -1473,3 +1473,101 @@ Preferred architecture direction now:
    fail-closed contract;
 3. later validate against a corpus containing real PD + II + IRD rather than weakening
    gates on the current reduced fixture.
+
+
+## Validated traceability extension — technical conditions and explicit source data
+
+Technical-conditions source commit:
+`74838ebc3ec079037baeaa9c046751d13c7724b1`
+
+Test-contract correction:
+`fc9929b71e199ea99f1f9824a661ea47b2b690f0`
+
+Explicit source-data / IRD source commit:
+`54c9e57590ca05794018920d569acd34ca40c34b`
+
+Green regression marker:
+`5e6e2687d4a02194dddbbd90a18bc94e5ba2c8c4`
+
+### Trace source roles
+
+The same Core25 `TRACEABILITY` archetype now supports three explicit source roles:
+
+- `SURVEY_REPORT` — engineering survey reports;
+- `TECHNICAL_CONDITIONS` — technical conditions / TU;
+- `SOURCE_DATA` — explicit owner/source data and IRD source documents.
+
+No source role has its own verdict engine. All three feed the same fail-closed
+two-sided proof contract.
+
+### Universal proof contract
+
+A source -> project trace can become categorical only when:
+
+1. the Assignment requirement explicitly implies the corresponding source role;
+2. the source page is addressable and classified as that source role;
+3. the project page explicitly states adoption/use of that source role;
+4. both pages share the same explicit report/reference anchor;
+5. both pages share at least two non-generic engineering-subject terms;
+6. source and project are different documents;
+7. upstream qualification emits separate `SOURCE_INPUT` and `PROJECT_ADOPTION` roles;
+8. Core25 re-validates the shared `trace_subject_key`, `trace_anchor`, and
+   `trace_source_role`.
+
+For `TECHNICAL_CONDITIONS` and `SOURCE_DATA`, trace qualification may override a
+legacy `PRESENCE_REQUIREMENT` / `NORMATIVE_COMPLIANCE` / `SEMANTIC_ENGINEERING`
+route only when the requirement explicitly names the source dependency.
+
+### Regression guards
+
+Synthetic end-to-end tests now cover:
+- technical conditions -> project adoption with same anchor;
+- technical conditions with mismatched anchor -> review;
+- TU reference without source document -> review;
+- explicit source data/IRD -> project adoption with same anchor;
+- source data with mismatched anchor -> review;
+- source-data reference without source document -> review.
+
+A red CI at the TU commit was traced to an invalid test assertion:
+`verification_kind` in the public row is intentionally overwritten with the final
+public verdict. Production logic was not changed; the test now asserts the stable
+proof state, reason code, and coverage executor.
+
+### Current Test78 accounting
+
+Both the TU extension and the SOURCE_DATA/IRD extension preserve the benchmark:
+
+- `VERIFIED_OK`: **25**;
+- `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **29**;
+- strict categorical coverage: **27/56 = 48.2%**;
+- Test78 classification: **NO_CHANGE**;
+- changed IDs: **none**.
+
+This is expected: the current 12-document Test78 fixture does not contain the required
+external source documents for these positive trace paths.
+
+### Validation at `54c9e57...`
+
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- alpha1 release gate: **success**.
+
+### Continue from here
+
+The 12-document frontier has now been audited deeply enough that forcing the next
+percentage gain would require weakening gates.
+
+Preferred next direction:
+1. build or add a benchmark corpus that contains real PD + engineering surveys + IRD;
+2. use it to measure the new cross-document trace archetype end-to-end;
+3. keep Test78 at 27/56 until genuinely complete evidence appears in its fixture;
+4. continue improving universal extractors only when they recover previously hidden,
+   addressable evidence rather than infer missing documents.

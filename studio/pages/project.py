@@ -165,22 +165,31 @@ def _upload(ctx):
                         for item in addition.warnings:
                             st.warning(item)
                         if addition.files and not addition.errors:
-                            merged = merge_prepared_packages(staged_package, addition)
-                            st.session_state['_project_upload_staged_package'] = merged
-                            st.session_state['_project_upload_add_part'] = False
-                            st.session_state['_project_upload_clear_key'] = add_upload_key
-                            st.session_state['_project_upload_generation'] = upload_generation + 1
-                            st.session_state.pop('studio3_upload_inventory', None)
-                            st.session_state.pop('studio3_package_confirmed', None)
-                            part_status.update(
-                                label=(
-                                    f"ZIP-часть добавлена · файлов в комплекте: "
-                                    f"{int(merged.package_summary.get('files') or 0)}"
-                                ),
-                                state='complete',
-                                expanded=False,
-                            )
-                            st.rerun()
+                            try:
+                                merged = merge_prepared_packages(staged_package, addition)
+                            except ValueError as exc:
+                                part_status.update(
+                                    label='ZIP-часть не добавлена: превышен безопасный лимит',
+                                    state='error',
+                                    expanded=True,
+                                )
+                                st.error(str(exc))
+                            else:
+                                st.session_state['_project_upload_staged_package'] = merged
+                                st.session_state['_project_upload_add_part'] = False
+                                st.session_state['_project_upload_clear_key'] = add_upload_key
+                                st.session_state['_project_upload_generation'] = upload_generation + 1
+                                st.session_state.pop('studio3_upload_inventory', None)
+                                st.session_state.pop('studio3_package_confirmed', None)
+                                part_status.update(
+                                    label=(
+                                        f"ZIP-часть добавлена · файлов в комплекте: "
+                                        f"{int(merged.package_summary.get('files') or 0)}"
+                                    ),
+                                    state='complete',
+                                    expanded=False,
+                                )
+                                st.rerun()
                         elif not addition.files:
                             part_status.update(label='В ZIP-части нет поддерживаемых PDF/XML', state='error')
             else:

@@ -4,6 +4,8 @@ import io
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from core.project_upload import (
     PreparedUpload,
     apply_document_type_overrides,
@@ -155,6 +157,26 @@ def test_merge_prepared_zip_parts_deduplicates_exact_member():
     assert len(merged.files) == 1
     assert any("дубль между частями" in warning.lower() for warning in merged.warnings)
     assert merged.package_summary["staged_parts"] == 2
+
+
+def test_merge_prepared_parts_enforces_aggregate_byte_limit(monkeypatch):
+    import core.project_upload as project_upload
+
+    left = prepare_uploads([Upload("a.pdf", b"123456")])
+    right = prepare_uploads([Upload("b.pdf", b"abcdef")])
+    monkeypatch.setattr(project_upload, "MAX_UNCOMPRESSED_BYTES", 10)
+    with pytest.raises(ValueError, match="Общий распакованный объём"):
+        merge_prepared_packages(left, right)
+
+
+def test_merge_prepared_parts_enforces_aggregate_file_limit(monkeypatch):
+    import core.project_upload as project_upload
+
+    left = prepare_uploads([Upload("a.pdf", b"a")])
+    right = prepare_uploads([Upload("b.pdf", b"b")])
+    monkeypatch.setattr(project_upload, "MAX_ARCHIVE_ENTRIES", 1)
+    with pytest.raises(ValueError, match="слишком много файлов"):
+        merge_prepared_packages(left, right)
 
 
 def test_apply_overrides():

@@ -1059,8 +1059,7 @@ def _normative_design_adoption_check(requirement: dict[str, Any], page_corpus: l
     if not required_refs:
         return None
     sections=list((requirement.get("evidence_contract_v2") or {}).get("expected_sections") or [])
-    if not sections:
-        return None
+    unsectioned = not sections
 
     subject=re.split(r"\b(?:в соответствии с|согласно)\b",text,maxsplit=1,flags=re.I)[0]
     subject_terms=[term for term in _significant_terms(subject) if term not in {"соответст"}]
@@ -1104,6 +1103,40 @@ def _normative_design_adoption_check(requirement: dict[str, Any], page_corpus: l
         return None
     solution_ranked.sort(key=lambda item:item[0],reverse=True)
     adoption_ranked.sort(key=lambda item:item[0],reverse=True)
+
+    # If routing could not infer profile sections, do not aggregate a design
+    # solution from one document with a normative reference from another.
+    # The fallback is deliberately fail-closed: one addressable project page
+    # must independently prove both the engineering subject and adoption of
+    # every norm explicitly named by the Assignment.
+    if unsectioned:
+        joint_candidates = []
+        required_ref_set = set(required_refs)
+        for solution_item in solution_ranked:
+            solution_page = solution_item[1]
+            solution_key = (
+                str(solution_page.get("document") or ""),
+                solution_page.get("page"),
+            )
+            for adoption_item in adoption_ranked:
+                adoption_page = adoption_item[1]
+                adoption_key = (
+                    str(adoption_page.get("document") or ""),
+                    adoption_page.get("page"),
+                )
+                if solution_key != adoption_key:
+                    continue
+                if not required_ref_set <= set(adoption_item[2]):
+                    continue
+                joint_candidates.append((solution_item, adoption_item))
+        if not joint_candidates:
+            return None
+        joint_candidates.sort(
+            key=lambda pair: pair[0][0] + pair[1][0],
+            reverse=True,
+        )
+        solution_ranked = [joint_candidates[0][0]]
+        adoption_ranked = [joint_candidates[0][1]]
 
     covered=set()
     selected=[]

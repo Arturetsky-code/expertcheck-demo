@@ -431,6 +431,78 @@ def _safe_identification_project_inventory(
         })
     return result
 
+def _safe_negative_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
+    """Structure-only diagnostics for negative/applicability REVIEW rows."""
+    from core.assignment_verification_kernel import (
+        NEGATIVE_MARKERS,
+        _norm,
+        _query_text,
+        _significant_terms,
+    )
+
+    generic = {
+        "разработк", "требовани", "отсутству", "необходимо",
+        "предусмат", "применяет", "требуется",
+    }
+    result = []
+    for row in rows:
+        if row.get("final_verification_kind") != "REVIEW_QUESTION":
+            continue
+        if str(row.get("requirement_type") or "").upper() != "PROHIBITION_OR_NOT_REQUIRED":
+            continue
+
+        terms = [
+            term for term in _significant_terms(_query_text(row))
+            if not any(term.startswith(x) for x in generic)
+        ]
+        windows = []
+        for page in corpus:
+            if is_assignment_source(page):
+                continue
+            raw = str(page.get("text") or "")
+            lines = [
+                re.sub(r"\s+", " ", line).strip()
+                for line in raw.splitlines()
+                if line.strip()
+            ]
+            clauses = []
+            buffer = ""
+            for line in lines:
+                buffer = f"{buffer} {line}".strip() if buffer else line
+                if re.search(r"[.!?;:]\s*$", line):
+                    clauses.append(buffer)
+                    buffer = ""
+            if buffer:
+                clauses.append(buffer)
+
+            for clause in clauses:
+                low = _norm(clause)
+                if not any(marker in low for marker in NEGATIVE_MARKERS):
+                    continue
+                hits = [term for term in terms if term in low]
+                windows.append({
+                    "document_type": page.get("document_type"),
+                    "hit_count": len(hits),
+                    "coverage": round(len(set(hits)) / max(1, len(terms)), 3),
+                })
+
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "requirement_scope": row.get("requirement_scope"),
+            "query_term_count": len(terms),
+            "source_title_term_count": len(_significant_terms(str(row.get("source_row_title") or ""))),
+            "negative_window_count": len(windows),
+            "max_subject_hit_count": max([x["hit_count"] for x in windows] or [0]),
+            "max_subject_coverage": max([x["coverage"] for x in windows] or [0]),
+            "matching_document_types": sorted({
+                str(x.get("document_type") or "")
+                for x in windows
+                if x["hit_count"] >= 2 and x.get("document_type")
+            }),
+        })
+    return result
+
+
 def _safe_composite_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
     """Structure-only condition matrices for deterministic composite REVIEW rows."""
     from core.assignment_verification_kernel import verify_assignment_requirement
@@ -943,6 +1015,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "negative_frontier_diagnostics": _safe_negative_frontier(runtime_rows, corpus),
         "composite_frontier_diagnostics": _safe_composite_frontier(runtime_rows, corpus),
         "trace_frontier_diagnostics": _safe_trace_frontier(runtime_rows, corpus),
         "presence_frontier_diagnostics": _safe_presence_frontier(runtime_rows),
@@ -1055,6 +1128,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"],
+        "negative_frontier_diagnostics": result["negative_frontier_diagnostics"],
         "composite_frontier_diagnostics": result["composite_frontier_diagnostics"],
         "trace_frontier_diagnostics": result["trace_frontier_diagnostics"],
         "presence_frontier_diagnostics": result["presence_frontier_diagnostics"],

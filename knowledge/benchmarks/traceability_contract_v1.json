@@ -1,7 +1,7 @@
 {
   "benchmark_id": "traceability-contract-v1",
-  "version": "1.0",
-  "policy": "Synthetic contract benchmark. No real project text or client data.",
+  "version": "1.1",
+  "policy": "Synthetic contract benchmark with adversarial negatives. No real project text or client data.",
   "cases": [
     {
       "case_id": "SURVEY_GEOLOGY_MATCH",
@@ -204,6 +204,129 @@
           "document_type": "ИОС2",
           "page": 22,
           "text": "Проектом предусмотрено хозяйственно-питьевое водоснабжение. Схема и точка подключения приняты в соответствии с исходными данными заказчика № IRD-WS-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "TU_WRONG_SOURCE_ROLE_SAME_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-TU-WRONG-ROLE",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": "Электроснабжение и точку технологического присоединения выполнить в соответствии с техническими условиями",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_Исходные_данные.pdf",
+          "document_type": "ИРД",
+          "page": 4,
+          "text": "Исходные данные заказчика № TU-EL-2026. Электроснабжение объекта. Точка технологического присоединения определена на границе участка."
+        },
+        {
+          "document": "ПД_ИОС1.pdf",
+          "document_type": "ИОС1",
+          "page": 18,
+          "text": "Проектом предусмотрено электроснабжение и принята точка технологического присоединения в соответствии с техническими условиями № TU-EL-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SOURCE_DATA_WRONG_SOURCE_ROLE_SAME_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-IRD-WRONG-ROLE",
+        "source_row_title": "Водоснабжение",
+        "requirement_text": "Схему хозяйственно-питьевого водоснабжения выполнить в соответствии с исходными данными заказчика",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_ТУ.pdf",
+          "document_type": "ТУ",
+          "page": 2,
+          "text": "Технические условия № IRD-WS-2026. Хозяйственно-питьевое водоснабжение объекта. Точка подключения определена."
+        },
+        {
+          "document": "ПД_ИОС2.pdf",
+          "document_type": "ИОС2",
+          "page": 22,
+          "text": "Проектом предусмотрено хозяйственно-питьевое водоснабжение. Схема и точка подключения приняты в соответствии с исходными данными заказчика № IRD-WS-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SURVEY_SAME_DOCUMENT_BOTH_ROLES",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-SURVEY-SAME-DOC",
+        "requirement_text": "Проектные решения по основаниям зданий принять по результатам инженерно-геологических изысканий",
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED"
+      },
+      "pages": [
+        {
+          "document": "Комплект.pdf",
+          "document_type": "ИГИ",
+          "page": 12,
+          "text": "Технический отчет. Шифр RAM-IGI-2026. Инженерно-геологические изыскания. Основания зданий и расчетные характеристики грунтов установлены."
+        },
+        {
+          "document": "Комплект.pdf",
+          "document_type": "ПЗ",
+          "page": 31,
+          "text": "Проектные решения по основаниям зданий приняты по результатам инженерно-геологических изысканий, отчет № RAM-IGI-2026. Расчетные характеристики грунтов приняты для фундаментов."
+        }
+      ]
+    },
+    {
+      "case_id": "SURVEY_GENERIC_NUMERIC_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-SURVEY-GENERIC-ANCHOR",
+        "requirement_text": "Проектные решения по основаниям зданий принять по результатам инженерно-геологических изысканий",
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED"
+      },
+      "pages": [
+        {
+          "document": "ИИ_ИГИ.pdf",
+          "document_type": "ИГИ",
+          "page": 12,
+          "text": "Технический отчет № 2026. Инженерно-геологические изыскания. Основания зданий и расчетные характеристики грунтов установлены."
+        },
+        {
+          "document": "ПД_ПЗ.pdf",
+          "document_type": "ПЗ",
+          "page": 31,
+          "text": "Проектные решения по основаниям зданий приняты по результатам инженерно-геологических изысканий, отчет № 2026. Расчетные характеристики грунтов приняты для фундаментов."
+        }
+      ]
+    },
+    {
+      "case_id": "TU_WEAK_SUBJECT_OVERLAP",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-TU-WEAK-SUBJECT",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": "Электроснабжение и точку технологического присоединения выполнить в соответствии с техническими условиями",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_ТУ.pdf",
+          "document_type": "ТУ",
+          "page": 2,
+          "text": "Технические условия № TU-EL-2026. Электроснабжение объекта предусмотрено."
+        },
+        {
+          "document": "ПД_ИОС1.pdf",
+          "document_type": "ИОС1",
+          "page": 18,
+          "text": "Проектом принята точка технологического присоединения в соответствии с техническими условиями № TU-EL-2026."
         }
       ]
     }

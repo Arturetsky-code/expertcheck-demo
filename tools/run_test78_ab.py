@@ -431,6 +431,45 @@ def _safe_identification_project_inventory(
         })
     return result
 
+def _safe_composite_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
+    """Structure-only condition matrices for deterministic composite REVIEW rows."""
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    allowed = {
+        "LIGHTING_COMPOSITE_EXECUTOR",
+        "FENCING_COMPOSITE_EXECUTOR",
+        "LIGHTNING_GROUNDING_COMPOSITE_EXECUTOR",
+    }
+    result = []
+    for row in rows:
+        if row.get("final_verification_kind") != "REVIEW_QUESTION":
+            continue
+        executor = str(row.get("coverage_executor") or "")
+        if executor not in allowed:
+            continue
+        checked = verify_assignment_requirement(row, corpus)
+        if not isinstance(checked, dict):
+            continue
+        matrix = [
+            {
+                "condition_id": str(item.get("condition_id") or ""),
+                "proven": item.get("proven") is True,
+            }
+            for item in (checked.get("condition_matrix") or [])
+            if isinstance(item, dict)
+        ]
+        summary = dict(checked.get("condition_summary") or {})
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "verification_kernel": checked.get("verification_kernel"),
+            "status": checked.get("status"),
+            "proven_count": int(summary.get("proven") or 0),
+            "total_count": int(summary.get("total") or len(matrix) or 0),
+            "condition_matrix": matrix,
+        })
+    return result
+
+
 def _safe_trace_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
     """Structure-only diagnostics for CROSS_DOCUMENT_TRACE review rows.
 
@@ -904,6 +943,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "composite_frontier_diagnostics": _safe_composite_frontier(runtime_rows, corpus),
         "trace_frontier_diagnostics": _safe_trace_frontier(runtime_rows, corpus),
         "presence_frontier_diagnostics": _safe_presence_frontier(runtime_rows),
         "normative_frontier_diagnostics": _safe_normative_frontier(runtime_rows),
@@ -1015,6 +1055,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
+        "composite_frontier_diagnostics": result["composite_frontier_diagnostics"],
         "trace_frontier_diagnostics": result["trace_frontier_diagnostics"],
         "presence_frontier_diagnostics": result["presence_frontier_diagnostics"],
         "normative_frontier_diagnostics": result["normative_frontier_diagnostics"],

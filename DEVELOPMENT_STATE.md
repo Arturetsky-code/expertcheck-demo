@@ -1652,3 +1652,124 @@ Until that corpus is available:
 - keep the synthetic 9/9 contract suite as a regression guard;
 - do not infer missing source documents from project references alone;
 - do not raise Test78 by weakening source/anchor/subject gates.
+
+
+## Validated checkpoint — adversarial traceability + upload source readiness
+
+Adversarial benchmark commit:
+`ef6bd05e2dcf541b84617ab85e6fcc2ef7c20cc9`
+
+Upload source classification commits:
+- `63776a1f4b2a4dab7f2c9b0d461e6e375c628a32` — source document types and package summary;
+- `c0250094ba7c5fa8d22bfbd1ec2824e6ed962a69` — explicit source-role priority over thematic PD classification.
+
+Upload UI commit:
+`c1d77223a5318f85f0d1a05cce87a61505981dea`
+
+### Adversarial traceability benchmark v1.1
+
+The deterministic synthetic traceability suite was expanded from **9** to **14** cases.
+
+New fail-closed negatives cover:
+1. TU requirement with a SOURCE_DATA document carrying the same anchor;
+2. SOURCE_DATA requirement with a TU document carrying the same anchor;
+3. the same physical document used as both source and project evidence;
+4. a generic numeric-only report anchor;
+5. matching anchor but weak engineering-subject overlap.
+
+Validated result:
+- classification: **PASS**;
+- cases: **14**;
+- passed: **14**;
+- failed: **0**.
+
+No production logic was changed to make these cases pass; the existing source-role,
+anchor, subject and independent-document gates already rejected them.
+
+### Upload/source-document classification
+
+The upload layer now recognizes explicit source document types:
+
+- `ИГДИ / ИГИ / ИГМИ / ИЭИ` -> trace role `SURVEY_REPORT`;
+- `ТУ` -> trace role `TECHNICAL_CONDITIONS`;
+- `ИРД / Исходные данные` -> trace role `SOURCE_DATA`.
+
+A first regression exposed a real filename-priority problem:
+`ТУ_электроснабжение.pdf` was initially classified as `ИОС1` because the thematic
+word `электроснабжение` matched before the source-document marker.
+
+Accepted correction:
+- explicit source-document roles are classified before thematic PD sections;
+- thus a TU/IRD/source-data file cannot be silently converted into an IOS/PZ family
+  merely because its filename names the engineering system it concerns.
+
+### Package traceability preflight
+
+`prepare_uploads()` now adds a compact `package_summary["traceability"]` block:
+
+- `SURVEY_REPORT` count;
+- `TECHNICAL_CONDITIONS` count;
+- `SOURCE_DATA` count;
+- available source roles;
+- missing source roles;
+- `traceability_ready` boolean.
+
+The Project upload UI displays one compact line:
+
+`ИИ — N · ТУ — N · ИРД/исходные данные — N`
+
+If no source-side documents are recognized, the UI explicitly warns that
+source-document -> PD traceability checks will be limited.
+
+### End-to-end type propagation
+
+The declared upload type is preserved through the analysis path:
+
+1. `PreparedUpload.declared_document_type`;
+2. legacy analyzer uses the declared type before its own classifier;
+3. returned `documents["Тип документа"]`;
+4. Core pipeline builds the `document_types` map;
+5. `build_page_corpus()` writes that exact type into each page;
+6. traceability qualification reads the page `document_type`.
+
+Therefore the new TU/IRD/survey classifications reach the actual trace checker rather
+than existing only in the upload screen.
+
+### Current Test78 baseline
+
+Production Test78 remains intentionally unchanged:
+- `VERIFIED_OK`: **25**;
+- `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **29**;
+- strict categorical coverage: **27/56 = 48.2%**;
+- classification: **NO_CHANGE**;
+- changed IDs: **none**.
+
+### Validation
+
+After the source-role priority fix:
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**.
+
+After the compact upload UI change:
+- Core25 Quality Leap gates: **success**;
+- Core20 quality gates: **success**;
+- Source Snapshot Artifact: **success**.
+
+### Continue from here
+
+The traceability logic and upload classification are now aligned.
+
+The next infrastructure risk for a real **800 MB–1+ GB** project package is memory
+behaviour during ZIP preparation: the browser holds the uploaded ZIP while the current
+upload preparation also materializes extracted PDF/XML members in memory.
+
+Before claiming full-size package readiness, inspect and reduce this peak-memory path.
+Do not solve it by lowering the 1.5 GB archive safety limit without changing storage
+behaviour.

@@ -1,0 +1,50 @@
+name: Traceability contract benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/expertcheck-25.2-coverage-breakthrough
+    paths:
+      - .github/workflows/traceability-benchmark.yml
+      - tools/run_traceability_benchmark.py
+      - knowledge/benchmarks/traceability_contract_v1.json
+      - core/assignment_verification_kernel.py
+      - core/coverage_breakthrough.py
+      - core25/**
+
+permissions:
+  contents: read
+
+jobs:
+  traceability-contract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        run: python -m pip install -q -r requirements.txt
+
+      - name: Run traceability contract benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python tools/run_traceability_benchmark.py --out-dir benchmark_out
+          cat benchmark_out/traceability_benchmark.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: traceability-contract-benchmark
+          path: |
+            benchmark_out/traceability_benchmark.json
+            benchmark_out/traceability_benchmark.md
+          retention-days: 30
+          if-no-files-found: error

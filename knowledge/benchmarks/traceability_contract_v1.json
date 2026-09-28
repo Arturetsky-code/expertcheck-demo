@@ -1,0 +1,211 @@
+{
+  "benchmark_id": "traceability-contract-v1",
+  "version": "1.0",
+  "policy": "Synthetic contract benchmark. No real project text or client data.",
+  "cases": [
+    {
+      "case_id": "SURVEY_GEOLOGY_MATCH",
+      "expected": "VERIFIED_OK",
+      "requirement": {
+        "requirement_id": "TB-SURVEY-GEOLOGY-MATCH",
+        "requirement_text": "Проектные решения по основаниям зданий принять по результатам инженерно-геологических изысканий",
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED"
+      },
+      "pages": [
+        {
+          "document": "ИИ_ИГИ.pdf",
+          "document_type": "ИГИ",
+          "page": 12,
+          "text": "Технический отчет. Шифр RAM-IGI-2026. Инженерно-геологические изыскания. Основания зданий: расчетные характеристики грунтов установлены по результатам полевых работ."
+        },
+        {
+          "document": "ПД_ПЗ.pdf",
+          "document_type": "ПЗ",
+          "page": 31,
+          "text": "Проектные решения по основаниям зданий приняты по результатам инженерно-геологических изысканий, отчет № RAM-IGI-2026. Расчетные характеристики грунтов приняты для проектирования фундаментов."
+        }
+      ]
+    },
+    {
+      "case_id": "SURVEY_GEOLOGY_MISMATCHED_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-SURVEY-GEOLOGY-MISMATCH",
+        "requirement_text": "Проектные решения по основаниям зданий принять по результатам инженерно-геологических изысканий",
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED"
+      },
+      "pages": [
+        {
+          "document": "ИИ_ИГИ.pdf",
+          "document_type": "ИГИ",
+          "page": 12,
+          "text": "Технический отчет. Шифр RAM-IGI-2026. Инженерно-геологические изыскания. Основания зданий: расчетные характеристики грунтов установлены."
+        },
+        {
+          "document": "ПД_ПЗ.pdf",
+          "document_type": "ПЗ",
+          "page": 31,
+          "text": "Проектные решения по основаниям зданий приняты по результатам инженерно-геологических изысканий, отчет № OTHER-IGI-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SURVEY_GEOLOGY_MISSING_SOURCE",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-SURVEY-GEOLOGY-MISSING",
+        "requirement_text": "Проектные решения по основаниям зданий принять по результатам инженерно-геологических изысканий",
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED"
+      },
+      "pages": [
+        {
+          "document": "ПД_ПЗ.pdf",
+          "document_type": "ПЗ",
+          "page": 31,
+          "text": "Проектные решения по основаниям зданий приняты по результатам инженерно-геологических изысканий, отчет № RAM-IGI-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "TECHNICAL_CONDITIONS_MATCH",
+      "expected": "VERIFIED_OK",
+      "requirement": {
+        "requirement_id": "TB-TU-MATCH",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": "Электроснабжение и точку технологического присоединения выполнить в соответствии с техническими условиями",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_ТУ.pdf",
+          "document_type": "ТУ",
+          "page": 2,
+          "text": "Технические условия № TU-EL-2026. Электроснабжение объекта. Точка технологического присоединения определена на границе земельного участка."
+        },
+        {
+          "document": "ПД_ИОС1.pdf",
+          "document_type": "ИОС1",
+          "page": 18,
+          "text": "Проектом предусмотрено электроснабжение объекта и принята точка технологического присоединения в соответствии с техническими условиями № TU-EL-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "TECHNICAL_CONDITIONS_MISMATCHED_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-TU-MISMATCH",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": "Электроснабжение и точку технологического присоединения выполнить в соответствии с техническими условиями",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_ТУ.pdf",
+          "document_type": "ТУ",
+          "page": 2,
+          "text": "Технические условия № TU-EL-2026. Электроснабжение объекта. Точка технологического присоединения определена."
+        },
+        {
+          "document": "ПД_ИОС1.pdf",
+          "document_type": "ИОС1",
+          "page": 18,
+          "text": "Проектом предусмотрено электроснабжение и принята точка технологического присоединения в соответствии с техническими условиями № TU-OTHER-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "TECHNICAL_CONDITIONS_MISSING_SOURCE",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-TU-MISSING",
+        "source_row_title": "Электроснабжение",
+        "requirement_text": "Электроснабжение и точку технологического присоединения выполнить в соответствии с техническими условиями",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ПД_ИОС1.pdf",
+          "document_type": "ИОС1",
+          "page": 18,
+          "text": "Проектом предусмотрено электроснабжение и принята точка технологического присоединения в соответствии с техническими условиями № TU-EL-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SOURCE_DATA_MATCH",
+      "expected": "VERIFIED_OK",
+      "requirement": {
+        "requirement_id": "TB-IRD-MATCH",
+        "source_row_title": "Водоснабжение",
+        "requirement_text": "Схему хозяйственно-питьевого водоснабжения выполнить в соответствии с исходными данными заказчика",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_Исходные_данные.pdf",
+          "document_type": "ИРД",
+          "page": 4,
+          "text": "Исходные данные заказчика № IRD-WS-2026. Хозяйственно-питьевое водоснабжение объекта: точка подключения к существующей сети определена у северной границы участка."
+        },
+        {
+          "document": "ПД_ИОС2.pdf",
+          "document_type": "ИОС2",
+          "page": 22,
+          "text": "Проектом предусмотрено хозяйственно-питьевое водоснабжение. Схема и точка подключения приняты в соответствии с исходными данными заказчика № IRD-WS-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SOURCE_DATA_MISMATCHED_ANCHOR",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-IRD-MISMATCH",
+        "source_row_title": "Водоснабжение",
+        "requirement_text": "Схему хозяйственно-питьевого водоснабжения выполнить в соответствии с исходными данными заказчика",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ИРД_Исходные_данные.pdf",
+          "document_type": "ИРД",
+          "page": 4,
+          "text": "Исходные данные заказчика № IRD-WS-2026. Хозяйственно-питьевое водоснабжение объекта: точка подключения определена."
+        },
+        {
+          "document": "ПД_ИОС2.pdf",
+          "document_type": "ИОС2",
+          "page": 22,
+          "text": "Проектом предусмотрено хозяйственно-питьевое водоснабжение. Схема и точка подключения приняты в соответствии с исходными данными заказчика № IRD-OTHER-2026."
+        }
+      ]
+    },
+    {
+      "case_id": "SOURCE_DATA_MISSING_SOURCE",
+      "expected": "REVIEW_QUESTION",
+      "requirement": {
+        "requirement_id": "TB-IRD-MISSING",
+        "source_row_title": "Водоснабжение",
+        "requirement_text": "Схему хозяйственно-питьевого водоснабжения выполнить в соответствии с исходными данными заказчика",
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "SYSTEM_SPECIFIC"
+      },
+      "pages": [
+        {
+          "document": "ПД_ИОС2.pdf",
+          "document_type": "ИОС2",
+          "page": 22,
+          "text": "Проектом предусмотрено хозяйственно-питьевое водоснабжение. Схема и точка подключения приняты в соответствии с исходными данными заказчика № IRD-WS-2026."
+        }
+      ]
+    }
+  ]
+}

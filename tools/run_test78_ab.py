@@ -429,6 +429,92 @@ def _safe_identification_project_inventory(
         })
     return result
 
+def _safe_normative_frontier(rows: list[dict]) -> list[dict]:
+    """Emit structure-only diagnostics for normative REVIEW rows.
+
+    No requirement text, project fragment, document name, or page number is
+    emitted.  The diagnostic only exposes boolean/counted proof predicates so
+    a routing/admission defect can be distinguished from missing evidence.
+    """
+    from core.assignment_verification_kernel import (
+        DESIGN_MARKERS,
+        _norm,
+        _normative_ids,
+        _significant_terms,
+    )
+
+    action_markers = (
+        "предусмотреть",
+        "выполнить",
+        "разработать",
+        "должны соответствовать",
+        "проектные решения",
+    )
+    adoption_markers = (
+        "руководствоваться",
+        "в соответствии",
+        "в строгом соответствии",
+        "выполня",
+        "производств",
+        "предусмотр",
+    )
+
+    result = []
+    for row in rows:
+        if row.get("final_verification_kind") != "REVIEW_QUESTION":
+            continue
+        if str(row.get("requirement_type") or "").upper() != "NORMATIVE_COMPLIANCE":
+            continue
+
+        text = str(row.get("requirement_text") or "")
+        low_req = _norm(text)
+        required_refs = _normative_ids(text)
+        subject = re.split(r"\b(?:в соответствии с|согласно)\b", text, maxsplit=1, flags=re.I)[0]
+        subject_terms = [term for term in _significant_terms(subject) if term != "соответст"]
+
+        candidate_diags = []
+        for item in row.get("directed_evidence_candidates") or []:
+            if not isinstance(item, dict):
+                continue
+            fragment = str(
+                item.get("context")
+                or item.get("exact_clause")
+                or item.get("source_trace")
+                or ""
+            )
+            low = _norm(fragment)
+            refs_on_page = [ref for ref in required_refs if ref in low]
+            subject_hits = [term for term in subject_terms if term in low]
+            candidate_diags.append({
+                "evidence_kind": item.get("evidence_kind"),
+                "evidence_state": item.get("evidence_state"),
+                "document_type": item.get("document_type"),
+                "required_ref_count_on_page": len(refs_on_page),
+                "all_required_refs_on_page": bool(required_refs) and len(refs_on_page) == len(required_refs),
+                "subject_term_count": len(subject_terms),
+                "subject_hit_count": len(subject_hits),
+                "subject_minimum_met": bool(subject_terms) and len(subject_hits) >= min(2, len(subject_terms)),
+                "has_design_marker": any(marker in low for marker in DESIGN_MARKERS),
+                "has_adoption_marker": any(marker in low for marker in adoption_markers),
+                "owner_match": item.get("owner_match") is True,
+                "matched_term_count": len(item.get("matched_terms") or []),
+                "matched_normative_ref_count": len(item.get("matched_normative_refs") or []),
+            })
+
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "requirement_scope": row.get("requirement_scope"),
+            "expected_section_count": len(row.get("expected_sections") or []),
+            "required_normative_ref_count": len(required_refs),
+            "requirement_action_marker": any(marker in low_req for marker in action_markers),
+            "subject_term_count": len(subject_terms),
+            "coverage_executor": row.get("coverage_executor"),
+            "admission_stage": row.get("core25_admission_stage"),
+            "candidate_diagnostics": candidate_diags,
+        })
+    return result
+
+
 def _review_frontier(rows: list[dict], limit: int = 12) -> list[dict]:
     review = [row for row in rows if row.get("final_verification_kind") == "REVIEW_QUESTION"]
     review.sort(
@@ -652,6 +738,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "normative_frontier_diagnostics": _safe_normative_frontier(runtime_rows),
         "identification_frontier": _identification_frontier(current_rows),
         "identification_enrichment": identification_enrichment,
         "identification_layout_diagnostics": _safe_identification_layout_diagnostics(requirements, assignment_corpus),
@@ -760,6 +847,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
+        "normative_frontier_diagnostics": result["normative_frontier_diagnostics"],
         "identification_frontier": result["identification_frontier"],
         "identification_enrichment": result["identification_enrichment"],
         "identification_layout_diagnostics": result["identification_layout_diagnostics"],

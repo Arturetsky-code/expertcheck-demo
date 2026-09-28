@@ -429,6 +429,61 @@ def _safe_identification_project_inventory(
         })
     return result
 
+def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
+    """Structure-only diagnostics for presence REVIEW rows.
+
+    The output intentionally excludes requirement/project text and page/document
+    names. It exposes only proof predicates needed to distinguish a missing
+    section route from weak semantic evidence.
+    """
+    from core.assignment_verification_kernel import DESIGN_MARKERS, _norm
+
+    result = []
+    for row in rows:
+        if row.get("final_verification_kind") != "REVIEW_QUESTION":
+            continue
+        if str(row.get("requirement_type") or "").upper() != "PRESENCE_REQUIREMENT":
+            continue
+
+        contract = dict(row.get("evidence_contract_v2") or {})
+        candidates = []
+        for item in row.get("directed_evidence_candidates") or []:
+            if not isinstance(item, dict):
+                continue
+            fragment = str(
+                item.get("context")
+                or item.get("exact_clause")
+                or item.get("source_trace")
+                or ""
+            )
+            low = _norm(fragment)
+            candidates.append({
+                "evidence_kind": item.get("evidence_kind"),
+                "evidence_state": item.get("evidence_state"),
+                "document_type": item.get("document_type"),
+                "matched_term_count": len(item.get("matched_terms") or []),
+                "semantic_coverage": item.get("semantic_coverage"),
+                "critical_qualifiers_satisfied": item.get("critical_qualifiers_satisfied") is True,
+                "owner_match": item.get("owner_match") is True,
+                "has_design_marker": any(marker in low for marker in DESIGN_MARKERS),
+                "has_parameter_value": item.get("value") is not None,
+                "parameter_code": item.get("parameter_code") or "",
+            })
+
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "requirement_scope": row.get("requirement_scope"),
+            "expected_section_count": len(row.get("expected_sections") or []),
+            "contract_expected_section_count": len(contract.get("expected_sections") or []),
+            "critical_qualifier_count": len(contract.get("critical_qualifiers") or []),
+            "has_object_id": bool(row.get("object_id") or row.get("target_object_id")),
+            "coverage_executor": row.get("coverage_executor"),
+            "admission_stage": row.get("core25_admission_stage"),
+            "candidate_diagnostics": candidates,
+        })
+    return result
+
+
 def _safe_normative_frontier(rows: list[dict]) -> list[dict]:
     """Emit structure-only diagnostics for normative REVIEW rows.
 
@@ -738,6 +793,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "presence_frontier_diagnostics": _safe_presence_frontier(runtime_rows),
         "normative_frontier_diagnostics": _safe_normative_frontier(runtime_rows),
         "identification_frontier": _identification_frontier(current_rows),
         "identification_enrichment": identification_enrichment,
@@ -847,6 +903,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
+        "presence_frontier_diagnostics": result["presence_frontier_diagnostics"],
         "normative_frontier_diagnostics": result["normative_frontier_diagnostics"],
         "identification_frontier": result["identification_frontier"],
         "identification_enrichment": result["identification_enrichment"],

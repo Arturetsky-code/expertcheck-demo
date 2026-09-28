@@ -71,6 +71,93 @@ def test_factual_normative_assertion_can_close_but_reference_only_cannot():
     assert row["proof_state"] == "INSUFFICIENT"
 
 
+def _unsectioned_presence_requirement(*, object_bound=False):
+    req = {
+        "requirement_id": "REQ-UNSECTIONED-PRESENCE",
+        "requirement_text": (
+            "Предусмотреть централизованную систему диспетчерского контроля "
+            "технологических параметров с регистрацией аварийных сигналов "
+            "и архивированием событий"
+        ),
+        "requirement_type": "PRESENCE_REQUIREMENT",
+        "requirement_scope": "OBJECT_SPECIFIC" if object_bound else "UNRESOLVED",
+        "evidence_contract_v2": {
+            "scope": "OBJECT_SPECIFIC" if object_bound else "UNRESOLVED",
+            "critical_qualifiers": ["архивированием событий"],
+        },
+    }
+    if object_bound:
+        req["object_id"] = "OBJ-CONTROL"
+        req["object_name"] = "Система диспетчерского контроля"
+    return req
+
+
+def _unsectioned_presence_pages(*, partial=False):
+    text = (
+        "Проектом предусмотрена централизованная система диспетчерского контроля "
+        "технологических параметров с регистрацией аварийных сигналов "
+        "и архивированием событий."
+    )
+    if partial:
+        text = (
+            "Проектом предусмотрена система диспетчерского контроля "
+            "с архивированием событий."
+        )
+    return [{
+        "document": "Раздел ПД №1_ПЗ.pdf",
+        "document_type": "ПЗ",
+        "page": 31,
+        "text": text,
+    }]
+
+
+def test_unsectioned_project_presence_can_close_from_single_high_coverage_pz_page():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+    from core.coverage_breakthrough import attach_coverage_executor_evidence
+
+    req = _unsectioned_presence_requirement()
+    pages = _unsectioned_presence_pages()
+    direct = verify_assignment_requirement(req, pages)
+    assert direct is not None
+    assert direct["status"] == "Соответствует заданию"
+    assert direct["verification_kernel"] == "GENERIC_PRESENCE_EXECUTOR"
+    evidence = direct["verification_evidence"][0]
+    assert evidence["evidence_state"] == "verified_candidate"
+    assert evidence["unsectioned_project_presence"] is True
+    assert evidence["full_semantic_coverage"] >= 0.85
+
+    attach_coverage_executor_evidence([req], pages)
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_PRESENCE_CONFIRMED"
+
+
+def test_unsectioned_project_presence_rejects_partial_semantic_overlap():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _unsectioned_presence_requirement(),
+        _unsectioned_presence_pages(partial=True),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_kernel"] == "SOURCE_LOCKED_RETRIEVAL"
+    assert result["verification_evidence"][0]["evidence_state"] == "candidate"
+
+
+def test_unsectioned_project_presence_does_not_bypass_object_binding():
+    from core.assignment_verification_kernel import verify_assignment_requirement
+
+    result = verify_assignment_requirement(
+        _unsectioned_presence_requirement(object_bound=True),
+        _unsectioned_presence_pages(),
+    )
+    assert result is not None
+    assert result["status"] == "Требует проверки"
+    assert result["verification_kernel"] == "SOURCE_LOCKED_RETRIEVAL"
+
+
 def test_site_presence_scope_is_not_forced_to_unbound():
     req = {
         "requirement_id": "REQ-FENCE",

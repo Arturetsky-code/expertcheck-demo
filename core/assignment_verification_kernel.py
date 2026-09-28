@@ -1617,22 +1617,65 @@ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[d
     qualifier_ok = all(_norm(item) in low for item in critical)
     denominator = max(1, min(len(terms), 8))
     coverage = len(hits[:8]) / denominator
+    full_coverage = len(set(hits)) / max(1, len(terms))
     required_hit_count = min(4, len(terms))
-    strong_presence = bool(
+    has_design_assertion = any(marker in low for marker in DESIGN_MARKERS)
+
+    routed_presence = bool(
         rtype == "PRESENCE_REQUIREMENT"
         and sections
         and len(hits) >= required_hit_count
         and coverage >= 0.60
         and qualifier_ok
-        and any(marker in low for marker in DESIGN_MARKERS)
+        and has_design_assertion
     )
+
+    # Fail-closed fallback for genuinely project-global presence requirements
+    # where section routing could not be inferred.  A generic phrase match is
+    # not enough: the proof must be a single addressable PZ page with near-
+    # complete semantic coverage, all critical qualifiers and an explicit
+    # project/design assertion.  Object/numeric requirements are excluded.
+    contract_scope = _norm(contract.get("scope") or requirement.get("requirement_scope") or "")
+    object_bound = bool(
+        requirement.get("object_id")
+        or requirement.get("target_object_id")
+        or contract_scope in {"object_specific", "equipment_specific"}
+    )
+    parameter_code = str(requirement.get("parameter_code") or "").strip()
+    has_numeric_requirement = requirement.get("required_value") is not None
+    low_req = _norm(text)
+    action_requested = any(marker in low_req for marker in (
+        "предусмотр", "выполн", "разработ", "принят", "обеспеч", "установ",
+    ))
+    negative_request = any(marker in low_req for marker in (
+        "не требуется", "не предусматр", "не предусмотр", "не примен",
+    ))
+    project_note_page = str(page.get("document_type") or "").strip().upper() == "ПЗ"
+    unsectioned_project_presence = bool(
+        rtype == "PRESENCE_REQUIREMENT"
+        and not sections
+        and not object_bound
+        and not parameter_code
+        and not has_numeric_requirement
+        and len(terms) >= 8
+        and len(hits) >= 8
+        and full_coverage >= 0.85
+        and qualifier_ok
+        and has_design_assertion
+        and action_requested
+        and not negative_request
+        and project_note_page
+    )
+    strong_presence = routed_presence or unsectioned_project_presence
     evidence = {
         "evidence_kind": "QUALIFIED_PROJECT_PASSAGE" if strong_presence else "SOURCE_LOCKED_PASSAGE",
         "evidence_state": "verified_candidate" if strong_presence else "candidate",
         "document": page.get("document"), "document_type": page.get("document_type"), "page": page.get("page"),
         "context": snippet, "score": min(100, score), "matched_terms": hits,
         "semantic_coverage": round(coverage, 3),
+        "full_semantic_coverage": round(full_coverage, 3),
         "critical_qualifiers_satisfied": qualifier_ok,
+        "unsectioned_project_presence": unsectioned_project_presence,
     }
     return {
         "status": "Соответствует заданию" if strong_presence else "Требует проверки",
@@ -1641,7 +1684,12 @@ def _generic_passage_candidates(requirement: dict[str, Any], page_corpus: list[d
         "evidence_quality_state": "VERIFIED_ENGINEERING_EVIDENCE" if strong_presence else "CANDIDATE_EVIDENCE",
         "match_confidence": min(.95 if strong_presence else .79, score / 100),
         "decision_basis": (
-            "Адресное проектное решение подтверждено в ожидаемом профильном разделе с достаточным покрытием ключевых условий."
+            (
+                "Адресное проектное решение подтверждено на одной странице ПЗ почти полным покрытием "
+                "требования и всех критических квалификаторов; профильный раздел не был задан."
+                if unsectioned_project_presence else
+                "Адресное проектное решение подтверждено в ожидаемом профильном разделе с достаточным покрытием ключевых условий."
+            )
             if strong_presence else
             "Найден профильный проектный фрагмент. Для категоричного вывода требуется специализированный типизированный checker."
         ),

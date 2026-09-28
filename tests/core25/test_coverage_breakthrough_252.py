@@ -419,10 +419,10 @@ def test_cross_document_trace_qualifies_technical_conditions_to_project_adoption
 
     attach_coverage_executor_evidence([req], pages)
     row = run_assignment_runtime([req])["rows"][0]
-    assert row["verification_kind"] == "TRACEABILITY"
     assert row["final_verification_kind"] == "VERIFIED_OK"
     assert row["proof_state"] == "PROVEN_MATCH"
     assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
+    assert row["coverage_executor"] == "CROSS_DOCUMENT_TRACE_EXECUTOR"
 
 
 def test_cross_document_trace_rejects_mismatched_technical_condition_anchor():

@@ -1119,3 +1119,88 @@ Do not promote:
 
 Preferred next work is another review requirement where complete addressable evidence
 already exists and the fix improves a reusable archetype rather than one Test78 ID.
+
+
+## Validated checkpoint — high-confidence unsectioned presence (27/56)
+
+Source code commit:
+`3e2c23330e4233aed6c34cf58d2ab99fa3a20f07`
+
+Green regression marker:
+`7597e849ab5a1b1e3fd9fb833a0b025f5b7f5f0d`
+
+### Test78 result
+
+Deterministic Test78 A/B produced **SINGLE_GAIN** with exactly one changed requirement:
+
+- `ASSIGN-1ABCB2369DD986`: `REVIEW_QUESTION -> VERIFIED_OK`;
+- proof: `PROVEN_MATCH`;
+- reason: `ASSIGNMENT_PRESENCE_CONFIRMED`;
+- executor/archetype: `GENERIC_PRESENCE_EXECUTOR` / `PRESENCE`.
+
+New strict categorical accounting:
+- `VERIFIED_OK`: **25**;
+- native `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **29**;
+- external deviations: **0**;
+- strict categorical coverage: **27/56 = 48.2%**;
+- native categorical archetypes: **13**;
+- all 27 categorical rows map to a native archetype.
+
+### Universal safeguard
+
+The gap was generic presence requirements for which no profile section could be inferred.
+The previous implementation required a non-empty section route even when the same PZ
+page almost completely reproduced the engineering requirement.
+
+The accepted fallback remains fail-closed.  An unsectioned presence requirement may be
+promoted only when all of the following are true:
+
+1. requirement type is `PRESENCE_REQUIREMENT`;
+2. no expected section route exists;
+3. the requirement is not object/equipment bound;
+4. no numeric required value and no parameter code are present;
+5. the requirement is an affirmative engineering action, not a negative/applicability
+   statement;
+6. the proof comes from one addressable `ПЗ` page;
+7. the page contains an explicit project/design assertion;
+8. every critical qualifier is present;
+9. at least 8 significant requirement terms are present;
+10. full semantic coverage is at least **0.85**.
+
+The decisive Test78 candidate had **16/18 = 0.889** full term coverage.
+Nearby review candidates remained below the threshold or failed qualifiers/owner/design
+gates:
+- `ASSIGN-4F91A035979A30`: 6/18, qualifiers incomplete, stale secondary parameter
+  remains non-authoritative;
+- `ASSIGN-ADC7788A7483F8`: 9/18;
+- `ASSIGN-783AD352DCC283`: 5/10;
+- object-bound candidates remain excluded.
+
+Thus the gain does not reopen the previously corrected false-positive route for
+`ASSIGN-4F91A035979A30`.
+
+### Validation
+
+At source commit `3e2c233...`:
+- Test78 deterministic A/B: **success / SINGLE_GAIN**;
+- Core25 Quality Leap gates: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**.
+
+### Continue from here
+
+Treat **27/56** as accepted only after the baseline-manifest recheck returns
+`NO_CHANGE`.
+
+Do not promote:
+- capacity evidence across incompatible semantic levels;
+- brand-only equipment differences;
+- incomplete lighting/normative composites;
+- object-bound or partial generic presence matches.
+
+Preferred next work: inspect the remaining review frontier for a reusable evidence
+contract or cross-document trace pattern with complete addressable evidence.

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "benchmark": "Test78",
-  "baseline_label": "26/56",
-  "baseline_source_sha": "ccb749b2477138d846ea5f69f2a5e80fa495076c",
+  "baseline_label": "27/56",
+  "baseline_source_sha": "3e2c23330e4233aed6c34cf58d2ab99fa3a20f07",
   "proven_deviations": 0,
   "row_overrides": [
     {
@@ -32,7 +32,14 @@
       "proof_state": "PROVEN_MATCH",
       "core25_reason_code": "ASSIGNMENT_NORMATIVE_DESIGN_ADOPTION_CONFIRMED",
       "coverage_executor": "NORMATIVE_DESIGN_ADOPTION_EXECUTOR"
+    },
+    {
+      "requirement_id": "ASSIGN-1ABCB2369DD986",
+      "final_verification_kind": "VERIFIED_OK",
+      "proof_state": "PROVEN_MATCH",
+      "core25_reason_code": "ASSIGNMENT_PRESENCE_CONFIRMED",
+      "coverage_executor": "GENERIC_PRESENCE_EXECUTOR"
     }
   ],
-  "audit_note": "Current 26/56 audited baseline. The new gain ASSIGN-016FCF9FBA5CD6 is proven by the reusable NORMATIVE_DESIGN_ADOPTION archetype through a fail-closed unsectioned route: the same addressable page must prove the engineering subject, a project/design assertion, and adoption of every norm explicitly named by the Assignment. Distinct same-page proof slots are preserved through coverage deduplication and Core25 evidence identity. Both deviations remain native Core25 PROJECT_FINDING results; no external deviations remain."
+  "audit_note": "Current 27/56 audited baseline. ASSIGN-1ABCB2369DD986 is now proven natively by the reusable PRESENCE archetype through a fail-closed unsectioned project-global fallback: one addressable PZ page, no object or numeric binding, explicit project/design assertion, all critical qualifiers satisfied, action-form requirement, at least eight significant term hits, and >=85% full semantic coverage. Weaker unsectioned presence candidates remain REVIEW. Both deviations remain native Core25 PROJECT_FINDING results; no external deviations remain."
 }

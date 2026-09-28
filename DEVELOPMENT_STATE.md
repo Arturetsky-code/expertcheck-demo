@@ -1297,3 +1297,98 @@ Next development direction should therefore be one of:
   actually present.
 
 Do not turn a project-side statement alone into a cross-document proof.
+
+
+## Validated traceability extension — raw corpus qualification
+
+Source commits:
+- `8c2a0ae7ca2907f3163a271e427d064133af7350` — explicit survey-to-project trace qualification;
+- `5f3384f5a49e9cdda43fc97bfccce380afd320c0` — preserve engineering foundation subject semantics.
+
+Green regression marker:
+`790d157c97a41f95c1b199880f5da0054eb853f1`
+
+### End-to-end behavior
+
+The traceability path now works from raw page corpus, not only from pre-qualified
+synthetic evidence.
+
+For `CROSS_DOCUMENT_TRACE`, the deterministic checker may emit a verified two-role
+package only when:
+
+1. an addressable source page is recognized as an engineering-survey source;
+2. an addressable project page contains an explicit adoption statement referring to
+   engineering-survey results/materials;
+3. both pages contain at least two specific engineering-subject terms from the
+   Assignment requirement;
+4. both pages contain the same explicit report/reference anchor extracted from a
+   `Шифр ...`, `Отчет № ...` or equivalent identifier;
+5. the shared anchor contains a sufficiently specific alphanumeric/reference token;
+6. the source and project documents are distinct.
+
+The checker then emits:
+- `QUALIFIED_CROSS_DOCUMENT_TRACE / SOURCE_INPUT`;
+- `QUALIFIED_CROSS_DOCUMENT_TRACE / PROJECT_ADOPTION`;
+- the same `trace_subject_key` and `trace_anchor`;
+- independently verified source/adoption flags.
+
+Core25 then re-validates this package through the fail-closed `TRACEABILITY` proof.
+
+### Important semantic correction
+
+The first end-to-end implementation failed one regression test because stem
+`основани` was incorrectly treated as generic wording from the phrase
+`на основании`.
+
+That is unsafe for engineering semantics because `основания зданий` is a real
+engineering subject.
+
+The accepted correction keeps foundation/base semantics as a subject term while
+`на основании` remains an adoption relation detected separately.
+
+### Regression coverage
+
+The validated tests now cover:
+- raw engineering-survey + project pages with the same report anchor -> categorical
+  trace proof;
+- missing source document -> `REVIEW`;
+- mismatched explicit report anchors -> `REVIEW`;
+- Core25 source-side missing -> `REVIEW`;
+- Core25 mismatched anchors -> `REVIEW`;
+- same document used as both trace roles -> `REVIEW`.
+
+### Current Test78 accounting
+
+No Test78 score change is accepted from this work:
+- `VERIFIED_OK`: **25**;
+- `PROJECT_FINDING`: **2**;
+- `REVIEW_QUESTION`: **29**;
+- strict categorical coverage: **27/56 = 48.2%**;
+- Test78 classification after the final trace implementation: **NO_CHANGE**;
+- changed requirement IDs: **none**.
+
+The benchmark cannot exercise the positive trace path because the current 12-document
+fixture contains **0 matching engineering-survey source pages**.
+
+### Validation
+
+At final source commit `5f3384f...`:
+- Core25 Quality Leap gates: **success**;
+- Core25 tests: **success**;
+- baseline full diagnostic: **success**;
+- Core20 regression: **success**;
+- Core20 quality gates: **success**;
+- results integrity: **success**;
+- Validate ExpertCheck 25.2 branch: **success**;
+- Source Snapshot Artifact: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- alpha1 release gate: **success**.
+
+### Continue from here
+
+The next useful validation step for this archetype is a benchmark that actually contains
+both PD and engineering-survey documents. Until then, do not relax the explicit
+cross-document anchor requirement merely to move Test78.
+
+For the current 12-document frontier, continue only with review requirements whose
+complete evidence is actually present in the fixture.

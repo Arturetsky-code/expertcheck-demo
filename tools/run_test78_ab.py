@@ -429,6 +429,91 @@ def _safe_identification_project_inventory(
         })
     return result
 
+def _safe_trace_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
+    """Structure-only diagnostics for CROSS_DOCUMENT_TRACE review rows.
+
+    This intentionally emits no requirement text, project text, filenames or
+    page numbers.  It only reports whether the benchmark corpus contains both
+    sides of a potential trace chain and whether they share the requirement
+    vocabulary strongly enough to justify implementing a Core25 proof route.
+    """
+    from core.assignment_verification_kernel import _norm, _query_text, _significant_terms
+    from core.page_evidence_store import is_assignment_source
+
+    survey_markers = (
+        "изыскан",
+        "игди",
+        "иги",
+        "игми",
+        "иэи",
+        "инженерно-геодез",
+        "инженерно-геолог",
+        "инженерно-гидрометеор",
+        "инженерно-эколог",
+        "техническ отчет",
+        "технический отчет",
+    )
+    project_markers = ("пз", "пзу", "кр", "ар", "тх", "иос")
+
+    project_corpus = [p for p in corpus if not is_assignment_source(p)]
+    result = []
+    for row in rows:
+        if row.get("final_verification_kind") != "REVIEW_QUESTION":
+            continue
+        if str(row.get("requirement_type") or "").upper() != "CROSS_DOCUMENT_TRACE":
+            continue
+
+        terms = _significant_terms(_query_text(row))
+        page_diags = []
+        for page in project_corpus:
+            low = _norm(page.get("text") or "")
+            doc_type = _norm(page.get("document_type") or "")
+            document = _norm(page.get("document") or "")
+            hits = [term for term in terms if term in low]
+            if len(hits) < 2:
+                continue
+            source_like = any(marker in doc_type or marker in document for marker in survey_markers)
+            design_like = (
+                not source_like
+                and any(marker == doc_type or doc_type.startswith(marker) for marker in project_markers)
+            )
+            page_diags.append({
+                "document_type": page.get("document_type"),
+                "term_hit_count": len(hits),
+                "term_coverage": round(len(set(hits)) / max(1, len(terms)), 3),
+                "source_survey_like": source_like,
+                "project_design_like": design_like,
+            })
+
+        source_pages = [x for x in page_diags if x["source_survey_like"]]
+        design_pages = [x for x in page_diags if x["project_design_like"]]
+        result.append({
+            "requirement_id": row.get("requirement_id"),
+            "requirement_scope": row.get("requirement_scope"),
+            "expected_section_count": len(row.get("expected_sections") or []),
+            "query_term_count": len(terms),
+            "coverage_executor": row.get("coverage_executor"),
+            "admission_stage": row.get("core25_admission_stage"),
+            "candidate_kind_counts": dict(Counter(
+                str(item.get("evidence_kind") or "")
+                for item in (row.get("directed_evidence_candidates") or [])
+                if isinstance(item, dict)
+            )),
+            "source_survey_page_count": len(source_pages),
+            "project_design_page_count": len(design_pages),
+            "max_source_term_coverage": max([x["term_coverage"] for x in source_pages] or [0]),
+            "max_design_term_coverage": max([x["term_coverage"] for x in design_pages] or [0]),
+            "source_document_types": sorted({
+                str(x.get("document_type") or "") for x in source_pages if x.get("document_type")
+            }),
+            "design_document_types": sorted({
+                str(x.get("document_type") or "") for x in design_pages if x.get("document_type")
+            }),
+            "two_sided_trace_candidate": bool(source_pages and design_pages),
+        })
+    return result
+
+
 def _safe_presence_frontier(rows: list[dict]) -> list[dict]:
     """Structure-only diagnostics for presence REVIEW rows.
 
@@ -817,6 +902,7 @@ def run(fixture: dict, baseline_manifest: dict | None = None) -> dict:
         "regressions": regressions,
         "other_changes": other_changes,
         "review_frontier": _review_frontier(current_rows),
+        "trace_frontier_diagnostics": _safe_trace_frontier(runtime_rows, corpus),
         "presence_frontier_diagnostics": _safe_presence_frontier(runtime_rows),
         "normative_frontier_diagnostics": _safe_normative_frontier(runtime_rows),
         "identification_frontier": _identification_frontier(current_rows),
@@ -927,6 +1013,7 @@ def main() -> None:
         "archetype_coverage": result["archetype_coverage"]["current"],
         "categorical_archetype_coverage": result["categorical_archetype_coverage"]["current"],
         "review_frontier": result["review_frontier"][:8],
+        "trace_frontier_diagnostics": result["trace_frontier_diagnostics"],
         "presence_frontier_diagnostics": result["presence_frontier_diagnostics"],
         "normative_frontier_diagnostics": result["normative_frontier_diagnostics"],
         "identification_frontier": result["identification_frontier"],

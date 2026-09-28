@@ -436,9 +436,9 @@ def _safe_negative_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
     from core.assignment_verification_kernel import (
         NEGATIVE_MARKERS,
         _norm,
-        _query_text,
         _significant_terms,
     )
+    from core.page_evidence_store import section_matches
 
     generic = {
         "разработк", "требовани", "отсутству", "необходимо",
@@ -451,10 +451,19 @@ def _safe_negative_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
         if str(row.get("requirement_type") or "").upper() != "PROHIBITION_OR_NOT_REQUIRED":
             continue
 
-        terms = [
-            term for term in _significant_terms(_query_text(row))
-            if not any(term.startswith(x) for x in generic)
-        ]
+        title_terms = _significant_terms(str(row.get("source_row_title") or ""))
+        body_terms = _significant_terms(str(row.get("requirement_text") or ""))
+        terms = []
+        for term in [*title_terms, *body_terms]:
+            if any(term.startswith(x) for x in generic):
+                continue
+            if term not in terms:
+                terms.append(term)
+
+        contract = dict(row.get("evidence_contract_v2") or {})
+        expected_sections = list(contract.get("expected_sections") or [])
+        critical = [str(x) for x in contract.get("critical_qualifiers") or []]
+
         windows = []
         for page in corpus:
             if is_assignment_source(page):
@@ -480,25 +489,49 @@ def _safe_negative_frontier(rows: list[dict], corpus: list[dict]) -> list[dict]:
                 if not any(marker in low for marker in NEGATIVE_MARKERS):
                     continue
                 hits = [term for term in terms if term in low]
+                title_hits = [term for term in title_terms if term in low]
+                body_hits = [term for term in body_terms if term in low]
+                qualifier_ok = all(_norm(item) in low for item in critical)
                 windows.append({
                     "document_type": page.get("document_type"),
                     "hit_count": len(hits),
                     "coverage": round(len(set(hits)) / max(1, len(terms)), 3),
+                    "title_coverage": round(len(set(title_hits)) / max(1, len(title_terms)), 3),
+                    "body_coverage": round(len(set(body_hits)) / max(1, len(body_terms)), 3),
+                    "qualifier_ok": qualifier_ok,
+                    "expected_section_match": (
+                        section_matches(page.get("document_type") or page.get("document"), expected_sections)
+                        if expected_sections else False
+                    ),
                 })
 
+        ranked = sorted(
+            windows,
+            key=lambda x: (
+                x["hit_count"],
+                x["qualifier_ok"],
+                x["expected_section_match"],
+                x["body_coverage"],
+            ),
+            reverse=True,
+        )
+        best = ranked[0] if ranked else {}
         result.append({
             "requirement_id": row.get("requirement_id"),
             "requirement_scope": row.get("requirement_scope"),
             "query_term_count": len(terms),
-            "source_title_term_count": len(_significant_terms(str(row.get("source_row_title") or ""))),
+            "source_title_term_count": len(title_terms),
+            "body_term_count": len(body_terms),
+            "critical_qualifier_count": len(critical),
+            "contract_expected_section_count": len(expected_sections),
             "negative_window_count": len(windows),
-            "max_subject_hit_count": max([x["hit_count"] for x in windows] or [0]),
-            "max_subject_coverage": max([x["coverage"] for x in windows] or [0]),
-            "matching_document_types": sorted({
-                str(x.get("document_type") or "")
-                for x in windows
-                if x["hit_count"] >= 2 and x.get("document_type")
-            }),
+            "max_subject_hit_count": int(best.get("hit_count") or 0),
+            "max_subject_coverage": float(best.get("coverage") or 0),
+            "best_title_coverage": float(best.get("title_coverage") or 0),
+            "best_body_coverage": float(best.get("body_coverage") or 0),
+            "best_critical_qualifiers_satisfied": best.get("qualifier_ok") is True,
+            "best_expected_section_match": best.get("expected_section_match") is True,
+            "best_document_type": best.get("document_type"),
         })
     return result
 

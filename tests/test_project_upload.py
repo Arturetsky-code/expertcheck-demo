@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import io
 import zipfile
+from pathlib import Path
 
 from core.project_upload import (
     PreparedUpload,
     apply_document_type_overrides,
     document_family,
     guess_document_type,
+    merge_prepared_packages,
     prepare_uploads,
 )
 
@@ -117,6 +119,42 @@ def test_reject_zip_traversal():
     result = prepare_uploads([Upload("project.zip", archive)])
     assert len(result.files) == 1
     assert any("небезопасный" in warning.lower() for warning in result.warnings)
+
+
+def test_merge_prepared_zip_parts_keeps_file_backing_alive():
+    left = prepare_uploads([Upload(
+        "part-1.zip",
+        make_zip({"a/ИГИ_Технический_отчет.pdf": b"%PDF-survey"})
+    )])
+    right = prepare_uploads([Upload(
+        "part-2.zip",
+        make_zip({"b/Раздел ПД №1_ПЗ.pdf": b"%PDF-project"})
+    )])
+
+    merged = merge_prepared_packages(left, right)
+    assert len(merged.files) == 2
+    assert all(item.file_backed for item in merged.files)
+    assert merged.package_summary["staged_parts"] == 2
+    assert merged.package_summary["storage"]["file_backed_files"] == 2
+    assert merged.package_summary["traceability"]["source_role_counts"]["SURVEY_REPORT"] == 1
+
+    paths = [item.backing_path for item in merged.files]
+    del left, right
+    import gc
+    gc.collect()
+    assert all(Path(path).exists() for path in paths)
+    assert {item.getvalue() for item in merged.files} == {b"%PDF-survey", b"%PDF-project"}
+
+
+def test_merge_prepared_zip_parts_deduplicates_exact_member():
+    payload = b"%PDF-same"
+    left = prepare_uploads([Upload("part-1.zip", make_zip({"same.pdf": payload}))])
+    right = prepare_uploads([Upload("part-2.zip", make_zip({"same.pdf": payload}))])
+
+    merged = merge_prepared_packages(left, right)
+    assert len(merged.files) == 1
+    assert any("дубль между частями" in warning.lower() for warning in merged.warnings)
+    assert merged.package_summary["staged_parts"] == 2
 
 
 def test_apply_overrides():

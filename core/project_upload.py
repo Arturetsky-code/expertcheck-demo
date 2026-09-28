@@ -450,6 +450,67 @@ def prepare_uploads(uploaded_files: Iterable[Any]) -> UploadPreparationResult:
     return UploadPreparationResult(files, inventory, warnings, errors, summary, temp_resources)
 
 
+def merge_prepared_packages(
+    base: UploadPreparationResult,
+    addition: UploadPreparationResult,
+) -> UploadPreparationResult:
+    """Merge sequentially staged upload parts without rematerialising file bytes.
+
+    Temporary-directory owners from every part are retained by the merged result,
+    so file-backed members stay readable after the intermediate package objects
+    leave scope.
+    """
+    files: list[PreparedUpload] = []
+    warnings = list(base.warnings or []) + list(addition.warnings or [])
+    errors = list(base.errors or []) + list(addition.errors or [])
+    temp_resources = list(base.temp_resources or []) + list(addition.temp_resources or [])
+
+    seen: set[tuple[str, int, str]] = set()
+    for file in list(base.files or []) + list(addition.files or []):
+        signature = (file.name.lower(), file.size, _content_digest(file))
+        if signature in seen:
+            warnings.append(f"Удалён полный дубль между частями комплекта: {file.name}")
+            continue
+        seen.add(signature)
+        files.append(file)
+
+    package_warnings, identity_summary = _package_checks(files)
+    warnings.extend(package_warnings)
+    warnings = list(dict.fromkeys(str(item) for item in warnings if str(item).strip()))
+    errors = list(dict.fromkeys(str(item) for item in errors if str(item).strip()))
+
+    inventory: list[dict[str, Any]] = []
+    for idx, file in enumerate(files):
+        inventory.append({
+            "ID": idx,
+            "Файл": file.name,
+            "Формат": _extension(file.name).lstrip(".").upper(),
+            "Предполагаемый раздел": file.declared_document_type or "Не определён",
+            "Семейство": document_family(file.declared_document_type),
+            "Размер, МБ": round(file.size / 1024 / 1024, 2),
+            "Источник": file.source_container,
+            "Статус": "Готов" if file.declared_document_type != "Не определён" else "Уточнить раздел",
+        })
+
+    summary = {
+        "files": len(files),
+        "total_bytes": sum(file.size for file in files),
+        "identity": identity_summary,
+        "completeness": _completeness(files),
+        "traceability": _traceability_source_summary(files),
+        "storage": {
+            "file_backed_files": sum(1 for file in files if file.file_backed),
+            "in_memory_files": sum(1 for file in files if not file.file_backed),
+            "file_backed_bytes": sum(file.size for file in files if file.file_backed),
+        },
+        "staged_parts": int((base.package_summary or {}).get("staged_parts") or 1)
+            + int((addition.package_summary or {}).get("staged_parts") or 1),
+    }
+    return UploadPreparationResult(
+        files, inventory, warnings, errors, summary, temp_resources
+    )
+
+
 def apply_document_type_overrides(
     files: list[PreparedUpload],
     inventory_rows: Iterable[dict[str, Any]],

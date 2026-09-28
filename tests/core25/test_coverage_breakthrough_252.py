@@ -224,6 +224,91 @@ def test_unresolved_negative_requirement_is_safe_project_global_and_closes():
     assert row["core25_binding_counts"]["BOUND"] == 1
 
 
+def _traceability_requirement():
+    return {
+        "requirement_id": "REQ-TRACE",
+        "requirement_text": (
+            "Проектные решения принять на основании результатов инженерных изысканий"
+        ),
+        "requirement_type": "CROSS_DOCUMENT_TRACE",
+        "requirement_scope": "UNRESOLVED",
+    }
+
+
+def _trace_candidate(slot, document, *, anchor="report-igi-2026", verified=True):
+    payload = {
+        "evidence_state": "verified_candidate",
+        "evidence_kind": "QUALIFIED_CROSS_DOCUMENT_TRACE",
+        "document": document,
+        "document_type": "ИГИ" if slot == "SOURCE_INPUT" else "ПЗ",
+        "page": 12 if slot == "SOURCE_INPUT" else 31,
+        "context": (
+            "Инженерно-геологические изыскания устанавливают расчетные характеристики грунтов."
+            if slot == "SOURCE_INPUT"
+            else "Проектные решения приняты по результатам инженерно-геологических изысканий."
+        ),
+        "score": 98,
+        "trace_chain": True,
+        "trace_subject_key": "engineering-geology-input",
+        "trace_anchor": anchor,
+        "proof_slot": slot,
+        "matched_terms": ["инженерн", "изыскан", "грунт"],
+        "source_input_verified": slot == "SOURCE_INPUT" and verified,
+        "project_adoption_verified": slot == "PROJECT_ADOPTION" and verified,
+    }
+    return payload
+
+
+def test_cross_document_trace_requires_two_verified_addressable_roles():
+    req = _traceability_requirement()
+    req["directed_evidence_candidates"] = [
+        _trace_candidate("SOURCE_INPUT", "ИГИ.pdf"),
+        _trace_candidate("PROJECT_ADOPTION", "ПЗ.pdf"),
+    ]
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "VERIFIED_OK"
+    assert row["proof_state"] == "PROVEN_MATCH"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED"
+    assert row["core25_binding_counts"]["BOUND"] == 2
+
+
+def test_cross_document_trace_stays_review_when_source_side_is_missing():
+    req = _traceability_requirement()
+    req["directed_evidence_candidates"] = [
+        _trace_candidate("PROJECT_ADOPTION", "ПЗ.pdf"),
+    ]
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+    assert row["proof_state"] == "INSUFFICIENT"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_NOT_PROVEN"
+
+
+def test_cross_document_trace_rejects_different_trace_anchors():
+    req = _traceability_requirement()
+    req["directed_evidence_candidates"] = [
+        _trace_candidate("SOURCE_INPUT", "ИГИ.pdf", anchor="igi-a"),
+        _trace_candidate("PROJECT_ADOPTION", "ПЗ.pdf", anchor="igi-b"),
+    ]
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_NOT_PROVEN"
+
+
+def test_cross_document_trace_rejects_same_document_for_both_roles():
+    req = _traceability_requirement()
+    req["directed_evidence_candidates"] = [
+        _trace_candidate("SOURCE_INPUT", "ПЗ.pdf"),
+        _trace_candidate("PROJECT_ADOPTION", "ПЗ.pdf"),
+    ]
+
+    row = run_assignment_runtime([req])["rows"][0]
+    assert row["final_verification_kind"] == "REVIEW_QUESTION"
+    assert row["core25_reason_code"] == "ASSIGNMENT_CROSS_DOCUMENT_TRACE_NOT_PROVEN"
+
+
 def test_exact_requirement_owner_wins_over_duplicate_registry_alias_ids():
     req = {
         "requirement_id": "REQ-DSK-CAPACITY",

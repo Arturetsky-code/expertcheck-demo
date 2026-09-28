@@ -359,6 +359,83 @@ def _negative_assertion_proof(
     )
 
 
+def _traceability_proof(
+    requirement: Requirement25,
+    route: VerificationRoute,
+    pairs: tuple[tuple[Evidence25, Binding25], ...],
+) -> Proof25:
+    """Prove a two-sided source-input -> project-adoption chain.
+
+    Upstream retrieval may surface related passages, but Core25 only accepts a
+    categorical trace when both addressable documents carry the same explicit
+    trace subject and anchor, and each role is independently verified.
+    """
+    grouped: dict[tuple[str, str], dict[str, list[tuple[Evidence25, Binding25]]]] = {}
+
+    for evidence_item, binding in pairs:
+        metadata = dict(evidence_item.metadata or {})
+        kind = str(metadata.get("legacy_evidence_kind") or "").upper()
+        if kind != "QUALIFIED_CROSS_DOCUMENT_TRACE" or metadata.get("trace_chain") is not True:
+            continue
+
+        slot = str(metadata.get("proof_slot") or "").upper()
+        subject = _norm_text(metadata.get("trace_subject_key"))
+        anchor = _norm_text(metadata.get("trace_anchor"))
+        terms = tuple(metadata.get("matched_terms") or ())
+        if not subject or not anchor or len(terms) < 2:
+            continue
+
+        if slot == "SOURCE_INPUT":
+            if metadata.get("source_input_verified") is not True:
+                continue
+        elif slot == "PROJECT_ADOPTION":
+            if metadata.get("project_adoption_verified") is not True:
+                continue
+            if not _has_project_assertion(evidence_item.fragment):
+                continue
+        else:
+            continue
+
+        grouped.setdefault((subject, anchor), {}).setdefault(slot, []).append(
+            (evidence_item, binding)
+        )
+
+    for (subject, anchor), slots in grouped.items():
+        sources = slots.get("SOURCE_INPUT") or []
+        projects = slots.get("PROJECT_ADOPTION") or []
+        for source_pair in sources:
+            for project_pair in projects:
+                source_item, source_binding = source_pair
+                project_item, project_binding = project_pair
+                if (
+                    not source_item.resolved_document.strip()
+                    or not project_item.resolved_document.strip()
+                    or source_item.resolved_document == project_item.resolved_document
+                ):
+                    continue
+                accepted = (source_pair, project_pair)
+                evidence_ids = tuple(item.evidence_id for item, _ in accepted)
+                binding_ids = tuple(binding.binding_id for _, binding in accepted)
+                return Proof25(
+                    proof_id=_proof_id(requirement, route, evidence_ids, binding_ids),
+                    requirement_id=requirement.requirement_id,
+                    state=ProofState.PROVEN_MATCH,
+                    evidence_ids=evidence_ids,
+                    binding_ids=binding_ids,
+                    reason_code="ASSIGNMENT_CROSS_DOCUMENT_TRACE_CONFIRMED",
+                    metadata={
+                        "trace_subject_key": subject,
+                        "trace_anchor": anchor,
+                    },
+                )
+
+    return _insufficient(
+        requirement,
+        route,
+        reason_code="ASSIGNMENT_CROSS_DOCUMENT_TRACE_NOT_PROVEN",
+    )
+
+
 def _normative_assertion_proof(
     requirement: Requirement25,
     route: VerificationRoute,
@@ -780,6 +857,8 @@ def build_proof(
         return _negative_assertion_proof(requirement, route, pairs)
     if route.kind == "NORMATIVE_ASSERTION":
         return _normative_assertion_proof(requirement, route, pairs)
+    if route.kind == "TRACEABILITY":
+        return _traceability_proof(requirement, route, pairs)
     if route.kind == "NORMATIVE_DESIGN_ADOPTION":
         return _normative_design_adoption_proof(requirement, route, pairs)
     if route.kind == "DYNAMIC_FOUNDATION_NORMATIVE":

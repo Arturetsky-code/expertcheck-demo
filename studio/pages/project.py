@@ -171,6 +171,20 @@ def _upload(ctx):
                             st.success('Доступно: ' + '; '.join(available))
                         if limits:
                             st.info('Ограничения: ' + '; '.join(limits))
+                        trace = summary.get('traceability', {})
+                        trace_counts = trace.get('source_role_counts', {})
+                        survey_count = int(trace_counts.get('SURVEY_REPORT') or 0)
+                        tu_count = int(trace_counts.get('TECHNICAL_CONDITIONS') or 0)
+                        source_data_count = int(trace_counts.get('SOURCE_DATA') or 0)
+                        st.caption(
+                            'Источники для междокументной проверки: '
+                            f'ИИ — {survey_count} · ТУ — {tu_count} · ИРД/исходные данные — {source_data_count}'
+                        )
+                        if not trace.get('traceability_ready'):
+                            st.info(
+                                'В комплекте не распознаны ИИ, ТУ или ИРД. '
+                                'Проверки прослеживаемости «исходный документ → ПД» будут ограничены.'
+                            )
                     confirmed = st.checkbox('Состав загруженного комплекта проверен', key='studio3_package_confirmed')
         if st.button(
             'Запустить проверку',

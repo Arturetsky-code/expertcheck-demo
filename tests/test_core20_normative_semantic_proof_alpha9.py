@@ -157,7 +157,7 @@ def test_alpha9_same_actual_model_is_not_independent_even_across_providers():
     assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
 
 
-def test_alpha9_stale_semantic_proof_is_rejected_by_queue_fingerprint():
+def test_alpha9_stale_semantic_proof_is_rejected_when_packet_fingerprint_changes():
     proof = _proof_result()
     semantic = run_normative_semantic_proof(
         proof["semantic_queue"],
@@ -166,7 +166,37 @@ def test_alpha9_stale_semantic_proof_is_rejected_by_queue_fingerprint():
         limit=8,
     )
     semantic["fingerprint"] = "stale"
+    semantic["decisions"]["PP87-X-SEM"]["packet_fingerprint"] = "stale-packet"
     applied = apply_normative_semantic_proof(proof, semantic)
     assert applied["semantic_proof_applied"] == 0
     assert applied["semantic_proof_stale"] is True
     assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
+
+
+def test_alpha9_existing_semantic_proof_survives_queue_expansion_for_unchanged_packet():
+    proof = _proof_result()
+    semantic = run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+
+    expanded = _proof_result()
+    extra = dict(expanded["semantic_queue"][0])
+    extra["packet_id"] = "NORM-PP87-Y-SEM"
+    extra["requirement_id"] = "PP87-Y-SEM"
+    extra["requirement"] = "В ПЗУ должны быть приведены сведения о вертикальной планировке территории."
+    extra["evidence"] = [dict(extra["evidence"][0])]
+    extra["evidence"][0]["evidence_id"] = "NORM-E-PP87-Y-SEM-01"
+    extra["evidence"][0]["page"] = 12
+    extra["evidence"][0]["text"] = "Приведено описание вертикальной планировки территории."
+    expanded["semantic_queue"] = [*expanded["semantic_queue"], extra]
+    expanded["semantic_queue_total"] = 2
+
+    applied = apply_normative_semantic_proof(expanded, semantic)
+    assert applied["semantic_proof_applied"] == 1
+    assert applied["semantic_proof_stale"] is False
+    assert applied["semantic_proof_summary"]["queue_fingerprint_match"] is False
+    assert applied["semantic_proof_summary"]["reused_decisions"] == 1
+    assert applied["rows"][0]["kind"] == "VERIFIED_OK"

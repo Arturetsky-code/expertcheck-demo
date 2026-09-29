@@ -40,6 +40,24 @@ def queue_fingerprint(queue:list[dict[str,Any]]|None)->str:
     return _fingerprint(list(queue or []))
 
 
+def _packet_fingerprint(packet:dict[str,Any])->str:
+    evidence=list(packet.get("evidence") or [])
+    payload={
+        "packet_id":packet.get("packet_id"),
+        "requirement_id":packet.get("requirement_id"),
+        "requirement":packet.get("requirement"),
+        "proof_type":packet.get("proof_type"),
+        "evidence":[{
+            "evidence_id":row.get("evidence_id"),
+            "document":row.get("document"),
+            "page":row.get("page"),
+            "text":str(row.get("text") or "")[:1200],
+        } for row in evidence],
+    }
+    raw=json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":"))
+    return hashlib.sha256(raw.encode("utf-8","ignore")).hexdigest()
+
+
 def _norm_identity(value:Any)->str:
     return " ".join(str(value or "").strip().casefold().split())
 
@@ -264,6 +282,7 @@ def run_normative_semantic_proof(
         decisions[requirement_id]={
             "requirement_id":requirement_id,
             "packet_id":pid,
+            "packet_fingerprint":_packet_fingerprint(packet),
             "state":state,
             "reason":reason,
             "judge_verdict":str(judge.get("verdict") or "INSUFFICIENT"),
@@ -297,15 +316,49 @@ def apply_normative_semantic_proof(
     semantic=dict(semantic_result or {})
     queue=list(result.get("semantic_queue") or [])
     expected=_fingerprint(queue)
-    if not semantic or semantic.get("fingerprint")!=expected:
+    if not semantic:
         result["semantic_proof_applied"]=0
-        result["semantic_proof_stale"]=bool(semantic)
+        result["semantic_proof_stale"]=False
         return result
+
     decisions=dict(semantic.get("decisions") or {})
+    exact_queue=semantic.get("fingerprint")==expected
+    current_packet_fingerprints={
+        str(packet.get("requirement_id") or ""):_packet_fingerprint(packet)
+        for packet in queue
+        if str(packet.get("requirement_id") or "")
+    }
+    if exact_queue:
+        reusable=decisions
+        stale_count=0
+    else:
+        reusable={}
+        stale_count=0
+        for rid,decision in decisions.items():
+            if not isinstance(decision,dict):
+                stale_count+=1
+                continue
+            stored_fp=str(decision.get("packet_fingerprint") or "")
+            current_fp=current_packet_fingerprints.get(str(rid))
+            if stored_fp and current_fp and stored_fp==current_fp:
+                reusable[rid]=decision
+            else:
+                stale_count+=1
+        if not reusable:
+            result["semantic_proof_applied"]=0
+            result["semantic_proof_stale"]=True
+            result["semantic_proof_summary"]={
+                **{k:v for k,v in semantic.items() if k!="decisions"},
+                "queue_fingerprint_match":False,
+                "reused_decisions":0,
+                "stale_decisions":stale_count,
+            }
+            return result
+
     applied=0
     for row in rows:
         rid=str(row.get("requirement_id") or "")
-        decision=decisions.get(rid)
+        decision=reusable.get(rid)
         if not isinstance(decision,dict):
             continue
         row["semantic_proof"]={k:v for k,v in decision.items() if k!="requirement_id"}
@@ -324,5 +377,10 @@ def apply_normative_semantic_proof(
     result["project_findings"]=sum(str(x.get("kind") or "").upper()=="PROJECT_FINDING" for x in rows)
     result["semantic_proof_applied"]=applied
     result["semantic_proof_stale"]=False
-    result["semantic_proof_summary"]={k:v for k,v in semantic.items() if k!="decisions"}
+    result["semantic_proof_summary"]={
+        **{k:v for k,v in semantic.items() if k!="decisions"},
+        "queue_fingerprint_match":exact_queue,
+        "reused_decisions":len(reusable),
+        "stale_decisions":stale_count,
+    }
     return result

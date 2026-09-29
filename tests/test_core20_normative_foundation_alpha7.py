@@ -107,3 +107,26 @@ def test_alpha7_real_expert_history_is_read_only_training_signal():
     patterns=history.top_patterns(limit=5)
     assert patterns
     assert all(x["history_policy"]=="PRIORITIZATION_AND_ANALOGS_ONLY" for x in patterns)
+
+
+def test_alpha7_first_normative_wave_384_and_gost27751_is_curated():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+
+    for requirement_id in (
+        "FZ384-4-1-ID-FEATURES",
+        "FZ384-4-7-RESP-LEVEL",
+        "FZ384-4-11-ID-IN-ASSIGNMENT-PD",
+        "FZ384-15-2-RESP-INPUT",
+        "FZ384-15-5.1-SAFETY-JUSTIFICATION",
+        "GOST27751-10.1-CLASS-LEVEL-GAMMA",
+        "GOST27751-10.2-ASSIGNMENT",
+    ):
+        row=contracts[requirement_id]
+        assert row["source_verified"] is True
+        assert row["trust_state"] == "VERIFIED_CLAUSE"
+        assert row["automatic_contract_ready"] is True
+
+    gost=foundation.documents_by_id["GOST-27751-2014"]
+    assert gost["source_class"] == "official"
+    assert gost["validity_canonical_id"] == "GOST:27751-2014"

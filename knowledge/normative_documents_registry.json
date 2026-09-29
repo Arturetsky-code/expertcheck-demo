@@ -24,13 +24,14 @@
     "authority": "Российская Федерация",
     "source_class": "official",
     "status": "Действует с изменениями",
-    "verification_status": "Статус проверен по официальному источнику; постатейная верификация продолжается",
-    "verified_on": "2026-08-24",
+    "verification_status": "Статус и статьи 4, 15 сверены с действующей редакцией; последняя редакция от 25.12.2023 применяется с 01.09.2024",
+    "verified_on": "2026-09-29",
     "official_source": "https://pravo.gov.ru/proxy/ips/?doc_itself=&nd=102135277&page=1&rdk=2&vkart=card",
     "scope": [
       "BUILDING_SAFETY"
     ],
-    "validity_canonical_id": "FZ:384-фз"
+    "validity_canonical_id": "FZ:384-фз",
+    "edition_reference": "Ред. от 25.12.2023 (Федеральный закон № 653-ФЗ); изменения действуют с 01.09.2024"
   },
   {
     "document_id": "123-FZ",
@@ -99,5 +100,24 @@
     "scope": [
       "CONSTRUCTION_ORGANIZATION"
     ]
+  },
+  {
+    "document_id": "GOST-27751-2014",
+    "title": "ГОСТ 27751-2014 «Надежность строительных конструкций и оснований. Основные положения»",
+    "document_type": "ГОСТ",
+    "authority": "Росстандарт",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус, Изменение №1 и поправка 2026 года проверены по Федеральному информационному фонду стандартов; пункты 10.1–10.2 верифицированы для атомарных требований",
+    "verified_on": "2026-09-29",
+    "official_source": "https://protect.gost.ru/gost/details/e4eba4be-53ab-4df2-ac3e-2bf10c2bea35",
+    "edition_reference": "ГОСТ 27751-2014 с Изменением №1 (с 01.02.2023) и поправкой ИУС 4-2026 (с 20.04.2026)",
+    "effective_from": "2015-07-01",
+    "effective_to": null,
+    "scope": [
+      "STRUCTURAL_RELIABILITY",
+      "RESPONSIBILITY_CLASSIFICATION"
+    ],
+    "validity_canonical_id": "GOST:27751-2014"
   }
 ]

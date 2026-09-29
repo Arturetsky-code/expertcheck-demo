@@ -2007,5 +2007,239 @@
       "applicability": "CONDITIONAL"
     },
     "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ384-4-1-ID-FEATURES",
+    "source": "Федеральный закон от 30.12.2009 № 384-ФЗ",
+    "topic": "Идентификационные признаки здания или сооружения",
+    "requirement": "В текстовой части проектной документации должны быть определимы установленные законом идентификационные признаки здания или сооружения: назначение, функционально-технологические особенности, опасные природные и техногенные воздействия, принадлежность к ОПО, пожарная и взрывопожарная опасность, постоянное пребывание людей и уровень ответственности.",
+    "sections": [
+      "ПЗ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "идентификационные признаки",
+      "назначение",
+      "опасный производственный объект",
+      "пожарная опасность",
+      "уровень ответственности"
+    ],
+    "document_id": "384-FZ",
+    "paragraph": "ст. 4, ч. 1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Состав семи идентификационных признаков сверён по действующей редакции статьи 4; требование переформулировано без воспроизведения текста нормы.",
+    "official_source": "https://www.rosguard.gov.ru/document/article/federalnyj-zakon-ot-30-dekabrya-2009-g--384fz",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ384-4-7-RESP-LEVEL",
+    "source": "Федеральный закон от 30.12.2009 № 384-ФЗ",
+    "topic": "Уровень ответственности",
+    "requirement": "Для здания или сооружения должен быть установлен один из предусмотренных законом уровней ответственности: повышенный, нормальный или пониженный.",
+    "sections": [
+      "ПЗ",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "уровень ответственности",
+      "повышенный",
+      "нормальный",
+      "пониженный"
+    ],
+    "document_id": "384-FZ",
+    "paragraph": "ст. 4, ч. 7",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Перечень допустимых уровней ответственности сверён по действующей редакции статьи 4.",
+    "official_source": "https://www.rosguard.gov.ru/document/article/federalnyj-zakon-ot-30-dekabrya-2009-g--384fz",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ384-4-11-ID-IN-ASSIGNMENT-PD",
+    "source": "Федеральный закон от 30.12.2009 № 384-ФЗ",
+    "topic": "Фиксация идентификационных признаков",
+    "requirement": "Идентификационные признаки должны быть заданы заказчиком в задании на проектирование и отражены проектировщиком в текстовых материалах проектной документации.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "CROSS_DOCUMENT",
+    "automation": "AUTO",
+    "keywords": [
+      "задание на проектирование",
+      "идентификационные признаки",
+      "уровень ответственности",
+      "проектная документация"
+    ],
+    "document_id": "384-FZ",
+    "paragraph": "ст. 4, ч. 11",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Обязанность указания идентификационных признаков в задании и текстовых материалах ПД сверена по действующей редакции статьи 4.",
+    "official_source": "https://www.rosguard.gov.ru/document/article/federalnyj-zakon-ot-30-dekabrya-2009-g--384fz",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 2,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ384-15-2-RESP-INPUT",
+    "source": "Федеральный закон от 30.12.2009 № 384-ФЗ",
+    "topic": "Исходные данные и уровень ответственности",
+    "requirement": "В исходных данных для проектирования должен быть указан уровень ответственности проектируемого здания или сооружения, определённый по статье 4.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "исходные данные",
+      "уровень ответственности",
+      "задание на проектирование"
+    ],
+    "document_id": "384-FZ",
+    "paragraph": "ст. 15, ч. 2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к указанию уровня ответственности в исходных данных сверено по действующей редакции статьи 15.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_95720/4a26a6f92ff426799b232f66c99512b5d9ce6573/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ384-15-5.1-SAFETY-JUSTIFICATION",
+    "source": "Федеральный закон от 30.12.2009 № 384-ФЗ",
+    "topic": "Обоснование соответствия требованиям безопасности",
+    "requirement": "Проектная документация должна содержать обоснование соответствия проектных решений требованиям 384-ФЗ с указанием применённых положений закона и документов, используемых для обеспечения соблюдения его требований.",
+    "sections": [
+      "ПЗ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "обоснование соответствия",
+      "384-ФЗ",
+      "технический регламент",
+      "нормативные документы"
+    ],
+    "document_id": "384-FZ",
+    "paragraph": "ст. 15, ч. 5.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Обязанность обосновывать соответствие проектных решений и указывать нормативные основания сверена по действующей редакции статьи 15.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_95720/4a26a6f92ff426799b232f66c99512b5d9ce6573/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "GOST27751-10.1-CLASS-LEVEL-GAMMA",
+    "source": "ГОСТ 27751-2014",
+    "topic": "Класс сооружения, уровень ответственности и коэффициент надёжности",
+    "requirement": "Для сооружения должны быть взаимно согласованы класс КС-3/КС-2/КС-1, уровень ответственности и принятый коэффициент надёжности по ответственности; минимальные значения составляют соответственно 1,1 / 1,0 / 0,8. При проверке необходимо учитывать предусмотренные стандартом специальные случаи и исключения.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "класс сооружения",
+      "уровень ответственности",
+      "коэффициент надежности",
+      "КС-3",
+      "КС-2",
+      "КС-1"
+    ],
+    "document_id": "GOST-27751-2014",
+    "paragraph": "п. 10.1, табл. 2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Связка класса, уровня ответственности и минимального коэффициента сверена по п. 10.1 в редакции Изменения №1; учтено наличие примечаний и исключений.",
+    "official_source": "https://protect.gost.ru/gost/details/e4eba4be-53ab-4df2-ac3e-2bf10c2bea35",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "GOST27751-10.2-ASSIGNMENT",
+    "source": "ГОСТ 27751-2014",
+    "topic": "Назначение класса и коэффициента в задании на проектирование",
+    "requirement": "Класс сооружения, уровень ответственности и коэффициент надёжности по ответственности должны быть установлены в задании на проектирование по согласованию с заказчиком и не должны быть ниже минимальных значений, установленных п. 10.1.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "CROSS_DOCUMENT",
+    "automation": "AUTO",
+    "keywords": [
+      "задание на проектирование",
+      "класс сооружения",
+      "уровень ответственности",
+      "коэффициент надежности"
+    ],
+    "document_id": "GOST-27751-2014",
+    "paragraph": "п. 10.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование о фиксации класса, уровня и коэффициента в задании и нижнем пределе значений сверено по п. 10.2 после Изменения №1.",
+    "official_source": "https://protect.gost.ru/gost/details/e4eba4be-53ab-4df2-ac3e-2bf10c2bea35",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 2,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

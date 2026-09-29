@@ -445,6 +445,8 @@ class NormativeExecutionEngine20:
         ec=dict(contract.get("evidence_contract") or {})
         minimum=max(1,int(ec.get("min_keyword_hits") or 2))
         ranked=_rank_candidates(contract,candidates)
+        # Cross-document proof keeps the strongest existing evidence while
+        # reserving room for a different section/source when the contract needs it.
         cross_document=str(contract.get("check_kind") or "").upper()=="CROSS_DOCUMENT"
         minimum_sources=max(1,int(ec.get("minimum_sources") or 1))
         evidence_candidates=_candidate_payloads(

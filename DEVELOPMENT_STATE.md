@@ -2133,3 +2133,79 @@ Quality Gate/report propagation defect is closed.
 Return to product-quality work rather than report plumbing. Use the manual Streamlit
 results to choose the next high-value weakness: evidence quality / false review noise,
 NTD proof coverage, checklist coverage, or a specific Test78 REVIEW frontier candidate.
+
+
+## Validated checkpoint — normative knowledge wave 1
+
+Validated lineage:
+- `88c7125a50dd377dfe636bb89bd3f2c920073cc1` — add verified 384-FZ and GOST 27751 knowledge package;
+- `8b9b39776b7e21c9f1f20a37f2b5cb81347682f3` — upgrade existing GOST 27751 validity record instead of shadowing it;
+- `cf490fe41ca24c1f79b4b5398043307daa131fdd` — run Test78 automatically on normative knowledge-file changes.
+
+### Scope
+
+Knowledge-only expansion; Core verdict logic was not changed.
+
+Catalogue:
+- normative documents: 8 -> 9;
+- atomic requirements: 61 -> 68;
+- newly curated verified clauses: 7.
+
+New verified clauses:
+- 384-FZ art. 4 part 1 — identification features;
+- 384-FZ art. 4 part 7 — responsibility level;
+- 384-FZ art. 4 part 11 — identification features in design assignment and PD;
+- 384-FZ art. 15 part 2 — responsibility level in design input data;
+- 384-FZ art. 15 part 5.1 — justification of compliance with safety requirements;
+- GOST 27751-2014 cl. 10.1 / table 2 — class, responsibility level and reliability coefficient consistency;
+- GOST 27751-2014 cl. 10.2 — assignment of class, level and coefficient in the design assignment.
+
+Full normative texts were not copied into the repository. The package stores source metadata,
+clause addresses, paraphrased atomic requirements and proof contracts.
+
+### Source verification
+
+384-FZ:
+- current consolidated revision: 25.12.2023, effective from 01.09.2024;
+- amendment basis: Federal Law No. 653-FZ, official publication
+  `0001202312250053`.
+
+GOST 27751-2014:
+- Rosstandart status: active;
+- Amendment No. 1 effective 01.02.2023;
+- correction published in IUS 4-2026 and effective 20.04.2026.
+
+The historical validity corpus already contained GOST 27751-2014 as an unverified citation.
+That existing canonical record was upgraded in place, preserving its historical expert
+statistics (48 occurrences / 16 projects), rather than adding a duplicate canonical_id.
+
+### Regression control
+
+Test78 workflow now listens to:
+- `knowledge/normative_documents_registry.json`;
+- `knowledge/normative_validity_registry.json`;
+- `knowledge/normative_requirements_v3.json`.
+
+At `cf490fe4...`:
+- Core20 quality gates: success;
+- Core25 tests: success;
+- Core20 regression: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / legacy full suite: success;
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next validation
+
+Open the saved 12-document DSK project on the current branch without re-uploading the PDFs.
+Rebuild/reopen the normative route and reports, then compare:
+- known documents;
+- verified clauses;
+- executable contracts;
+- routed verified clauses;
+- normative evidence coverage;
+- semantic queue;
+- specialist review count.
+
+Do not add wave 2 until the real-project effect of wave 1 is measured.

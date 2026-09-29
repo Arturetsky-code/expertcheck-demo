@@ -146,7 +146,7 @@ def test_alpha8_numeric_only_page_is_not_normative_candidate():
         "document":"Раздел ПД №4_КР1.pdf",
         "document_type":"КР",
         "page":40,
-        "text":"В расчёте приведены расстояния 50 м и 100 м без сведений о конвейерах или переходных мостиках.",
+        "text":"В гидравлическом расчёте приведены радиусы 50 м и 100 м для водоотводного сооружения.",
     }]
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")

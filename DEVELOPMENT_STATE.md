@@ -2849,3 +2849,58 @@ Primary success criterion after reboot:
 - pending semantic queue becomes **23**, matching the post-AI resumable state.
 
 Other project metrics should remain stable.
+
+
+## End-of-day green checkpoint — 2026-09-29
+
+Final live Streamlit validation after reboot on the saved 12-document DSK project.
+
+### Stable project state
+
+Knowledge / routing:
+- normative documents: 13;
+- validity records: 153;
+- atomic requirements: 86;
+- verified clauses: 57;
+- executable contracts: 57.
+
+Normative execution:
+- evidence candidates: 120;
+- proved: 11;
+- held by proof control: 33;
+- semantic proof applied: 3;
+- pending semantic queue: 23;
+- specialist questions: 43;
+- system limitations: 3;
+- addressable evidence: 73.7%.
+
+### What is now proven in the live product
+
+1. Semantic proof survives Streamlit reboot.
+2. Semantic proof survives knowledge expansion when the judged requirement and selected
+   addressable evidence are unchanged.
+3. Semantic proof survives retrieval candidate-pool growth/re-ranking when the selected
+   evidence remains unchanged.
+4. Changed selected evidence or changed requirement still invalidates proof fail-closed.
+5. Alpha 10 resumable queue is aligned with selected-evidence reuse:
+   processed packets no longer return to pending after reboot solely because the root queue
+   fingerprint changed.
+6. Cross-document retrieval can reserve evidence capacity for a different section/source
+   without bypassing the evidence-quality layer.
+7. Current Test78 remains stable at 27/56 categorical:
+   25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW, NO_CHANGE.
+
+### End-of-day decision
+
+Stop development for the day at this checkpoint.
+
+Do not:
+- re-upload the 12 PDFs;
+- run another full-project AI pass;
+- add normative wave 4 on top of this state today.
+
+Next session:
+- start from this green checkpoint;
+- keep the same saved DSK project as the control project;
+- begin normative knowledge wave 4 only after confirming the branch is still at or
+  descended from this checkpoint.

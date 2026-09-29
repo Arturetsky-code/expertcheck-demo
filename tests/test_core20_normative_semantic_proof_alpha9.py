@@ -157,7 +157,7 @@ def test_alpha9_same_actual_model_is_not_independent_even_across_providers():
     assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
 
 
-def test_alpha9_stale_semantic_proof_is_rejected_when_packet_fingerprint_changes():
+def test_alpha9_legacy_stale_semantic_proof_without_selected_proof_fingerprint_is_rejected():
     proof = _proof_result()
     semantic = run_normative_semantic_proof(
         proof["semantic_queue"],
@@ -166,7 +166,10 @@ def test_alpha9_stale_semantic_proof_is_rejected_when_packet_fingerprint_changes
         limit=8,
     )
     semantic["fingerprint"] = "stale"
-    semantic["decisions"]["PP87-X-SEM"]["packet_fingerprint"] = "stale-packet"
+    decision = semantic["decisions"]["PP87-X-SEM"]
+    decision["packet_fingerprint"] = "stale-packet"
+    decision.pop("requirement_fingerprint", None)
+    decision.pop("selected_proof_fingerprint", None)
     applied = apply_normative_semantic_proof(proof, semantic)
     assert applied["semantic_proof_applied"] == 0
     assert applied["semantic_proof_stale"] is True

@@ -3962,13 +3962,16 @@
     {
       "canonical_id": "SP:18.13330.2019",
       "reference": "СП 18.13330.2019",
-      "aliases": [],
+      "aliases": [
+        "СП 18.13330.2019",
+        "СП 18 13330 2019"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-29",
+      "verified_revision": "СП 18.13330.2019 с Изменениями №1–5; Изменение №5 действует с 04.09.2026",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Федеральный информационный фонд стандартов Росстандарта указывает СП 18.13330.2019 как действующий; Изменение №5 зарегистрировано 26.08.2026 и введено 04.09.2026.",
       "expert_occurrences": 5,
       "expert_projects": [
         "2024/02/01-097",
@@ -3989,7 +3992,21 @@
         "2026/03/19-050-0019-01"
       ],
       "priority_score": 7,
-      "verification_priority": "P3"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №5",
+          "approved": "2026-08-03",
+          "registered": "2026-08-26",
+          "effective_from": "2026-09-04",
+          "order": "498/пр"
+        }
+      ],
+      "verification_evidence": [
+        "ROSSTANDART: СП 18.13330.2019 — действует",
+        "ROSSTANDART: Изменение №5, приказ 498/пр, действует с 04.09.2026"
+      ]
     },
     {
       "canonical_id": "SP:165.1325800.2014",
@@ -4502,13 +4519,16 @@
     {
       "canonical_id": "SP:52.13330.2016",
       "reference": "СП 52.13330.2016",
-      "aliases": [],
+      "aliases": [
+        "СП 52.13330.2016",
+        "СП 52 13330 2016"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-29",
+      "verified_revision": "СП 52.13330.2016 с Изменениями №1–2",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Федеральный информационный фонд стандартов Росстандарта указывает СП 52.13330.2016 как действующий и публикует Изменения №1 и №2.",
       "expert_occurrences": 3,
       "expert_projects": [
         "2025/10/17-071",
@@ -4525,7 +4545,12 @@
         "2025/10/17-071-0038-03"
       ],
       "priority_score": 3.6,
-      "verification_priority": "P3"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "verification_evidence": [
+        "ROSSTANDART: СП 52.13330.2016 — действует",
+        "ROSSTANDART: Изменения №1 и №2"
+      ]
     },
     {
       "canonical_id": "SNIP:2.06.15-85",
@@ -5643,6 +5668,42 @@
       "verification_evidence": [
         "ROSSTANDART: СП 12.13130.2009 — действует",
         "ROSSTANDART: Изменение №1, введено 01.02.2011"
+      ]
+    },
+    {
+      "canonical_id": "FNP:505-2020",
+      "reference": "приказ Ростехнадзора от 08.12.2020 № 505",
+      "aliases": [
+        "приказ Ростехнадзора от 08.12.2020 № 505",
+        "приказом Ростехнадзора России от 08 декабря 2020 года № 505",
+        "ФНП № 505",
+        "ФНП 505"
+      ],
+      "document_kind": "FNP",
+      "status": "Действует с изменениями",
+      "verified_on": "2026-09-29",
+      "verified_revision": "ред. от 24.03.2026; срок действия до 01.09.2032",
+      "official_source_kind": "PRAVO",
+      "status_basis": "Приказ Ростехнадзора №94 от 24.03.2026 продлил действие приказа №505 до 01.09.2032; изменение вступило в силу 10.05.2026.",
+      "expert_occurrences": 19,
+      "expert_projects": [],
+      "expert_project_count": 0,
+      "expert_sections": [],
+      "source_remark_ids": [],
+      "priority_score": 38,
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_AND_CONSOLIDATED_TEXT",
+      "changes": [
+        {
+          "act": "Приказ Ростехнадзора от 24.03.2026 №94",
+          "effective_from": "2026-05-10",
+          "official_publication": "0001202604290007",
+          "kind": "term_extension"
+        }
+      ],
+      "verification_evidence": [
+        "PRAVO: 0001202012220071",
+        "PRAVO: 0001202604290007"
       ]
     }
   ],

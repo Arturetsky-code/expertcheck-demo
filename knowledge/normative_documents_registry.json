@@ -53,14 +53,23 @@
   },
   {
     "document_id": "FNP-MINING",
-    "title": "ФНП в области промышленной безопасности для горных работ и переработки твёрдых полезных ископаемых",
+    "title": "ФНП «Правила безопасности при ведении горных работ и переработке твердых полезных ископаемых», приказ Ростехнадзора от 08.12.2020 № 505",
     "document_type": "ФНП",
     "authority": "Ростехнадзор",
     "source_class": "official",
-    "verification_status": "Требует загрузки и верификации применимой редакции",
+    "verification_status": "Статус и пункты 1184, 1215, 1461 сверены по действующей редакции от 24.03.2026; срок действия продлён до 01.09.2032",
     "scope": [
-      "MINING"
-    ]
+      "MINING",
+      "MINERAL_PROCESSING",
+      "INDUSTRIAL_SAFETY"
+    ],
+    "status": "Действует с изменениями",
+    "verified_on": "2026-09-29",
+    "official_source": "https://publication.pravo.gov.ru/Document/View/0001202012220071",
+    "edition_reference": "Приказ Ростехнадзора от 08.12.2020 №505, ред. от 24.03.2026; изменение по приказу №94 действует с 10.05.2026",
+    "effective_from": "2021-01-01",
+    "effective_to": "2032-09-01",
+    "validity_canonical_id": "FNP:505-2020"
   },
   {
     "document_id": "GOST-R-21.101-2026",
@@ -164,5 +173,46 @@
       "FIRE_EXPLOSION_CATEGORY"
     ],
     "validity_canonical_id": "SP:12.13130.2009"
+  },
+  {
+    "document_id": "SP-52.13330.2016",
+    "title": "СП 52.13330.2016 «Естественное и искусственное освещение»",
+    "document_type": "СП",
+    "authority": "Минстрой России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 7.6.1, 7.6.3 верифицированы; учтены Изменения №1–2",
+    "verified_on": "2026-09-29",
+    "official_source": "https://protect.gost.ru/sp/details/9c938e6d-bd3f-4c81-904f-ba8d4c14357b",
+    "edition_reference": "СП 52.13330.2016 с Изменениями №1–2",
+    "effective_from": "2017-05-08",
+    "effective_to": null,
+    "scope": [
+      "LIGHTING",
+      "EMERGENCY_LIGHTING",
+      "EVACUATION_LIGHTING"
+    ],
+    "validity_canonical_id": "SP:52.13330.2016"
+  },
+  {
+    "document_id": "SP-18.13330.2019",
+    "title": "СП 18.13330.2019 «Производственные объекты. Планировочная организация земельного участка»",
+    "document_type": "СП",
+    "authority": "Минстрой России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 5.37, 5.52 верифицированы; учтены Изменения №1–5",
+    "verified_on": "2026-09-29",
+    "official_source": "https://protect.gost.ru/sp/details/cde2d8a3-00aa-48c4-b5db-6b6460a5616d",
+    "edition_reference": "СП 18.13330.2019 с Изменениями №1–5; Изменение №5 действует с 04.09.2026",
+    "effective_from": "2020-03-18",
+    "effective_to": null,
+    "scope": [
+      "SITE_PLANNING",
+      "INDUSTRIAL_SITE",
+      "DRAINAGE",
+      "TRANSPORT_ACCESS"
+    ],
+    "validity_canonical_id": "SP:18.13330.2019"
   }
 ]

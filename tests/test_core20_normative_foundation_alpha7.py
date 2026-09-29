@@ -157,3 +157,26 @@ def test_alpha7_second_normative_wave_fire_package_is_curated():
     assert foundation.documents_by_id["123-FZ"]["status"] == "Действует с изменениями"
     assert foundation.documents_by_id["SP-4.13130.2013"]["status"] == "Действует"
     assert foundation.documents_by_id["SP-12.13130.2009"]["status"] == "Действует"
+
+
+def test_alpha7_third_normative_wave_mining_lighting_site_is_curated():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+
+    for requirement_id in (
+        "FNP505-1184-CONVEYOR-GALLERY-FIRE",
+        "FNP505-1215-CONVEYOR-CROSSING-SPACING",
+        "FNP505-1461-SURFACE-EMERGENCY-LIGHTING",
+        "SP52-7.6.1-EMERGENCY-LIGHTING-POWER",
+        "SP52-7.6.3-EVACUATION-LIGHTING",
+        "SP18-5.37-ENTRANCE-GATE-WIDTH",
+        "SP18-5.52-CLOSED-STORM-SEWER",
+    ):
+        row=contracts[requirement_id]
+        assert row["source_verified"] is True
+        assert row["trust_state"] == "VERIFIED_CLAUSE"
+        assert row["automatic_contract_ready"] is True
+
+    assert foundation.documents_by_id["FNP-MINING"]["status"] == "Действует с изменениями"
+    assert foundation.documents_by_id["SP-52.13330.2016"]["status"] == "Действует"
+    assert foundation.documents_by_id["SP-18.13330.2019"]["status"] == "Действует"

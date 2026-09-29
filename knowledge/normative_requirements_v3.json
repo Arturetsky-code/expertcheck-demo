@@ -2639,5 +2639,252 @@
       "applicability": "SECTION_PRESENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FNP505-1184-CONVEYOR-GALLERY-FIRE",
+    "source": "Приказ Ростехнадзора от 08.12.2020 № 505",
+    "topic": "Пожарная безопасность ленточных конвейеров в галереях",
+    "requirement": "Для ленточных конвейеров в галереях должны быть предусмотрены трудновоспламеняющиеся ленты, несгораемые конструкции галерей и эстакад, автоматическое пожаротушение и пожарная сигнализация на приводных станциях и перегрузочных пунктах, а также пожарный трубопровод и автоматическая пожарная сигнализация по длине галереи с передачей сигнала диспетчеру.",
+    "sections": [
+      "ТХ",
+      "АР",
+      "КР",
+      "ИОС"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "ленточный конвейер",
+      "конвейерная галерея",
+      "трудновоспламеняющаяся лента",
+      "автоматическое пожаротушение",
+      "пожарная сигнализация",
+      "диспетчер"
+    ],
+    "document_id": "FNP-MINING",
+    "paragraph": "п. 1184",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Комплекс требований к конвейерным галереям, лентам, пожаротушению, сигнализации и пожарному трубопроводу сверён по п. 1184 действующей редакции ФНП №505.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_372372/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FNP505-1215-CONVEYOR-CROSSING-SPACING",
+    "source": "Приказ Ростехнадзора от 08.12.2020 № 505",
+    "topic": "Переходные мостики через конвейеры",
+    "requirement": "Переходные мостики через конвейер должны размещаться с интервалом не более 50 м в зданиях и подземных камерах и не более 100 м в остальных случаях.",
+    "sections": [
+      "ТХ",
+      "АР",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "переходные мостики",
+      "через конвейер",
+      "50 м",
+      "100 м"
+    ],
+    "document_id": "FNP-MINING",
+    "paragraph": "п. 1215",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Предельные расстояния между переходными мостиками сверены по п. 1215 действующей редакции ФНП №505.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_372372/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FNP505-1461-SURFACE-EMERGENCY-LIGHTING",
+    "source": "Приказ Ростехнадзора от 08.12.2020 № 505",
+    "topic": "Аварийное освещение поверхностного комплекса",
+    "requirement": "На объектах поверхностного комплекса каждое рабочее место должно иметь аварийное освещение от независимого источника питания; для перечисленных технологических и вспомогательных зданий также должно предусматриваться аварийное освещение от независимого источника.",
+    "sections": [
+      "ИОС",
+      "ТХ",
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "аварийное освещение",
+      "независимый источник питания",
+      "рабочее место",
+      "поверхностного комплекса"
+    ],
+    "document_id": "FNP-MINING",
+    "paragraph": "п. 1461",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование аварийного освещения рабочих мест поверхностного комплекса сверено по п. 1461 действующей редакции ФНП №505.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_372372/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP52-7.6.1-EMERGENCY-LIGHTING-POWER",
+    "source": "СП 52.13330.2016",
+    "topic": "Питание и включение аварийного освещения",
+    "requirement": "Аварийное освещение должно предусматриваться на случай нарушения питания рабочего освещения и должно включаться автоматически при отключении рабочего освещения либо вручную при отказе автоматики.",
+    "sections": [
+      "ИОС"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "аварийное освещение",
+      "рабочее освещение",
+      "автоматически",
+      "отключении питания",
+      "независимый источник"
+    ],
+    "document_id": "SP-52.13330.2016",
+    "paragraph": "п. 7.6.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Логика включения аварийного освещения сверена по п. 7.6.1 с учётом Изменения №1.",
+    "official_source": "https://protect.gost.ru/sp/details/9c938e6d-bd3f-4c81-904f-ba8d4c14357b",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP52-7.6.3-EVACUATION-LIGHTING",
+    "source": "СП 52.13330.2016",
+    "topic": "Освещение путей эвакуации",
+    "requirement": "Освещение путей эвакуации должно предусматриваться в установленных пунктом 7.6.3 местах, включая коридоры и проходы, изменения уровня и направления пути, пересечения проходов, лестничные марши и иные предусмотренные нормой участки эвакуационного пути.",
+    "sections": [
+      "ИОС",
+      "АР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "освещение путей эвакуации",
+      "эвакуационное освещение",
+      "коридор",
+      "проход",
+      "лестничный марш",
+      "эвакуационный выход"
+    ],
+    "document_id": "SP-52.13330.2016",
+    "paragraph": "п. 7.6.3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Перечень мест устройства освещения путей эвакуации сверён по п. 7.6.3 действующей редакции СП; пункт также включён в актуальный перечень обязательных требований с 01.06.2026.",
+    "official_source": "https://protect.gost.ru/sp/details/9c938e6d-bd3f-4c81-904f-ba8d4c14357b",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP18-5.37-ENTRANCE-GATE-WIDTH",
+    "source": "СП 18.13330.2019",
+    "topic": "Ширина ворот въездов на производственную площадку",
+    "requirement": "Ширина ворот автомобильного въезда на земельный участок производственного объекта должна быть не менее ширины наиболее габаритного применяемого автомобиля плюс 1,5 м и в любом случае не менее 3,5 м; для железнодорожного въезда — не менее 4,5 м.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "ширина ворот",
+      "автомобильного въезда",
+      "1,5 м",
+      "3,5 м",
+      "4,5 м",
+      "железнодорожного въезда"
+    ],
+    "document_id": "SP-18.13330.2019",
+    "paragraph": "п. 5.37",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Минимальные параметры ворот автомобильных и железнодорожных въездов сверены по п. 5.37 в редакции после Изменения №2; последующее Изменение №5 не меняет этот пункт.",
+    "official_source": "https://protect.gost.ru/sp/details/cde2d8a3-00aa-48c4-b5db-6b6460a5616d",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP18-5.52-CLOSED-STORM-SEWER",
+    "source": "СП 18.13330.2019",
+    "topic": "Дождевая канализация производственной площадки",
+    "requirement": "На территории производственного объекта должна быть предусмотрена закрытая система дождевой канализации.",
+    "sections": [
+      "ПЗУ",
+      "ИОС"
+    ],
+    "check_kind": "PRESENCE",
+    "automation": "AUTO",
+    "keywords": [
+      "закрытая система дождевой канализации",
+      "дождевая канализация",
+      "дождевой сток",
+      "ливневая канализация"
+    ],
+    "document_id": "SP-18.13330.2019",
+    "paragraph": "п. 5.52",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование закрытой системы дождевой канализации сверено по п. 5.52 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/cde2d8a3-00aa-48c4-b5db-6b6460a5616d",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

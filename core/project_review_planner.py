@@ -114,6 +114,7 @@ def build_review_plan(
             'checker_mode':_txt(row.get('checker_mode')),
             'verified_core_gate_state':_txt(row.get('verified_core_gate_state')),
             'verified_core_gate_reasons':list(row.get('verified_core_gate_reasons') or []),
+            'verified_core_gate':dict(row.get('verified_core_gate') or {}),
         })
     for i,row in enumerate(normative,1):
         q=classify_verification(row,'normative')

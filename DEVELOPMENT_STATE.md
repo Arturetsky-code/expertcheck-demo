@@ -2291,3 +2291,98 @@ On "НТД и практика", compare wave-1 baseline:
 
 Measure how wave 2 changes contract count, candidate evidence, addressable evidence,
 semantic queue and deterministic proof before starting another semantic-AI batch.
+
+
+## Validated checkpoint — wave 2 DSK measurement and semantic-proof persistence
+
+Current validated lineage:
+- wave 2 fire-safety knowledge: `4922d8958e291431683cf6a455fbba6d3426fb0b`;
+- wave 2 checkpoint: `4c7b737c078b0f14462cb5d430ed47be41f31479`;
+- per-packet semantic reuse implementation: `540101f62126024cb6e6ed69e2ddf060e4da2b47`;
+- source-packet fingerprint correction: `e71668803045d373d5f0258e1d365dba96f6b669`;
+- Test78 Core20 trigger: `cc56eee00a006ba584ed0aaab8b50d481ac82df0`.
+
+### Manual Streamlit measurement after wave 2
+
+Saved 12-document DSK project, no re-upload and no new semantic-AI run:
+
+Knowledge:
+- documents: 11;
+- validity records: 152;
+- atomic requirements: 79;
+- verified clauses: 50;
+- projects linked with NTD history: 20.
+
+Project routing:
+- project-relevant routes: 79;
+- verified-clause routes: 50;
+- executable contracts: 50;
+- history-prioritized routes: 61.
+
+Normative execution:
+- contracts: 50;
+- evidence candidates: 87;
+- deterministic proved: 7;
+- demoted/held by proof control: 21;
+- semantic queue: 18;
+- semantic proof applied: 0;
+- specialist questions: 41;
+- system limitations: 2;
+- addressable evidence coverage: 68.0%.
+
+Wave-1 deterministic baseline before its AI semantic pass was:
+39 contracts / 63 candidates / 7 proved / 18 held / 15 semantic queue /
+0 semantic applied / 30 specialist questions / 2 limitations / 69.2% addressable.
+
+Therefore wave 2 itself added:
+- +11 executable contracts;
+- +24 evidence candidates;
+- +3 proof-controlled holds;
+- +3 semantic-queue items;
+- +11 specialist-review rows;
+while preserving deterministic proved count and nearly preserving addressable-evidence ratio.
+
+### Semantic proof persistence defect and fix
+
+The previous wave-1 partial semantic run had produced 4 independent semantic confirmations
+(7 -> 11 proved; 30 -> 26 specialist questions). After wave 2 enlarged the normative queue,
+those confirmations were not reused because semantic proof was gated by one fingerprint of
+the entire queue.
+
+The corrected contract is fail-closed and per-packet:
+- each newly generated semantic decision stores a fingerprint of the original normative
+  packet (requirement + proof type + addressable evidence);
+- when the knowledge base expands, a prior decision is reused only if that individual
+  packet fingerprint is unchanged;
+- changed requirement text, proof type, evidence address, or evidence fragment invalidates
+  reuse for that packet;
+- legacy semantic decisions created before this change do not contain per-packet
+  fingerprints and are therefore not silently trusted after a queue change.
+
+This means the 4 old wave-1 semantic confirmations require one safe revalidation under the
+new format; future knowledge waves will preserve unchanged confirmations.
+
+### Validation
+
+At the semantic-persistence source:
+- Core20 tests: success;
+- results-integrity: success;
+- Core25 tests: success;
+- Core20 regression: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success.
+
+Test78 is now triggered by `core20/**` as well as `core/**`, `core25/**` and normative
+knowledge files.
+
+At `cc56eee0...`:
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next step
+
+Do not add wave 3 yet. Reopen the saved DSK project on the current branch and perform one
+bounded normative semantic run when providers are available. This will create the new
+per-packet checkpoint format. Then record the post-AI wave-2 metrics and only after that
+start the next knowledge wave.

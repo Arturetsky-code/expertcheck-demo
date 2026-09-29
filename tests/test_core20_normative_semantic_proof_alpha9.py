@@ -200,3 +200,69 @@ def test_alpha9_existing_semantic_proof_survives_queue_expansion_for_unchanged_p
     assert applied["semantic_proof_summary"]["queue_fingerprint_match"] is False
     assert applied["semantic_proof_summary"]["reused_decisions"] == 1
     assert applied["rows"][0]["kind"] == "VERIFIED_OK"
+
+
+def test_alpha9_selected_evidence_proof_survives_candidate_pool_growth():
+    proof = _proof_result(multi=True)
+    semantic = run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+
+    expanded = _proof_result(multi=True)
+    packet = expanded["semantic_queue"][0]
+    packet["evidence"].insert(0,{
+        "evidence_id":"NORM-E-PP87-X-SEM-00",
+        "document":"ПЗУ.pdf",
+        "page":9,
+        "section":"ПЗУ",
+        "text":"Дополнительный адресный кандидат по инженерной защите территории.",
+        "source_locator":"ПЗУ.pdf, стр. 9",
+        "matched_keywords":["инженерной защите"],
+        "retrieval_keyword_score":1,
+        "retrieval_keyword_coverage":0.33,
+    })
+    applied = apply_normative_semantic_proof(expanded, semantic)
+    assert applied["semantic_proof_applied"] == 1
+    assert applied["semantic_proof_stale"] is False
+    assert applied["semantic_proof_summary"]["queue_fingerprint_match"] is False
+    assert applied["rows"][0]["kind"] == "VERIFIED_OK"
+
+
+def test_alpha9_selected_evidence_change_invalidates_proof_even_if_requirement_is_same():
+    proof = _proof_result()
+    semantic = run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+
+    changed = _proof_result()
+    changed["semantic_queue"][0]["evidence"][0]["text"] = (
+        "На этой странице инженерная защита упоминается, но прежний подтверждённый фрагмент отсутствует."
+    )
+    applied = apply_normative_semantic_proof(changed, semantic)
+    assert applied["semantic_proof_applied"] == 0
+    assert applied["semantic_proof_stale"] is True
+    assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
+
+
+def test_alpha9_requirement_change_invalidates_selected_evidence_proof():
+    proof = _proof_result()
+    semantic = run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+
+    changed = _proof_result()
+    changed["semantic_queue"][0]["requirement"] = (
+        "В ПЗУ должны быть обоснованы решения по инженерной защите территории и приведён отдельный расчёт."
+    )
+    applied = apply_normative_semantic_proof(changed, semantic)
+    assert applied["semantic_proof_applied"] == 0
+    assert applied["semantic_proof_stale"] is True

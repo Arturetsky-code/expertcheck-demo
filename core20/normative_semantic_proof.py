@@ -58,6 +58,59 @@ def _packet_fingerprint(packet:dict[str,Any])->str:
     return hashlib.sha256(raw.encode("utf-8","ignore")).hexdigest()
 
 
+def _requirement_fingerprint(packet:dict[str,Any])->str:
+    payload={
+        "requirement_id":packet.get("requirement_id"),
+        "requirement":packet.get("requirement"),
+        "proof_type":packet.get("proof_type"),
+    }
+    raw=json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":"))
+    return hashlib.sha256(raw.encode("utf-8","ignore")).hexdigest()
+
+
+def _selected_proof_fingerprint(
+    packet:dict[str,Any],
+    selected_evidence:list[dict[str,Any]]|None,
+)->str:
+    payload={
+        "requirement_fingerprint":_requirement_fingerprint(packet),
+        "selected_evidence":[{
+            "document":row.get("document") or "",
+            "page":row.get("page"),
+            "fragment":str(row.get("fragment") or row.get("text") or "")[:500],
+        } for row in (selected_evidence or [])],
+    }
+    raw=json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":"))
+    return hashlib.sha256(raw.encode("utf-8","ignore")).hexdigest()
+
+
+def _selected_evidence_still_available(
+    packet:dict[str,Any],
+    selected_evidence:list[dict[str,Any]]|None,
+)->bool:
+    selected=[dict(row) for row in (selected_evidence or []) if isinstance(row,dict)]
+    if not selected:
+        return False
+    current=[dict(row) for row in (packet.get("evidence") or []) if isinstance(row,dict)]
+    for old in selected:
+        old_doc=str(old.get("document") or "")
+        old_page=old.get("page")
+        old_fragment=" ".join(str(old.get("fragment") or old.get("text") or "").split())
+        if not old_doc or old_page in (None,"") or not old_fragment:
+            return False
+        found=False
+        for row in current:
+            if str(row.get("document") or "")!=old_doc or row.get("page")!=old_page:
+                continue
+            current_text=" ".join(str(row.get("text") or row.get("fragment") or "").split())
+            if old_fragment in current_text:
+                found=True
+                break
+        if not found:
+            return False
+    return True
+
+
 def _norm_identity(value:Any)->str:
     return " ".join(str(value or "").strip().casefold().split())
 
@@ -284,10 +337,14 @@ def run_normative_semantic_proof(
             else:
                 reason=str(critic.get("reason") or "Независимый Critic не подтвердил смысловое доказательство.")
         selected_ids=list(judge.get("evidence_ids") or [])
+        selected_evidence=_selected_evidence(packet,selected_ids)
+        source_packet=next((row for row in source if str(row.get("packet_id") or "")==pid),{})
         decisions[requirement_id]={
             "requirement_id":requirement_id,
             "packet_id":pid,
             "packet_fingerprint":source_packet_fingerprints.get(pid,""),
+            "requirement_fingerprint":_requirement_fingerprint(source_packet),
+            "selected_proof_fingerprint":_selected_proof_fingerprint(source_packet,selected_evidence),
             "state":state,
             "reason":reason,
             "judge_verdict":str(judge.get("verdict") or "INSUFFICIENT"),
@@ -301,7 +358,7 @@ def run_normative_semantic_proof(
             "independent":independent,
             "independence_reason":independence_reason,
             "evidence_ids":selected_ids,
-            "selected_evidence":_selected_evidence(packet,selected_ids),
+            "selected_evidence":selected_evidence,
             "blocking_concerns":list(critic.get("blocking_concerns") or []),
         }
     base["decisions"]=decisions
@@ -315,7 +372,11 @@ def apply_normative_semantic_proof(
     proof_result:dict[str,Any],
     semantic_result:dict[str,Any]|None,
 )->dict[str,Any]:
-    """Apply a persisted semantic checkpoint only to the exact current queue."""
+    """Apply semantic proof when the judged requirement and cited evidence remain unchanged.
+
+    Candidate-pool growth or re-ranking does not invalidate a proof that still points to
+    the same addressable evidence. Requirement or cited-evidence changes remain fail-closed.
+    """
     result=dict(proof_result or {})
     rows=[dict(x) for x in (result.get("rows") or [])]
     semantic=dict(semantic_result or {})
@@ -333,6 +394,11 @@ def apply_normative_semantic_proof(
         for packet in queue
         if str(packet.get("requirement_id") or "")
     }
+    current_packets={
+        str(packet.get("requirement_id") or ""):packet
+        for packet in queue
+        if str(packet.get("requirement_id") or "")
+    }
     if exact_queue:
         reusable=decisions
         stale_count=0
@@ -346,6 +412,21 @@ def apply_normative_semantic_proof(
             stored_fp=str(decision.get("packet_fingerprint") or "")
             current_fp=current_packet_fingerprints.get(str(rid))
             if stored_fp and current_fp and stored_fp==current_fp:
+                reusable[rid]=decision
+                continue
+
+            packet=current_packets.get(str(rid))
+            stored_requirement_fp=str(decision.get("requirement_fingerprint") or "")
+            stored_proof_fp=str(decision.get("selected_proof_fingerprint") or "")
+            selected=list(decision.get("selected_evidence") or [])
+            if (
+                isinstance(packet,dict)
+                and stored_requirement_fp
+                and stored_proof_fp
+                and _requirement_fingerprint(packet)==stored_requirement_fp
+                and _selected_evidence_still_available(packet,selected)
+                and _selected_proof_fingerprint(packet,selected)==stored_proof_fp
+            ):
                 reusable[rid]=decision
             else:
                 stale_count+=1

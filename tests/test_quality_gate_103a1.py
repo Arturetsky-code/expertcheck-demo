@@ -195,3 +195,31 @@ def test_report_quality_gate_still_requires_adversarial_for_non_core25_categoric
     result=validate_review_plan(plan)
     assert result['status']=='FAILED'
     assert any('проверки достаточности' in issue for issue in result['issues'])
+
+
+def test_review_plan_preserves_core25_authoritative_gate_for_report_quality():
+    row={
+        'requirement_id':'REQ-CORE25-PLAN',
+        'requirement_text':'Продолжительность смены – 12 часов',
+        'status':'Соответствует заданию',
+        'verification_kind':'VERIFIED_OK',
+        'final_verification_kind':'VERIFIED_OK',
+        'evidence':['ТХ1.pdf, стр. 33: продолжительность смены 12 часов'],
+        'evidence_quality_state':'VERIFIED_EVIDENCE',
+        'deep_evidence_candidate_count':1,
+        'adversarial_state':'NOT_REQUIRED',
+        'verified_core_gate_state':'PASSED',
+        'verified_core_gate':{
+            'passed':True,
+            'core25_authoritative':True,
+            'semantic_route':False,
+        },
+    }
+    plan=build_review_plan(
+        assignment_rows=[row],
+        normative_rows=[],
+        checklist_review={'results':[]},
+    )
+    assert plan['items'][0]['verified_core_gate']['core25_authoritative'] is True
+    result=validate_review_plan(plan)
+    assert result['status']=='PASSED',result['issues']

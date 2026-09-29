@@ -90,3 +90,66 @@ def test_alpha8_production_conditional_clause_passes_applicability_but_alpha9_re
     assert row["proof_type"]=="SEMANTIC_REQUIREMENT"
     assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
     assert row["evidence_page"]==11
+
+
+def test_alpha8_conditional_applicability_and_morphology_rank_real_conveyor_evidence():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №4_КР1.pdf","Тип документа":"КР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №4_КР1.pdf",
+            "document_type":"КР",
+            "page":40,
+            "text":"В расчёте приведены расстояния 50 м и 100 м для несвязанного инженерного параметра.",
+        },
+        {
+            "document":"Раздел ПД №4_КР1.pdf",
+            "document_type":"КР",
+            "page":51,
+            "text":"Выходы из эстакад конвейерных и переходных мостиков над конвейерами "
+                   "расположены не реже чем через 100 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
+    assert row["evidence_page"]==51
+    assert "переходные мостики" in row["matched_keywords"]
+    assert "100 м" in row["matched_keywords"]
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert all(candidate["page"]!=40 for candidate in row["evidence_candidates"])
+
+
+def test_alpha8_gate_width_retrieval_handles_word_order_and_inflection():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ1.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ1.pdf",
+        "document_type":"ПЗУ",
+        "page":27,
+        "text":"В ограждении в местах заезда автотранспорта устанавливаются ворота: "
+               "около КПП — распашные шириной 4,5 м.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH")
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
+    assert row["evidence_page"]==27
+    assert "ширина ворот" in row["matched_keywords"]
+    assert "4,5 м" in row["matched_keywords"]
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+
+
+def test_alpha8_numeric_only_page_is_not_normative_candidate():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №4_КР1.pdf","Тип документа":"КР"}]
+    pages=[{
+        "document":"Раздел ПД №4_КР1.pdf",
+        "document_type":"КР",
+        "page":40,
+        "text":"В расчёте приведены расстояния 50 м и 100 м без сведений о конвейерах или переходных мостиках.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    assert row["retrieval_candidate_count"]==0

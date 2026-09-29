@@ -2674,7 +2674,12 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "конвейерная галерея",
+        "галерея конвейера"
+      ],
+      "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2709,7 +2714,11 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "конвейер"
+      ],
+      "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2849,7 +2858,12 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "ворота",
+        "заезд автотранспорта"
+      ],
+      "applicability_min_hits": 2
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

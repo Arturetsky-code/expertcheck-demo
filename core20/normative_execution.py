@@ -21,6 +21,72 @@ def _norm(value:Any)->str:
     return " ".join(str(value or "").replace("ё","е").casefold().replace("\xa0"," ").split())
 
 
+_MATCH_STOPWORDS={"в","во","на","над","под","по","при","для","от","до","из","с","со","к","ко","у","и","или","либо","как","через"}
+_MATCH_UNITS={"м","мм","см","кв","квт","м2","м3"}
+
+
+def _stem_token(token:str)->str:
+    token=_norm(token).replace(".",",")
+    if re.fullmatch(r"\d+(?:,\d+)?",token):
+        return token
+    return token[:5] if len(token)>=6 else token
+
+
+def _keyword_signature(keyword:str)->tuple[list[str],list[str],int]:
+    tokens=re.findall(r"[a-zа-я]+|\d+(?:[.,]\d+)?",_norm(keyword))
+    alpha=[token for token in tokens if token.isalpha()]
+    lexical=[
+        _stem_token(token) for token in alpha
+        if token not in _MATCH_STOPWORDS and token not in _MATCH_UNITS and len(token)>=4
+    ]
+    numeric=[_stem_token(token) for token in tokens if re.fullmatch(r"\d+(?:[.,]\d+)?",token)]
+    return lexical,numeric,len(alpha)
+
+
+def _keyword_match(keyword:str,text:str)->tuple[bool,bool,int]:
+    normalized=_norm(text)
+    phrase=_norm(keyword)
+    lexical,numeric,alpha_count=_keyword_signature(keyword)
+
+    # Pure numeric thresholds may support an already anchored textual hit, but
+    # they are never allowed to create a normative candidate on their own.
+    if numeric and not lexical:
+        rendered=normalized.replace(".",",")
+        positions=[rendered.find(value) for value in numeric]
+        ok=all(pos>=0 for pos in positions)
+        return ok,True,min((pos for pos in positions if pos>=0),default=-1)
+
+    exact=normalized.find(phrase)
+    if exact>=0:
+        return True,False,exact
+
+    if not lexical:
+        return False,False,-1
+
+    # Do not turn a phrase such as "через конвейер" into a generic one-word
+    # match after dropping the preposition.
+    if alpha_count>1 and len(lexical)<2:
+        return False,False,-1
+
+    positions=[]
+    for stem in lexical:
+        stem_positions=[m.start() for m in re.finditer(re.escape(stem),normalized)]
+        if not stem_positions:
+            return False,False,-1
+        positions.append(stem_positions)
+
+    # Order-independent, morphology-tolerant phrase matching, but only inside
+    # a local evidence window so distant page terms do not create a concept hit.
+    for anchor in positions[0]:
+        selected=[anchor]
+        for variants in positions[1:]:
+            nearest=min(variants,key=lambda pos:abs(pos-anchor))
+            selected.append(nearest)
+        if max(selected)-min(selected)<=320:
+            return True,False,min(selected)
+    return False,False,-1
+
+
 def _page_section(page:dict[str,Any])->str:
     return _section_key(page.get("document_type") or page.get("section") or page.get("document") or "")
 
@@ -39,7 +105,13 @@ def _keywords(contract:dict[str,Any])->list[str]:
 def _fragment(text:str,hits:list[str],radius:int=240)->str:
     raw=" ".join(str(text or "").split())
     low=raw.casefold().replace("ё","е")
-    positions=[low.find(hit) for hit in hits if hit and low.find(hit)>=0]
+    positions=[]
+    for hit in hits:
+        if not hit:
+            continue
+        matched,_,position=_keyword_match(hit,low)
+        if matched and position>=0:
+            positions.append(position)
     pos=min(positions,default=-1)
     if pos<0:
         return raw[:700]
@@ -61,10 +133,32 @@ def _project_profile(documents:list[dict[str,Any]]|None)->str:
     return ""
 
 
-def _conditional_applicability(contract:dict[str,Any],documents:list[dict[str,Any]]|None)->tuple[bool,str]:
+def _conditional_applicability(
+    contract:dict[str,Any],
+    documents:list[dict[str,Any]]|None,
+    pages:list[dict[str,Any]]|None=None,
+)->tuple[bool,str]:
     ec=dict(contract.get("evidence_contract") or {})
     if str(ec.get("applicability") or "").upper()!="CONDITIONAL":
         return True,"SECTION_PRESENT"
+
+    applicability_keywords=[
+        _norm(value) for value in (ec.get("applicability_keywords") or [])
+        if _norm(value)
+    ]
+    if applicability_keywords:
+        matched=set()
+        for page in pages or []:
+            text=str(page.get("text") or page.get("content") or "")
+            for keyword in applicability_keywords:
+                ok,is_numeric,_=_keyword_match(keyword,text)
+                if ok and not is_numeric:
+                    matched.add(keyword)
+        minimum=max(1,int(ec.get("applicability_min_hits") or 1))
+        if len(matched)>=minimum:
+            return True,"PROJECT_CORPUS_CONDITION_PROVEN"
+        return False,"PROJECT_CORPUS_CONDITION_NOT_PROVEN"
+
     requirement=_norm(contract.get("requirement") or "")
     profile=_norm(_project_profile(documents))
     if "производственного назначения" in requirement:
@@ -101,13 +195,26 @@ def _rank_candidates(
     for page in candidates:
         raw_text=str(page.get("text") or page.get("content") or "")
         text=_norm(raw_text)
-        hits=[kw for kw in words if kw and kw in text]
-        if not hits:
+        lexical_hits=[]
+        numeric_hits=[]
+        for keyword in words:
+            matched,is_numeric,_=_keyword_match(keyword,text)
+            if not matched:
+                continue
+            if is_numeric:
+                numeric_hits.append(keyword)
+            else:
+                lexical_hits.append(keyword)
+
+        # A bare dimension/value is not normative evidence. Numeric thresholds
+        # only strengthen a page that already contains a textual concept hit.
+        if not lexical_hits:
             continue
+        hits=[*lexical_hits,*numeric_hits]
         coverage=len(hits)/max(1,len(words))
-        ranked.append((len(hits),coverage,len(text),page,hits))
-    ranked.sort(key=lambda x:(x[0],x[1],x[2]),reverse=True)
-    return ranked
+        ranked.append((len(hits),coverage,len(text),page,hits,len(lexical_hits)))
+    ranked.sort(key=lambda x:(x[5],x[0],x[1],x[2]),reverse=True)
+    return [(score,coverage,length,page,hits) for score,coverage,length,page,hits,_ in ranked]
 
 
 def _candidate_payloads(
@@ -239,7 +346,7 @@ class NormativeExecutionEngine20:
             "retrieval_candidate_count":0,
             "evidence_candidates":[],
         }
-        applicable,applicability_reason=_conditional_applicability(contract,documents)
+        applicable,applicability_reason=_conditional_applicability(contract,documents,candidates)
         base["applicability_reason_code"]=applicability_reason
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],

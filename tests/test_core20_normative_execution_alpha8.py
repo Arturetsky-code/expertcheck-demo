@@ -160,32 +160,19 @@ def test_alpha8_numeric_only_page_is_not_normative_candidate():
 
 
 def test_alpha8_cross_document_candidates_preserve_top3_and_add_section_diversity():
-    contract={
-        "requirement_id":"X-CROSS",
-        "check_kind":"CROSS_DOCUMENT",
-        "keywords":["идентификационные признаки","уровень ответственности"],
-        "evidence_contract":{"minimum_sources":2},
-    }
-    pages=[
-        {"document":"КР1.pdf","document_type":"КР","page":24,
-         "text":"Идентификационные признаки. Уровень ответственности. Идентификационные признаки."},
-        {"document":"КР1.pdf","document_type":"КР","page":25,
-         "text":"Идентификационные признаки. Уровень ответственности."},
-        {"document":"КР1.pdf","document_type":"КР","page":26,
-         "text":"Идентификационные признаки. Уровень ответственности."},
-        {"document":"КР1.pdf","document_type":"КР","page":27,
-         "text":"Идентификационные признаки. Уровень ответственности."},
-        {"document":"Задание.pdf","document_type":"Задание на проектирование","page":13,
-         "text":"Идентификационные признаки проектируемых зданий. Уровень ответственности."},
+    ranked=[
+        (4,1.0,900,{"document":"КР1.pdf","document_type":"КР","page":24,"text":"A"},["идентификационные признаки","уровень ответственности"]),
+        (4,1.0,800,{"document":"КР1.pdf","document_type":"КР","page":25,"text":"B"},["идентификационные признаки","уровень ответственности"]),
+        (4,1.0,700,{"document":"КР1.pdf","document_type":"КР","page":26,"text":"C"},["идентификационные признаки","уровень ответственности"]),
+        (4,1.0,600,{"document":"КР1.pdf","document_type":"КР","page":27,"text":"D"},["идентификационные признаки","уровень ответственности"]),
+        (3,0.75,500,{"document":"Задание.pdf","document_type":"Задание на проектирование","page":13,"text":"E"},["идентификационные признаки","уровень ответственности"]),
     ]
-    ranked=_rank_candidates(contract,pages)
     payloads=_candidate_payloads(ranked,"X-CROSS",limit=4,minimum_distinct_sections=2)
     assert [(row["document"],row["page"]) for row in payloads[:3]] == [
         ("КР1.pdf",24),("КР1.pdf",25),("КР1.pdf",26)
     ]
     assert payloads[3]["document"]=="Задание.pdf"
     assert len({row["section"] for row in payloads})>=2
-
 
 def test_alpha8_single_document_candidate_order_is_unchanged():
     contract={

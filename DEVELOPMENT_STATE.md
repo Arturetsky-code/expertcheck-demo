@@ -2066,3 +2066,70 @@ Repeat the short Streamlit run on the same 12-file package without a full AI pas
 re-export the three reports. The expected result is that deterministic Core25
 categorical rows no longer create false report Quality Gate errors solely because the
 legacy adversarial/AI route was not executed.
+
+
+## Validated checkpoint — manual Streamlit report Quality Gate regression
+
+Validated code lineage:
+- report Quality Gate fix: `3fe4b8a1e54d81c2f9ef2556c1cd6a8c77e087fc`
+- preserve Core25 gate in review plan: `06c85aa48dbae415876a656c788eae6820d9d69a`
+- integration test: `afbc54332533490734145718e83e3841ec21b070`
+- CI trigger/current validated source: `4d188d63d73ac7063b17e6047fecbe54ac9a94da`
+- green regression marker: `a990bc7110529809e25c119ff87164871ab5fee2`
+
+### Manual Streamlit evidence
+
+The saved 12-document DSK project was reopened in Streamlit on the current 25.2 branch.
+No full project re-upload was required and no additional full AI run was used for this
+validation. Reports were regenerated from the saved analysis state.
+
+Before the propagation fix, each exported report contained 28 false Quality Gate errors
+(QG-001 through QG-028) stating that categorical results lacked a completed sufficiency
+check even though their Core25 canonical Verified Core proof had already passed.
+
+After preserving the full `verified_core_gate` contract into `build_review_plan`:
+- Executive Summary report: **0 QG false-error matches**;
+- GIP report: **0 QG false-error matches**;
+- Technical Appendix: **0 QG false-error matches**;
+- the Report Control sheet collapsed from 32 rows to 4 rows;
+- report integrity/control status is **PASSED / Пройден**;
+- report status changed from
+  **Предварительный — Quality Gate отчёта не пройден**
+  to **Итоговый — проверка неполная**.
+
+This is not a claim that the project review is complete. The report correctly remains
+incomplete because specialist questions, automation gaps, project completeness and the
+remaining AI queue still exist.
+
+### Result preservation
+
+The correction did not hide real project findings. The regenerated reports still show:
+- 3 confirmed project findings;
+- 62 specialist review questions;
+- 673 checks outside current automatic coverage.
+
+The three confirmed findings remain:
+1. compressor building footprint conflict: PZ 54.3 m² vs PZU 48.7 m²;
+2. identification-attribute mismatch for the assignment requirement;
+3. SHANTUI L76-C5 assignment vs ARKTOS L76-C5 / quantity mismatch.
+
+### CI / deterministic safety
+
+At source `4d188d63...`:
+- Core20 quality gates: **success**;
+- Core25 tests: **success**;
+- Core20 regression: **success**;
+- baseline full diagnostic: **success**;
+- Validate ExpertCheck 25.2: **success**;
+- alpha1 release gate / full legacy suite: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Test78 remains **25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56**;
+- changed requirement IDs: **none**.
+
+### Next step
+
+Quality Gate/report propagation defect is closed.
+
+Return to product-quality work rather than report plumbing. Use the manual Streamlit
+results to choose the next high-value weakness: evidence quality / false review noise,
+NTD proof coverage, checklist coverage, or a specific Test78 REVIEW frontier candidate.

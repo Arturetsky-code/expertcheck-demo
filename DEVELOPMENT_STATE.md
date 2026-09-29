@@ -2209,3 +2209,85 @@ Rebuild/reopen the normative route and reports, then compare:
 - specialist review count.
 
 Do not add wave 2 until the real-project effect of wave 1 is measured.
+
+
+## Validated checkpoint — normative knowledge wave 2: fire safety
+
+Source commit:
+`4922d8958e291431683cf6a455fbba6d3426fb0b`
+
+### Scope
+
+Knowledge-only expansion. Core verdict logic was not changed.
+
+Catalogue after wave 2:
+- normative documents: 11;
+- atomic requirements: 79;
+- newly added verified clauses in this wave: 11.
+
+Documents curated in wave 2:
+- Federal Law No. 123-FZ, current revision 04.08.2026;
+- SP 4.13130.2013, active with Amendments No. 1–4;
+- SP 12.13130.2009, active with Amendment No. 1.
+
+Verified atomic clauses added:
+- 123-FZ art. 27 part 3 — inputs for fire/explosion categorisation;
+- 123-FZ art. 27 part 22 — categories must be stated in project documentation;
+- 123-FZ art. 78 part 1 — fire-technical characteristics in project documentation;
+- 123-FZ art. 92 part 2 — standalone fire-safety systems section for production objects;
+- SP 12.13130.2009 cl. 4.1 — category taxonomy for rooms/buildings/outdoor installations;
+- SP 12.13130.2009 cl. 4.2 — categorisation input factors;
+- SP 12.13130.2009 cl. 5.2 — sequential category determination A → D;
+- SP 4.13130.2013 cl. 6.1.2 / table 3 — fire separation distances for production sites;
+- SP 4.13130.2013 cl. 8.2.1 — number of fire-access sides;
+- SP 4.13130.2013 cl. 8.2.3 — minimum fire-road width by building height;
+- SP 4.13130.2013 cl. 8.2.6 — road-edge-to-wall distance by building height.
+
+Full normative texts were not copied into the repository. Only source metadata,
+clause addresses, paraphrased atomic requirements and proof contracts were stored.
+
+### Source status
+
+123-FZ:
+- current revision verified as 04.08.2026;
+- latest amendment in the consolidated revision: Federal Law No. 330-FZ of 04.08.2026.
+
+SP 4.13130.2013:
+- Rosstandart status: active;
+- Amendment No. 4 effective from 01.12.2023.
+
+SP 12.13130.2009:
+- Rosstandart status: active;
+- Amendment No. 1 effective from 01.02.2011.
+
+Existing historical validity records for 123-FZ and SP 4 were upgraded in place,
+preserving expert-history statistics. SP 12 was added as a new canonical validity record.
+
+### Regression control
+
+At `4922d895...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core25 tests: success;
+- Core20 regression: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / legacy full suite: success;
+- Test78: success / NO_CHANGE;
+- Test78 remains 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next validation
+
+Open the saved 12-document DSK project on the current branch. No PDF re-upload and no
+full AI project run are required.
+
+On "НТД и практика", compare wave-1 baseline:
+- executable contracts: 39;
+- candidate evidence: 63;
+- proved: 11 after partial semantic proof;
+- specialist questions: 26;
+- system limitations: 2;
+- addressable evidence: 69.2%.
+
+Measure how wave 2 changes contract count, candidate evidence, addressable evidence,
+semantic queue and deterministic proof before starting another semantic-AI batch.

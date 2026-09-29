@@ -2386,3 +2386,103 @@ Do not add wave 3 yet. Reopen the saved DSK project on the current branch and pe
 bounded normative semantic run when providers are available. This will create the new
 per-packet checkpoint format. Then record the post-AI wave-2 metrics and only after that
 start the next knowledge wave.
+
+
+## Validated checkpoint — normative knowledge wave 3: mining, lighting, site planning
+
+Source commit:
+`ba6bb233ffc35adf5f714fed0f70975ecbb4f649`
+
+### Scope
+
+Knowledge-only expansion. Core verdict logic was not changed.
+
+Catalogue after wave 3:
+- normative documents: 13;
+- atomic requirements: 86;
+- newly added verified clauses in this wave: 7.
+
+Documents curated in wave 3:
+- FNP mining/mineral-processing rules, Order of Rostechnadzor No. 505 of 08.12.2020,
+  current revision 24.03.2026, term extended to 01.09.2032;
+- SP 52.13330.2016, active with Amendments No. 1–2;
+- SP 18.13330.2019, active with Amendments No. 1–5; Amendment No. 5 effective 04.09.2026.
+
+Verified atomic clauses added:
+- FNP 505 cl. 1184 — fire-safety package for belt conveyors in galleries;
+- FNP 505 cl. 1215 — bridge crossing spacing over conveyors;
+- FNP 505 cl. 1461 — emergency lighting on surface-complex workplaces;
+- SP 52.13330.2016 cl. 7.6.1 — emergency-lighting power-loss behavior;
+- SP 52.13330.2016 cl. 7.6.3 — evacuation-route lighting;
+- SP 18.13330.2019 cl. 5.37 — production-site entrance gate width;
+- SP 18.13330.2019 cl. 5.52 — closed storm-water sewer on production-site territory.
+
+Full normative texts were not copied into the repository. Only source metadata,
+clause addresses, paraphrased atomic requirements and proof contracts were stored.
+
+### Source status
+
+FNP 505:
+- current consolidated revision: 24.03.2026;
+- Order No. 94 effective 10.05.2026 extended the validity term to 01.09.2032;
+- official publication identifier for the amendment: 0001202604290007.
+
+SP 52.13330.2016:
+- Rosstandart status: active;
+- Amendments No. 1 and No. 2 are published by Rosstandart;
+- cl. 7.6.3 is also included in the current mandatory-requirements list effective from 01.06.2026.
+
+SP 18.13330.2019:
+- Rosstandart status: active;
+- Amendments No. 1–5;
+- Amendment No. 5 registered 26.08.2026 and effective 04.09.2026.
+
+Existing historical validity records for SP 52 and SP 18 were upgraded in place,
+preserving expert-history statistics. The generic FNP-MINING catalog record was upgraded
+to the concrete Order No. 505 contract and linked to a new canonical validity record.
+
+### Regression control
+
+At `ba6bb233...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core25 tests: success;
+- Core20 regression: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- Test78 remains 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Manual baseline before wave 3
+
+Wave-2 post-semantic-run DSK state:
+- executable contracts: 50;
+- candidate evidence: 87;
+- proved: 11;
+- semantic proof applied: 4;
+- semantic queue: 14;
+- specialist questions: 37;
+- system limitations: 2;
+- addressable evidence: 68.0%.
+
+### Next validation
+
+Open the same saved 12-document DSK project on the current branch with no PDF re-upload
+and no new AI run.
+
+First verify semantic-proof persistence:
+- the existing 4 semantic confirmations should remain applied after the wave-3 knowledge
+  expansion if their per-packet fingerprints are unchanged.
+
+Then capture the new wave-3 project metrics:
+- verified-clause routes;
+- executable contracts;
+- candidate evidence;
+- proved;
+- semantic proof applied;
+- semantic queue;
+- specialist questions;
+- addressable evidence.
+
+Do not start another semantic-AI batch until this no-AI persistence check is observed.

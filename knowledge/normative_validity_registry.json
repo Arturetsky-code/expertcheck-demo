@@ -488,11 +488,11 @@
         "Федерального закона от 22.07.2008 №123-ФЗ"
       ],
       "document_kind": "FZ",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
+      "status": "Действует с изменениями",
+      "verified_on": "2026-09-29",
+      "verified_revision": "ред. от 04.08.2026; Федеральный закон №330-ФЗ",
       "official_source_kind": "PRAVO",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status_basis": "Действующая редакция 123-ФЗ от 04.08.2026 подтверждена по актуальному консолидированному тексту; последнее изменение внесено Федеральным законом от 04.08.2026 №330-ФЗ.",
       "expert_occurrences": 75,
       "expert_projects": [
         "2024/10/09-111",
@@ -536,7 +536,12 @@
         "2026/01/30-013-0049-01"
       ],
       "priority_score": 150,
-      "verification_priority": "P1"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_AND_CONSOLIDATED_TEXT",
+      "verification_evidence": [
+        "123-ФЗ: действующая редакция от 04.08.2026",
+        "Федеральный закон от 04.08.2026 №330-ФЗ, статья 9"
+      ]
     },
     {
       "canonical_id": "SNIP:12-01-2004",
@@ -2483,13 +2488,16 @@
     {
       "canonical_id": "SP:4.13130.2013",
       "reference": "СП 4.13130.2013",
-      "aliases": [],
+      "aliases": [
+        "СП 4.13130.2013",
+        "СП 4 13130 2013"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-29",
+      "verified_revision": "СП 4.13130.2013 с Изменениями №1–4; Изменение №4 действует с 01.12.2023",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Карточка Росстандарта подтверждает действующий статус СП 4.13130.2013 и зарегистрированные Изменения №1–4.",
       "expert_occurrences": 11,
       "expert_projects": [
         "2024/12/28-065",
@@ -2518,7 +2526,30 @@
         "2026/03/19-050-0121-01"
       ],
       "priority_score": 17.6,
-      "verification_priority": "P3"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "verification_evidence": [
+        "ROSSTANDART: СП 4.13130.2013 — действует",
+        "ROSSTANDART: Изменение №4, введено 01.12.2023"
+      ],
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "effective_from": "2020-08-14"
+        },
+        {
+          "name": "Изменение №2",
+          "effective_from": "2022-03-01"
+        },
+        {
+          "name": "Изменение №3",
+          "effective_from": "2022-12-01"
+        },
+        {
+          "name": "Изменение №4",
+          "effective_from": "2023-12-01"
+        }
+      ]
     },
     {
       "canonical_id": "SP:131.13330.2025",
@@ -5577,6 +5608,42 @@
       "source_remark_ids": [],
       "priority_score": 0,
       "verification_priority": "P3"
+    },
+    {
+      "canonical_id": "SP:12.13130.2009",
+      "reference": "СП 12.13130.2009",
+      "aliases": [
+        "СП 12.13130.2009",
+        "СП 12 13130 2009"
+      ],
+      "document_kind": "SP",
+      "status": "Действует",
+      "verified_on": "2026-09-29",
+      "verified_revision": "СП 12.13130.2009 с Изменением №1, действующим с 01.02.2011",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Карточка Росстандарта подтверждает действующий статус СП 12.13130.2009 и Изменение №1.",
+      "expert_occurrences": 1,
+      "expert_projects": [
+        "2026/01/30-013"
+      ],
+      "expert_project_count": 1,
+      "expert_sections": [],
+      "source_remark_ids": [
+        "2026/01/30-013-0049-01"
+      ],
+      "priority_score": 2,
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "effective_from": "2011-02-01"
+        }
+      ],
+      "verification_evidence": [
+        "ROSSTANDART: СП 12.13130.2009 — действует",
+        "ROSSTANDART: Изменение №1, введено 01.02.2011"
+      ]
     }
   ],
   "generated_from": {

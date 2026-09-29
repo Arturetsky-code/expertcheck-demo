@@ -130,3 +130,30 @@ def test_alpha7_first_normative_wave_384_and_gost27751_is_curated():
     gost=foundation.documents_by_id["GOST-27751-2014"]
     assert gost["source_class"] == "official"
     assert gost["validity_canonical_id"] == "GOST:27751-2014"
+
+
+def test_alpha7_second_normative_wave_fire_package_is_curated():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+
+    for requirement_id in (
+        "FZ123-27-3-CATEGORY-BASIS",
+        "FZ123-27-22-CATEGORY-IN-PD",
+        "FZ123-78-1-FIRE-CHARACTERISTICS",
+        "FZ123-92-2-PRODUCTION-FIRE-SECTION",
+        "SP12-4.1-CATEGORY-TAXONOMY",
+        "SP12-4.2-CATEGORY-INPUTS",
+        "SP12-5.2-SEQUENTIAL-CATEGORY",
+        "SP4-6.1.2-PRODUCTION-FIRE-DISTANCE",
+        "SP4-8.2.1-FIRE-ACCESS-SIDES",
+        "SP4-8.2.3-FIRE-ROAD-WIDTH",
+        "SP4-8.2.6-ROAD-WALL-DISTANCE",
+    ):
+        row=contracts[requirement_id]
+        assert row["source_verified"] is True
+        assert row["trust_state"] == "VERIFIED_CLAUSE"
+        assert row["automatic_contract_ready"] is True
+
+    assert foundation.documents_by_id["123-FZ"]["status"] == "Действует с изменениями"
+    assert foundation.documents_by_id["SP-4.13130.2013"]["status"] == "Действует"
+    assert foundation.documents_by_id["SP-12.13130.2009"]["status"] == "Действует"

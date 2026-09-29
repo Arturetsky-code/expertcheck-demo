@@ -2241,5 +2241,403 @@
       "applicability": "SECTION_PRESENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ123-27-3-CATEGORY-BASIS",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Основания категорирования помещений",
+    "requirement": "Категория помещения производственного или складского назначения по пожарной и взрывопожарной опасности должна определяться с учётом вида и количества веществ и материалов, их пожароопасных свойств, объёмно-планировочных решений и характеристик технологического процесса.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ТХ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "категория помещения",
+      "взрывопожарной",
+      "пожарной опасности",
+      "вещества и материалы",
+      "технологического процесса"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 27, ч. 3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Основания категорирования сверены по действующей редакции статьи 27; атомарное требование сформулировано без копирования текста нормы.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/a8c77699ce581f96b2636dee84de4e750b33ed20/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ123-27-22-CATEGORY-IN-PD",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Категории в проектной документации",
+    "requirement": "Категории зданий, сооружений и помещений производственного и складского назначения по пожарной и взрывопожарной опасности должны быть указаны в проектной документации.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ТХ"
+    ],
+    "check_kind": "PRESENCE",
+    "automation": "AUTO",
+    "keywords": [
+      "категория",
+      "пожарной опасности",
+      "взрывопожарной опасности",
+      "А",
+      "Б",
+      "В1",
+      "В2",
+      "В3",
+      "В4",
+      "Г",
+      "Д"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 27, ч. 22",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Обязанность отражения категорий в ПД сверена по действующей редакции статьи 27.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/a8c77699ce581f96b2636dee84de4e750b33ed20/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ123-78-1-FIRE-CHARACTERISTICS",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Пожарно-технические характеристики в проектной документации",
+    "requirement": "Проектная документация должна содержать предусмотренные 123-ФЗ пожарно-технические характеристики зданий, сооружений, строительных конструкций, инженерного оборудования и применяемых строительных материалов.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "пожарно-технические характеристики",
+      "степень огнестойкости",
+      "класс пожарной опасности",
+      "пожарная безопасность"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 78, ч. 1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Обязанность отражать пожарно-технические характеристики сверена по действующей редакции статьи 78.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/e4593aca3f06557c6e6432582d1d14618eed2b6e/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "FZ123-92-2-PRODUCTION-FIRE-SECTION",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Раздел по системам пожарной безопасности производственного объекта",
+    "requirement": "Для объекта производственного назначения состав и функциональные характеристики систем обеспечения пожарной безопасности должны быть оформлены самостоятельным разделом проектной документации.",
+    "sections": [
+      "ALL"
+    ],
+    "check_kind": "STRUCTURE",
+    "automation": "AUTO",
+    "keywords": [
+      "системы обеспечения пожарной безопасности",
+      "самостоятельный раздел",
+      "мероприятия по обеспечению пожарной безопасности"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 92, ч. 2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к самостоятельному разделу для производственных объектов сверено по действующей редакции статьи 92.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/13fc1e53b7124ecb9c3e3394fb67e4583663c11f/",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": false,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP12-4.1-CATEGORY-TAXONOMY",
+    "source": "СП 12.13130.2009",
+    "topic": "Категории помещений, зданий и наружных установок",
+    "requirement": "Для применимых производственных и складских объектов должны использоваться установленные СП 12.13130.2009 категории: помещения А, Б, В1–В4, Г, Д; здания А, Б, В, Г, Д; наружные установки АН, БН, ВН, ГН, ДН.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ТХ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "категория",
+      "В1",
+      "В4",
+      "АН",
+      "БН",
+      "ВН",
+      "ГН",
+      "ДН"
+    ],
+    "document_id": "SP-12.13130.2009",
+    "paragraph": "п. 4.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Состав категорий помещений, зданий и наружных установок сверён по п. 4.1 с учётом Изменения №1.",
+    "official_source": "https://protect.gost.ru/sp/details/71a928ce-33aa-4258-ad4c-dd5309d21664",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP12-4.2-CATEGORY-INPUTS",
+    "source": "СП 12.13130.2009",
+    "topic": "Исходные данные для определения категории",
+    "requirement": "Категорирование помещений, зданий и наружных установок должно учитывать пожароопасные свойства и количество обращающихся веществ и материалов, объёмно-планировочные решения и особенности технологического процесса.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ТХ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "категорирование",
+      "пожароопасные свойства",
+      "количество",
+      "объемно-планировочные решения",
+      "технологический процесс"
+    ],
+    "document_id": "SP-12.13130.2009",
+    "paragraph": "п. 4.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Перечень исходных факторов категорирования сверён по п. 4.2 с действующей редакцией СП.",
+    "official_source": "https://protect.gost.ru/sp/details/71a928ce-33aa-4258-ad4c-dd5309d21664",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP12-5.2-SEQUENTIAL-CATEGORY",
+    "source": "СП 12.13130.2009",
+    "topic": "Последовательность определения категории помещения",
+    "requirement": "Определение категории помещения должно выполняться последовательной проверкой от наиболее опасной категории А к наименее опасной категории Д.",
+    "sections": [
+      "ТХ",
+      "АР",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "последовательной проверки",
+      "категория А",
+      "категория Б",
+      "категория Д",
+      "определение категории"
+    ],
+    "document_id": "SP-12.13130.2009",
+    "paragraph": "п. 5.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Последовательность проверки категорий сверена по п. 5.2 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/71a928ce-33aa-4258-ad4c-dd5309d21664",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP4-6.1.2-PRODUCTION-FIRE-DISTANCE",
+    "source": "СП 4.13130.2013",
+    "topic": "Противопожарные расстояния на территории производственного объекта",
+    "requirement": "Для объекта производственного назначения противопожарные расстояния между зданиями и сооружениями должны назначаться с учётом степени огнестойкости, класса конструктивной пожарной опасности и категории по взрывопожарной и пожарной опасности в соответствии с таблицей 3 СП 4.13130.2013.",
+    "sections": [
+      "ПЗУ",
+      "АР",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "противопожарные расстояния",
+      "степень огнестойкости",
+      "класс конструктивной пожарной опасности",
+      "категория",
+      "таблица 3"
+    ],
+    "document_id": "SP-4.13130.2013",
+    "paragraph": "п. 6.1.2, табл. 3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Логика назначения расстояний для производственных объектов сверена по п. 6.1.2 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP4-8.2.1-FIRE-ACCESS-SIDES",
+    "source": "СП 4.13130.2013",
+    "topic": "Подъезд пожарной техники к производственным зданиям",
+    "requirement": "Для производственных и складских зданий должен быть обеспечен подъезд мобильных средств пожаротушения по длине здания: как правило, с одной стороны при ширине не более 18 м и с двух сторон при ширине более 18 м; для замкнутых и полузамкнутых дворов требуется двусторонний подъезд.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "подъезд пожарных автомобилей",
+      "пожарной техники",
+      "18 м",
+      "с одной стороны",
+      "с двух сторон"
+    ],
+    "document_id": "SP-4.13130.2013",
+    "paragraph": "п. 8.2.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Условие количества сторон подъезда сверено по п. 8.2.1 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP4-8.2.3-FIRE-ROAD-WIDTH",
+    "source": "СП 4.13130.2013",
+    "topic": "Ширина проезда для пожарных автомобилей",
+    "requirement": "Минимальная ширина пожарного проезда должна приниматься по высоте здания или сооружения: не менее 3,5 м при высоте до 13 м включительно, 4,2 м при высоте свыше 13 до 46 м включительно и 6 м при высоте более 46 м.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "ширина проездов",
+      "пожарных автомобилей",
+      "3,5 м",
+      "4,2 м",
+      "6 м",
+      "высота"
+    ],
+    "document_id": "SP-4.13130.2013",
+    "paragraph": "п. 8.2.3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Градации минимальной ширины проезда по высоте сверены по п. 8.2.3 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP4-8.2.6-ROAD-WALL-DISTANCE",
+    "source": "СП 4.13130.2013",
+    "topic": "Расстояние от пожарного проезда до здания",
+    "requirement": "Расстояние от края пожарного проезда или спланированной поверхности до стен здания или сооружения должно назначаться по высоте объекта: при высоте не более 12 м — не более 25 м; свыше 12 до 28 м — 5–8 м; более 28 м — 8–10 м.",
+    "sections": [
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "расстояние от края проезжей части",
+      "до стен",
+      "25 м",
+      "5 - 8 м",
+      "8 - 10 м",
+      "пожарных автомобилей"
+    ],
+    "document_id": "SP-4.13130.2013",
+    "paragraph": "п. 8.2.6",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Градации расстояния от проезда до стен по высоте объекта сверены по п. 8.2.6 действующей редакции СП.",
+    "official_source": "https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c",
+    "verified_on": "2026-09-29",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT"
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

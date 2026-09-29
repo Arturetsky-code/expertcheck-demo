@@ -39,11 +39,17 @@
     "document_type": "Федеральный закон",
     "authority": "Российская Федерация",
     "source_class": "official",
-    "verification_status": "Требует постатейной верификации редакции",
+    "verification_status": "Статус и статьи 27, 78, 92 сверены с действующей редакцией от 04.08.2026",
     "scope": [
       "FIRE_SAFETY"
     ],
-    "validity_canonical_id": "FZ:123-фз"
+    "validity_canonical_id": "FZ:123-фз",
+    "status": "Действует с изменениями",
+    "verified_on": "2026-09-29",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/",
+    "edition_reference": "Ред. от 04.08.2026; последняя редакция включает Федеральный закон от 04.08.2026 № 330-ФЗ",
+    "effective_from": "2009-05-01",
+    "effective_to": null
   },
   {
     "document_id": "FNP-MINING",
@@ -119,5 +125,44 @@
       "RESPONSIBILITY_CLASSIFICATION"
     ],
     "validity_canonical_id": "GOST:27751-2014"
+  },
+  {
+    "document_id": "SP-4.13130.2013",
+    "title": "СП 4.13130.2013 «Системы противопожарной защиты. Ограничение распространения пожара на объектах защиты. Требования к объемно-планировочным и конструктивным решениям»",
+    "document_type": "СП",
+    "authority": "МЧС России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 6.1.2, 8.2.1, 8.2.3, 8.2.6 верифицированы; учтены Изменения №1–4",
+    "verified_on": "2026-09-29",
+    "official_source": "https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c",
+    "edition_reference": "СП 4.13130.2013 с Изменениями №1–4; Изменение №4 действует с 01.12.2023",
+    "effective_from": "2013-07-29",
+    "effective_to": null,
+    "scope": [
+      "FIRE_SAFETY",
+      "FIRE_SEPARATION",
+      "FIRE_ACCESS"
+    ],
+    "validity_canonical_id": "SP:4.13130.2013"
+  },
+  {
+    "document_id": "SP-12.13130.2009",
+    "title": "СП 12.13130.2009 «Определение категорий помещений, зданий и наружных установок по взрывопожарной и пожарной опасности»",
+    "document_type": "СП",
+    "authority": "МЧС России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 4.1, 4.2, 5.2 верифицированы; учтено Изменение №1",
+    "verified_on": "2026-09-29",
+    "official_source": "https://protect.gost.ru/sp/details/71a928ce-33aa-4258-ad4c-dd5309d21664",
+    "edition_reference": "СП 12.13130.2009 с Изменением №1, действующим с 01.02.2011",
+    "effective_from": "2009-05-01",
+    "effective_to": null,
+    "scope": [
+      "FIRE_SAFETY",
+      "FIRE_EXPLOSION_CATEGORY"
+    ],
+    "validity_canonical_id": "SP:12.13130.2009"
   }
 ]

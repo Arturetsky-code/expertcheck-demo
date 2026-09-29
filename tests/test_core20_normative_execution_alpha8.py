@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from core20.normative_execution import NormativeExecutionEngine20
+from core20.normative_execution import (
+    NormativeExecutionEngine20,
+    _candidate_payloads,
+    _rank_candidates,
+)
 from core20.normative_foundation import NormativeKnowledgeFoundation20
 
 

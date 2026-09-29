@@ -217,13 +217,12 @@ def _rank_candidates(
     return [(score,coverage,length,page,hits) for score,coverage,length,page,hits,_ in ranked]
 
 
-def _candidate_payloads(
+def _diversify_ranked_candidates(
     ranked:list[tuple[int,float,int,dict[str,Any],list[str]]],
-    requirement_id:str,
     *,
     limit:int=4,
     minimum_distinct_sections:int=1,
-)->list[dict[str,Any]]:
+)->list[tuple[int,float,int,dict[str,Any],list[str]]]:
     deduped=[]
     seen_ranked=set()
     for item in ranked:
@@ -236,38 +235,52 @@ def _candidate_payloads(
         seen_ranked.add(key)
         deduped.append(item)
 
-    ordered=deduped
     minimum_distinct_sections=max(1,min(int(minimum_distinct_sections or 1),limit))
-    if minimum_distinct_sections>1 and len(deduped)>1:
-        # Preserve the strongest existing candidates and use only the remaining
-        # slots to widen source/section diversity for cross-document proof.
-        protected=max(1,limit-(minimum_distinct_sections-1))
-        chosen=list(deduped[:protected])
-        chosen_ids={id(item) for item in chosen}
-        seen_sections={
-            _page_section(item[3]) or _norm(item[3].get("document") or "")
-            for item in chosen
-        }
+    if minimum_distinct_sections<=1 or len(deduped)<=1:
+        return deduped[:limit]
 
-        for item in deduped[protected:]:
-            if len(chosen)>=limit:
+    # Preserve the strongest existing candidates and use only the remaining
+    # slots to widen source/section diversity for cross-document proof.
+    protected=max(1,limit-(minimum_distinct_sections-1))
+    chosen=list(deduped[:protected])
+    chosen_ids={id(item) for item in chosen}
+    seen_sections={
+        _page_section(item[3]) or _norm(item[3].get("document") or "")
+        for item in chosen
+    }
+
+    for item in deduped[protected:]:
+        if len(chosen)>=limit:
+            break
+        section=_page_section(item[3]) or _norm(item[3].get("document") or "")
+        if section and section not in seen_sections:
+            chosen.append(item)
+            chosen_ids.add(id(item))
+            seen_sections.add(section)
+            if len(seen_sections)>=minimum_distinct_sections:
                 break
-            section=_page_section(item[3]) or _norm(item[3].get("document") or "")
-            if section and section not in seen_sections:
-                chosen.append(item)
-                chosen_ids.add(id(item))
-                seen_sections.add(section)
-                if len(seen_sections)>=minimum_distinct_sections:
-                    break
 
-        for item in deduped:
-            if len(chosen)>=limit:
-                break
-            if id(item) not in chosen_ids:
-                chosen.append(item)
-                chosen_ids.add(id(item))
-        ordered=chosen
+    for item in deduped:
+        if len(chosen)>=limit:
+            break
+        if id(item) not in chosen_ids:
+            chosen.append(item)
+            chosen_ids.add(id(item))
+    return chosen[:limit]
 
+
+def _candidate_payloads(
+    ranked:list[tuple[int,float,int,dict[str,Any],list[str]]],
+    requirement_id:str,
+    *,
+    limit:int=4,
+    minimum_distinct_sections:int=1,
+)->list[dict[str,Any]]:
+    ordered=_diversify_ranked_candidates(
+        ranked,
+        limit=limit,
+        minimum_distinct_sections=minimum_distinct_sections,
+    )
     output=[]
     seen=set()
     for score,coverage,_,page,hits in ordered:

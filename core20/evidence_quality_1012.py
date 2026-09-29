@@ -222,13 +222,19 @@ def candidate_payloads_quality(
     requirement_id: str,
     *,
     limit: int = 4,
+    minimum_distinct_sections: int = 1,
 ) -> list[dict[str, Any]]:
     """Create only substantive, topic-aligned addressable evidence payloads."""
     from . import normative_execution as execution
 
+    ordered = execution._diversify_ranked_candidates(
+        ranked,
+        limit=limit,
+        minimum_distinct_sections=minimum_distinct_sections,
+    )
     output: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
-    for score, coverage, _, page, hits in ranked:
+    for score, coverage, _, page, hits in ordered:
         raw_text = str(page.get("text") or page.get("content") or "")
         if is_toc_or_index_page(raw_text):
             continue

@@ -2753,3 +2753,99 @@ Secondary signals:
 - evidence candidates may stay 120 or change slightly because the top-4 composition changes;
 - cross-document rows should include evidence from more than one section when eligible;
 - no new categorical result is allowed solely because of source diversity.
+
+
+## Validated checkpoint — Alpha 10 resumable queue aligned with selected-evidence reuse
+
+Validated source:
+`2bf4e9ab7b7ed46162bdca1b428340cd686e9e88`
+
+### Root cause of 23 -> 27 semantic queue after reboot
+
+The observed increase from 23 pending semantic packets in the live post-AI session to 27
+after reboot was not caused by four new normative requirements from source diversity.
+
+Only two current verified clauses are eligible for the new CROSS_DOCUMENT source-diversity
+contract:
+- FZ384-4-11-ID-IN-ASSIGNMENT-PD;
+- GOST27751-10.2-ASSIGNMENT.
+
+The actual cause was the Alpha 10.1 resumable-queue overlay.
+
+The base semantic-proof layer already supported per-decision reuse across candidate-pool
+changes through the selected-evidence fingerprint. This was visible in Streamlit because
+three semantic confirmations survived retrieval changes and reboot.
+
+However, Alpha 10.1 independently treated a semantic decision as processed only when the
+fingerprint of the complete root queue exactly matched. When retrieval changed the candidate
+pool, the base layer correctly reused the three unchanged selected-evidence decisions, but
+Alpha 10.1 still counted those packets as pending. Therefore:
+- semantic proof applied remained 3;
+- pending semantic queue incorrectly returned from 23 to 27.
+
+### Fix
+
+Alpha 10.1 no longer duplicates the coarse whole-queue compatibility gate.
+
+It now:
+1. filters the persisted checkpoint to real completed Judge/Critic decisions;
+2. delegates compatibility/reuse to the base semantic-proof layer;
+3. reads which decisions were actually attached back to current proof rows;
+4. treats exactly those reusable completed decisions as processed;
+5. exposes as pending only current semantic packets without a safely reusable completed
+   decision.
+
+Consequences:
+- candidate-pool growth/re-ranking does not re-add an unchanged judged packet to pending;
+- changed selected evidence still returns the packet to pending;
+- changed requirement/proof contract remains fail-closed;
+- provider placeholders and incomplete SUPPORTS-without-Critic decisions remain pending.
+
+### Regression coverage
+
+Added Alpha 10 tests verify:
+- a changed root queue with additional alternative evidence preserves a completed decision
+  when the selected evidence is unchanged and removes that packet from pending;
+- changing the selected evidence makes the packet pending again.
+
+Existing tests continue to verify:
+- exact-root resumable queue behavior;
+- multiple semantic runs merge on the same root;
+- checkpoints from another project/root are rejected;
+- provider failures do not consume a packet;
+- SUPPORTS without Critic remains pending.
+
+### Validation
+
+At `2bf4e9ab...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next Streamlit check
+
+Use the same saved DSK project.
+
+Do not upload PDFs and do not run AI.
+
+Pre-fix live checkpoint:
+- contracts: 57;
+- candidate evidence: 120;
+- proved: 11;
+- semantic proof applied: 3;
+- pending semantic queue after reboot: 27 (incorrect);
+- specialist questions: 43;
+- system limitations: 3;
+- addressable evidence: 73.7%.
+
+Primary success criterion after reboot:
+- semantic proof applied remains **3**;
+- pending semantic queue becomes **23**, matching the post-AI resumable state.
+
+Other project metrics should remain stable.

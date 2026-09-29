@@ -735,13 +735,17 @@
     {
       "canonical_id": "GOST:27751-2014",
       "reference": "ГОСТ 27751-2014",
-      "aliases": [],
+      "aliases": [
+        "ГОСТ 27751-2014",
+        "ГОСТ 27751—2014",
+        "ГОСТ 27751 2014"
+      ],
       "document_kind": "GOST",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-29",
+      "verified_revision": "Изменение №1 введено 01.02.2023; поправка ИУС 4-2026 введена 20.04.2026",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Федеральный информационный фонд стандартов Росстандарта указывает ГОСТ 27751-2014 как действующий и публикует карточки Изменения №1 и поправки 2026 года.",
       "expert_occurrences": 48,
       "expert_projects": [
         "2024/02/01-097",
@@ -785,7 +789,27 @@
         "2024/02/01-097-0003-02"
       ],
       "priority_score": 96,
-      "verification_priority": "P2"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "registered": "2022-12-23",
+          "effective_from": "2023-02-01",
+          "order": "1571-ст"
+        },
+        {
+          "name": "Поправка",
+          "registered": "2026-04-20",
+          "effective_from": "2026-04-20",
+          "publication": "ИУС 4-2026"
+        }
+      ],
+      "verification_evidence": [
+        "ROSSTANDART: ГОСТ 27751-2014 — действует",
+        "ROSSTANDART: Изменение №1, приказ 1571-ст",
+        "ROSSTANDART: Поправка ИУС 4-2026"
+      ]
     },
     {
       "canonical_id": "FZ:190-фз",

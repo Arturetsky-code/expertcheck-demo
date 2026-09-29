@@ -2581,3 +2581,97 @@ Expected qualitative result after this fix:
 - FNP 505 cl. 1215 and SP 18 cl. 5.37 should route to addressable semantic evidence rather
   than stopping at generic conditional applicability;
 - no new categorical normative conclusion should appear without the existing proof gates.
+
+
+## Validated checkpoint — selected-evidence semantic-proof persistence
+
+Validated lineage:
+- retrieval/applicability fix: `3ee1cec3a04bb0e1b689d7a872ae04307e62548c`;
+- retrieval test-fixture correction: `48491071aa2226fec872b86b919c9a586ce76e31`;
+- selected-evidence semantic persistence: `2c4da63dbc33f597ae2c47c0b7ee2823d421d333`;
+- legacy fail-closed test correction: `609f7f11e290315b9a935976f5d48325b683d5cf`.
+
+### Manual Streamlit signal after retrieval improvement
+
+Same saved 12-document DSK project, no new AI run:
+
+Before retrieval improvement:
+- contracts: 57;
+- evidence candidates: 90;
+- proved: 11;
+- semantic proof applied: 4;
+- semantic queue: 14;
+- specialist questions: 44;
+- system limitations: 2;
+- addressable evidence: 63.2%.
+
+After retrieval improvement:
+- contracts: 57;
+- evidence candidates: 120;
+- proved: 9;
+- semantic proof applied: 1;
+- semantic queue: 27;
+- specialist questions: 45;
+- system limitations: 3;
+- addressable evidence: 73.7%.
+
+Interpretation:
+- retrieval materially improved (+30 candidates, +10.5 pp addressable evidence);
+- three prior semantic confirmations became stale because the per-packet fingerprint included
+  the entire top-candidate pool, so re-ranking/adding alternatives changed the packet even
+  when the Judge-selected proof evidence could remain valid.
+
+### Persistence fix
+
+New semantic decisions now store:
+- requirement fingerprint;
+- selected-proof fingerprint;
+- selected addressable evidence.
+
+On later queue/candidate changes, a decision is reused only if:
+1. the requirement + proof type are unchanged;
+2. every evidence fragment actually selected by Judge is still present at the same
+   document/page and contains the same judged fragment;
+3. the selected-proof fingerprint matches.
+
+Adding or re-ranking alternative candidates no longer invalidates a proven semantic result.
+Changing the selected evidence or the requirement still invalidates it fail-closed.
+
+Legacy decisions created before this selected-proof format are not silently upgraded after a
+packet mismatch; they require one safe revalidation.
+
+### Regression coverage
+
+Tests now verify:
+- candidate-pool growth preserves a proof whose selected evidence is unchanged;
+- changed selected evidence invalidates proof;
+- changed requirement invalidates proof;
+- a legacy stale decision without selected-proof fingerprint remains fail-closed.
+
+### Validation
+
+At production source `2c4da63d...`:
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+At current HEAD `609f7f11...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success.
+
+### Next step
+
+Do not add wave 4 yet.
+
+Open the same saved DSK project on the current branch without re-uploading PDFs and without
+running AI. Current legacy semantic checkpoint may still retain only the one decision whose
+old packet fingerprint already matched, because the other three old decisions do not have
+the new selected-proof fingerprint.
+
+Run one bounded normative semantic batch only after confirming the no-AI state. That run will
+write the new selected-proof format. Subsequent retrieval or knowledge expansion should then
+preserve unchanged semantic confirmations.

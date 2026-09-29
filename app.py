@@ -165,9 +165,11 @@ if st.session_state.result:
     # migrate one engineering contract at a time without a big-bang rewrite.
     try:
         manifest=build_dual_run_manifest(
-            d.to_dict('records') if hasattr(d,'to_dict') else [],
-            f.to_dict('records') if hasattr(f,'to_dict') else [],
-            cmp.to_dict('records') if hasattr(cmp,'to_dict') else [],
+            project_name=st.session_state.get('project_name') or 'Новый проект',
+            documents=d.to_dict('records') if hasattr(d,'to_dict') else [],
+            findings=f.to_dict('records') if hasattr(f,'to_dict') else [],
+            comparisons=cmp.to_dict('records') if hasattr(cmp,'to_dict') else [],
+            assembly_rows=rows,
         )
         st.session_state.canonical_core_20_manifest=manifest
     except Exception as exc:

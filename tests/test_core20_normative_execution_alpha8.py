@@ -153,3 +153,56 @@ def test_alpha8_numeric_only_page_is_not_normative_candidate():
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
     assert row["retrieval_candidate_count"]==0
+
+
+def test_alpha8_cross_document_candidates_preserve_top3_and_add_section_diversity():
+    contract={
+        "requirement_id":"X-CROSS",
+        "check_kind":"CROSS_DOCUMENT",
+        "keywords":["идентификационные признаки","уровень ответственности"],
+        "evidence_contract":{"minimum_sources":2},
+    }
+    pages=[
+        {"document":"КР1.pdf","document_type":"КР","page":24,
+         "text":"Идентификационные признаки. Уровень ответственности. Идентификационные признаки."},
+        {"document":"КР1.pdf","document_type":"КР","page":25,
+         "text":"Идентификационные признаки. Уровень ответственности."},
+        {"document":"КР1.pdf","document_type":"КР","page":26,
+         "text":"Идентификационные признаки. Уровень ответственности."},
+        {"document":"КР1.pdf","document_type":"КР","page":27,
+         "text":"Идентификационные признаки. Уровень ответственности."},
+        {"document":"Задание.pdf","document_type":"Задание на проектирование","page":13,
+         "text":"Идентификационные признаки проектируемых зданий. Уровень ответственности."},
+    ]
+    ranked=_rank_candidates(contract,pages)
+    payloads=_candidate_payloads(ranked,"X-CROSS",limit=4,minimum_distinct_sections=2)
+    assert [(row["document"],row["page"]) for row in payloads[:3]] == [
+        ("КР1.pdf",24),("КР1.pdf",25),("КР1.pdf",26)
+    ]
+    assert payloads[3]["document"]=="Задание.pdf"
+    assert len({row["section"] for row in payloads})>=2
+
+
+def test_alpha8_single_document_candidate_order_is_unchanged():
+    contract={
+        "requirement_id":"X-SINGLE",
+        "check_kind":"SEMANTIC",
+        "keywords":["аварийное освещение","эвакуационное освещение"],
+        "evidence_contract":{"minimum_sources":1},
+    }
+    pages=[
+        {"document":"ИОС1.pdf","document_type":"ИОС","page":24,
+         "text":"Аварийное освещение. Эвакуационное освещение."},
+        {"document":"ИОС1.pdf","document_type":"ИОС","page":25,
+         "text":"Аварийное освещение. Эвакуационное освещение."},
+        {"document":"ИОС1.pdf","document_type":"ИОС","page":26,
+         "text":"Аварийное освещение. Эвакуационное освещение."},
+        {"document":"АР1.pdf","document_type":"АР","page":10,
+         "text":"Аварийное освещение."},
+    ]
+    ranked=_rank_candidates(contract,pages)
+    plain=_candidate_payloads(ranked,"X-SINGLE",limit=4)
+    explicit=_candidate_payloads(ranked,"X-SINGLE",limit=4,minimum_distinct_sections=1)
+    assert [(x["document"],x["page"]) for x in plain] == [
+        (x["document"],x["page"]) for x in explicit
+    ]

@@ -222,10 +222,55 @@ def _candidate_payloads(
     requirement_id:str,
     *,
     limit:int=4,
+    minimum_distinct_sections:int=1,
 )->list[dict[str,Any]]:
+    deduped=[]
+    seen_ranked=set()
+    for item in ranked:
+        _,_,_,page,_=item
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        key=(document,str(page_no))
+        if key in seen_ranked:
+            continue
+        seen_ranked.add(key)
+        deduped.append(item)
+
+    ordered=deduped
+    minimum_distinct_sections=max(1,min(int(minimum_distinct_sections or 1),limit))
+    if minimum_distinct_sections>1 and len(deduped)>1:
+        # Preserve the strongest existing candidates and use only the remaining
+        # slots to widen source/section diversity for cross-document proof.
+        protected=max(1,limit-(minimum_distinct_sections-1))
+        chosen=list(deduped[:protected])
+        chosen_ids={id(item) for item in chosen}
+        seen_sections={
+            _page_section(item[3]) or _norm(item[3].get("document") or "")
+            for item in chosen
+        }
+
+        for item in deduped[protected:]:
+            if len(chosen)>=limit:
+                break
+            section=_page_section(item[3]) or _norm(item[3].get("document") or "")
+            if section and section not in seen_sections:
+                chosen.append(item)
+                chosen_ids.add(id(item))
+                seen_sections.add(section)
+                if len(seen_sections)>=minimum_distinct_sections:
+                    break
+
+        for item in deduped:
+            if len(chosen)>=limit:
+                break
+            if id(item) not in chosen_ids:
+                chosen.append(item)
+                chosen_ids.add(id(item))
+        ordered=chosen
+
     output=[]
     seen=set()
-    for score,coverage,_,page,hits in ranked:
+    for score,coverage,_,page,hits in ordered:
         document=str(page.get("document") or "").strip()
         page_no=page.get("page")
         fragment=_fragment(str(page.get("text") or page.get("content") or ""),hits)
@@ -387,7 +432,14 @@ class NormativeExecutionEngine20:
         ec=dict(contract.get("evidence_contract") or {})
         minimum=max(1,int(ec.get("min_keyword_hits") or 2))
         ranked=_rank_candidates(contract,candidates)
-        evidence_candidates=_candidate_payloads(ranked,rid,limit=4)
+        cross_document=str(contract.get("check_kind") or "").upper()=="CROSS_DOCUMENT"
+        minimum_sources=max(1,int(ec.get("minimum_sources") or 1))
+        evidence_candidates=_candidate_payloads(
+            ranked,
+            rid,
+            limit=4,
+            minimum_distinct_sections=(minimum_sources if cross_document else 1),
+        )
         base["evidence_candidates"]=evidence_candidates
         base["retrieval_candidate_count"]=len(evidence_candidates)
         if not ranked or not evidence_candidates:

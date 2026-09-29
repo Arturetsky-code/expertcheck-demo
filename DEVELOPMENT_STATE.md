@@ -2675,3 +2675,81 @@ the new selected-proof fingerprint.
 Run one bounded normative semantic batch only after confirming the no-AI state. That run will
 write the new selected-proof format. Subsequent retrieval or knowledge expansion should then
 preserve unchanged semantic confirmations.
+
+
+## Validated checkpoint — cross-document evidence diversity
+
+Validated lineage:
+- selected-evidence semantic persistence checkpoint: `4576af63380e30dcda912f31852082449f18b14c`;
+- source-diversity implementation: `f1950f9ba878eb03d49cc6422fd2b9438e5ca6ed`;
+- evidence-quality overlay integration: `caeccb3b43046230f2012c74cf016c005784bb12`;
+- isolated diversity test: `c77728b63cfd37c20f12e447055c4bb5ee873875`;
+- current validated CI source: `1bbaa60039f5a6c984691025a12c9a6ffff3329d`.
+
+### Problem
+
+Cross-document normative requirements such as 384-FZ art. 4 part 11 can have many
+high-scoring pages from one section (for example repeated identification tables in KR).
+The previous top-4 retrieval could therefore use all four slots from one section and omit
+the Design Assignment or PZ even when those sources contained the legally relevant
+cross-document evidence.
+
+### Fix
+
+For contracts with `check_kind == CROSS_DOCUMENT` and `minimum_sources >= 2`:
+- the strongest existing candidates are preserved;
+- only the remaining evidence slots are used to increase section/source diversity;
+- ordinary single-document contracts keep their previous ordering.
+
+The diversity step is implemented as a shared Core20 helper and is also applied inside the
+mandatory Alpha 10.1.2 evidence-quality overlay. Therefore source diversity does not bypass:
+- table-of-contents rejection;
+- topic-alignment gating;
+- substantive-page quality checks.
+
+For the common two-source / four-candidate case, the strongest first three candidates are
+preserved and the fourth slot may be replaced by the best candidate from another section.
+
+### Persistence relevance
+
+This change is intentionally suitable for the selected-evidence persistence check:
+it can add/reorder an alternative cross-document candidate while preserving the strongest
+existing evidence. A previously confirmed semantic proof should remain reusable if the
+Judge-selected document/page/fragment is still present and unchanged.
+
+### Validation
+
+At current source `1bbaa600...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- Test78 remains 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next Streamlit check
+
+Use the same saved 12-document DSK project.
+
+Do not re-upload PDFs and do not run AI.
+
+Pre-change baseline:
+- contracts: 57;
+- evidence candidates: 120;
+- proved: 11;
+- semantic proof applied: 3;
+- semantic queue: 23;
+- specialist questions: 43;
+- system limitations: 3;
+- addressable evidence: 73.7%.
+
+Primary success criterion:
+- `semantic proof applied` remains **3** after project rebuild/reboot.
+
+Secondary signals:
+- evidence candidates may stay 120 or change slightly because the top-4 composition changes;
+- cross-document rows should include evidence from more than one section when eligible;
+- no new categorical result is allowed solely because of source diversity.

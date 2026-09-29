@@ -51,9 +51,11 @@ def validate_review_plan(
         if item.get("verification_kind") == "PROJECT_FINDING" and item.get("adversarial_state") == "BLOCKED":
             issues.append(f"Заблокированный adversarial gate результат остался несоответствием: {title}.")
         if item.get("verification_kind") in {"VERIFIED_OK", "PROJECT_FINDING"}:
+            verified_core_gate = item.get("verified_core_gate") or {}
+            core25_authoritative = verified_core_gate.get("core25_authoritative") is True
             if item.get("verified_core_gate_state") != "PASSED":
                 issues.append(f"Категоричный вывод не прошёл единый Verified Core gate: {title}.")
-            if item.get("adversarial_state") != "PASSED":
+            if not core25_authoritative and item.get("adversarial_state") != "PASSED":
                 issues.append(f"Категоричный вывод не имеет пройденной проверки достаточности: {title}.")
             if int(item.get("evidence_candidate_count") or 0) <= 0:
                 issues.append(f"Категоричный вывод не имеет адресного доказательства: {title}.")

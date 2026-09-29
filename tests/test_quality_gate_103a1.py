@@ -136,3 +136,62 @@ def test_report_quality_gate_accepts_consistent_plan():
     )
     result=validate_review_plan(plan)
     assert result['status']=='PASSED',result['issues']
+
+
+def test_report_quality_gate_accepts_core25_authoritative_deterministic_verdict_without_legacy_adversarial():
+    zero_domain={
+        'total':0,'verified_ok':0,'project_findings':0,'review_questions':0,
+        'system_limitations':0,'informational':0,'completed':0,'automatic_coverage_pct':0.0,
+    }
+    plan={
+        'domains':{
+            'assignment':{
+                'total':1,'verified_ok':1,'project_findings':0,'review_questions':0,
+                'system_limitations':0,'informational':0,'completed':1,'automatic_coverage_pct':100.0,
+            },
+            'normative':dict(zero_domain),
+            'checklist':dict(zero_domain),
+        },
+        'items':[{
+            'title':'Core25 deterministic requirement',
+            'verification_kind':'VERIFIED_OK',
+            'verified_core_gate_state':'PASSED',
+            'verified_core_gate':{
+                'passed':True,
+                'core25_authoritative':True,
+                'semantic_route':False,
+            },
+            'adversarial_state':'NOT_REQUIRED',
+            'evidence_candidate_count':1,
+        }],
+    }
+    result=validate_review_plan(plan)
+    assert result['status']=='PASSED',result['issues']
+
+
+def test_report_quality_gate_still_requires_adversarial_for_non_core25_categorical_verdict():
+    zero_domain={
+        'total':0,'verified_ok':0,'project_findings':0,'review_questions':0,
+        'system_limitations':0,'informational':0,'completed':0,'automatic_coverage_pct':0.0,
+    }
+    plan={
+        'domains':{
+            'assignment':{
+                'total':1,'verified_ok':1,'project_findings':0,'review_questions':0,
+                'system_limitations':0,'informational':0,'completed':1,'automatic_coverage_pct':100.0,
+            },
+            'normative':dict(zero_domain),
+            'checklist':dict(zero_domain),
+        },
+        'items':[{
+            'title':'Legacy categorical requirement',
+            'verification_kind':'VERIFIED_OK',
+            'verified_core_gate_state':'PASSED',
+            'verified_core_gate':{'passed':True,'semantic_route':False},
+            'adversarial_state':'NOT_REQUIRED',
+            'evidence_candidate_count':1,
+        }],
+    }
+    result=validate_review_plan(plan)
+    assert result['status']=='FAILED'
+    assert any('проверки достаточности' in issue for issue in result['issues'])

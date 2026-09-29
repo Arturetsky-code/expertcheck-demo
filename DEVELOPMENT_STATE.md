@@ -2486,3 +2486,98 @@ Then capture the new wave-3 project metrics:
 - addressable evidence.
 
 Do not start another semantic-AI batch until this no-AI persistence check is observed.
+
+
+## Validated checkpoint — wave 3 normative retrieval/applicability fix
+
+Validated lineage:
+- wave 3 knowledge checkpoint: `d32c50415d85fd90ff19a0d8752e9fbd0a1eaeee`;
+- retrieval/applicability source: `3ee1cec3a04bb0e1b689d7a872ae04307e62548c`;
+- test-fixture correction only: `48491071aa2226fec872b86b919c9a586ce76e31`.
+
+### Manual diagnosis from the 12-document DSK corpus
+
+Wave 3 added seven executable requirements but only three additional evidence candidates.
+The reason was upstream of AI:
+
+1. conditional applicability was hard-coded for only one special case
+   (`объект производственного назначения`), so curated conditional clauses for conveyor
+   crossings and entrance gates could be stopped before evidence retrieval;
+2. evidence retrieval matched full keyword phrases as exact substrings and counted bare
+   dimensions such as `50 м` / `100 м` as independent keyword hits.
+
+The real DSK corpus contains examples that expose both weaknesses:
+- KR states that transition bridges over conveyors are arranged at intervals not greater
+  than 100 m, but wording differs morphologically from the curated keyword phrase;
+- PZU states that vehicle-entry gates are 4.5 m wide using the word order
+  `ворота ... шириной 4,5 м`;
+- IOS contains explicit emergency/evacuation-lighting descriptions.
+
+### Fix
+
+`core20/normative_execution.py` now:
+- supports structured, corpus-proven conditional applicability through
+  `evidence_contract.applicability_keywords` and `applicability_min_hits`;
+- performs morphology-tolerant, order-independent local phrase matching using conservative
+  token stems inside a bounded evidence window;
+- keeps exact phrase matching when available;
+- treats pure numeric thresholds as supporting evidence only — a page with numbers but no
+  textual concept cannot become a normative candidate;
+- preserves all existing proof gates: retrieval still does not create a categorical
+  semantic/typed conclusion.
+
+Structured applicability was added only where it can be proven from explicit project
+content without making a legal inference:
+- FNP 505 cl. 1215 — conveyor presence;
+- SP 18.13330.2019 cl. 5.37 — gates + vehicle-entry context;
+- FNP 505 cl. 1184 — only an explicit conveyor-gallery concept can establish applicability.
+
+FNP 505 cl. 1461 remains fail-closed because applicability to the surface-complex workplace
+set is not yet encoded with a sufficiently reliable project predicate.
+
+### Regression tests
+
+Added coverage proves that:
+- a real conveyor-crossing fragment outranks an unrelated page containing only 50 m / 100 m;
+- `ширина ворот` matches `ворота ... шириной 4,5 м` without exact word order/case;
+- a purely numeric page does not become normative evidence.
+
+The first test fixture accidentally contained the word `конвейерах` in a sentence saying
+that conveyor information was absent, which correctly triggered the applicability anchor.
+That fixture alone was corrected in `48491071...`; production code was unchanged.
+
+### Validation
+
+For production code `3ee1cec3...`:
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+At current HEAD `48491071...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success.
+
+### Next Streamlit check
+
+Use the same saved 12-document DSK project. Do not re-upload PDFs and do not run AI.
+
+Wave-3 pre-fix baseline:
+- executable contracts: 57;
+- evidence candidates: 90;
+- proved: 11;
+- semantic proof applied: 4;
+- semantic queue: 14;
+- specialist questions: 44;
+- system limitations: 2;
+- addressable evidence: 63.2%.
+
+Expected qualitative result after this fix:
+- the 4 existing semantic confirmations remain preserved;
+- candidate evidence and/or addressable evidence increase for wave-3 clauses;
+- FNP 505 cl. 1215 and SP 18 cl. 5.37 should route to addressable semantic evidence rather
+  than stopping at generic conditional applicability;
+- no new categorical normative conclusion should appear without the existing proof gates.

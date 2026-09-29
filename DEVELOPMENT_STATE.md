@@ -2001,3 +2001,68 @@ limit through sequential ZIP parts while keeping staged members file-backed.
 This is **ready for manual browser validation**, not yet a claim that a real 800 MB–1 GB
 package has been proven in production. A real multipart upload should be tested before
 calling the large-package milestone complete.
+
+
+## Validated checkpoint — report Quality Gate respects Core25 authoritative proof
+
+Source commit:
+`3fe4b8a1e54d81c2f9ef2556c1cd6a8c77e087fc`
+
+Green validation marker:
+`7e80cf71970a191bc83c23a4cf207cba7cbbd4c2`
+
+### Problem reproduced in Streamlit
+
+A manual 12-file project run without a full AI pass produced categorical Core25
+assignment results whose canonical Verified Core gate had already passed, but the
+report Quality Gate still emitted repeated errors equivalent to:
+
+`Категоричный вывод не имеет пройденной проверки достаточности`.
+
+The conflict came from two different contracts:
+- Core25 categorical results may be authoritative through their canonical public
+  Routing → Evidence → Binding → Proof → Decision trace;
+- the legacy report Quality Gate independently required
+  `adversarial_state == PASSED` for every categorical result.
+
+That second requirement incorrectly treated a deterministic Core25 L5 proof as if it
+still required the legacy adversarial/AI route.
+
+### Fix
+
+`core/report_quality_gate.py` now recognizes
+`verified_core_gate.core25_authoritative == True`.
+
+For that narrowly defined route:
+- `verified_core_gate_state == PASSED` remains mandatory;
+- addressable evidence remains mandatory;
+- an explicit `adversarial_state == BLOCKED` is still rejected by the existing
+  contradiction checks;
+- absence of a legacy adversarial pass is no longer reported as a Quality Gate error.
+
+All non-Core25 categorical routes retain the previous adversarial requirement.
+
+Regression tests were added for both sides of the contract:
+- authoritative deterministic Core25 verdict without legacy adversarial pass is accepted;
+- non-Core25 categorical verdict without adversarial pass is still rejected.
+
+### Validation
+
+At source `3fe4b8a1...`:
+- Core20 quality gates: **success**;
+- Core25 tests: **success**;
+- Core20 regression: **success**;
+- baseline full diagnostic: **success**;
+- Validate ExpertCheck 25.2: **success**;
+- full legacy repository suite against allowlist: **success**;
+- alpha1 release gate: **success**;
+- Test78 deterministic A/B: **success / NO_CHANGE**;
+- Test78 remains **25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56**;
+- changed requirement IDs: **none**.
+
+### Next step
+
+Repeat the short Streamlit run on the same 12-file package without a full AI pass and
+re-export the three reports. The expected result is that deterministic Core25
+categorical rows no longer create false report Quality Gate errors solely because the
+legacy adversarial/AI route was not executed.

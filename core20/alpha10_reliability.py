@@ -185,33 +185,40 @@ def apply_normative_semantic_proof(
     fingerprint = str(semantic.get("fingerprint") or "")
     root = str(semantic.get("root_fingerprint") or fingerprint or "")
 
-    # Preserve the base stale-check contract: an explicitly mismatched
-    # fingerprint is always stale, even if a separate root_fingerprint remains.
-    compatible_root = bool(semantic and root == expected and (not fingerprint or fingerprint == expected))
-    if compatible_root:
-        compatible = dict(semantic)
-        compatible["fingerprint"] = expected
-        compatible["decisions"] = {
-            key: value for key, value in dict(semantic.get("decisions") or {}).items()
-            if _decision_complete(value)
-        }
-        result = _ORIGINAL_APPLY(proof, compatible)
-    else:
-        result = _ORIGINAL_APPLY(proof, semantic)
-
-    decisions = {
+    # Delegate compatibility to the base semantic-proof layer. It can reuse an
+    # individual decision when the requirement and Judge-selected evidence are
+    # unchanged even if the complete retrieval candidate pool/root fingerprint
+    # has changed. Alpha 10 must not reintroduce a coarser whole-queue gate.
+    compatible = dict(semantic)
+    compatible["decisions"] = {
         key: value for key, value in dict(semantic.get("decisions") or {}).items()
-        if compatible_root and _decision_complete(value)
+        if _decision_complete(value)
     }
-    processed_ids = set(decisions)
+    exact_root = bool(semantic and root == expected and (not fingerprint or fingerprint == expected))
+    if exact_root:
+        compatible["fingerprint"] = expected
+        compatible["root_fingerprint"] = expected
+
+    result = _ORIGINAL_APPLY(proof, compatible)
+
+    processed_decisions = {}
+    for row in result.get("rows") or []:
+        if not isinstance(row, dict):
+            continue
+        rid = str(row.get("requirement_id") or "")
+        decision = row.get("semantic_proof")
+        if rid and _decision_complete(decision):
+            processed_decisions[rid] = dict(decision)
+
+    processed_ids = set(processed_decisions)
     pending = [packet for packet in full_queue if _packet_requirement_id(packet) not in processed_ids]
     confirmed = sum(
         str(value.get("state") or "").upper() == "VERIFIED_OK"
-        for value in decisions.values() if isinstance(value, dict)
+        for value in processed_decisions.values()
     )
     reviewed = sum(
         str(value.get("state") or "").upper() == "REVIEW_QUESTION"
-        for value in decisions.values() if isinstance(value, dict)
+        for value in processed_decisions.values()
     )
 
     result["semantic_queue_full_total"] = len(full_queue)
@@ -223,11 +230,16 @@ def apply_normative_semantic_proof(
     result["semantic_queue_evidence"] = sum(len(packet.get("evidence") or []) for packet in pending)
 
     summary = dict(result.get("semantic_proof_summary") or {})
-    if compatible_root:
+    if semantic:
         summary.update({
             "version": ENGINE_VERSION,
-            "root_fingerprint": expected,
-            "root_queue_total": len(full_queue),
+            "root_fingerprint": root or expected,
+            "current_queue_fingerprint": expected,
+            "queue_fingerprint_match": exact_root,
+            "root_queue_total": max(
+                len(full_queue),
+                int(semantic.get("root_queue_total") or semantic.get("queue_total") or 0),
+            ),
             "processed_total": len(processed_ids),
             "verified_ok": confirmed,
             "reviewed_total": reviewed,

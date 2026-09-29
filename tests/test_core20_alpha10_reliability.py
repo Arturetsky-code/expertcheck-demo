@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from core20 import alpha10_reliability as a10
+from core20 import normative_semantic_proof as semantic
 from core20.normative_semantic_proof import queue_fingerprint
 from core20.quality_integrity import as_list, consensus_counts
 from core.expert_review_engine import _enrich, _text
@@ -38,6 +39,20 @@ def _ok(state: str = "VERIFIED_OK") -> dict:
         "critic_confidence": 0.93 if state == "VERIFIED_OK" else 0,
         "selected_evidence": selected,
     }
+
+
+def _selected_ok(packet: dict, state: str = "VERIFIED_OK") -> dict:
+    decision = _ok(state)
+    if state != "VERIFIED_OK":
+        return decision
+    decision["packet_fingerprint"] = semantic._packet_fingerprint(packet)
+    decision["requirement_fingerprint"] = semantic._requirement_fingerprint(packet)
+    decision["selected_proof_fingerprint"] = semantic._selected_proof_fingerprint(
+        packet,
+        decision["selected_evidence"],
+    )
+    return decision
+
 
 
 def test_alpha10_removes_processed_packets_from_pending_queue():
@@ -246,3 +261,71 @@ def test_alpha10_1_cross_section_legacy_values_normalize_safely():
     assert as_list(float("nan")) == []
     assert as_list("ПЗ") == ["ПЗ"]
     assert as_list(["ПЗ", "ПЗУ"]) == ["ПЗ", "ПЗУ"]
+
+
+def test_alpha10_queue_root_change_keeps_reusable_selected_evidence_processed():
+    old_packet = _packet("R1")
+    old_queue = [old_packet, _packet("R2")]
+    old_root = queue_fingerprint(old_queue)
+
+    current_r1 = _packet("R1")
+    current_r1["evidence"].append({
+        "evidence_id": "E-R1-ALT",
+        "document": "KR.pdf",
+        "page": 24,
+        "text": "alternative addressable project evidence",
+    })
+    current_queue = [current_r1, _packet("R2")]
+    current_root = queue_fingerprint(current_queue)
+    assert current_root != old_root
+
+    proof = {
+        "rows": [
+            {"requirement_id": rid, "kind": "REVIEW_QUESTION", "proof_state": "SEMANTIC_PROOF_REQUIRED"}
+            for rid in ("R1", "R2")
+        ],
+        "semantic_queue": current_queue,
+        "semantic_queue_total": 2,
+    }
+    checkpoint = {
+        "root_fingerprint": old_root,
+        "fingerprint": old_root,
+        "root_queue_total": 2,
+        "queue_total": 2,
+        "decisions": {"R1": _selected_ok(old_packet)},
+    }
+
+    result = a10.apply_normative_semantic_proof(proof, checkpoint)
+
+    assert result["semantic_proof_applied"] == 1
+    assert result["semantic_queue_processed"] == 1
+    assert result["semantic_queue_total"] == 1
+    assert [row["requirement_id"] for row in result["semantic_queue"]] == ["R2"]
+    assert result["semantic_proof_summary"]["queue_fingerprint_match"] is False
+
+
+def test_alpha10_changed_selected_evidence_returns_packet_to_pending():
+    old_packet = _packet("R1")
+    old_root = queue_fingerprint([old_packet])
+
+    changed = _packet("R1")
+    changed["evidence"][0]["text"] = "changed project evidence"
+    proof = {
+        "rows": [{"requirement_id": "R1", "kind": "REVIEW_QUESTION", "proof_state": "SEMANTIC_PROOF_REQUIRED"}],
+        "semantic_queue": [changed],
+        "semantic_queue_total": 1,
+    }
+    checkpoint = {
+        "root_fingerprint": old_root,
+        "fingerprint": old_root,
+        "root_queue_total": 1,
+        "queue_total": 1,
+        "decisions": {"R1": _selected_ok(old_packet)},
+    }
+
+    result = a10.apply_normative_semantic_proof(proof, checkpoint)
+
+    assert result["semantic_proof_applied"] == 0
+    assert result["semantic_queue_processed"] == 0
+    assert result["semantic_queue_total"] == 1
+    assert result.get("semantic_proof_stale") is True

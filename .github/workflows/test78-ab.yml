@@ -10,6 +10,7 @@ on:
       - .github/workflows/test78-ab.yml
       - tools/run_test78_ab.py
       - core/**
+      - core20/**
       - core25/**
       - knowledge/normative_documents_registry.json
       - knowledge/normative_validity_registry.json

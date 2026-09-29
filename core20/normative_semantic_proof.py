@@ -173,6 +173,11 @@ def run_normative_semantic_proof(
     """
     source=[dict(x) for x in (queue or []) if isinstance(x,dict)]
     fp=_fingerprint(source)
+    source_packet_fingerprints={
+        str(packet.get("packet_id") or ""):_packet_fingerprint(packet)
+        for packet in source
+        if str(packet.get("packet_id") or "")
+    }
     packets=[_as_semantic_packet(x) for x in source[:max(0,int(limit or 0))]]
     packets=[x for x in packets if x.get("evidence")]
     base={
@@ -282,7 +287,7 @@ def run_normative_semantic_proof(
         decisions[requirement_id]={
             "requirement_id":requirement_id,
             "packet_id":pid,
-            "packet_fingerprint":_packet_fingerprint(packet),
+            "packet_fingerprint":source_packet_fingerprints.get(pid,""),
             "state":state,
             "reason":reason,
             "judge_verdict":str(judge.get("verdict") or "INSUFFICIENT"),

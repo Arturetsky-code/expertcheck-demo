@@ -11,6 +11,9 @@ on:
       - tools/run_test78_ab.py
       - core/**
       - core25/**
+      - knowledge/normative_documents_registry.json
+      - knowledge/normative_validity_registry.json
+      - knowledge/normative_requirements_v3.json
       - knowledge/benchmarks/private/test78_fixture_26of56.enc.b64.part.*
       - knowledge/benchmarks/test78_baseline_overrides.json
 

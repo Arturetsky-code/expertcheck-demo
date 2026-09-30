@@ -189,8 +189,8 @@ def test_alpha7_fourth_normative_wave_engineering_fire_water_is_curated():
     for requirement_id in (
         "SP6-2025-5.2-SPZ-RELIABILITY",
         "SP6-2025-5.3-SPZ-PANEL",
-        "SP8-10.2-FIRE-WATER-VOLUME",
-        "SP8-10.3-FIRE-RESERVOIRS",
+        "SP8-9.2-WATER-SYSTEM-FIRE-VOLUME",
+        "SP8-9.5-WATER-SYSTEM-RESERVOIRS",
         "SP8-11.5-FIRE-WATER-LEVEL",
         "SP10-1.4-VPV-EXEMPTION",
         "SP10-T7.2-PRODUCTION-FLOW",

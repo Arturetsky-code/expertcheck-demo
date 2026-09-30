@@ -3100,3 +3100,56 @@ Expected qualitative checks:
   than being forced toward noisier KR evidence;
 - design-assignment pages should no longer be rejected solely because their table header
   contains the word "Содержание".
+
+
+## Live green checkpoint — wave 4 corrected fire-water routing
+
+Validated in Streamlit on the same saved 12-document DSK project after reboot, with no PDF
+re-upload and no new AI run.
+
+### Live metrics after SP 8 / TOC correction
+
+Compared with the pre-correction wave-4 baseline:
+
+- executable contracts: 64 -> 64;
+- evidence candidates: 140 -> 154 (+14);
+- proved: 11 -> 11;
+- held by proof control: 38 -> 40 (+2);
+- semantic proof applied: 3 -> 3;
+- pending semantic queue: 28 -> 30 (+2);
+- specialist questions: 50 -> 50;
+- system limitations: 3 -> 3;
+- addressable evidence: 75.0% -> 78.1% (+3.1 pp).
+
+### Interpretation
+
+The correction improved the evidence layer rather than inflating the normative scope:
+- no additional executable contracts were created;
+- addressable evidence increased materially;
+- two additional requirements reached semantic proof instead of stopping earlier;
+- the existing three selected-evidence semantic confirmations survived the knowledge and
+  retrieval changes;
+- no new deterministic/categorical result appeared solely from the correction.
+
+This aggregate result is consistent with the intended correction:
+- SP 8 section 9 clauses replace the previously mismatched section 10 clauses for the
+  reservoir -> fire pump station -> outdoor fire-water network architecture;
+- substantive IOS2 table/narrative pages are no longer excluded as TOC;
+- design-assignment table headers containing "Содержание основных данных и требований" no
+  longer trigger TOC rejection by themselves.
+
+### Next step
+
+The wave-4 evidence/routing correction is accepted as green.
+
+Run one bounded normative semantic batch only; do not run the full-project AI pipeline.
+Record post-AI values for:
+- proved;
+- semantic proof applied;
+- pending semantic queue;
+- specialist questions;
+- evidence candidates;
+- addressable evidence.
+
+Provider rate limits may stop the batch early; completed semantic decisions must remain
+persisted and resumable.

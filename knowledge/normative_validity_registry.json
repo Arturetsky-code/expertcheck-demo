@@ -1152,13 +1152,16 @@
     {
       "canonical_id": "SP:8.13130.2020",
       "reference": "СП 8.13130.2020",
-      "aliases": [],
+      "aliases": [
+        "СП 8.13130.2020",
+        "СП 8 13130 2020"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-30",
+      "verified_revision": "СП 8.13130.2020 с Изменением №1, действующим с 01.03.2024",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Карточка Росстандарта подтверждает действующий статус СП 8.13130.2020 и Изменение №1.",
       "expert_occurrences": 32,
       "expert_projects": [
         "2024/02/01-097",
@@ -1191,7 +1194,19 @@
         "2026/01/30-013-0060-01"
       ],
       "priority_score": 64,
-      "verification_priority": "P2"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "effective_from": "2024-03-01",
+          "order": "1329"
+        }
+      ],
+      "verification_evidence": [
+        "ROSSTANDART: СП 8.13130.2020 — действует",
+        "ROSSTANDART: Изменение №1, введено 01.03.2024"
+      ]
     },
     {
       "canonical_id": "SP:529.1325800.2023",
@@ -2785,13 +2800,17 @@
     {
       "canonical_id": "SP:6.13130.2021",
       "reference": "СП 6.13130.2021",
-      "aliases": [],
+      "aliases": [
+        "СП 6.13130.2021",
+        "СП 6 13130 2021",
+        "СП 6.13130-2021"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Заменён",
+      "verified_on": "2026-09-30",
+      "verified_revision": "СП 6.13130.2021 действовал до 29.06.2026",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Росстандарт указывает срок применения СП 6.13130.2021 до 29.06.2026 и действующий с этой даты СП 6.13130.2025.",
       "expert_occurrences": 9,
       "expert_projects": [
         "2024/10/09-111",
@@ -2821,7 +2840,14 @@
         "2026/03/13-099-0061-01"
       ],
       "priority_score": 15.3,
-      "verification_priority": "P3"
+      "verification_priority": "P1",
+      "replacement": "СП 6.13130.2025",
+      "replacement_effective_from": "2026-06-29",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "verification_evidence": [
+        "ROSSTANDART: СП 6.13130.2021 — до 29.06.2026",
+        "ROSSTANDART: СП 6.13130.2025 — действует с 29.06.2026"
+      ]
     },
     {
       "canonical_id": "SP:116.13330.2012",
@@ -4253,13 +4279,16 @@
     {
       "canonical_id": "SP:10.13130.2020",
       "reference": "СП 10.13130.2020",
-      "aliases": [],
+      "aliases": [
+        "СП 10.13130.2020",
+        "СП 10 13130 2020"
+      ],
       "document_kind": "SP",
-      "status": "Требует верификации",
-      "verified_on": "",
-      "verified_revision": "",
-      "official_source_kind": "MINSTROY",
-      "status_basis": "Документ извлечён из реальных замечаний экспертизы; статус требует проверки по официальному источнику.",
+      "status": "Действует",
+      "verified_on": "2026-09-30",
+      "verified_revision": "СП 10.13130.2020 с Изменением №1, действующим с 01.09.2026",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Карточка Росстандарта подтверждает действующий статус СП 10.13130.2020; Изменение №1 введено с 01.09.2026.",
       "expert_occurrences": 4,
       "expert_projects": [
         "2024/02/01-097",
@@ -4277,7 +4306,19 @@
         "2026/03/19-050-0142-03"
       ],
       "priority_score": 5.2,
-      "verification_priority": "P3"
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "changes": [
+        {
+          "name": "Изменение №1",
+          "effective_from": "2026-09-01",
+          "order": "348"
+        }
+      ],
+      "verification_evidence": [
+        "ROSSTANDART: СП 10.13130.2020 — действует",
+        "ROSSTANDART: Изменение №1, введено 01.09.2026"
+      ]
     },
     {
       "canonical_id": "SP:155.13130.2014",
@@ -5704,6 +5745,32 @@
       "verification_evidence": [
         "PRAVO: 0001202012220071",
         "PRAVO: 0001202604290007"
+      ]
+    },
+    {
+      "canonical_id": "SP:6.13130.2025",
+      "reference": "СП 6.13130.2025",
+      "aliases": [
+        "СП 6.13130.2025",
+        "СП 6 13130 2025",
+        "СП 6.13130-2025"
+      ],
+      "document_kind": "SP",
+      "status": "Действует",
+      "verified_on": "2026-09-30",
+      "verified_revision": "СП 6.13130.2025, действует с 29.06.2026; учтены опубликованные поправки 2026 года",
+      "official_source_kind": "ROSSTANDART",
+      "status_basis": "Карточка Росстандарта подтверждает действующий статус СП 6.13130.2025 и дату введения 29.06.2026.",
+      "expert_occurrences": 0,
+      "expert_projects": [],
+      "expert_project_count": 0,
+      "expert_sections": [],
+      "source_remark_ids": [],
+      "priority_score": 20,
+      "verification_priority": "P1",
+      "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
+      "verification_evidence": [
+        "ROSSTANDART: СП 6.13130.2025 — действует с 29.06.2026"
       ]
     }
   ],

@@ -2900,5 +2900,298 @@
       "applicability": "SECTION_PRESENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP6-2025-5.2-SPZ-RELIABILITY",
+    "source": "СП 6.13130.2025",
+    "topic": "Категория надёжности электроприёмников систем противопожарной защиты",
+    "requirement": "Электроприёмники систем противопожарной защиты должны относиться к I категории по надёжности электроснабжения; для предусмотренных пунктом 5.2 специальных объектов применяется особая группа I категории.",
+    "sections": [
+      "ИОС1",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "систем противопожарной защиты",
+      "категория надежности",
+      "категория надёжности",
+      "I категория",
+      "первая категория"
+    ],
+    "document_id": "SP-6.13130.2025",
+    "paragraph": "п. 5.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к категории надёжности электроприёмников СПЗ сверено по п. 5.2 действующего СП 6.13130.2025.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_524326/4fb536106332826fd0e0ced6c595568da5ae4626/",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "пожарная сигнализация",
+        "пожаротушение",
+        "систем противопожарной защиты"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP6-2025-5.3-SPZ-PANEL",
+    "source": "СП 6.13130.2025",
+    "topic": "Питание электроприёмников СПЗ от выделенного НКУ",
+    "requirement": "На объектах с электроприёмниками I категории по надёжности питание электроприёмников систем противопожарной защиты должно выполняться от панели питания электрооборудования СПЗ в составе НКУ в соответствии с пунктом 5.3.",
+    "sections": [
+      "ИОС1",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "панель питания",
+      "электрооборудования СПЗ",
+      "НКУ",
+      "АВР",
+      "систем противопожарной защиты"
+    ],
+    "document_id": "SP-6.13130.2025",
+    "paragraph": "п. 5.3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к организации питания электроприёмников СПЗ на объектах I категории сверено по п. 5.3 действующего СП 6.13130.2025.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_524326/4fb536106332826fd0e0ced6c595568da5ae4626/",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "I категория",
+        "первая категория",
+        "АВР"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP8-10.2-FIRE-WATER-VOLUME",
+    "source": "СП 8.13130.2020",
+    "topic": "Расчёт пожарного объёма воды",
+    "requirement": "Объём пожарных резервуаров и пожарных водоёмов должен определяться исходя из расчётного расхода воды на наружное пожаротушение и продолжительности тушения пожара.",
+    "sections": [
+      "ИОС2",
+      "ПБ",
+      "ПЗ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "объем резервуаров",
+      "объём резервуаров",
+      "расход воды на наружное пожаротушение",
+      "продолжительность тушения",
+      "пожарный запас воды"
+    ],
+    "document_id": "SP-8.13130.2020",
+    "paragraph": "п. 10.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Расчётная зависимость объёма пожарного запаса от расхода и продолжительности тушения сверена по п. 10.2 с учётом Изменения №1.",
+    "official_source": "https://protect.gost.ru/sp/details/d1901f3f-07ed-46c2-8d81-65b601772eaa",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "противопожарный резервуар",
+        "пожарный запас воды",
+        "наружное пожаротушение"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP8-10.3-FIRE-RESERVOIRS",
+    "source": "СП 8.13130.2020",
+    "topic": "Количество и распределение пожарного запаса по резервуарам",
+    "requirement": "Пожарных резервуаров или пожарных водоёмов должно быть не менее двух; в каждом должно храниться не менее 50% объёма воды на пожаротушение, а подача воды в любую точку пожара должна обеспечиваться из двух соседних резервуаров или водоёмов.",
+    "sections": [
+      "ИОС2",
+      "ПБ",
+      "ПЗУ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "пожарных резервуаров",
+      "не менее двух",
+      "50%",
+      "подача воды",
+      "два резервуара"
+    ],
+    "document_id": "SP-8.13130.2020",
+    "paragraph": "п. 10.3",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к количеству резервуаров, доле пожарного объёма и обеспечению подачи воды сверено по п. 10.3 в редакции Изменения №1.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_471707/363d589238fa8ea996e767959da7473fb0d8ec3c/",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "противопожарный резервуар",
+        "пожарный резервуар"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP8-11.5-FIRE-WATER-LEVEL",
+    "source": "СП 8.13130.2020",
+    "topic": "Контроль уровня воды в пожарных резервуарах",
+    "requirement": "В резервуарах и баках с запасами воды на пожаротушение следует предусматривать измерение уровня воды и его контроль для автоматики либо передачи сигналов в насосную станцию или пункт управления, когда такой контроль необходим.",
+    "sections": [
+      "ИОС2",
+      "ИОС1",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "контроль уровня воды",
+      "измерение уровня",
+      "датчик уровня",
+      "уровнемер",
+      "передачей сигнала",
+      "пожарного запаса"
+    ],
+    "document_id": "SP-8.13130.2020",
+    "paragraph": "п. 11.5",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Требование к измерению и контролю уровня воды для автоматики/сигнализации сверено по п. 11.5 действующего СП 8.13130.2020.",
+    "official_source": "https://protect.gost.ru/sp/details/d1901f3f-07ed-46c2-8d81-65b601772eaa",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "противопожарный резервуар",
+        "пожарный запас воды"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP10-1.4-VPV-EXEMPTION",
+    "source": "СП 10.13130.2020",
+    "topic": "Обоснование отсутствия внутреннего противопожарного водопровода",
+    "requirement": "Решение об отсутствии внутреннего противопожарного водопровода должно быть обосновано применимостью условий пункта 1.4, включая параметры здания и предусмотренные пунктом исключения.",
+    "sections": [
+      "ИОС2",
+      "ПБ",
+      "АР",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "внутреннее пожаротушение",
+      "ВПВ не требуется",
+      "не предусматривается",
+      "пункт 1.4",
+      "таблицей 7.2"
+    ],
+    "document_id": "SP-10.13130.2020",
+    "paragraph": "п. 1.4",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Актуальные условия неприменения ВПВ сверены по п. 1.4 в редакции Изменения №1, действующей с 01.09.2026.",
+    "official_source": "https://protect.gost.ru/sp/details/d048b9cd-eff7-49de-bab0-4aa54eb6b173",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "внутреннее пожаротушение",
+        "внутренний противопожарный водопровод"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "SP10-T7.2-PRODUCTION-FLOW",
+    "source": "СП 10.13130.2020",
+    "topic": "Расход внутреннего пожаротушения производственных и складских зданий",
+    "requirement": "Для производственных и складских зданий необходимость ВПВ, количество одновременно используемых пожарных кранов и минимальный расход диктующего пожарного крана должны определяться по таблице 7.2 с учётом степени огнестойкости, категории пожарной опасности, класса конструктивной пожарной опасности и объёма здания.",
+    "sections": [
+      "ИОС2",
+      "ПБ",
+      "АР",
+      "КР"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "внутреннее пожаротушение",
+      "пожарных кранов",
+      "2,5 л/с",
+      "степень огнестойкости",
+      "категория",
+      "строительный объем"
+    ],
+    "document_id": "SP-10.13130.2020",
+    "paragraph": "табл. 7.2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Состав определяющих параметров и назначение таблицы 7.2 сверены по редакции Изменения №1, действующей с 01.09.2026.",
+    "official_source": "https://www.kontur-extern.ru/info/normativ/document/9/500205-izmenenie-n-1-k-svodu-pravil-sp-10-13130-2020-sistemy-protivopozharnoy-zashchity",
+    "verified_on": "2026-09-30",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "производственное здание",
+        "складское здание",
+        "внутреннее пожаротушение"
+      ],
+      "applicability_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

@@ -180,3 +180,26 @@ def test_alpha7_third_normative_wave_mining_lighting_site_is_curated():
     assert foundation.documents_by_id["FNP-MINING"]["status"] == "Действует с изменениями"
     assert foundation.documents_by_id["SP-52.13330.2016"]["status"] == "Действует"
     assert foundation.documents_by_id["SP-18.13330.2019"]["status"] == "Действует"
+
+
+def test_alpha7_fourth_normative_wave_engineering_fire_water_is_curated():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+
+    for requirement_id in (
+        "SP6-2025-5.2-SPZ-RELIABILITY",
+        "SP6-2025-5.3-SPZ-PANEL",
+        "SP8-10.2-FIRE-WATER-VOLUME",
+        "SP8-10.3-FIRE-RESERVOIRS",
+        "SP8-11.5-FIRE-WATER-LEVEL",
+        "SP10-1.4-VPV-EXEMPTION",
+        "SP10-T7.2-PRODUCTION-FLOW",
+    ):
+        row=contracts[requirement_id]
+        assert row["source_verified"] is True
+        assert row["trust_state"] == "VERIFIED_CLAUSE"
+        assert row["automatic_contract_ready"] is True
+
+    assert foundation.documents_by_id["SP-6.13130.2025"]["status"] == "Действует"
+    assert foundation.documents_by_id["SP-8.13130.2020"]["status"] == "Действует"
+    assert foundation.documents_by_id["SP-10.13130.2020"]["status"] == "Действует"

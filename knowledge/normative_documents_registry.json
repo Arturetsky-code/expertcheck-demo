@@ -214,5 +214,65 @@
       "TRANSPORT_ACCESS"
     ],
     "validity_canonical_id": "SP:18.13330.2019"
+  },
+  {
+    "document_id": "SP-6.13130.2025",
+    "title": "СП 6.13130.2025 «Система обеспечения пожарной безопасности объекта защиты. Электроустановки низковольтные. Требования пожарной безопасности»",
+    "document_type": "СП",
+    "authority": "МЧС России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 5.2, 5.3 верифицированы по действующей редакции; СП введён с 29.06.2026 взамен СП 6.13130.2021",
+    "verified_on": "2026-09-30",
+    "official_source": "https://protect.gost.ru/sp/details/40528e45-0061-4e4f-816d-8789a254389f",
+    "edition_reference": "СП 6.13130.2025, действует с 29.06.2026; учтены опубликованные поправки 2026 года",
+    "effective_from": "2026-06-29",
+    "effective_to": null,
+    "scope": [
+      "POWER_SUPPLY",
+      "FIRE_PROTECTION_POWER",
+      "LOW_VOLTAGE_INSTALLATIONS"
+    ],
+    "validity_canonical_id": "SP:6.13130.2025"
+  },
+  {
+    "document_id": "SP-8.13130.2020",
+    "title": "СП 8.13130.2020 «Системы противопожарной защиты. Наружное противопожарное водоснабжение. Требования пожарной безопасности»",
+    "document_type": "СП",
+    "authority": "МЧС России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус и пункты 10.2, 10.3, 11.5 верифицированы; учтено Изменение №1",
+    "verified_on": "2026-09-30",
+    "official_source": "https://protect.gost.ru/sp/details/d1901f3f-07ed-46c2-8d81-65b601772eaa",
+    "edition_reference": "СП 8.13130.2020 с Изменением №1, действующим с 01.03.2024",
+    "effective_from": "2020-09-30",
+    "effective_to": null,
+    "scope": [
+      "FIRE_WATER_SUPPLY",
+      "OUTDOOR_FIRE_WATER",
+      "FIRE_RESERVOIRS"
+    ],
+    "validity_canonical_id": "SP:8.13130.2020"
+  },
+  {
+    "document_id": "SP-10.13130.2020",
+    "title": "СП 10.13130.2020 «Системы противопожарной защиты. Внутренний противопожарный водопровод. Нормы и правила проектирования»",
+    "document_type": "СП",
+    "authority": "МЧС России",
+    "source_class": "official",
+    "status": "Действует",
+    "verification_status": "Статус, пункт 1.4 и таблица 7.2 верифицированы; учтено Изменение №1, действующее с 01.09.2026",
+    "verified_on": "2026-09-30",
+    "official_source": "https://protect.gost.ru/sp/details/d048b9cd-eff7-49de-bab0-4aa54eb6b173",
+    "edition_reference": "СП 10.13130.2020 с Изменением №1, действующим с 01.09.2026",
+    "effective_from": "2021-01-26",
+    "effective_to": null,
+    "scope": [
+      "FIRE_WATER_SUPPLY",
+      "INDOOR_FIRE_WATER",
+      "FIRE_HOSE_SYSTEM"
+    ],
+    "validity_canonical_id": "SP:10.13130.2020"
   }
 ]

@@ -2904,3 +2904,93 @@ Next session:
 - keep the same saved DSK project as the control project;
 - begin normative knowledge wave 4 only after confirming the branch is still at or
   descended from this checkpoint.
+
+
+## Validated checkpoint — normative knowledge wave 4: SPZ power and fire-water systems
+
+Source commit:
+`fb5ccae946b16024f5163df8f96d8c9d12adbd4c`
+
+### Scope
+
+Knowledge-only expansion. Core verdict logic was not changed.
+
+Catalogue after wave 4:
+- normative documents: 16;
+- validity records: 154;
+- atomic requirements: 93;
+- newly added verified clauses in this wave: 7.
+
+Documents curated in wave 4:
+- SP 6.13130.2025 — low-voltage electrical installations / fire-protection-system power;
+- SP 8.13130.2020 — outdoor fire-water supply;
+- SP 10.13130.2020 — indoor fire-water supply.
+
+Edition transition:
+- historical SP 6.13130.2021 validity record is preserved and marked replaced;
+- replacement: SP 6.13130.2025;
+- replacement effective from 29.06.2026.
+This edition transition is stored as normative validity data and is not by itself treated as
+a project finding; applicability to a project/document must consider the relevant project
+and document dates.
+
+Verified atomic clauses added:
+- SP 6.13130.2025 cl. 5.2 — reliability category for fire-protection-system electric receivers;
+- SP 6.13130.2025 cl. 5.3 — fire-protection-system power supply from the dedicated SPZ panel/NKU for applicable I-category objects;
+- SP 8.13130.2020 cl. 10.2 — calculation basis for fire-water storage volume;
+- SP 8.13130.2020 cl. 10.3 — minimum number of fire-water reservoirs and distribution of fire-water reserve;
+- SP 8.13130.2020 cl. 11.5 — water-level measurement/control in fire-water reservoirs;
+- SP 10.13130.2020 cl. 1.4 — justification of cases where indoor fire-water supply is not required;
+- SP 10.13130.2020 table 7.2 — indoor fire-water demand for production/warehouse buildings.
+
+Full normative texts were not copied into the repository. The knowledge package stores
+source metadata, clause addresses, paraphrased atomic requirements and proof contracts.
+
+### Regression control
+
+At `fb5ccae9...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- Test78 remains 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Live baseline before wave 4
+
+Saved 12-document DSK project:
+- executable contracts: 57;
+- evidence candidates: 120;
+- proved: 11;
+- semantic proof applied: 3;
+- pending semantic queue: 23;
+- specialist questions: 43;
+- system limitations: 3;
+- addressable evidence: 73.7%.
+
+### Next validation
+
+Use the same saved DSK project.
+Do not re-upload PDFs and do not run AI before taking the first wave-4 measurement.
+
+Primary checks:
+- the existing 3 semantic confirmations remain applied;
+- verified-clause routes / executable contracts increase by the newly applicable wave-4 clauses;
+- fire-water clauses should find addressable evidence in IOS2 where the project describes
+  fire-water reserve, three reservoirs and level control;
+- SPZ-power clauses should route to IOS1/PB evidence without creating a categorical result
+  merely from a normative reference.
+
+Record:
+- executable contracts;
+- evidence candidates;
+- proved;
+- held by proof control;
+- semantic proof applied;
+- pending semantic queue;
+- specialist questions;
+- system limitations;
+- addressable evidence.

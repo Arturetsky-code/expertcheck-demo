@@ -80,7 +80,15 @@ def toc_diagnostics(value: Any) -> dict[str, Any]:
 
     sample = original[:7000]
     low_sample = sample.casefold().replace("ё", "е")
-    explicit_heading = bool(re.search(r"\b(?:содержание|оглавление)\b", low[:1800]))
+    heading_lines = [
+        " ".join(line.replace("ё", "е").casefold().split())
+        for line in original[:2200].splitlines()
+        if line.strip()
+    ]
+    explicit_heading = any(
+        re.fullmatch(r"(?:содержание|оглавление)\s*:?", line)
+        for line in heading_lines[:80]
+    )
     leader_page_refs = len(re.findall(r"(?:\.{3,}|…{2,})\s*\d{1,4}\b", sample))
     numbered_entries = len(re.findall(
         r"(?:^|\s)\d+(?:\.\d+){0,3}\s+[a-zа-я][a-zа-я-]{3,}",
@@ -117,11 +125,26 @@ def toc_diagnostics(value: Any) -> dict[str, Any]:
         score += 1
 
     is_toc = bool(
-        (explicit_heading and (leader_page_refs >= 1 or numbered_entries + lettered_entries >= 3))
+        # Explicit standalone heading is authoritative, but phrases such as
+        # "Содержание основных данных и требований" in design-assignment
+        # table headers are not treated as a contents page.
+        (explicit_heading and (
+            leader_page_refs >= 1
+            or numbered_entries + lettered_entries >= 3
+            or toc_vocabulary >= 3
+        ))
+        # Dot leaders with trailing page references are a strong TOC/index signal.
         or leader_page_refs >= 3
-        or (numbered_entries >= 5 and chained_page_refs >= 2)
-        or (numbered_entries + lettered_entries >= 6 and chained_page_refs >= 2 and toc_vocabulary >= 3)
-        or score >= 7
+        or (leader_page_refs >= 1 and numbered_entries + lettered_entries >= 3)
+        # Continuation pages may lose the heading and dot leaders during
+        # extraction; require a much denser combination of headings/page refs
+        # and TOC vocabulary before rejecting them.
+        or (
+            numbered_entries >= 8
+            and chained_page_refs >= 5
+            and toc_vocabulary >= 5
+        )
+        or (score >= 9 and toc_vocabulary >= 4)
     )
     return {
         "is_toc": is_toc,

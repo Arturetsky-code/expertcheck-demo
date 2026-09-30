@@ -3153,3 +3153,102 @@ Record post-AI values for:
 
 Provider rate limits may stop the batch early; completed semantic decisions must remain
 persisted and resumable.
+
+
+## Validated checkpoint — partial semantic run after expanded normative root
+
+Source commit:
+`b057f33a65671d39f60306b5a1618ff96d4f0579`
+
+### Live symptom after corrected wave 4 AI run
+
+Pre-run:
+- contracts: 64;
+- evidence candidates: 154;
+- proved: 11;
+- held by proof control: 40;
+- semantic proof applied: 3;
+- pending semantic queue: 30;
+- specialist questions: 50;
+- system limitations: 3;
+- addressable evidence: 78.1%.
+
+After one bounded semantic run stopped by provider rate limit:
+- contracts: 64;
+- evidence candidates: 154;
+- proved: 12;
+- held by proof control: 40;
+- semantic proof applied: 4;
+- pending semantic queue: 30;
+- specialist questions: 49;
+- system limitations: 3;
+- addressable evidence: 78.1%.
+
+One new requirement was clearly confirmed, but pending did not decrease.
+
+### Root cause class
+
+Alpha 10.1 already handled:
+- resumable runs on one unchanged root;
+- selected-evidence reuse across retrieval changes;
+- fail-closed return of stale packets to pending.
+
+The uncovered case is different:
+1. knowledge/retrieval expansion increases the full normative root;
+2. apply() safely removes reusable completed decisions;
+3. the Streamlit button receives only the already-filtered pending slice;
+4. that pending slice can itself be larger than the historical root total;
+5. run() may then treat the pending slice as a new standalone root and fail to carry forward
+   previously completed decisions that are absent from the slice.
+
+With a partial provider run this can make one newly completed decision replace previously
+processed checkpoint state instead of strictly accumulating it.
+
+### Fix
+
+The resumable run now distinguishes:
+- unchanged complete-root calls: previous completed decisions are skipped and accumulated as before;
+- pending-slice calls after root expansion: only previous completed decisions whose
+  requirement IDs are absent from the current pending slice are carried forward.
+
+A previous decision whose requirement ID is present in pending is deliberately not carried.
+It must be re-evaluated fail-closed.
+
+The merged root total for an expanded pending slice is reconstructed as:
+current pending packets + safely carried completed decisions.
+
+### Regression coverage
+
+Added tests verify:
+- an expanded pending slice larger than the old root total preserves prior completed
+  VERIFIED and REVIEW decisions while accumulating a new partial-run decision;
+- provider 429 does not erase already completed decisions;
+- a previous decision whose requirement is pending again is not silently carried forward.
+
+### Validation
+
+At `b057f33a...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next live validation
+
+The already-persisted checkpoint from the previous partial run cannot reconstruct decisions
+that were not stored in it, so reboot alone may still show:
+- semantic proof applied: 4;
+- pending semantic queue: 30.
+
+Do not interpret that as failure of this fix.
+
+After provider availability returns, run exactly one more bounded normative semantic batch.
+The success criterion is:
+- existing completed decisions remain preserved;
+- each newly completed packet decreases pending rather than replacing prior checkpoint state;
+- provider failure leaves unfinished packets pending without deleting completed decisions.

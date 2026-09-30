@@ -95,13 +95,20 @@ def _merge_result(
     *,
     root_fingerprint: str,
     root_total: int,
+    previous_decisions_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     merged = dict(current or {})
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
-    previous_decisions = {
-        key: value for key, value in dict(previous.get("decisions") or {}).items()
-        if previous_root == root_fingerprint and _decision_complete(value)
-    }
+    if previous_decisions_override is None:
+        previous_decisions = {
+            key: value for key, value in dict(previous.get("decisions") or {}).items()
+            if previous_root == root_fingerprint and _decision_complete(value)
+        }
+    else:
+        previous_decisions = {
+            key: value for key, value in dict(previous_decisions_override or {}).items()
+            if _decision_complete(value)
+        }
     current_decisions = {
         key: value for key, value in dict(merged.get("decisions") or {}).items()
         if _decision_complete(value)
@@ -148,14 +155,39 @@ def run_normative_semantic_proof(
     """Run only unprocessed packets and accumulate completed decisions."""
     source = [dict(x) for x in (queue or []) if isinstance(x, dict)]
     previous = _previous_checkpoint()
-    root_fingerprint, root_total = _root_identity(previous, source)
-
+    queue_fp = _semantic.queue_fingerprint(source)
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
-    previous_decisions = {
+    previous_total = int(previous.get("root_queue_total") or previous.get("queue_total") or 0)
+    complete_previous = {
         key: value for key, value in dict(previous.get("decisions") or {}).items()
-        if previous_root == root_fingerprint and _decision_complete(value)
+        if _decision_complete(value)
     }
-    pending = [packet for packet in source if _packet_requirement_id(packet) not in previous_decisions]
+
+    if previous_root and previous_root == queue_fp:
+        # The caller supplied the complete unchanged root queue.
+        carried = complete_previous
+        pending = [
+            packet for packet in source
+            if _packet_requirement_id(packet) not in carried
+        ]
+        root_fingerprint = previous_root
+        root_total = max(previous_total, len(source))
+    else:
+        # In the Streamlit runtime the button receives the already-resolved
+        # pending slice produced by apply_normative_semantic_proof().  Knowledge
+        # expansion can make that slice larger than the old root.  Decisions
+        # absent from this current pending slice have already been safely reused
+        # by the apply gate and must survive the next partial AI run.  A previous
+        # decision whose requirement is present in pending is deliberately NOT
+        # carried: it must be re-evaluated fail-closed.
+        current_ids = {_packet_requirement_id(packet) for packet in source}
+        carried = {
+            rid: decision for rid, decision in complete_previous.items()
+            if rid not in current_ids
+        }
+        pending = list(source)
+        root_fingerprint = queue_fp
+        root_total = len(source) + len(carried)
 
     current = _ORIGINAL_RUN(
         pending,
@@ -170,6 +202,7 @@ def run_normative_semantic_proof(
         previous,
         root_fingerprint=root_fingerprint,
         root_total=root_total,
+        previous_decisions_override=carried,
     )
 
 

@@ -329,3 +329,80 @@ def test_alpha10_changed_selected_evidence_returns_packet_to_pending():
     assert result["semantic_queue_processed"] == 0
     assert result["semantic_queue_total"] == 1
     assert result.get("semantic_proof_stale") is True
+
+
+def test_alpha10_expanded_root_partial_run_keeps_prior_completed_decisions(monkeypatch):
+    old_queue=[_packet("R1"),_packet("R2"),_packet("R3")]
+    old_root=queue_fingerprint(old_queue)
+    previous={
+        "root_fingerprint":old_root,
+        "fingerprint":old_root,
+        "root_queue_total":3,
+        "queue_total":3,
+        "decisions":{
+            "R1":_ok("VERIFIED_OK"),
+            "R2":_ok("REVIEW_QUESTION"),
+        },
+        "provider_errors":[],
+    }
+    # After knowledge expansion + apply(), R1/R2 are already resolved and the
+    # UI passes a larger pending slice than the old root total.
+    pending=[_packet(rid) for rid in ("R3","R4","R5","R6","R7","R8")]
+
+    monkeypatch.setattr(a10,"_previous_checkpoint",lambda:previous)
+    monkeypatch.setattr(
+        a10,
+        "_ORIGINAL_RUN",
+        lambda queue,judge_provider=None,critic_provider=None,limit=24:{
+            "decisions":{"R3":_ok("VERIFIED_OK")},
+            "selected":1,
+            "provider_errors":["HTTP 429"],
+        },
+    )
+
+    merged=a10.run_normative_semantic_proof(
+        pending,judge_provider=object(),critic_provider=object(),limit=24,
+    )
+
+    assert set(merged["decisions"])=={"R1","R2","R3"}
+    assert merged["processed_total"]==3
+    assert merged["verified_ok"]==2
+    assert merged["reviewed_total"]==1
+    assert merged["root_queue_total"]==8
+    assert merged["pending_total"]==5
+    assert merged["provider_errors"]==["HTTP 429"]
+
+
+def test_alpha10_pending_requirement_is_not_carried_from_previous_checkpoint(monkeypatch):
+    previous={
+        "root_fingerprint":"old-root",
+        "fingerprint":"old-root",
+        "root_queue_total":4,
+        "queue_total":4,
+        "decisions":{
+            "R1":_ok("VERIFIED_OK"),
+            "R2":_ok("REVIEW_QUESTION"),
+        },
+        "provider_errors":[],
+    }
+    # R2 is pending again, so its old decision must not be silently reused.
+    pending=[_packet(rid) for rid in ("R2","R3","R4","R5","R6")]
+
+    monkeypatch.setattr(a10,"_previous_checkpoint",lambda:previous)
+    monkeypatch.setattr(
+        a10,
+        "_ORIGINAL_RUN",
+        lambda queue,judge_provider=None,critic_provider=None,limit=24:{
+            "decisions":{"R3":_ok("VERIFIED_OK")},
+            "selected":1,
+            "provider_errors":[],
+        },
+    )
+
+    merged=a10.run_normative_semantic_proof(
+        pending,judge_provider=object(),critic_provider=object(),limit=24,
+    )
+
+    assert set(merged["decisions"])=={"R1","R3"}
+    assert "R2" not in merged["decisions"]
+    assert merged["root_queue_total"]==6

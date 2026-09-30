@@ -2994,3 +2994,109 @@ Record:
 - specialist questions;
 - system limitations;
 - addressable evidence.
+
+
+## Validated checkpoint — wave 4 fire-water correction and TOC evidence-quality fix
+
+Validated lineage:
+- wave 4 green checkpoint: `6019b8b9087866f334b14a03f047571704b2f2a8`;
+- corrected SP 8 knowledge: `3d4b798b0dcd573bd80f69c1a0356e212de0e53e`;
+- narrative-table / design-assignment TOC fix: `1e7ec745a118fcd7f26fe3aabe2edd99b907ef5d`.
+
+### Wave-4 diagnosis on the saved DSK corpus
+
+The first wave-4 live measurement was:
+- executable contracts: 64;
+- evidence candidates: 140;
+- proved: 11;
+- held by proof control: 38;
+- semantic proof applied: 3;
+- pending semantic queue: 28;
+- specialist questions: 50;
+- system limitations: 3;
+- addressable evidence: 75.0%.
+
+Five of seven wave-4 clauses reached semantic proof. Two SP 8 clauses did not:
+- old SP8-10.2-FIRE-WATER-VOLUME -> weak evidence;
+- old SP8-10.3-FIRE-RESERVOIRS -> positive evidence not found.
+
+Manual review showed that section 10 of SP 8 is the direct fire-reservoir / fire-pond
+scenario, while the DSK design uses reservoirs feeding a fire-pump station and an outdoor
+fire-water network with hydrants. For this architecture the relevant verified section is
+section 9 "Water storage tanks":
+- cl. 9.2 — fire-water volume in water-supply-system reservoirs;
+- cl. 9.5 — at least two reservoirs, at least 50% remaining fire-water volume when one
+  reservoir is disabled, and independent operation/emptying.
+
+The DSK IOS2 corpus contains strong addressable evidence:
+- IOS2 sheet 13 / PDF page 14 — internal/outdoor fire-flow basis, 270 m3 reserve, three
+  100 m3 reservoirs, pump station and outdoor fire-water scheme;
+- IOS2 sheet 19 / PDF page 20 — explicit calculation V = 25 x 3.6 x 3 = 270 m3 and
+  3 x 100 m3 reservoirs;
+- IOS2 sheets 23-24 / PDF pages 24-25 — automatic level measurement, reserve level
+  control and dispatcher signalling.
+
+Wave 4 knowledge therefore replaces the two section-10 contracts with:
+- SP8-9.2-WATER-SYSTEM-FIRE-VOLUME;
+- SP8-9.5-WATER-SYSTEM-RESERVOIRS.
+
+SP10 cl. 1.4 and table 7.2 remain in the package, but their topic/keywords were tightened
+toward internal fire-water evidence.
+
+### Evidence-quality root cause
+
+IOS2 PDF page 14 was incorrectly classified as a table-of-contents page.
+
+The old TOC detector could classify a page as TOC based on dense numbered entries and
+chained numeric references even when:
+- no standalone "Содержание"/"Оглавление" heading existed;
+- no dot leaders/page references existed;
+- the page contained a substantive table followed by engineering narrative.
+
+It could also treat the design-assignment column heading
+"Содержание основных данных и требований" as an explicit contents heading.
+
+The corrected detector:
+- recognises "Содержание"/"Оглавление" only as standalone headings;
+- keeps dot leaders + page references as the strong TOC signal;
+- requires a much denser combined continuation-page pattern when the heading/leaders are
+  absent;
+- no longer treats ordinary engineering tables or design-assignment content columns as TOC.
+
+Regression tests explicitly cover:
+- TOC continuation without the heading;
+- standalone explicit contents heading;
+- design-assignment "Содержание основных данных и требований" as non-TOC;
+- a tabular fire-water page with substantive narrative as non-TOC.
+
+### Validation
+
+At current source `1e7ec745...`:
+- Core20 tests: success;
+- results-integrity: success;
+- Core20 regression: success;
+- Core25 tests: success;
+- baseline full diagnostic: success;
+- alpha1 release gate / full legacy suite: success;
+- Test78: success / NO_CHANGE;
+- 25 VERIFIED_OK + 2 PROJECT_FINDING + 29 REVIEW = 27/56;
+- changed requirement IDs: none.
+
+### Next Streamlit check
+
+Use the same saved 12-document DSK project.
+Do not re-upload PDFs and do not run AI.
+
+Compare against the pre-correction wave-4 live baseline:
+64 contracts / 140 evidence candidates / 11 proved / 38 held /
+3 semantic proof applied / 28 pending / 50 specialist questions /
+3 system limitations / 75.0% addressable evidence.
+
+Expected qualitative checks:
+- the existing 3 semantic confirmations remain preserved if their selected evidence is unchanged;
+- SP8 cl. 9.2 and 9.5 should now reach addressable semantic evidence instead of stopping
+  before semantic proof;
+- SP10 cl. 1.4 / table 7.2 should be able to use the substantive IOS2 fire-water page rather
+  than being forced toward noisier KR evidence;
+- design-assignment pages should no longer be rejected solely because their table header
+  contains the word "Содержание".

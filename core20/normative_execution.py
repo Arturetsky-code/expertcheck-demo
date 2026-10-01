@@ -414,6 +414,11 @@ def _set_element_match(
     aliases=[str(value) for value in (element.get("aliases") or []) if str(value).strip()]
     all_terms=[str(value) for value in (element.get("all_terms") or []) if str(value).strip()]
     numeric_required=bool(element.get("numeric_required"))
+    evidence_groups=[
+        dict(value) for value in (element.get("evidence_groups") or [])
+        if isinstance(value,dict) and (value.get("aliases") or [])
+    ]
+    group_window_chars=max(120,int(element.get("group_window_chars") or 500))
     applicability_aliases=[
         str(value) for value in (element.get("applicability_aliases") or [])
         if str(value).strip()
@@ -468,23 +473,53 @@ def _set_element_match(
             continue
 
         alias_hits=[]
-        for alias in aliases:
-            matched,is_numeric,_=_keyword_match(alias,raw)
-            if matched and not is_numeric and not _applicability_negated(alias,raw):
-                alias_hits.append(alias)
-        if aliases and not alias_hits:
-            continue
-
         required_hits=[]
+        group_hits=[]
         failed=False
-        for term in all_terms:
-            matched,is_numeric,_=_keyword_match(term,raw)
-            if not matched or is_numeric or _applicability_negated(term,raw):
-                failed=True
-                break
-            required_hits.append(term)
-        if failed:
-            continue
+
+        if evidence_groups:
+            for group in evidence_groups:
+                group_label=str(group.get("label") or group.get("id") or "смысловая группа")
+                options=[
+                    str(value) for value in (group.get("aliases") or [])
+                    if str(value).strip()
+                ]
+                option_hits=[]
+                for option in options:
+                    matched,is_numeric,position=_keyword_match(option,raw)
+                    if matched and not is_numeric and not _applicability_negated(option,raw):
+                        option_hits.append((position,option))
+                if not option_hits:
+                    failed=True
+                    break
+                position,selected=min(option_hits,key=lambda item:item[0])
+                group_hits.append({
+                    "label":group_label,
+                    "alias":selected,
+                    "position":position,
+                })
+            if failed:
+                continue
+            group_positions=[int(item.get("position") or 0) for item in group_hits]
+            if group_positions and max(group_positions)-min(group_positions)>group_window_chars:
+                continue
+            alias_hits=[str(item.get("alias") or "") for item in group_hits]
+        else:
+            for alias in aliases:
+                matched,is_numeric,_=_keyword_match(alias,raw)
+                if matched and not is_numeric and not _applicability_negated(alias,raw):
+                    alias_hits.append(alias)
+            if aliases and not alias_hits:
+                continue
+
+            for term in all_terms:
+                matched,is_numeric,_=_keyword_match(term,raw)
+                if not matched or is_numeric or _applicability_negated(term,raw):
+                    failed=True
+                    break
+                required_hits.append(term)
+            if failed:
+                continue
 
         matched_terms=list(dict.fromkeys([*alias_hits,*required_hits]))
         if not matched_terms and not aliases and not all_terms:
@@ -522,9 +557,16 @@ def _set_element_match(
 
     near_misses=[]
     if not evidence:
+        group_aliases=[
+            str(alias)
+            for group in evidence_groups
+            for alias in (group.get("aliases") or [])
+            if str(alias).strip()
+        ]
+        diagnostic_terms=[*group_aliases,*aliases,*all_terms]
         diagnostic_contract={
-            "keywords":[*aliases,*all_terms],
-            "requirement":" ".join([label,*aliases,*all_terms]),
+            "keywords":diagnostic_terms,
+            "requirement":" ".join([label,*diagnostic_terms]),
         }
         raw_near_misses=_near_miss_candidates(diagnostic_contract,pages,limit=3)
         page_lookup={
@@ -543,31 +585,59 @@ def _set_element_match(
                 "",
             )
             alias_group_hit=not aliases
-            if aliases:
-                alias_group_hit=any(
-                    _keyword_match(alias,raw)[0]
-                    and not _applicability_negated(alias,raw)
-                    for alias in aliases
-                )
             required_group_hits=[]
             missing_required=[]
-            for term in all_terms:
-                matched,is_numeric,_=_keyword_match(term,raw)
-                ok=bool(matched and not is_numeric and not _applicability_negated(term,raw))
-                if ok:
-                    required_group_hits.append(term)
-                else:
-                    missing_required.append(term)
+            group_positions=[]
+            missing_groups=[]
+
+            if evidence_groups:
+                total_groups=len(evidence_groups)+(1 if numeric_required else 0)
+                matched_groups=0
+                for group in evidence_groups:
+                    group_label=str(group.get("label") or group.get("id") or "смысловая группа")
+                    option_hits=[]
+                    for option in group.get("aliases") or []:
+                        matched,is_numeric,position=_keyword_match(str(option),raw)
+                        if matched and not is_numeric and not _applicability_negated(str(option),raw):
+                            option_hits.append((position,str(option)))
+                    if option_hits:
+                        position,selected=min(option_hits,key=lambda item:item[0])
+                        matched_groups+=1
+                        required_group_hits.append(selected)
+                        group_positions.append(position)
+                    else:
+                        missing_groups.append(group_label)
+                alias_group_hit=(matched_groups==len(evidence_groups))
+                if (
+                    not missing_groups
+                    and group_positions
+                    and max(group_positions)-min(group_positions)>group_window_chars
+                ):
+                    missing_groups.append("локальная связь смысловых групп")
+            else:
+                if aliases:
+                    alias_group_hit=any(
+                        _keyword_match(alias,raw)[0]
+                        and not _applicability_negated(alias,raw)
+                        for alias in aliases
+                    )
+                for term in all_terms:
+                    matched,is_numeric,_=_keyword_match(term,raw)
+                    ok=bool(matched and not is_numeric and not _applicability_negated(term,raw))
+                    if ok:
+                        required_group_hits.append(term)
+                    else:
+                        missing_required.append(term)
+                total_groups=(1 if aliases else 0)+len(all_terms)+(1 if numeric_required else 0)
+                matched_groups=(1 if aliases and alias_group_hit else 0)+len(required_group_hits)
+                if aliases and not alias_group_hit:
+                    missing_groups.append("ключевая формулировка элемента")
+                missing_groups.extend(missing_required)
+
             fragment=str(candidate.get("fragment") or "")
             numeric_present=bool(re.search(r"\b\d+(?:[.,]\d+)?\b",fragment))
-            total_groups=(1 if aliases else 0)+len(all_terms)+(1 if numeric_required else 0)
-            matched_groups=(1 if aliases and alias_group_hit else 0)+len(required_group_hits)
             if numeric_required and numeric_present:
                 matched_groups+=1
-            missing_groups=[]
-            if aliases and not alias_group_hit:
-                missing_groups.append("ключевая формулировка элемента")
-            missing_groups.extend(missing_required)
             if numeric_required and not numeric_present:
                 missing_groups.append("числовое значение")
             near_misses.append({

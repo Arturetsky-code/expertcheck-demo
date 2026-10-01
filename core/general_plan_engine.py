@@ -439,6 +439,41 @@ def _extract_ocr_named_labels(text: str) -> list[tuple[str, str]]:
     return result
 
 
+def _general_plan_visual_kinds(text: str) -> list[str]:
+    """Conservative page-level drawing kind for PZU visual preflight.
+
+    A drawing index / sheet list is explicitly not a graphical sheet even when
+    it enumerates titles such as "План земляных масс" or "Ситуационный план".
+    """
+    low=_normalize_text(text)
+    if "ведомость графической части" in low or "ведомость документов графической части" in low:
+        return []
+
+    kinds=[]
+    tests=(
+        ("site_layout", (
+            "схема планировочной организации земельного участка",
+            "схема планировочной организации",
+            "генеральный план",
+        )),
+        ("relief_earthworks", (
+            "схема организации рельефа",
+            "план земляных масс",
+            "вертикальная планировка",
+        )),
+        ("utility_networks", (
+            "сводный план инженерных сетей",
+            "сводный план сетей",
+            "план инженерных сетей",
+        )),
+        ("situation_plan", ("ситуационный план",)),
+    )
+    for kind,aliases in tests:
+        if any(alias in low for alias in aliases):
+            kinds.append(kind)
+    return kinds
+
+
 def _looks_like_general_plan(page: fitz.Page, textpage: fitz.TextPage | None = None) -> bool:
     text = _normalize_text(page.get_text("text", textpage=textpage))
     return (
@@ -492,7 +527,24 @@ class GeneralPlanRegisterEngine:
             elif text_method.startswith("OCR"):
                 audit.append({"page": page.number + 1, "position": "", "name": "",
                               "decision": "OCR", "method": text_method})
+            page_text=page.get_text("text", textpage=textpage)
             positions = _drawing_positions(page, textpage)
+            visual_kinds=_general_plan_visual_kinds(page_text)
+            looks_like_gp=_looks_like_general_plan(page,textpage)
+            audit.append({
+                "page":page.number+1,
+                "decision":"visual_sheet_audit",
+                "general_plan_page":bool(looks_like_gp),
+                "visual_kinds":visual_kinds,
+                "position_count":sum(int(value or 0) for value in positions.values()),
+                "has_explication":bool(_page_has_explication(page,textpage)),
+                "text_method":text_method,
+                "reason":(
+                    "лист ПЗУ классифицирован по содержанию страницы"
+                    if visual_kinds else
+                    "графический тип листа ПЗУ не подтверждён"
+                ),
+            })
             for position, count in positions.items():
                 field_counts[position] = field_counts.get(position, 0) + count
                 field_pages.setdefault(position, set()).add(page.number + 1)

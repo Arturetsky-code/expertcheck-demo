@@ -482,7 +482,59 @@ def _set_element_match(
             "keywords":[*aliases,*all_terms],
             "requirement":" ".join([label,*aliases,*all_terms]),
         }
-        near_misses=_near_miss_candidates(diagnostic_contract,pages,limit=3)
+        raw_near_misses=_near_miss_candidates(diagnostic_contract,pages,limit=3)
+        page_lookup={
+            (
+                str(page.get("document") or ""),
+                str(page.get("page")),
+            ):str(page.get("text") or page.get("content") or "")
+            for page in pages or []
+        }
+        for candidate in raw_near_misses:
+            raw=page_lookup.get(
+                (
+                    str(candidate.get("document") or ""),
+                    str(candidate.get("page")),
+                ),
+                "",
+            )
+            alias_group_hit=not aliases
+            if aliases:
+                alias_group_hit=any(
+                    _keyword_match(alias,raw)[0]
+                    and not _applicability_negated(alias,raw)
+                    for alias in aliases
+                )
+            required_group_hits=[]
+            missing_required=[]
+            for term in all_terms:
+                matched,is_numeric,_=_keyword_match(term,raw)
+                ok=bool(matched and not is_numeric and not _applicability_negated(term,raw))
+                if ok:
+                    required_group_hits.append(term)
+                else:
+                    missing_required.append(term)
+            fragment=str(candidate.get("fragment") or "")
+            numeric_present=bool(re.search(r"\b\d+(?:[.,]\d+)?\b",fragment))
+            total_groups=(1 if aliases else 0)+len(all_terms)+(1 if numeric_required else 0)
+            matched_groups=(1 if aliases and alias_group_hit else 0)+len(required_group_hits)
+            if numeric_required and numeric_present:
+                matched_groups+=1
+            missing_groups=[]
+            if aliases and not alias_group_hit:
+                missing_groups.append("ключевая формулировка элемента")
+            missing_groups.extend(missing_required)
+            if numeric_required and not numeric_present:
+                missing_groups.append("числовое значение")
+            near_misses.append({
+                **candidate,
+                "required_group_hits":required_group_hits,
+                "required_group_total":total_groups,
+                "required_group_matched":matched_groups,
+                "missing_groups":missing_groups,
+                "alias_group_hit":alias_group_hit,
+                "numeric_present":numeric_present,
+            })
 
     return {
         "id":element_id,

@@ -255,6 +255,51 @@ def _conditional_applicability(
     return bool(decision.get("applicable")),str(decision.get("reason_code") or "")
 
 
+def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
+    output=[]
+    seen=set()
+    for row in documents or []:
+        if not isinstance(row,dict):
+            continue
+        raw_section=str(
+            row.get("Тип документа")
+            or row.get("document_type")
+            or row.get("Раздел")
+            or row.get("section")
+            or ""
+        )
+        raw_name=str(
+            row.get("Файл")
+            or row.get("document")
+            or row.get("filename")
+            or ""
+        ).strip()
+        if _section_key(raw_section or raw_name)!="иос":
+            continue
+
+        normalized=_norm(f"{raw_section} {raw_name}").replace(" ","")
+        codes=[]
+        for match in re.finditer(r"иос(\d+(?:\.\d+)*)",normalized):
+            code=f"ИОС{match.group(1)}"
+            if code not in codes:
+                codes.append(code)
+        if not codes:
+            codes=["ИОС"]
+
+        document=raw_name or raw_section or "ИОС"
+        key=(document,tuple(codes))
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append({
+            "document":document,
+            "section":"ИОС",
+            "subsections":codes,
+        })
+    output.sort(key=lambda item:(item["subsections"],item["document"]))
+    return output
+
+
 def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
     roles=set()
     for row in documents or []:
@@ -688,10 +733,45 @@ class NormativeExecutionEngine20:
                 "matched_keywords":[]}
 
         if rid_upper=="PP87-CLAUSE-15-IOS":
-            return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
-                "reason":"Состав раздела ИОС маршрутизирован по верифицированному пункту 15, но полнота применимых подразделов требует проектно-специфической проверки.",
-                "reason_code":"NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING",
-                "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
+            inventory=_ios_inventory(documents)
+            if not inventory:
+                return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
+                    "reason":"Пункт 15 применим по маршруту ИОС, но инвентарь загруженных подразделов не распознан. Полнота применимых подразделов не доказана.",
+                    "reason_code":"NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING",
+                    "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
+
+            inventory_candidates=[]
+            for index,item in enumerate(inventory[:4],1):
+                codes=", ".join(item.get("subsections") or ["ИОС"])
+                inventory_candidates.append({
+                    "evidence_id":f"NORM-E-{rid}-INV-{index:02d}",
+                    "document":item.get("document") or "ИОС",
+                    "page":None,
+                    "section":"ИОС",
+                    "fragment":f"Инвентарь загруженных подразделов: {codes}. Документ: {item.get('document') or 'ИОС'}.",
+                    "matched_keywords":list(item.get("subsections") or []),
+                    "retrieval_keyword_score":len(item.get("subsections") or []),
+                    "retrieval_keyword_coverage":1.0,
+                    "locator_kind":"DOCUMENT_INVENTORY",
+                })
+            primary=inventory_candidates[0]
+            return {
+                **base,
+                "kind":"VERIFIED_OK",
+                "state":KIND_LABELS["VERIFIED_OK"],
+                "reason":(
+                    "Фактический инвентарь подразделов ИОС распознан и передан в контракт полноты. "
+                    "Сам инвентарь не доказывает полноту применимых подразделов и не является итоговым нормативным подтверждением."
+                ),
+                "reason_code":"NORMATIVE_IOS_INVENTORY_CANDIDATE",
+                "evidence_candidates":inventory_candidates,
+                "retrieval_candidate_count":len(inventory_candidates),
+                "evidence_id":primary.get("evidence_id") or "",
+                "evidence_document":primary.get("document") or "",
+                "evidence_page":None,
+                "evidence_fragment":primary.get("fragment") or "",
+                "matched_keywords":list(primary.get("matched_keywords") or []),
+            }
 
         if not candidates:
             return {**base,"kind":"SYSTEM_LIMITATION","state":KIND_LABELS["SYSTEM_LIMITATION"],

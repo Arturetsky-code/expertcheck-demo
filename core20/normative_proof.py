@@ -273,10 +273,19 @@ def proof_frontier_summary(
                 ),
                 "set_mode": str(set_eval.get("mode") or ""),
                 "matched_count": int(set_eval.get("matched_count") or 0),
+                "required_count": int(set_eval.get("required_count") or 0),
+                "applicability_pending_count": int(
+                    set_eval.get("applicability_pending_count") or 0
+                ),
                 "total_count": total_count,
                 "atomization_complete": bool(set_eval.get("atomization_complete")),
                 "missing_labels": [
                     str(value) for value in (set_eval.get("missing_labels") or [])
+                    if str(value)
+                ],
+                "applicability_pending_labels": [
+                    str(value)
+                    for value in (set_eval.get("applicability_pending_labels") or [])
                     if str(value)
                 ],
                 "observed_inventory": [
@@ -289,6 +298,14 @@ def proof_frontier_summary(
                         "label": str(item.get("label") or item.get("id") or ""),
                         "matched": bool(item.get("matched")),
                         "numeric_required": bool(item.get("numeric_required")),
+                        "applicability_state": str(
+                            item.get("applicability_state") or "REQUIRED"
+                        ),
+                        "applicability_trace": [
+                            dict(value)
+                            for value in (item.get("applicability_trace") or [])
+                            if isinstance(value,dict)
+                        ],
                         "evidence": [
                             dict(value) for value in (item.get("evidence") or [])
                             if isinstance(value,dict)
@@ -499,10 +516,22 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         result["proof_state"] = "SET_PROOF_CONTRACT_REQUIRED"
         result["reason_code"] = "NORMATIVE_SET_COMPLETENESS_NOT_PROVEN"
         missing=[str(value) for value in (set_eval.get("missing_labels") or []) if str(value)]
+        pending=[
+            str(value)
+            for value in (set_eval.get("applicability_pending_labels") or [])
+            if str(value)
+        ]
         if set_eval.get("configured"):
+            details=[]
+            if missing:
+                details.append("не подтверждены: " + "; ".join(missing))
+            if pending:
+                details.append("применимость не доказана: " + "; ".join(pending))
+            if not bool(set_eval.get("atomization_complete",True)):
+                details.append("атомизация нормативного набора ещё не завершена")
             result["reason"] = (
                 "Набор обязательных элементов проверен детерминированно, но полнота не доказана. "
-                + ("Не подтверждены: " + "; ".join(missing) + "." if missing else
+                + ("; ".join(details) + "." if details else
                    "Требуется дополнительный applicability/атомизационный контракт.")
             )
         else:

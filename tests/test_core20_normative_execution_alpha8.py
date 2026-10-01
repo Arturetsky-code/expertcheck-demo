@@ -8,6 +8,7 @@ from core20.normative_execution import (
     _set_completeness_evaluation,
     _set_element_match,
     _keyword_span_diagnostic,
+    _visual_preflight_evaluation,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -701,3 +702,68 @@ def test_alpha8_keyword_span_diagnostic_distinguishes_missing_from_distant_terms
     assert local["matched"] is True
     assert local["reason"]=="LOCAL_MATCH"
     assert local["span_chars"] <= 320
+
+
+
+def test_alpha8_visual_contracts_are_explicit_for_all_seven_graphic_requirements():
+    foundation=_foundation()
+    ids={
+        "PP87-12-M-GRAPHIC",
+        "PP87-12-N-EARTHWORKS",
+        "PP87-12-O-UTILITIES",
+        "PP87-12-P-SITUATION",
+        "PP87-13-I-FACADES",
+        "PP87-13-L1-FLOOR-PLANS",
+        "PP87-13-L2-SECTIONS",
+    }
+    contracts={
+        row["requirement_id"]:row
+        for row in foundation.contracts()
+        if row["requirement_id"] in ids
+    }
+
+    assert set(contracts)==ids
+    for row in contracts.values():
+        ec=dict(row.get("evidence_contract") or {})
+        visual=dict(ec.get("visual_contract") or {})
+        assert ec.get("proof_type")=="GRAPHIC_CONTENT"
+        assert visual.get("visual_kind")
+        assert visual.get("candidate_markers")
+        assert visual.get("elements")
+        assert visual.get("review_policy")=="VISUAL_CONFIRMATION_REQUIRED"
+
+
+def test_alpha8_visual_preflight_selects_pages_but_never_claims_graphic_proof():
+    contract={
+        "requirement_id":"VIS-1",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"AR_FLOOR_PLANS",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["план этажа","экспликация помещений"],
+                "elements":[
+                    {"id":"plan","label":"План этажа","aliases":["план этажа"]},
+                    {"id":"schedule","label":"Экспликация помещений","aliases":["экспликация помещений"]},
+                    {"id":"equipment","label":"Технологическое оборудование","aliases":["технологическое оборудование"]},
+                ],
+            },
+        },
+    }
+    pages=[{
+        "document":"АР.pdf",
+        "document_type":"АР",
+        "page":12,
+        "text":"План этажа. Экспликация помещений. Технологическое оборудование.",
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages)
+
+    assert result["configured"] is True
+    assert result["visual_kind"]=="AR_FLOOR_PLANS"
+    assert result["ready_for_visual_review"] is True
+    assert result["coverage_count"]==3
+    assert result["total_count"]==3
+    assert len(result["candidate_pages"])==1
+    assert result["candidate_pages"][0]["document"]=="АР.pdf"
+    assert result["candidate_pages"][0]["page"]==12
+    assert "preflight only" in result["principle"]

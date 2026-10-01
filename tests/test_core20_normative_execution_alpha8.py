@@ -566,7 +566,7 @@ def test_alpha8_conditional_set_element_separates_applicability_from_evidence():
             "document":"ПЗ.pdf",
             "document_type":"ПЗ",
             "page":1,
-            "text":"Общие сведения об объекте без описания коридоров.",
+            "text":"Общие сведения о проектируемом объекте.",
         }],
         "SET-COND",
     )

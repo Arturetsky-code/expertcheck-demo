@@ -268,6 +268,39 @@ def render(ctx):
                                 for row in retained_diag.get("rows") or []
                             ],hide_index=True,width="stretch")
 
+                        near_miss_rows=[]
+                        for row in retained_diag.get("rows") or []:
+                            if row.get("reason_code") not in {
+                                "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+                                "NORMATIVE_EVIDENCE_WEAK",
+                            }:
+                                continue
+                            for rank,candidate in enumerate(row.get("near_misses") or [],1):
+                                near_miss_rows.append({
+                                    "ID":row.get("requirement_id") or "",
+                                    "Ранг":rank,
+                                    "Документ":candidate.get("document") or "",
+                                    "Страница":candidate.get("page"),
+                                    "Раздел":candidate.get("section") or "",
+                                    "Совпавшие термины":", ".join(candidate.get("matched_terms") or []),
+                                    "Пересечение":(
+                                        f"{candidate.get('overlap_count') or 0}/"
+                                        f"{candidate.get('query_term_count') or 0}"
+                                    ),
+                                    "Фрагмент":candidate.get("fragment") or "",
+                                })
+                        if near_miss_rows:
+                            with st.expander("Ближайшие страницы для retrieval · диагностика",expanded=True):
+                                st.caption(
+                                    "Near-miss показывает страницы с частичным лексическим пересечением. "
+                                    "Они не считаются доказательством и не меняют результат проверки."
+                                )
+                                st.dataframe(
+                                    near_miss_rows,
+                                    hide_index=True,
+                                    width="stretch",
+                                )
+
             semantic_queue=list(execution.get("semantic_queue") or [])
             semantic_summary=dict(execution.get("semantic_proof_summary") or {})
             provider_errors=[str(value) for value in semantic_summary.get("provider_errors") or [] if str(value).strip()]

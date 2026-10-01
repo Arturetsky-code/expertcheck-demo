@@ -59,7 +59,7 @@ def test_alpha8_missing_text_never_becomes_normative_finding():
     assert any(row["kind"] in {"REVIEW_QUESTION","SYSTEM_LIMITATION"} for row in result["rows"])
 
 
-def test_alpha8_conditional_clause_requires_applicability_proof():
+def test_alpha8_energy_efficiency_clause_passes_applicability_but_requires_semantic_proof():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
     pages=[{
@@ -71,7 +71,9 @@ def test_alpha8_conditional_clause_requires_applicability_proof():
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
     assert row["kind"]=="REVIEW_QUESTION"
-    assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
+    assert row["applicability_trace"]
+    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
 
 
 def test_alpha8_production_conditional_clause_passes_applicability_but_alpha9_requires_semantic_proof():

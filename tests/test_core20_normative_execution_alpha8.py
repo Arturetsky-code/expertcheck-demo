@@ -5,6 +5,7 @@ from core20.normative_execution import (
     _candidate_payloads,
     _near_miss_candidates,
     _strong_near_miss_evidence,
+    _set_completeness_evaluation,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -380,3 +381,108 @@ def test_alpha8_ios_inventory_routes_to_set_completeness_without_auto_verificati
     assert packet["evidence"]
     assert packet["evidence"][0]["locator_kind"]=="DOCUMENT_INVENTORY"
     assert packet["evidence"][0]["page"] is None
+
+
+
+def test_alpha8_set_completeness_reports_missing_elements():
+    contract={
+        "requirement_id":"SET-X",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"ALL_REQUIRED",
+                "promotion_policy":"SEMANTIC_AFTER_COMPLETE",
+                "atomization_complete":True,
+                "elements":[
+                    {
+                        "id":"first",
+                        "label":"Первый элемент",
+                        "aliases":["первый обязательный элемент"],
+                    },
+                    {
+                        "id":"second",
+                        "label":"Второй элемент",
+                        "aliases":["второй обязательный элемент"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[{
+        "document":"ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":5,
+        "text":"В проекте предусмотрен первый обязательный элемент.",
+    }]
+
+    result=_set_completeness_evaluation(contract,pages,[])
+
+    assert result["configured"] is True
+    assert result["complete"] is False
+    assert result["matched_count"]==1
+    assert result["total_count"]==2
+    assert result["missing_ids"]==["second"]
+    assert result["missing_labels"]==["Второй элемент"]
+
+
+def test_alpha8_set_completeness_collects_addressable_evidence_for_every_element():
+    contract={
+        "requirement_id":"SET-X",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"ALL_REQUIRED",
+                "promotion_policy":"SEMANTIC_AFTER_COMPLETE",
+                "atomization_complete":True,
+                "elements":[
+                    {"id":"first","label":"Первый элемент","aliases":["первый обязательный элемент"]},
+                    {"id":"second","label":"Второй элемент","aliases":["второй обязательный элемент"]},
+                ],
+            },
+        },
+    }
+    pages=[
+        {
+            "document":"ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":5,
+            "text":"В проекте предусмотрен первый обязательный элемент.",
+        },
+        {
+            "document":"ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":8,
+            "text":"В проекте предусмотрен второй обязательный элемент.",
+        },
+    ]
+
+    result=_set_completeness_evaluation(contract,pages,[])
+
+    assert result["complete"] is True
+    assert result["matched_count"]==2
+    assert result["total_count"]==2
+    assert {row["set_element_id"] for row in result["evidence"]}=={"first","second"}
+    assert {row["page"] for row in result["evidence"]}=={5,8}
+
+
+def test_alpha8_ios_inventory_set_contract_stays_hold_without_applicability_map():
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"APPLICABILITY_AWARE_INVENTORY",
+                "promotion_policy":"HOLD",
+                "atomization_complete":False,
+            },
+        },
+    }
+    documents=[
+        {"Файл":"Раздел ПД №5_подраздел ПД №1_ИОС1.pdf","Тип документа":"ИОС1"},
+        {"Файл":"Раздел ПД №5_подраздел ПД №2_ИОС2.pdf","Тип документа":"ИОС2"},
+    ]
+
+    result=_set_completeness_evaluation(contract,[],documents)
+
+    assert result["mode"]=="APPLICABILITY_AWARE_INVENTORY"
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"
+    assert set(result["observed_inventory"])=={"ИОС1","ИОС2"}
+    assert result["missing_ids"]==["APPLICABILITY_MAP_REQUIRED"]

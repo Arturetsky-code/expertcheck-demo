@@ -872,6 +872,138 @@ def _set_completeness_evaluation(
     }
 
 
+def _visual_marker_match(marker:str,text:str)->bool:
+    diag=_keyword_span_diagnostic(marker,text)
+    return bool(diag.get("matched")) and not _applicability_negated(marker,text)
+
+
+def _visual_preflight_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+)->dict[str,Any]:
+    ec=dict(contract.get("evidence_contract") or {})
+    visual_contract=dict(ec.get("visual_contract") or {})
+    if not visual_contract:
+        return {
+            "configured":False,
+            "visual_kind":"",
+            "ready_for_visual_review":False,
+            "coverage_count":0,
+            "total_count":0,
+            "missing_labels":[],
+            "elements":[],
+            "candidate_pages":[],
+        }
+
+    visual_kind=str(visual_contract.get("visual_kind") or "DRAWING_CONTENT").upper()
+    candidate_markers=[
+        str(value) for value in (visual_contract.get("candidate_markers") or [])
+        if str(value).strip()
+    ]
+    elements=[
+        dict(value) for value in (visual_contract.get("elements") or [])
+        if isinstance(value,dict) and str(value.get("id") or "").strip()
+    ]
+
+    page_rows=[]
+    for page in pages or []:
+        raw=str(page.get("text") or page.get("content") or "")
+        if not raw.strip():
+            continue
+        marker_hits=[
+            marker for marker in candidate_markers
+            if _visual_marker_match(marker,raw)
+        ]
+        element_hits=[]
+        element_hit_labels=[]
+        for element in elements:
+            aliases=[
+                str(value) for value in (element.get("aliases") or [])
+                if str(value).strip()
+            ]
+            matched_aliases=[
+                alias for alias in aliases
+                if _visual_marker_match(alias,raw)
+            ]
+            if matched_aliases:
+                element_hits.append(str(element.get("id") or ""))
+                element_hit_labels.append(str(element.get("label") or element.get("id") or ""))
+        if not marker_hits and not element_hits:
+            continue
+
+        search_terms=list(dict.fromkeys([*marker_hits]))
+        for element in elements:
+            if str(element.get("id") or "") not in element_hits:
+                continue
+            search_terms.extend(
+                str(value) for value in (element.get("aliases") or [])
+                if str(value).strip()
+            )
+        page_rows.append({
+            "document":str(page.get("document") or ""),
+            "page":page.get("page"),
+            "section":str(page.get("document_type") or page.get("section") or ""),
+            "marker_hits":marker_hits,
+            "element_hits":element_hits,
+            "element_hit_labels":element_hit_labels,
+            "score":len(marker_hits)*2+len(element_hits),
+            "fragment":_fragment(raw,search_terms[:8],radius=260),
+        })
+
+    page_rows.sort(
+        key=lambda row:(
+            -int(row.get("score") or 0),
+            str(row.get("document") or ""),
+            int(row.get("page") or 0),
+        )
+    )
+    candidate_pages=page_rows[:12]
+
+    element_results=[]
+    for element in elements:
+        element_id=str(element.get("id") or "")
+        matches=[]
+        for page in page_rows:
+            if element_id not in (page.get("element_hits") or []):
+                continue
+            matches.append({
+                "document":page.get("document") or "",
+                "page":page.get("page"),
+                "section":page.get("section") or "",
+                "fragment":page.get("fragment") or "",
+            })
+        element_results.append({
+            "id":element_id,
+            "label":str(element.get("label") or element_id),
+            "matched_in_text_layer":bool(matches),
+            "candidate_locations":matches[:3],
+        })
+
+    missing=[
+        row for row in element_results
+        if not row.get("matched_in_text_layer")
+    ]
+    return {
+        "configured":True,
+        "visual_kind":visual_kind,
+        "review_policy":str(
+            visual_contract.get("review_policy")
+            or "VISUAL_CONFIRMATION_REQUIRED"
+        ).upper(),
+        "ready_for_visual_review":bool(candidate_pages),
+        "coverage_count":sum(bool(row.get("matched_in_text_layer")) for row in element_results),
+        "total_count":len(element_results),
+        "missing_ids":[str(row.get("id") or "") for row in missing],
+        "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
+        "elements":element_results,
+        "candidate_pages":candidate_pages,
+        "principle":(
+            "Text-layer drawing markers are preflight only. They select addressable pages "
+            "for visual proof and never confirm graphical content by themselves."
+        ),
+    }
+
+
 def _strong_near_miss_evidence(
     contract:dict[str,Any],
     candidates:list[dict[str,Any]],
@@ -1180,6 +1312,7 @@ class NormativeExecutionEngine20:
         base["applicability_trace"]=list(applicability.get("trace") or [])
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
         base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
+        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

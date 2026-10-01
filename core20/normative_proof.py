@@ -142,6 +142,42 @@ def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | N
     }
 
 
+def _visual_packet(row:dict[str,Any])->dict[str,Any]:
+    preflight=dict(row.get("visual_preflight") or {})
+    rid=str(row.get("requirement_id") or "")
+    return {
+        "packet_id":f"NORM-VIS-{rid}",
+        "requirement_id":rid,
+        "proof_type":"GRAPHIC_CONTENT",
+        "source":row.get("source") or row.get("document_id") or "",
+        "paragraph":row.get("paragraph") or "",
+        "topic":row.get("topic") or "",
+        "requirement":row.get("requirement") or "",
+        "sections":list(row.get("sections") or []),
+        "visual_kind":str(preflight.get("visual_kind") or ""),
+        "review_policy":str(preflight.get("review_policy") or ""),
+        "ready_for_visual_review":bool(preflight.get("ready_for_visual_review")),
+        "coverage_count":int(preflight.get("coverage_count") or 0),
+        "total_count":int(preflight.get("total_count") or 0),
+        "missing_labels":[
+            str(value) for value in (preflight.get("missing_labels") or [])
+            if str(value)
+        ],
+        "elements":[
+            dict(value) for value in (preflight.get("elements") or [])
+            if isinstance(value,dict)
+        ],
+        "candidate_pages":[
+            dict(value) for value in (preflight.get("candidate_pages") or [])
+            if isinstance(value,dict)
+        ],
+        "policy":(
+            "Text-layer markers are page-selection preflight only. A graphical requirement "
+            "may be promoted only by a dedicated visual proof that cites the inspected page/region."
+        ),
+    }
+
+
 def proof_frontier_summary(
     rows: list[dict[str, Any]] | None,
     *,
@@ -156,11 +192,14 @@ def proof_frontier_summary(
     semantic_admissions: Counter[str] = Counter()
     set_sources: Counter[str] = Counter()
     set_sections: Counter[str] = Counter()
+    visual_kinds: Counter[str] = Counter()
+    visual_sections: Counter[str] = Counter()
     retained_reasons: Counter[str] = Counter()
     retained_sources: Counter[str] = Counter()
     retained_sections: Counter[str] = Counter()
     semantic_rows: list[dict[str, Any]] = []
     set_rows: list[dict[str, Any]] = []
+    visual_rows: list[dict[str, Any]] = []
     applicability_rows: list[dict[str, Any]] = []
     retained_rows: list[dict[str, Any]] = []
     held_total = 0
@@ -324,6 +363,37 @@ def proof_frontier_summary(
             blockers["STRUCTURED_PROOF_REQUIRED"] += 1
         elif proof_state == "VISUAL_PROOF_REQUIRED":
             blockers["VISUAL_PROOF_REQUIRED"] += 1
+            preflight=dict(row.get("visual_preflight") or {})
+            visual_kind=str(preflight.get("visual_kind") or "UNCONFIGURED")
+            scope=_scope(row)
+            visual_kinds[visual_kind]+=1
+            visual_sections[scope]+=1
+            candidate_pages=list(preflight.get("candidate_pages") or [])
+            visual_rows.append({
+                "requirement_id":requirement_id,
+                "source":_source(row),
+                "paragraph":str(row.get("paragraph") or ""),
+                "sections":scope,
+                "topic":str(row.get("topic") or ""),
+                "visual_kind":visual_kind,
+                "configured":bool(preflight.get("configured")),
+                "ready_for_visual_review":bool(preflight.get("ready_for_visual_review")),
+                "coverage_count":int(preflight.get("coverage_count") or 0),
+                "total_count":int(preflight.get("total_count") or 0),
+                "missing_labels":[
+                    str(value) for value in (preflight.get("missing_labels") or [])
+                    if str(value)
+                ],
+                "candidate_page_count":len(candidate_pages),
+                "candidate_pages":[
+                    dict(value) for value in candidate_pages[:6]
+                    if isinstance(value,dict)
+                ],
+                "elements":[
+                    dict(value) for value in (preflight.get("elements") or [])
+                    if isinstance(value,dict)
+                ],
+            })
         elif proof_state == "PRESENCE_PROOF_NOT_ADDRESSABLE":
             blockers["PRESENCE_NOT_ADDRESSABLE"] += 1
         elif proof_state == "RETAINED_FAIL_CLOSED":
@@ -371,6 +441,12 @@ def proof_frontier_summary(
             "by_source": dict(set_sources),
             "by_section": dict(set_sections),
             "rows": set_rows,
+        },
+        "visual_pending": {
+            "total": len(visual_rows),
+            "by_kind": dict(visual_kinds),
+            "by_section": dict(visual_sections),
+            "rows": visual_rows,
         },
         "applicability_trace": {
             "total": len(applicability_rows),
@@ -591,6 +667,10 @@ class NormativeProofEngine20:
             for packet in [_semantic_packet(row, str(row.get("proof_type") or "SET_COMPLETENESS"))]
             if packet is not None
         ]
+        visual_queue = [
+            _visual_packet(row) for row in gated
+            if row.get("proof_state") == "VISUAL_PROOF_REQUIRED"
+        ]
         initial_demoted = max(0, raw_verified - verified)
         frontier = proof_frontier_summary(
             gated,
@@ -619,6 +699,8 @@ class NormativeProofEngine20:
             "semantic_queue_evidence": sum(len(packet.get("evidence") or []) for packet in semantic_queue),
             "set_completeness_queue": set_queue,
             "set_completeness_queue_total": len(set_queue),
+            "visual_queue": visual_queue,
+            "visual_queue_total": len(visual_queue),
             "principle": (
                 "Retrieval is not proof: PRESENCE/STRUCTURE may be deterministic; SET/SEMANTIC/GRAPHIC/TYPED/CROSS_SECTION "
                 "require their own proof contract. Missing proof never becomes a normative non-compliance."

@@ -186,6 +186,94 @@ def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
     return roles
 
 
+def _diagnostic_terms(contract:dict[str,Any])->list[tuple[str,str]]:
+    """Readable lexical terms used only for retrieval near-miss diagnostics."""
+    output=[]
+    seen=set()
+    for keyword in _keywords(contract):
+        tokens=re.findall(r"[a-zа-я]+",_norm(keyword))
+        for token in tokens:
+            if token in _MATCH_STOPWORDS or token in _MATCH_UNITS or len(token)<4:
+                continue
+            stem=_stem_token(token)
+            if stem in seen:
+                continue
+            seen.add(stem)
+            output.append((stem,token))
+    return output
+
+
+def _near_miss_fragment(text:str,stems:list[str],radius:int=260)->str:
+    raw=" ".join(str(text or "").split())
+    normalized=_norm(raw)
+    positions=[normalized.find(stem) for stem in stems if stem and normalized.find(stem)>=0]
+    pos=min(positions,default=-1)
+    if pos<0:
+        return raw[:700]
+    start=max(0,pos-radius)
+    end=min(len(raw),pos+radius)
+    rendered=raw[start:end].strip()
+    if start>0:
+        rendered="… "+rendered
+    if end<len(raw):
+        rendered=rendered+" …"
+    return rendered[:760]
+
+
+def _near_miss_candidates(
+    contract:dict[str,Any],
+    candidates:list[dict[str,Any]],
+    *,
+    limit:int=3,
+)->list[dict[str,Any]]:
+    """Rank partial lexical overlaps without changing any verification verdict."""
+    terms=_diagnostic_terms(contract)
+    if not terms:
+        return []
+    total=len(terms)
+    ranked=[]
+    for page in candidates:
+        raw_text=str(page.get("text") or page.get("content") or "")
+        normalized=_norm(raw_text)
+        matched=[(stem,label) for stem,label in terms if stem in normalized]
+        if not matched:
+            continue
+        stems=[stem for stem,_ in matched]
+        labels=list(dict.fromkeys(label for _,label in matched))
+        ranked.append((
+            len(matched),
+            len(matched)/max(1,total),
+            len(normalized),
+            page,
+            stems,
+            labels,
+        ))
+    ranked.sort(key=lambda item:(item[0],item[1],item[2]),reverse=True)
+
+    output=[]
+    seen=set()
+    for overlap,ratio,_,page,stems,labels in ranked:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        key=(document,str(page_no))
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append({
+            "document":document,
+            "page":page_no,
+            "section":str(page.get("document_type") or page.get("section") or ""),
+            "matched_terms":labels,
+            "overlap_count":overlap,
+            "query_term_count":total,
+            "overlap_ratio":round(ratio,3),
+            "fragment":_near_miss_fragment(str(page.get("text") or page.get("content") or ""),stems),
+        })
+        if len(output)>=max(1,int(limit or 1)):
+            break
+    return output
+
+
 def _rank_candidates(
     contract:dict[str,Any],
     candidates:list[dict[str,Any]],
@@ -414,6 +502,7 @@ class NormativeExecutionEngine20:
             "priority_score":int(contract.get("priority_score") or 0),
             "retrieval_candidate_count":0,
             "evidence_candidates":[],
+            "retrieval_near_misses":[],
         }
         applicable,applicability_reason=_conditional_applicability(contract,documents,candidates)
         base["applicability_reason_code"]=applicability_reason
@@ -472,6 +561,7 @@ class NormativeExecutionEngine20:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД и профильный раздел подтверждены, но адресное положительное доказательство выполнения требования не найдено. Отсутствие совпадения не трактуется как нарушение.",
                 "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+                "retrieval_near_misses":_near_miss_candidates(contract,candidates),
                 "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
 
         primary=evidence_candidates[0]
@@ -488,7 +578,8 @@ class NormativeExecutionEngine20:
         if int(primary.get("retrieval_keyword_score") or 0) < minimum:
             return {**base,**evidence,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Найден адресный кандидат доказательства, но совпадение недостаточно сильное для автоматического подтверждения.",
-                "reason_code":"NORMATIVE_EVIDENCE_WEAK"}
+                "reason_code":"NORMATIVE_EVIDENCE_WEAK",
+                "retrieval_near_misses":_near_miss_candidates(contract,candidates)}
 
         return {**base,**evidence,"kind":"VERIFIED_OK","state":KIND_LABELS["VERIFIED_OK"],
             "reason":"Retrieval-контур нашёл адресные положительные кандидаты. Окончательный статус определяется proof-контрактом Alpha 9.",

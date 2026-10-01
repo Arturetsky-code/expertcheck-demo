@@ -519,5 +519,9 @@ def test_alpha8_missing_set_element_keeps_near_miss_without_closing_element():
     assert result["complete"] is False
     assert element["matched"] is False
     assert element["near_misses"]
-    assert element["near_misses"][0]["document"]=="ПБ.pdf"
-    assert element["near_misses"][0]["page"]==17
+    near=element["near_misses"][0]
+    assert near["document"]=="ПБ.pdf"
+    assert near["page"]==17
+    assert near["required_group_matched"]==2
+    assert near["required_group_total"]==3
+    assert "перегрузочный пункт" in near["missing_groups"]

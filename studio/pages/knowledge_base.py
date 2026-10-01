@@ -259,6 +259,98 @@ def render(ctx):
                                 for row in semantic_diag.get("rows") or []
                             ],hide_index=True,width="stretch")
 
+                    visual_diag=dict(frontier.get("visual_pending") or {})
+                    if visual_diag.get("total"):
+                        with st.expander(
+                            f"Visual Proof · {int(visual_diag.get('total') or 0)} графических контрактов",
+                            expanded=True,
+                        ):
+                            st.caption(
+                                "Текстовый слой чертежа используется только для выбора адресных листов-кандидатов. "
+                                "Он не подтверждает графическое содержание и не меняет нормативный вердикт."
+                            )
+                            visual_rows=list(visual_diag.get("rows") or [])
+                            visual_kind_labels={
+                                "PZU_SITE_LAYOUT":"ПЗУ · планировочная схема",
+                                "PZU_RELIEF_EARTHWORKS":"ПЗУ · рельеф и земляные массы",
+                                "PZU_UTILITY_NETWORKS":"ПЗУ · инженерные сети",
+                                "PZU_SITUATION_PLAN":"ПЗУ · ситуационный план",
+                                "AR_FACADES":"АР · фасады",
+                                "AR_FLOOR_PLANS":"АР · поэтажные планы",
+                                "AR_SECTIONS":"АР · разрезы",
+                            }
+                            st.dataframe([
+                                {
+                                    "ID":row.get("requirement_id") or "",
+                                    "Тип visual-proof":visual_kind_labels.get(
+                                        row.get("visual_kind") or "",
+                                        row.get("visual_kind") or "",
+                                    ),
+                                    "Покрытие preflight":(
+                                        f"{row.get('coverage_count') or 0}/"
+                                        f"{row.get('total_count') or 0}"
+                                    ),
+                                    "Листов-кандидатов":row.get("candidate_page_count") or 0,
+                                    "Не найдено в text-layer":"; ".join(
+                                        row.get("missing_labels") or []
+                                    ),
+                                    "Тема":row.get("topic") or "",
+                                }
+                                for row in visual_rows
+                            ],hide_index=True,width="stretch")
+
+                            visual_page_rows=[]
+                            visual_element_rows=[]
+                            for row in visual_rows:
+                                requirement_id=row.get("requirement_id") or ""
+                                visual_kind=visual_kind_labels.get(
+                                    row.get("visual_kind") or "",
+                                    row.get("visual_kind") or "",
+                                )
+                                for rank,page in enumerate(row.get("candidate_pages") or [],1):
+                                    visual_page_rows.append({
+                                        "ID":requirement_id,
+                                        "Тип":visual_kind,
+                                        "Ранг":rank,
+                                        "Документ":page.get("document") or "",
+                                        "Страница":page.get("page"),
+                                        "Раздел":page.get("section") or "",
+                                        "Совпавшие элементы":"; ".join(
+                                            page.get("element_hit_labels") or []
+                                        ),
+                                        "Маркеры":"; ".join(page.get("marker_hits") or []),
+                                        "Фрагмент":page.get("fragment") or "",
+                                    })
+                                for element in row.get("elements") or []:
+                                    locations=list(element.get("candidate_locations") or [])
+                                    first=locations[0] if locations else {}
+                                    visual_element_rows.append({
+                                        "ID":requirement_id,
+                                        "Элемент":element.get("label") or element.get("id") or "",
+                                        "Text-layer":"Есть маркер" if element.get("matched_in_text_layer") else "Не найден",
+                                        "Документ":first.get("document") or "",
+                                        "Страница":first.get("page"),
+                                        "Фрагмент":first.get("fragment") or "",
+                                    })
+
+                            if visual_element_rows:
+                                st.markdown("**Элементы visual-контрактов**")
+                                st.dataframe(
+                                    visual_element_rows,
+                                    hide_index=True,
+                                    width="stretch",
+                                )
+                            if visual_page_rows:
+                                with st.expander(
+                                    "Адресные листы-кандидаты для визуальной проверки",
+                                    expanded=True,
+                                ):
+                                    st.dataframe(
+                                        visual_page_rows,
+                                        hide_index=True,
+                                        width="stretch",
+                                    )
+
                     set_diag=dict(frontier.get("set_completeness") or {})
                     if set_diag.get("total"):
                         with st.expander(

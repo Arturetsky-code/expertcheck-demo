@@ -829,7 +829,7 @@ def test_alpha8_ar_visual_preflight_requires_drawing_intelligence_sheet_kind():
     assert len(result["candidate_pages"])==1
     assert result["candidate_pages"][0]["document"]=="АР2.pdf"
     assert result["candidate_pages"][0]["page"]==22
-    assert result["candidate_pages"][0]["drawing_kinds"]==["facade","section_view"]
+    assert result["candidate_pages"][0]["drawing_kinds"]==["facade"]
     assert result["candidate_pages"][0]["designation"]=="RAM-01-АР2"
     assert result["rejected_untrusted_pages"]
     assert result["rejected_untrusted_pages"][0]["document"]=="АР1.pdf"
@@ -892,6 +892,16 @@ def test_alpha8_ar_visual_element_kind_gate_blocks_wrong_sheet_kind():
                     "drawing_kinds":["room_explication"],
                     "title_drawing_kinds":[],
                     "sheet_title":"",
+                },
+            ],
+            "room_schedules":[
+                {
+                    "document":"АР2.pdf",
+                    "page":11,
+                    "designation":"RAM-01-АР2",
+                    "position":"1.1",
+                    "parent_object":"Производственное здание",
+                    "owner_binding":"TITLE_BLOCK_EXACT",
                 },
             ],
         },

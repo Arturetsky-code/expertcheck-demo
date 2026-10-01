@@ -1619,7 +1619,11 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "энергетической эффективности"
+      ],
+      "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1651,7 +1655,11 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "энергетической эффективности"
+      ],
+      "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2753,7 +2761,11 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "поверхностного комплекса"
+      ],
+      "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

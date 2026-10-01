@@ -7,6 +7,7 @@ from core20.normative_execution import (
     _strong_near_miss_evidence,
     _set_completeness_evaluation,
     _set_element_match,
+    _keyword_span_diagnostic,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -671,3 +672,32 @@ def test_alpha8_set_evidence_groups_require_local_colocation():
     assert far["applicability_state"]=="REQUIRED"
     assert far["near_misses"]
     assert "локальная связь смысловых групп" in far["near_misses"][0]["missing_groups"]
+
+
+
+def test_alpha8_keyword_span_diagnostic_distinguishes_missing_from_distant_terms():
+    missing=_keyword_span_diagnostic(
+        "автоматическое пожаротушение",
+        "На перегрузочном пункте предусмотрена пожарная сигнализация.",
+    )
+    assert missing["matched"] is False
+    assert missing["reason"]=="MISSING_STEMS"
+    assert missing["missing_stems"]
+
+    distant=_keyword_span_diagnostic(
+        "автоматическое пожаротушение",
+        "Автоматическое управление предусмотрено. "
+        + ("технологическое описание " * 40)
+        + "Пожаротушение выполняется отдельной системой.",
+    )
+    assert distant["matched"] is False
+    assert distant["reason"]=="TERMS_TOO_FAR_APART"
+    assert distant["span_chars"] > 320
+
+    local=_keyword_span_diagnostic(
+        "автоматическое пожаротушение",
+        "На участке предусмотрена автоматическая система пожаротушения.",
+    )
+    assert local["matched"] is True
+    assert local["reason"]=="LOCAL_MATCH"
+    assert local["span_chars"] <= 320

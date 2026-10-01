@@ -268,6 +268,7 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     result["proof_type"] = proof_type
     result["retrieval_kind"] = str(result.get("kind") or "")
     result["retrieval_state"] = str(result.get("state") or "")
+    result["retrieval_reason_code"] = str(result.get("reason_code") or "")
     result["proof_engine_version"] = ENGINE_VERSION
 
     retrieval_kind = str(result.get("kind") or "").upper()
@@ -278,6 +279,7 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         "NORMATIVE_EVIDENCE_WEAK",
         "NORMATIVE_SECTION_EVIDENCE_MISSING",
         "NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
+        "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE",
     }
     if (
         proof_type == "GRAPHIC_CONTENT"
@@ -296,8 +298,26 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         )
         return result
 
-    if retrieval_kind != "VERIFIED_OK":
+    recoverable_retrieval = (
+        retrieval_reason in {
+            "NORMATIVE_EVIDENCE_WEAK",
+            "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE",
+        }
+        and bool(result.get("evidence_candidates"))
+    )
+    if retrieval_kind != "VERIFIED_OK" and not recoverable_retrieval:
         result["proof_state"] = "RETAINED_FAIL_CLOSED"
+        return result
+
+    if recoverable_retrieval:
+        result["kind"] = "REVIEW_QUESTION"
+        result["state"] = "Вопрос специалисту"
+        result["proof_state"] = "SEMANTIC_PROOF_REQUIRED"
+        result["reason_code"] = "NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+        result["reason"] = (
+            "Retrieval нашёл адресный, но недостаточно строгий лексический кандидат. "
+            "Он не может подтвердить требование напрямую и допускается только к независимой смысловой проверке."
+        )
         return result
 
     if proof_type == "STRUCTURE":

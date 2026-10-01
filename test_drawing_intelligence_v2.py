@@ -102,3 +102,5 @@ RAM-0207.4-ЗД-ПД-4.25-АР2
     assert title["position"] == "4.25"
     assert title["object_name"] == "Навес системы подачи извести"
     assert title["binding_method"] == "TITLE_BLOCK_BEFORE_DESIGNATION"
+    assert title["sheet_title"] == "Фасады. Разрез 1-1"
+    assert set(title["title_drawing_kinds"]) == {"facade","section_view"}

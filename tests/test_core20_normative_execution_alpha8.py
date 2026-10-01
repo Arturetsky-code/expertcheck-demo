@@ -813,6 +813,8 @@ def test_alpha8_ar_visual_preflight_requires_drawing_intelligence_sheet_kind():
                     "designation":"RAM-01-АР2",
                     "object_name":"Производственное здание",
                     "drawing_kinds":["facade","section_view"],
+                    "title_drawing_kinds":["facade"],
+                    "sheet_title":"Фасад 1-8",
                     "owner_binding":"TITLE_BLOCK_EXACT",
                 },
             ],
@@ -881,11 +883,15 @@ def test_alpha8_ar_visual_element_kind_gate_blocks_wrong_sheet_kind():
                     "document":"АР2.pdf",
                     "page":10,
                     "drawing_kinds":["floor_plan"],
+                    "title_drawing_kinds":["floor_plan"],
+                    "sheet_title":"План 1 этажа",
                 },
                 {
                     "document":"АР2.pdf",
                     "page":11,
                     "drawing_kinds":["room_explication"],
+                    "title_drawing_kinds":[],
+                    "sheet_title":"",
                 },
             ],
         },
@@ -896,3 +902,51 @@ def test_alpha8_ar_visual_element_kind_gate_blocks_wrong_sheet_kind():
 
     assert by_id["plan"]["candidate_locations"][0]["page"]==10
     assert by_id["schedule"]["candidate_locations"][0]["page"]==11
+
+
+
+def test_alpha8_broad_page_kind_does_not_qualify_without_title_kind():
+    contract={
+        "requirement_id":"VIS-FACADE-STRICT",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"AR_FACADES",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["фасад"],
+                "trusted_drawing_kinds":["facade"],
+                "elements":[
+                    {
+                        "id":"facade_views",
+                        "label":"Фасады",
+                        "aliases":["фасад"],
+                        "drawing_kinds":["facade"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[{
+        "document":"АР1.pdf",
+        "document_type":"АР",
+        "page":5,
+        "text":"В пояснительном тексте рассмотрены фасады здания.",
+    }]
+    documents=[{
+        "drawing_intelligence_v2":{
+            "sheets":[{
+                "document":"АР1.pdf",
+                "page":5,
+                "designation":"RAM-01-АР1",
+                "drawing_kinds":["facade"],
+                "title_drawing_kinds":[],
+                "sheet_title":"",
+            }],
+        },
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages,documents)
+
+    assert result["coverage_count"]==0
+    assert result["candidate_pages"]==[]
+    assert result["rejected_untrusted_pages"]
+    assert result["rejected_untrusted_pages"][0]["broad_drawing_kinds"]==["facade"]

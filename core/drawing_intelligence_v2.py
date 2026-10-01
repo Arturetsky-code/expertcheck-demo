@@ -116,6 +116,16 @@ def parse_title_block(text: str) -> dict[str, Any]:
 
     i,code=code_hits[-1]
 
+    sheet_title=""
+    for j in range(i+1,min(len(lines),i+7)):
+        raw_candidate=_owner_candidate(lines[j], allow_sheet_title=True)
+        if not raw_candidate:
+            continue
+        low_candidate=normalize_text(raw_candidate)
+        if any(low_candidate.startswith(marker) for marker in _SHEET_TITLE_MARKERS):
+            sheet_title=raw_candidate
+            break
+
     # Preferred layout: designation -> exact object name. If the first
     # semantic row is a drawing title (Scheme/Facade/Plan/Section), do not skip
     # into its wrapped continuation and accidentally bind that as an owner.
@@ -165,6 +175,8 @@ def parse_title_block(text: str) -> dict[str, Any]:
                 "resolved":False,
                 "designation":code,
                 "position":(_TITLE_POSITION_RE.search(code).group(1) if _TITLE_POSITION_RE.search(code) else ""),
+                "sheet_title":sheet_title,
+                "title_drawing_kinds":_drawing_kinds(sheet_title) if sheet_title else [],
                 "reason":"наименование владельца листа не разрешено однозначно",
             }
         method="TITLE_BLOCK_BEFORE_DESIGNATION"
@@ -175,6 +187,8 @@ def parse_title_block(text: str) -> dict[str, Any]:
         "position":(_TITLE_POSITION_RE.search(code).group(1) if _TITLE_POSITION_RE.search(code) else ""),
         "object_name":owner,
         "binding_method":method,
+        "sheet_title":sheet_title,
+        "title_drawing_kinds":_drawing_kinds(sheet_title) if sheet_title else [],
     }
 
 
@@ -496,6 +510,10 @@ class DrawingIntelligenceV2:
             for page_no,text in pages:
                 tb=parse_title_block(text)
                 kinds=_drawing_kinds(text)
+                title_kinds=[
+                    str(value) for value in (tb.get("title_drawing_kinds") or [])
+                    if str(value)
+                ]
                 if not tb.get("resolved"):
                     # Service/index/revision pages are allowed not to have a child-object owner.
                     if not any(k in kinds for k in ("drawing_index","revision")):
@@ -508,7 +526,10 @@ class DrawingIntelligenceV2:
                 regions=_region_bboxes(data,page_no)
                 sheet={
                     "document":uploaded.name,"page":page_no,"designation":code,"position":tb.get("position",""),
-                    "object_name":owner,"drawing_kinds":kinds,"owner_binding":"TITLE_BLOCK_EXACT",
+                    "object_name":owner,"drawing_kinds":kinds,
+                    "sheet_title":str(tb.get("sheet_title") or ""),
+                    "title_drawing_kinds":title_kinds,
+                    "owner_binding":"TITLE_BLOCK_EXACT",
                     "regions":regions,
                 }
                 graph["sheets"].append(sheet)

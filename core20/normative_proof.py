@@ -131,6 +131,56 @@ def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | N
     }
 
 
+def proof_frontier_summary(
+    rows: list[dict[str, Any]] | None,
+    *,
+    pending_requirement_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Summarise the current unresolved proof frontier without changing verdicts."""
+    pending_ids = {str(value) for value in (pending_requirement_ids or set()) if str(value)}
+    blockers: Counter[str] = Counter()
+    held_total = 0
+    unresolved_total = 0
+
+    for row in (rows or []):
+        if not isinstance(row, dict):
+            continue
+        current_kind = str(row.get("kind") or "").upper()
+        retrieval_kind = str(row.get("retrieval_kind") or "").upper()
+        proof_state = str(row.get("proof_state") or "").upper()
+        requirement_id = str(row.get("requirement_id") or "")
+
+        if retrieval_kind == "VERIFIED_OK" and current_kind != "VERIFIED_OK":
+            held_total += 1
+        if current_kind == "VERIFIED_OK":
+            continue
+
+        unresolved_total += 1
+        if proof_state == "SEMANTIC_PROOF_REQUIRED":
+            if requirement_id in pending_ids or not row.get("semantic_proof"):
+                blockers["SEMANTIC_PENDING"] += 1
+            else:
+                blockers["SEMANTIC_REVIEWED_NO_PROMOTION"] += 1
+        elif proof_state == "SET_PROOF_CONTRACT_REQUIRED":
+            blockers["SET_COMPLETENESS_REQUIRED"] += 1
+        elif proof_state == "STRUCTURED_PROOF_REQUIRED":
+            blockers["STRUCTURED_PROOF_REQUIRED"] += 1
+        elif proof_state == "VISUAL_PROOF_REQUIRED":
+            blockers["VISUAL_PROOF_REQUIRED"] += 1
+        elif proof_state == "PRESENCE_PROOF_NOT_ADDRESSABLE":
+            blockers["PRESENCE_NOT_ADDRESSABLE"] += 1
+        elif proof_state == "RETAINED_FAIL_CLOSED":
+            blockers["RETAINED_FAIL_CLOSED"] += 1
+        else:
+            blockers["OTHER_UNRESOLVED"] += 1
+
+    return {
+        "held_total": held_total,
+        "unresolved_total": unresolved_total,
+        "blocker_counts": dict(blockers),
+    }
+
+
 def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     result = dict(row)
     proof_type = _proof_type(result)
@@ -236,6 +286,15 @@ class NormativeProofEngine20:
             for packet in [_semantic_packet(row, str(row.get("proof_type") or "SET_COMPLETENESS"))]
             if packet is not None
         ]
+        initial_demoted = max(0, raw_verified - verified)
+        frontier = proof_frontier_summary(
+            gated,
+            pending_requirement_ids={
+                str(packet.get("requirement_id") or "")
+                for packet in semantic_queue
+                if str(packet.get("requirement_id") or "")
+            },
+        )
         return {
             "version": ENGINE_VERSION,
             "rows": gated,
@@ -245,7 +304,10 @@ class NormativeProofEngine20:
             "review_questions": questions,
             "system_limitations": limitations,
             "project_findings": findings,
-            "demoted_keyword_only": max(0, raw_verified - verified),
+            "demoted_keyword_only": initial_demoted,
+            "demoted_keyword_only_initial": initial_demoted,
+            "demoted_keyword_only_remaining": frontier["held_total"],
+            "proof_frontier": frontier,
             "proof_type_counts": {key: proof_types.get(key, 0) for key in PROOF_TYPES},
             "semantic_queue": semantic_queue,
             "semantic_queue_total": len(semantic_queue),

@@ -11,6 +11,7 @@ completed Judge/Critic decision are exposed for the next call.
 from typing import Any
 
 from . import normative_semantic_proof as _semantic
+from .normative_proof import proof_frontier_summary
 
 
 ENGINE_VERSION = "20.0-alpha10.1-quality-integrity"
@@ -261,6 +262,26 @@ def apply_normative_semantic_proof(
     result["semantic_queue"] = pending
     result["semantic_queue_total"] = len(pending)
     result["semantic_queue_evidence"] = sum(len(packet.get("evidence") or []) for packet in pending)
+
+    initial_demoted = int(
+        result.get("demoted_keyword_only_initial")
+        or result.get("demoted_keyword_only")
+        or 0
+    )
+    frontier = proof_frontier_summary(
+        list(result.get("rows") or []),
+        pending_requirement_ids={
+            _packet_requirement_id(packet)
+            for packet in pending
+            if _packet_requirement_id(packet)
+        },
+    )
+    result["demoted_keyword_only_initial"] = initial_demoted
+    result["demoted_keyword_only_remaining"] = int(frontier.get("held_total") or 0)
+    # The primary UI metric is the live remainder. Keep the initial gate count
+    # separately for audit and before/after comparison.
+    result["demoted_keyword_only"] = result["demoted_keyword_only_remaining"]
+    result["proof_frontier"] = frontier
 
     summary = dict(result.get("semantic_proof_summary") or {})
     if semantic:

@@ -375,6 +375,17 @@ class NormativeExecutionEngine20:
             "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
             "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),
             "demoted_keyword_only":int(proof.get("demoted_keyword_only") or 0),
+            "demoted_keyword_only_initial":int(
+                proof.get("demoted_keyword_only_initial")
+                or proof.get("demoted_keyword_only")
+                or 0
+            ),
+            "demoted_keyword_only_remaining":int(
+                proof.get("demoted_keyword_only_remaining")
+                if proof.get("demoted_keyword_only_remaining") is not None
+                else proof.get("demoted_keyword_only") or 0
+            ),
+            "proof_frontier":dict(proof.get("proof_frontier") or {}),
             "proof_type_counts":dict(proof.get("proof_type_counts") or {}),
             "guardrail":(
                 "Retrieval is not proof. Ненайденный текст не является доказательством нарушения, а лексическое совпадение "

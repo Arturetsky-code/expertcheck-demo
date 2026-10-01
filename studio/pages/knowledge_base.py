@@ -122,7 +122,10 @@ def render(ctx):
             p1.metric("Исполняемых контрактов",execution.get("contracts",0))
             p2.metric("Кандидатов доказательства",retrieval.get("candidate_evidence",0))
             p3.metric("Доказано",execution.get("verified_ok",0))
-            p4.metric("Удержано доказательным контролем",execution.get("demoted_keyword_only",0))
+            p4.metric(
+                "Удержано сейчас",
+                execution.get("demoted_keyword_only_remaining",execution.get("demoted_keyword_only",0)),
+            )
             p5.metric("Очередь смысловой проверки",execution.get("semantic_queue_total",0))
 
             e1,e2,e3,e4=st.columns(4)
@@ -135,6 +138,48 @@ def render(ctx):
                 "Для смыслового требования система сохраняет до четырёх адресных кандидатов, а проверяющая модель должна выбрать конкретные доказательства. "
                 "После независимого контроля выбранное доказательство становится каноническим proof trace; исходный retrieval сохраняется отдельно для аудита."
             )
+
+            initial_held=int(execution.get("demoted_keyword_only_initial") or execution.get("demoted_keyword_only") or 0)
+            remaining_held=int(
+                execution.get("demoted_keyword_only_remaining")
+                if execution.get("demoted_keyword_only_remaining") is not None
+                else execution.get("demoted_keyword_only") or 0
+            )
+            if initial_held != remaining_held:
+                st.caption(
+                    f"Доказательный контроль исходно удержал {initial_held} контрактов; "
+                    f"после накопленных смысловых решений в текущем остатке {remaining_held}."
+                )
+
+            frontier=dict(execution.get("proof_frontier") or {})
+            blocker_counts=dict(frontier.get("blocker_counts") or {})
+            if blocker_counts:
+                blocker_labels={
+                    "SEMANTIC_PENDING":"Смысловая очередь — ожидает Judge/Critic",
+                    "SEMANTIC_REVIEWED_NO_PROMOTION":"Смысловая проверка завершена, но доказательство не принято",
+                    "SET_COMPLETENESS_REQUIRED":"Нужен контракт полноты обязательного набора",
+                    "STRUCTURED_PROOF_REQUIRED":"Нужен структурированный числовой/межраздельный контракт",
+                    "VISUAL_PROOF_REQUIRED":"Нужна визуальная проверка графической части",
+                    "PRESENCE_NOT_ADDRESSABLE":"Нет адресного доказательства наличия",
+                    "RETAINED_FAIL_CLOSED":"Сохранено исходное неопределённое состояние",
+                    "OTHER_UNRESOLVED":"Прочий незавершённый доказательный контракт",
+                }
+                with st.expander("Диагностика текущего остатка",expanded=True):
+                    st.dataframe([
+                        {
+                            "Причина остатка":blocker_labels.get(code,code),
+                            "Контрактов":count,
+                        }
+                        for code,count in sorted(
+                            blocker_counts.items(),
+                            key=lambda item:(-int(item[1] or 0),item[0]),
+                        )
+                        if int(count or 0)>0
+                    ],hide_index=True,width="stretch")
+                    st.caption(
+                        "Это диагностическая раскладка текущего состояния. Она не меняет нормативные вердикты "
+                        "и не вызывает AI; нужна для выбора следующего узкого улучшения."
+                    )
 
             semantic_queue=list(execution.get("semantic_queue") or [])
             semantic_summary=dict(execution.get("semantic_proof_summary") or {})

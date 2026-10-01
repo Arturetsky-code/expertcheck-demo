@@ -54,6 +54,9 @@ def test_alpha9_semantic_keyword_hit_is_not_normative_proof():
     assert row["reason_code"] == "NORMATIVE_SEMANTIC_PROOF_REQUIRED"
     assert any(x["requirement_id"] == row["requirement_id"] for x in result["semantic_queue"])
     assert result["demoted_keyword_only"] >= 1
+    assert result["demoted_keyword_only_initial"] == result["demoted_keyword_only"]
+    assert result["demoted_keyword_only_remaining"] == result["demoted_keyword_only"]
+    assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_PENDING"] >= 1
 
 
 def test_alpha9_graphic_clause_cannot_be_proven_from_text_layer():

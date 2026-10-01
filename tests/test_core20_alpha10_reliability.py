@@ -406,3 +406,43 @@ def test_alpha10_pending_requirement_is_not_carried_from_previous_checkpoint(mon
     assert set(merged["decisions"])=={"R1","R3"}
     assert "R2" not in merged["decisions"]
     assert merged["root_queue_total"]==6
+
+
+
+def test_alpha10_recalculates_live_held_frontier_after_accumulated_semantic_decisions():
+    queue = [_packet("R1"), _packet("R2"), _packet("R3")]
+    root = queue_fingerprint(queue)
+    proof = {
+        "rows": [
+            {
+                "requirement_id": rid,
+                "kind": "REVIEW_QUESTION",
+                "retrieval_kind": "VERIFIED_OK",
+                "proof_state": "SEMANTIC_PROOF_REQUIRED",
+            }
+            for rid in ("R1", "R2", "R3")
+        ],
+        "semantic_queue": queue,
+        "semantic_queue_total": 3,
+        "demoted_keyword_only": 3,
+        "demoted_keyword_only_initial": 3,
+    }
+    checkpoint = {
+        "root_fingerprint": root,
+        "fingerprint": root,
+        "root_queue_total": 3,
+        "queue_total": 3,
+        "decisions": {
+            "R1": _ok("VERIFIED_OK"),
+            "R2": _ok("REVIEW_QUESTION"),
+        },
+    }
+
+    result = a10.apply_normative_semantic_proof(proof, checkpoint)
+
+    assert result["demoted_keyword_only_initial"] == 3
+    assert result["demoted_keyword_only_remaining"] == 2
+    assert result["demoted_keyword_only"] == 2
+    assert result["proof_frontier"]["held_total"] == 2
+    assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_PENDING"] == 1
+    assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_REVIEWED_NO_PROMOTION"] == 1

@@ -31,7 +31,10 @@ def _proof_type(row: dict[str, Any]) -> str:
     check_kind = str(row.get("check_kind") or "").strip().upper()
     requirement = _norm(row.get("requirement") or "")
     rid = str(row.get("requirement_id") or "").upper()
+    explicit = str(row.get("proof_type_hint") or "").strip().upper()
 
+    if explicit in PROOF_TYPES:
+        return explicit
     if rid == "PP87-CLAUSE-15-IOS":
         return "SET_COMPLETENESS"
     if check_kind == "STRUCTURE" or rid.startswith("PP87-CLAUSE-"):

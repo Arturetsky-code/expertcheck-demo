@@ -1257,6 +1257,8 @@ class NormativeExecutionEngine20:
             "semantic_queue_total":int(proof.get("semantic_queue_total") or 0),
             "set_completeness_queue":list(proof.get("set_completeness_queue") or []),
             "set_completeness_queue_total":int(proof.get("set_completeness_queue_total") or 0),
+            "visual_queue":list(proof.get("visual_queue") or []),
+            "visual_queue_total":int(proof.get("visual_queue_total") or 0),
             "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
             "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
             "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),

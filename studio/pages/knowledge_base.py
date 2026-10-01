@@ -181,6 +181,93 @@ def render(ctx):
                         "и не вызывает AI; нужна для выбора следующего узкого улучшения."
                     )
 
+                    semantic_diag=dict(frontier.get("semantic_pending") or {})
+                    if semantic_diag.get("total"):
+                        st.markdown("**Смысловая очередь — где сосредоточены 26 пакетов**")
+                        semantic_sources=dict(semantic_diag.get("by_source") or {})
+                        semantic_sections=dict(semantic_diag.get("by_section") or {})
+                        semantic_evidence=dict(semantic_diag.get("by_evidence_candidates") or {})
+                        d1,d2,d3=st.columns(3)
+                        with d1:
+                            st.caption("По НТД")
+                            st.dataframe([
+                                {"НТД":key,"Пакетов":value}
+                                for key,value in sorted(
+                                    semantic_sources.items(),
+                                    key=lambda item:(-int(item[1] or 0),item[0]),
+                                )
+                            ],hide_index=True,width="stretch")
+                        with d2:
+                            st.caption("По разделам проекта")
+                            st.dataframe([
+                                {"Разделы":key,"Пакетов":value}
+                                for key,value in sorted(
+                                    semantic_sections.items(),
+                                    key=lambda item:(-int(item[1] or 0),item[0]),
+                                )
+                            ],hide_index=True,width="stretch")
+                        with d3:
+                            st.caption("По числу evidence-кандидатов")
+                            st.dataframe([
+                                {"Кандидатов evidence":key,"Пакетов":value}
+                                for key,value in sorted(
+                                    semantic_evidence.items(),
+                                    key=lambda item:item[0],
+                                )
+                            ],hide_index=True,width="stretch")
+                        with st.expander("Показать пакеты смысловой очереди",expanded=False):
+                            st.dataframe([
+                                {
+                                    "ID":row.get("requirement_id") or "",
+                                    "НТД":row.get("source") or "",
+                                    "Пункт":row.get("paragraph") or "",
+                                    "Разделы":row.get("sections") or "",
+                                    "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
+                                    "Тема":row.get("topic") or "",
+                                }
+                                for row in semantic_diag.get("rows") or []
+                            ],hide_index=True,width="stretch")
+
+                    retained_diag=dict(frontier.get("retained_fail_closed") or {})
+                    if retained_diag.get("total"):
+                        retained_reason_labels={
+                            "NORMATIVE_APPLICABILITY_NOT_PROVEN":"Условная применимость требования не доказана",
+                            "NORMATIVE_STRUCTURE_PART_NOT_PROVEN":"Состав текстовой/графической частей не подтверждён",
+                            "NORMATIVE_IOS_SUBSECTION_APPLICABILITY_PENDING":"Применимость подразделов ИОС требует проектной проверки",
+                            "NORMATIVE_SECTION_EVIDENCE_MISSING":"В цифровом корпусе нет страниц ожидаемого раздела",
+                            "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND":"Адресное положительное evidence не найдено",
+                            "NORMATIVE_EVIDENCE_WEAK":"Evidence найдено, но retrieval недостаточно сильный",
+                            "UNSPECIFIED":"Причина не классифицирована",
+                        }
+                        st.markdown("**Исходно неопределённые — почему retrieval не дошёл до proof**")
+                        retained_reasons=dict(retained_diag.get("by_reason") or {})
+                        st.dataframe([
+                            {
+                                "Причина retrieval":retained_reason_labels.get(code,code),
+                                "Контрактов":count,
+                            }
+                            for code,count in sorted(
+                                retained_reasons.items(),
+                                key=lambda item:(-int(item[1] or 0),item[0]),
+                            )
+                        ],hide_index=True,width="stretch")
+                        with st.expander("Показать исходно неопределённые контракты",expanded=False):
+                            st.dataframe([
+                                {
+                                    "ID":row.get("requirement_id") or "",
+                                    "Причина":retained_reason_labels.get(
+                                        row.get("reason_code") or "UNSPECIFIED",
+                                        row.get("reason_code") or "UNSPECIFIED",
+                                    ),
+                                    "НТД":row.get("source") or "",
+                                    "Пункт":row.get("paragraph") or "",
+                                    "Разделы":row.get("sections") or "",
+                                    "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
+                                    "Тема":row.get("topic") or "",
+                                }
+                                for row in retained_diag.get("rows") or []
+                            ],hide_index=True,width="stretch")
+
             semantic_queue=list(execution.get("semantic_queue") or [])
             semantic_summary=dict(execution.get("semantic_proof_summary") or {})
             provider_errors=[str(value) for value in semantic_summary.get("provider_errors") or [] if str(value).strip()]

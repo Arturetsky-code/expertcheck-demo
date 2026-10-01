@@ -446,3 +446,5 @@ def test_alpha10_recalculates_live_held_frontier_after_accumulated_semantic_deci
     assert result["proof_frontier"]["held_total"] == 2
     assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_PENDING"] == 1
     assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_REVIEWED_NO_PROMOTION"] == 1
+    assert result["proof_frontier"]["semantic_pending"]["total"] == 1
+    assert result["proof_frontier"]["semantic_pending"]["rows"][0]["requirement_id"] == "R3"

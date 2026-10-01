@@ -139,8 +139,35 @@ def proof_frontier_summary(
     """Summarise the current unresolved proof frontier without changing verdicts."""
     pending_ids = {str(value) for value in (pending_requirement_ids or set()) if str(value)}
     blockers: Counter[str] = Counter()
+    semantic_sources: Counter[str] = Counter()
+    semantic_sections: Counter[str] = Counter()
+    semantic_evidence_buckets: Counter[str] = Counter()
+    retained_reasons: Counter[str] = Counter()
+    retained_sources: Counter[str] = Counter()
+    retained_sections: Counter[str] = Counter()
+    semantic_rows: list[dict[str, Any]] = []
+    retained_rows: list[dict[str, Any]] = []
     held_total = 0
     unresolved_total = 0
+
+    def _scope(row: dict[str, Any]) -> str:
+        sections = [str(value).strip() for value in row.get("sections") or [] if str(value).strip()]
+        return ", ".join(dict.fromkeys(sections)) or "Без раздела"
+
+    def _source(row: dict[str, Any]) -> str:
+        return str(row.get("source") or row.get("document_id") or "Без НТД").strip() or "Без НТД"
+
+    def _evidence_bucket(row: dict[str, Any]) -> str:
+        count = int(row.get("retrieval_candidate_count") or len(row.get("evidence_candidates") or []))
+        if count <= 0:
+            return "0"
+        if count == 1:
+            return "1"
+        if count == 2:
+            return "2"
+        if count == 3:
+            return "3"
+        return "4+"
 
     for row in (rows or []):
         if not isinstance(row, dict):
@@ -159,6 +186,23 @@ def proof_frontier_summary(
         if proof_state == "SEMANTIC_PROOF_REQUIRED":
             if requirement_id in pending_ids or not row.get("semantic_proof"):
                 blockers["SEMANTIC_PENDING"] += 1
+                source = _source(row)
+                scope = _scope(row)
+                bucket = _evidence_bucket(row)
+                semantic_sources[source] += 1
+                semantic_sections[scope] += 1
+                semantic_evidence_buckets[bucket] += 1
+                semantic_rows.append({
+                    "requirement_id": requirement_id,
+                    "source": source,
+                    "paragraph": str(row.get("paragraph") or ""),
+                    "sections": scope,
+                    "topic": str(row.get("topic") or ""),
+                    "retrieval_candidate_count": int(
+                        row.get("retrieval_candidate_count")
+                        or len(row.get("evidence_candidates") or [])
+                    ),
+                })
             else:
                 blockers["SEMANTIC_REVIEWED_NO_PROMOTION"] += 1
         elif proof_state == "SET_PROOF_CONTRACT_REQUIRED":
@@ -171,6 +215,25 @@ def proof_frontier_summary(
             blockers["PRESENCE_NOT_ADDRESSABLE"] += 1
         elif proof_state == "RETAINED_FAIL_CLOSED":
             blockers["RETAINED_FAIL_CLOSED"] += 1
+            reason_code = str(row.get("reason_code") or "UNSPECIFIED")
+            source = _source(row)
+            scope = _scope(row)
+            retained_reasons[reason_code] += 1
+            retained_sources[source] += 1
+            retained_sections[scope] += 1
+            retained_rows.append({
+                "requirement_id": requirement_id,
+                "reason_code": reason_code,
+                "source": source,
+                "paragraph": str(row.get("paragraph") or ""),
+                "sections": scope,
+                "topic": str(row.get("topic") or ""),
+                "retrieval_candidate_count": int(
+                    row.get("retrieval_candidate_count")
+                    or len(row.get("evidence_candidates") or [])
+                ),
+                "reason": str(row.get("reason") or ""),
+            })
         else:
             blockers["OTHER_UNRESOLVED"] += 1
 
@@ -178,6 +241,20 @@ def proof_frontier_summary(
         "held_total": held_total,
         "unresolved_total": unresolved_total,
         "blocker_counts": dict(blockers),
+        "semantic_pending": {
+            "total": len(semantic_rows),
+            "by_source": dict(semantic_sources),
+            "by_section": dict(semantic_sections),
+            "by_evidence_candidates": dict(semantic_evidence_buckets),
+            "rows": semantic_rows,
+        },
+        "retained_fail_closed": {
+            "total": len(retained_rows),
+            "by_reason": dict(retained_reasons),
+            "by_source": dict(retained_sources),
+            "by_section": dict(retained_sections),
+            "rows": retained_rows,
+        },
     }
 
 

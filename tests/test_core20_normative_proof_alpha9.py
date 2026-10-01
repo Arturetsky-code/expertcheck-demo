@@ -92,3 +92,62 @@ def test_alpha9_proof_gate_never_invents_project_finding():
     assert result["project_findings"] == 0
     assert result["verified_ok"] == 0
     assert result["review_questions"] == 1
+
+
+
+def test_alpha9_frontier_diagnostics_split_semantic_and_retrieval_blockers():
+    source = [
+        {
+            "requirement_id": "SEM-1",
+            "document_id": "DOC-SEM",
+            "source": "СП semantic",
+            "paragraph": "5.1",
+            "sections": ["ПЗУ"],
+            "topic": "Инженерная защита",
+            "check_kind": "SEMANTIC",
+            "requirement": "Должны быть обоснованы решения по инженерной защите.",
+            "kind": "VERIFIED_OK",
+            "state": "Подтверждено",
+            "evidence_document": "ПЗУ.pdf",
+            "evidence_page": 5,
+            "evidence_fragment": "Инженерная защита территории предусмотрена и обоснована.",
+            "retrieval_candidate_count": 3,
+            "evidence_candidates": [
+                {"document": "ПЗУ.pdf", "page": 5, "fragment": "a"},
+                {"document": "ПЗУ.pdf", "page": 6, "fragment": "b"},
+                {"document": "ПЗУ.pdf", "page": 7, "fragment": "c"},
+            ],
+        },
+        {
+            "requirement_id": "RET-1",
+            "document_id": "DOC-RET",
+            "source": "СП retrieval",
+            "paragraph": "7.2",
+            "sections": ["АР"],
+            "topic": "Сведения",
+            "check_kind": "SEMANTIC",
+            "requirement": "Должны быть приведены сведения.",
+            "kind": "REVIEW_QUESTION",
+            "state": "Вопрос специалисту",
+            "reason_code": "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+            "reason": "Адресное положительное доказательство не найдено.",
+            "retrieval_candidate_count": 0,
+            "evidence_candidates": [],
+        },
+    ]
+    result = NormativeProofEngine20().run(source)
+    frontier = result["proof_frontier"]
+
+    assert frontier["semantic_pending"]["total"] == 1
+    assert frontier["semantic_pending"]["by_source"] == {"СП semantic": 1}
+    assert frontier["semantic_pending"]["by_section"] == {"ПЗУ": 1}
+    assert frontier["semantic_pending"]["by_evidence_candidates"] == {"3": 1}
+    assert frontier["semantic_pending"]["rows"][0]["requirement_id"] == "SEM-1"
+
+    assert frontier["retained_fail_closed"]["total"] == 1
+    assert frontier["retained_fail_closed"]["by_reason"] == {
+        "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND": 1
+    }
+    assert frontier["retained_fail_closed"]["by_source"] == {"СП retrieval": 1}
+    assert frontier["retained_fail_closed"]["by_section"] == {"АР": 1}
+    assert frontier["retained_fail_closed"]["rows"][0]["requirement_id"] == "RET-1"

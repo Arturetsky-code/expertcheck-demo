@@ -657,6 +657,8 @@ class NormativeExecutionEngine20:
             "proof_engine":{key:value for key,value in proof.items() if key!="rows"},
             "semantic_queue":list(proof.get("semantic_queue") or []),
             "semantic_queue_total":int(proof.get("semantic_queue_total") or 0),
+            "set_completeness_queue":list(proof.get("set_completeness_queue") or []),
+            "set_completeness_queue_total":int(proof.get("set_completeness_queue_total") or 0),
             "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
             "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
             "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),

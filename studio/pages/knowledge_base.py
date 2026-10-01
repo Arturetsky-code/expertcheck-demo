@@ -272,12 +272,18 @@ def render(ctx):
                                     "НТД":row.get("source") or "",
                                     "Пункт":row.get("paragraph") or "",
                                     "Разделы":row.get("sections") or "",
-                                    "Покрытие набора":(
-                                        f"{row.get('matched_count') or 0}/{row.get('total_count')}"
+                                    "Покрытие обязательных":(
+                                        f"{row.get('matched_count') or 0}/{row.get('required_count') or 0}"
                                         if row.get("total_count") is not None
                                         else f"{row.get('matched_count') or 0}/?"
                                     ),
+                                    "Применимость ожидает":int(
+                                        row.get("applicability_pending_count") or 0
+                                    ),
                                     "Не подтверждено":"; ".join(row.get("missing_labels") or []),
+                                    "Не доказана применимость":"; ".join(
+                                        row.get("applicability_pending_labels") or []
+                                    ),
                                     "Инвентарь":"; ".join(row.get("observed_inventory") or []),
                                     "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
                                     "Тема":row.get("topic") or "",
@@ -292,15 +298,37 @@ def render(ctx):
                                 for element in row.get("elements") or []:
                                     evidence=list(element.get("evidence") or [])
                                     first=evidence[0] if evidence else {}
+                                    applicability_state=str(
+                                        element.get("applicability_state") or "REQUIRED"
+                                    )
+                                    if element.get("matched"):
+                                        element_status="Найден"
+                                    elif applicability_state=="APPLICABILITY_PENDING":
+                                        element_status="Применимость не доказана"
+                                    else:
+                                        element_status="Не найден"
+                                    applicability_trace=list(
+                                        element.get("applicability_trace") or []
+                                    )
+                                    applicability_first=(
+                                        applicability_trace[0] if applicability_trace else {}
+                                    )
                                     element_rows.append({
                                         "ID":requirement_id,
                                         "Элемент":element.get("label") or element.get("id") or "",
-                                        "Статус":"Найден" if element.get("matched") else "Не найден",
+                                        "Статус":element_status,
+                                        "Признак применимости":applicability_first.get(
+                                            "matched_condition"
+                                        ) or "",
+                                        "Документ применимости":applicability_first.get(
+                                            "document"
+                                        ) or "",
+                                        "Страница применимости":applicability_first.get("page"),
                                         "Документ":first.get("document") or "",
                                         "Страница":first.get("page"),
                                         "Фрагмент":first.get("fragment") or "",
                                     })
-                                    if element.get("matched"):
+                                    if element.get("matched") or applicability_state=="APPLICABILITY_PENDING":
                                         continue
                                     for rank,candidate in enumerate(element.get("near_misses") or [],1):
                                         set_near_miss_rows.append({
@@ -326,8 +354,8 @@ def render(ctx):
                             if element_rows:
                                 with st.expander("Элементы обязательных наборов",expanded=True):
                                     st.caption(
-                                        "Для каждого обязательного элемента показано адресное evidence. "
-                                        "Статус «Не найден» не является автоматическим нарушением."
+                                        "Для каждого элемента отдельно показаны применимость и evidence. "
+                                        "«Применимость не доказана» и «Не найден» не являются автоматическим нарушением."
                                     )
                                     st.dataframe(
                                         element_rows,

@@ -1073,7 +1073,8 @@
     "evidence_contract": {
       "minimum_sources": 1,
       "requires_profile_owner": false,
-      "requires_page_reference": true
+      "requires_page_reference": true,
+      "proof_type": "SET_COMPLETENESS"
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1623,7 +1624,8 @@
       "applicability_keywords": [
         "энергетической эффективности"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "SEMANTIC_REQUIREMENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1659,7 +1661,8 @@
       "applicability_keywords": [
         "энергетической эффективности"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "SEMANTIC_REQUIREMENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2765,7 +2768,8 @@
       "applicability_keywords": [
         "поверхностного комплекса"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "SEMANTIC_REQUIREMENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

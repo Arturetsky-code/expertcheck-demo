@@ -89,7 +89,8 @@ def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
 
     output=[]
     seen=set()
-    for index,candidate in enumerate(source[:4],1):
+    max_candidates=12 if bool((row.get("set_completeness") or {}).get("complete")) else 4
+    for index,candidate in enumerate(source[:max_candidates],1):
         document=str(candidate.get("document") or candidate.get("evidence_document") or "").strip()
         page=candidate.get("page") if candidate.get("page") not in (None,"") else candidate.get("evidence_page")
         fragment=str(candidate.get("fragment") or candidate.get("evidence_fragment") or "").strip()
@@ -113,6 +114,8 @@ def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
             "matched_keywords":list(candidate.get("matched_keywords") or []),
             "retrieval_keyword_score":candidate.get("retrieval_keyword_score") or 0,
             "retrieval_keyword_coverage":candidate.get("retrieval_keyword_coverage") or 0,
+            "set_element_id":str(candidate.get("set_element_id") or ""),
+            "set_element_label":str(candidate.get("set_element_label") or ""),
         })
     return output
 
@@ -414,14 +417,67 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         return result
 
     if proof_type == "SET_COMPLETENESS":
+        set_eval=dict(result.get("set_completeness") or {})
+        promotion=str(set_eval.get("promotion_policy") or "HOLD").upper()
+        if bool(set_eval.get("complete")) and promotion=="SEMANTIC_AFTER_COMPLETE":
+            set_evidence=[]
+            seen_elements=set()
+            for item in set_eval.get("evidence") or []:
+                if not isinstance(item,dict):
+                    continue
+                element_id=str(item.get("set_element_id") or "")
+                if element_id and element_id in seen_elements:
+                    continue
+                if element_id:
+                    seen_elements.add(element_id)
+                set_evidence.append({
+                    "evidence_id":str(item.get("evidence_id") or ""),
+                    "document":str(item.get("document") or ""),
+                    "page":item.get("page"),
+                    "section":str(item.get("section") or ""),
+                    "fragment":str(item.get("fragment") or ""),
+                    "matched_keywords":list(item.get("matched_terms") or []),
+                    "retrieval_keyword_score":max(1,len(item.get("matched_terms") or [])),
+                    "retrieval_keyword_coverage":1.0,
+                    "set_element_id":element_id,
+                    "set_element_label":str(item.get("set_element_label") or ""),
+                })
+            if set_evidence:
+                result["evidence_candidates"]=set_evidence
+                result["retrieval_candidate_count"]=len(set_evidence)
+                primary=set_evidence[0]
+                result["evidence_id"]=primary.get("evidence_id") or ""
+                result["evidence_document"]=primary.get("document") or ""
+                result["evidence_page"]=primary.get("page")
+                result["evidence_fragment"]=primary.get("fragment") or ""
+                result["matched_keywords"]=list(primary.get("matched_keywords") or [])
+            result["kind"]="REVIEW_QUESTION"
+            result["state"]="Вопрос специалисту"
+            result["proof_state"]="SEMANTIC_PROOF_REQUIRED"
+            result["reason_code"]="NORMATIVE_SET_COMPLETENESS_VERIFIED_SEMANTIC_REQUIRED"
+            result["reason"]=(
+                "Все атомизированные элементы обязательного набора имеют адресные evidence-кандидаты. "
+                "Полнота evidence-набора подтверждена детерминированно; содержательное соответствие "
+                "всего нормативного требования требует независимой смысловой проверки."
+            )
+            return result
+
         result["kind"] = "REVIEW_QUESTION"
         result["state"] = "Вопрос специалисту"
         result["proof_state"] = "SET_PROOF_CONTRACT_REQUIRED"
         result["reason_code"] = "NORMATIVE_SET_COMPLETENESS_NOT_PROVEN"
-        result["reason"] = (
-            "Найден адресный кандидат, но требование содержит набор обязательных сведений. "
-            "Пока набор не разложен на верифицированные обязательные элементы, совпадение ключевых слов не является доказательством полноты."
-        )
+        missing=[str(value) for value in (set_eval.get("missing_labels") or []) if str(value)]
+        if set_eval.get("configured"):
+            result["reason"] = (
+                "Набор обязательных элементов проверен детерминированно, но полнота не доказана. "
+                + ("Не подтверждены: " + "; ".join(missing) + "." if missing else
+                   "Требуется дополнительный applicability/атомизационный контракт.")
+            )
+        else:
+            result["reason"] = (
+                "Найден адресный кандидат, но требование содержит набор обязательных сведений. "
+                "Для требования ещё не задан декларативный set-contract, поэтому автоматический вывод удержан."
+            )
         return result
 
     if proof_type in {"TYPED_VALUE", "CROSS_SECTION"}:

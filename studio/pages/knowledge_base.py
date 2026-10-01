@@ -271,6 +271,13 @@ def render(ctx):
                                     "НТД":row.get("source") or "",
                                     "Пункт":row.get("paragraph") or "",
                                     "Разделы":row.get("sections") or "",
+                                    "Покрытие набора":(
+                                        f"{row.get('matched_count') or 0}/{row.get('total_count')}"
+                                        if row.get("total_count") is not None
+                                        else f"{row.get('matched_count') or 0}/?"
+                                    ),
+                                    "Не подтверждено":"; ".join(row.get("missing_labels") or []),
+                                    "Инвентарь":"; ".join(row.get("observed_inventory") or []),
                                     "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
                                     "Тема":row.get("topic") or "",
                                 }

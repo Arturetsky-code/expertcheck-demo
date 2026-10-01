@@ -274,6 +274,9 @@ def test_alpha9_recoverable_near_miss_requires_semantic_proof():
     assert result["verified_ok"] == 0
     assert result["semantic_queue_total"] == 1
     assert result["semantic_queue"][0]["evidence"][0]["document"] == "Задание.pdf"
+    assert result["proof_frontier"]["semantic_pending"]["by_retrieval_admission"] == {
+        "STRONG_NEAR_MISS": 1
+    }
 
 
 def test_alpha9_weak_phrase_candidate_requires_semantic_proof_not_direct_verification():
@@ -311,3 +314,6 @@ def test_alpha9_weak_phrase_candidate_requires_semantic_proof_not_direct_verific
     assert row["kind"] == "REVIEW_QUESTION"
     assert result["verified_ok"] == 0
     assert result["semantic_queue_total"] == 1
+    assert result["proof_frontier"]["semantic_pending"]["by_retrieval_admission"] == {
+        "WEAK_RETRIEVAL": 1
+    }

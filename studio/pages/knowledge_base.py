@@ -265,6 +265,7 @@ def render(ctx):
                             f"Контракты полноты обязательного набора · {int(set_diag.get('total') or 0)}",
                             expanded=True,
                         ):
+                            set_rows=list(set_diag.get("rows") or [])
                             st.dataframe([
                                 {
                                     "ID":row.get("requirement_id") or "",
@@ -281,8 +282,67 @@ def render(ctx):
                                     "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
                                     "Тема":row.get("topic") or "",
                                 }
-                                for row in set_diag.get("rows") or []
+                                for row in set_rows
                             ],hide_index=True,width="stretch")
+
+                            element_rows=[]
+                            set_near_miss_rows=[]
+                            for row in set_rows:
+                                requirement_id=row.get("requirement_id") or ""
+                                for element in row.get("elements") or []:
+                                    evidence=list(element.get("evidence") or [])
+                                    first=evidence[0] if evidence else {}
+                                    element_rows.append({
+                                        "ID":requirement_id,
+                                        "Элемент":element.get("label") or element.get("id") or "",
+                                        "Статус":"Найден" if element.get("matched") else "Не найден",
+                                        "Документ":first.get("document") or "",
+                                        "Страница":first.get("page"),
+                                        "Фрагмент":first.get("fragment") or "",
+                                    })
+                                    if element.get("matched"):
+                                        continue
+                                    for rank,candidate in enumerate(element.get("near_misses") or [],1):
+                                        set_near_miss_rows.append({
+                                            "ID":requirement_id,
+                                            "Элемент":element.get("label") or element.get("id") or "",
+                                            "Ранг":rank,
+                                            "Документ":candidate.get("document") or "",
+                                            "Страница":candidate.get("page"),
+                                            "Раздел":candidate.get("section") or "",
+                                            "Совпавшие термины":", ".join(candidate.get("matched_terms") or []),
+                                            "Пересечение":(
+                                                f"{candidate.get('overlap_count') or 0}/"
+                                                f"{candidate.get('query_term_count') or 0}"
+                                            ),
+                                            "Фрагмент":candidate.get("fragment") or "",
+                                        })
+
+                            if element_rows:
+                                with st.expander("Элементы обязательных наборов",expanded=True):
+                                    st.caption(
+                                        "Для каждого обязательного элемента показано адресное evidence. "
+                                        "Статус «Не найден» не является автоматическим нарушением."
+                                    )
+                                    st.dataframe(
+                                        element_rows,
+                                        hide_index=True,
+                                        width="stretch",
+                                    )
+                            if set_near_miss_rows:
+                                with st.expander(
+                                    "Near-miss для отсутствующих элементов набора",
+                                    expanded=True,
+                                ):
+                                    st.caption(
+                                        "Это страницы с частичным лексическим пересечением. "
+                                        "Они нужны только для диагностики retrieval и не закрывают элемент набора."
+                                    )
+                                    st.dataframe(
+                                        set_near_miss_rows,
+                                        hide_index=True,
+                                        width="stretch",
+                                    )
 
                     applicability_diag=dict(frontier.get("applicability_trace") or {})
                     if applicability_diag.get("total"):

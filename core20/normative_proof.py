@@ -142,6 +142,7 @@ def proof_frontier_summary(
     semantic_sources: Counter[str] = Counter()
     semantic_sections: Counter[str] = Counter()
     semantic_evidence_buckets: Counter[str] = Counter()
+    semantic_admissions: Counter[str] = Counter()
     retained_reasons: Counter[str] = Counter()
     retained_sources: Counter[str] = Counter()
     retained_sections: Counter[str] = Counter()
@@ -189,15 +190,31 @@ def proof_frontier_summary(
                 source = _source(row)
                 scope = _scope(row)
                 bucket = _evidence_bucket(row)
+                retrieval_reason = str(
+                    row.get("retrieval_reason_code")
+                    or row.get("reason_code")
+                    or ""
+                ).upper()
+                if retrieval_reason == "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE":
+                    admission = "STRONG_NEAR_MISS"
+                elif retrieval_reason == "NORMATIVE_EVIDENCE_WEAK":
+                    admission = "WEAK_RETRIEVAL"
+                elif str(row.get("retrieval_kind") or "").upper() == "VERIFIED_OK":
+                    admission = "STRICT_RETRIEVAL"
+                else:
+                    admission = "OTHER"
+
                 semantic_sources[source] += 1
                 semantic_sections[scope] += 1
                 semantic_evidence_buckets[bucket] += 1
+                semantic_admissions[admission] += 1
                 semantic_rows.append({
                     "requirement_id": requirement_id,
                     "source": source,
                     "paragraph": str(row.get("paragraph") or ""),
                     "sections": scope,
                     "topic": str(row.get("topic") or ""),
+                    "retrieval_admission": admission,
                     "retrieval_candidate_count": int(
                         row.get("retrieval_candidate_count")
                         or len(row.get("evidence_candidates") or [])
@@ -250,6 +267,7 @@ def proof_frontier_summary(
             "by_source": dict(semantic_sources),
             "by_section": dict(semantic_sections),
             "by_evidence_candidates": dict(semantic_evidence_buckets),
+            "by_retrieval_admission": dict(semantic_admissions),
             "rows": semantic_rows,
         },
         "retained_fail_closed": {

@@ -317,3 +317,34 @@ def test_alpha9_weak_phrase_candidate_requires_semantic_proof_not_direct_verific
     assert result["proof_frontier"]["semantic_pending"]["by_retrieval_admission"] == {
         "WEAK_RETRIEVAL": 1
     }
+
+
+
+def test_alpha9_explicit_proof_type_overrides_lexical_set_markers():
+    source = [{
+        "requirement_id": "EXPLICIT-SEMANTIC",
+        "check_kind": "SEMANTIC",
+        "proof_type_hint": "SEMANTIC_REQUIREMENT",
+        "requirement": "Для поверхностного комплекса должен быть приведён перечень мероприятий.",
+        "kind": "VERIFIED_OK",
+        "state": "Подтверждено",
+        "evidence_document": "АР.pdf",
+        "evidence_page": 12,
+        "evidence_fragment": "Перечень мероприятий для поверхностного комплекса приведён.",
+        "retrieval_candidate_count": 1,
+        "evidence_candidates": [{
+            "evidence_id": "E-1",
+            "document": "АР.pdf",
+            "page": 12,
+            "section": "АР",
+            "fragment": "Перечень мероприятий для поверхностного комплекса приведён.",
+        }],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert row["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+    assert result["semantic_queue_total"] == 1
+    assert result["set_completeness_queue_total"] == 0

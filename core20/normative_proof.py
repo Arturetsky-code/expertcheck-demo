@@ -259,6 +259,8 @@ def proof_frontier_summary(
             scope = _scope(row)
             set_sources[source] += 1
             set_sections[scope] += 1
+            set_eval=dict(row.get("set_completeness") or {})
+            total_count=set_eval.get("total_count")
             set_rows.append({
                 "requirement_id": requirement_id,
                 "source": source,
@@ -269,6 +271,18 @@ def proof_frontier_summary(
                     row.get("retrieval_candidate_count")
                     or len(row.get("evidence_candidates") or [])
                 ),
+                "set_mode": str(set_eval.get("mode") or ""),
+                "matched_count": int(set_eval.get("matched_count") or 0),
+                "total_count": total_count,
+                "atomization_complete": bool(set_eval.get("atomization_complete")),
+                "missing_labels": [
+                    str(value) for value in (set_eval.get("missing_labels") or [])
+                    if str(value)
+                ],
+                "observed_inventory": [
+                    str(value) for value in (set_eval.get("observed_inventory") or [])
+                    if str(value)
+                ],
                 "reason": str(row.get("reason") or ""),
             })
         elif proof_state == "STRUCTURED_PROOF_REQUIRED":

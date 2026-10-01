@@ -525,3 +525,26 @@ def test_alpha8_missing_set_element_keeps_near_miss_without_closing_element():
     assert near["required_group_matched"]==2
     assert near["required_group_total"]==3
     assert "перегрузочный пункт" in near["missing_groups"]
+
+
+
+def test_alpha8_conveyor_gallery_fire_contract_is_atomized_by_location():
+    foundation=_foundation()
+    contract=next(
+        x for x in foundation.contracts()
+        if x["requirement_id"]=="FNP505-1184-CONVEYOR-GALLERY-FIRE"
+    )
+    set_contract=dict((contract.get("evidence_contract") or {}).get("set_contract") or {})
+    elements=list(set_contract.get("elements") or [])
+    ids={str(x.get("id") or "") for x in elements}
+
+    assert set_contract.get("mode")=="ALL_REQUIRED"
+    assert set_contract.get("promotion_policy")=="SEMANTIC_AFTER_COMPLETE"
+    assert set_contract.get("atomization_complete") is True
+    assert len(elements)==9
+    assert {
+        "automatic_fire_suppression_drive_stations",
+        "automatic_fire_suppression_transfer_points",
+        "fire_alarm_drive_stations",
+        "fire_alarm_transfer_points",
+    }.issubset(ids)

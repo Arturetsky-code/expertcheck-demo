@@ -877,9 +877,37 @@ def _visual_marker_match(marker:str,text:str)->bool:
     return bool(diag.get("matched")) and not _applicability_negated(marker,text)
 
 
+def _drawing_sheet_index(
+    documents:list[dict[str,Any]]|None,
+)->dict[tuple[str,str],dict[str,Any]]:
+    if not documents or not isinstance(documents[0],dict):
+        return {}
+    graph=dict(documents[0].get("drawing_intelligence_v2") or {})
+    index={}
+    for sheet in graph.get("sheets") or []:
+        if not isinstance(sheet,dict):
+            continue
+        document=str(sheet.get("document") or "")
+        page=sheet.get("page")
+        if not document or page in (None,""):
+            continue
+        index[(document,str(page))]={
+            "drawing_kinds":[
+                str(value) for value in (sheet.get("drawing_kinds") or [])
+                if str(value)
+            ],
+            "designation":str(sheet.get("designation") or ""),
+            "position":str(sheet.get("position") or ""),
+            "object_name":str(sheet.get("object_name") or ""),
+            "owner_binding":str(sheet.get("owner_binding") or ""),
+        }
+    return index
+
+
 def _visual_preflight_evaluation(
     contract:dict[str,Any],
     pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None=None,
 )->dict[str,Any]:
     ec=dict(contract.get("evidence_contract") or {})
     visual_contract=dict(ec.get("visual_contract") or {})
@@ -904,11 +932,35 @@ def _visual_preflight_evaluation(
         dict(value) for value in (visual_contract.get("elements") or [])
         if isinstance(value,dict) and str(value.get("id") or "").strip()
     ]
+    trusted_drawing_kinds={
+        str(value) for value in (visual_contract.get("trusted_drawing_kinds") or [])
+        if str(value)
+    }
+    drawing_sheet_index=_drawing_sheet_index(documents)
+    require_drawing_graph=bool(trusted_drawing_kinds)
+    rejected_untrusted_pages=[]
 
     page_rows=[]
     for page in pages or []:
         raw=str(page.get("text") or page.get("content") or "")
         if not raw.strip():
+            continue
+        document=str(page.get("document") or "")
+        page_no=page.get("page")
+        sheet_meta=drawing_sheet_index.get((document,str(page_no))) or {}
+        sheet_kinds={
+            str(value) for value in (sheet_meta.get("drawing_kinds") or [])
+            if str(value)
+        }
+        if require_drawing_graph and not (sheet_kinds & trusted_drawing_kinds):
+            if any(_visual_marker_match(marker,raw) for marker in candidate_markers):
+                rejected_untrusted_pages.append({
+                    "document":document,
+                    "page":page_no,
+                    "section":str(page.get("document_type") or page.get("section") or ""),
+                    "drawing_kinds":sorted(sheet_kinds),
+                    "reason":"страница не подтверждена Drawing Intelligence как требуемый тип графического листа",
+                })
             continue
         marker_hits=[
             marker for marker in candidate_markers
@@ -921,10 +973,17 @@ def _visual_preflight_evaluation(
                 str(value) for value in (element.get("aliases") or [])
                 if str(value).strip()
             ]
-            matched_aliases=[
-                alias for alias in aliases
-                if _visual_marker_match(alias,raw)
-            ]
+            element_drawing_kinds={
+                str(value) for value in (element.get("drawing_kinds") or [])
+                if str(value)
+            }
+            if element_drawing_kinds and not (sheet_kinds & element_drawing_kinds):
+                matched_aliases=[]
+            else:
+                matched_aliases=[
+                    alias for alias in aliases
+                    if _visual_marker_match(alias,raw)
+                ]
             if matched_aliases:
                 element_hits.append(str(element.get("id") or ""))
                 element_hit_labels.append(str(element.get("label") or element.get("id") or ""))
@@ -940,9 +999,13 @@ def _visual_preflight_evaluation(
                 if str(value).strip()
             )
         page_rows.append({
-            "document":str(page.get("document") or ""),
-            "page":page.get("page"),
+            "document":document,
+            "page":page_no,
             "section":str(page.get("document_type") or page.get("section") or ""),
+            "selection_source":"DRAWING_INTELLIGENCE_V2" if require_drawing_graph else "TEXT_LAYER",
+            "drawing_kinds":sorted(sheet_kinds),
+            "designation":str(sheet_meta.get("designation") or ""),
+            "object_name":str(sheet_meta.get("object_name") or ""),
             "marker_hits":marker_hits,
             "element_hits":element_hits,
             "element_hit_labels":element_hit_labels,
@@ -997,6 +1060,8 @@ def _visual_preflight_evaluation(
         "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
         "elements":element_results,
         "candidate_pages":candidate_pages,
+        "selection_source":"DRAWING_INTELLIGENCE_V2" if require_drawing_graph else "TEXT_LAYER",
+        "rejected_untrusted_pages":rejected_untrusted_pages[:12],
         "principle":(
             "Text-layer drawing markers are preflight only. They select addressable pages "
             "for visual proof and never confirm graphical content by themselves."
@@ -1314,7 +1379,7 @@ class NormativeExecutionEngine20:
         base["applicability_trace"]=list(applicability.get("trace") or [])
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
         base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
-        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates)
+        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

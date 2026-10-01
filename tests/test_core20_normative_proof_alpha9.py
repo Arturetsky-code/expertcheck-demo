@@ -231,3 +231,83 @@ def test_alpha9_graphic_requirement_with_unproven_applicability_stays_fail_close
     assert row["reason_code"] == "NORMATIVE_APPLICABILITY_NOT_PROVEN"
     assert result["review_questions"] == 1
     assert result["system_limitations"] == 0
+
+
+
+def test_alpha9_recoverable_near_miss_requires_semantic_proof():
+    source = [{
+        "requirement_id": "X-NEAR-MISS",
+        "source": "384-ФЗ",
+        "paragraph": "ст. 15, ч. 2",
+        "sections": ["ALL"],
+        "check_kind": "SEMANTIC",
+        "requirement": "В исходных данных должен быть указан уровень ответственности объекта.",
+        "kind": "REVIEW_QUESTION",
+        "state": "Вопрос специалисту",
+        "reason_code": "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE",
+        "reason": "Сильный token-level near-miss.",
+        "evidence_document": "Задание.pdf",
+        "evidence_page": 11,
+        "evidence_fragment": "В задании определён уровень ответственности проектируемого объекта.",
+        "retrieval_candidate_count": 1,
+        "evidence_candidates": [{
+            "evidence_id": "NORM-E-X-01",
+            "document": "Задание.pdf",
+            "page": 11,
+            "section": "Задание на проектирование",
+            "fragment": "В задании определён уровень ответственности проектируемого объекта.",
+            "matched_keywords": ["задание", "уровень", "ответственности", "проектируемого"],
+            "retrieval_keyword_score": 4,
+            "retrieval_keyword_coverage": 0.8,
+            "retrieval_admission": "STRONG_NEAR_MISS",
+        }],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["retrieval_kind"] == "REVIEW_QUESTION"
+    assert row["retrieval_reason_code"] == "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE"
+    assert row["kind"] == "REVIEW_QUESTION"
+    assert row["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"] == "NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert result["verified_ok"] == 0
+    assert result["semantic_queue_total"] == 1
+    assert result["semantic_queue"][0]["evidence"][0]["document"] == "Задание.pdf"
+
+
+def test_alpha9_weak_phrase_candidate_requires_semantic_proof_not_direct_verification():
+    source = [{
+        "requirement_id": "X-WEAK",
+        "source": "СП",
+        "paragraph": "1.1",
+        "sections": ["ПЗУ"],
+        "check_kind": "SEMANTIC",
+        "requirement": "Должны быть обоснованы решения по инженерной защите.",
+        "kind": "REVIEW_QUESTION",
+        "state": "Вопрос специалисту",
+        "reason_code": "NORMATIVE_EVIDENCE_WEAK",
+        "reason": "Evidence найдено, но retrieval недостаточно сильный.",
+        "evidence_document": "ПЗУ.pdf",
+        "evidence_page": 8,
+        "evidence_fragment": "Инженерная защита территории предусмотрена.",
+        "retrieval_candidate_count": 1,
+        "evidence_candidates": [{
+            "evidence_id": "NORM-E-X-WEAK-01",
+            "document": "ПЗУ.pdf",
+            "page": 8,
+            "section": "ПЗУ",
+            "fragment": "Инженерная защита территории предусмотрена.",
+            "matched_keywords": ["инженерная защита"],
+            "retrieval_keyword_score": 1,
+            "retrieval_keyword_coverage": 0.5,
+        }],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+    assert row["kind"] == "REVIEW_QUESTION"
+    assert result["verified_ok"] == 0
+    assert result["semantic_queue_total"] == 1

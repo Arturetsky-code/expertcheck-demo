@@ -123,7 +123,7 @@ def render(ctx):
             p2.metric("Кандидатов доказательства",retrieval.get("candidate_evidence",0))
             p3.metric("Доказано",execution.get("verified_ok",0))
             p4.metric(
-                "Удержано сейчас",
+                "Удержано из strict retrieval",
                 execution.get("demoted_keyword_only_remaining",execution.get("demoted_keyword_only",0)),
             )
             p5.metric("Очередь смысловой проверки",execution.get("semantic_queue_total",0))
@@ -147,8 +147,9 @@ def render(ctx):
             )
             if initial_held != remaining_held:
                 st.caption(
-                    f"Доказательный контроль исходно удержал {initial_held} контрактов; "
-                    f"после накопленных смысловых решений в текущем остатке {remaining_held}."
+                    f"Из strict retrieval доказательный контроль исходно удержал {initial_held} контрактов; "
+                    f"после накопленных смысловых решений в этом контуре осталось {remaining_held}. "
+                    "Recoverable weak/near-miss кандидаты учитываются отдельно в смысловой очереди."
                 )
 
             frontier=dict(execution.get("proof_frontier") or {})

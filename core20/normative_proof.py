@@ -151,10 +151,14 @@ def proof_frontier_summary(
     semantic_sections: Counter[str] = Counter()
     semantic_evidence_buckets: Counter[str] = Counter()
     semantic_admissions: Counter[str] = Counter()
+    set_sources: Counter[str] = Counter()
+    set_sections: Counter[str] = Counter()
     retained_reasons: Counter[str] = Counter()
     retained_sources: Counter[str] = Counter()
     retained_sections: Counter[str] = Counter()
     semantic_rows: list[dict[str, Any]] = []
+    set_rows: list[dict[str, Any]] = []
+    applicability_rows: list[dict[str, Any]] = []
     retained_rows: list[dict[str, Any]] = []
     held_total = 0
     unresolved_total = 0
@@ -185,6 +189,22 @@ def proof_frontier_summary(
         retrieval_kind = str(row.get("retrieval_kind") or "").upper()
         proof_state = str(row.get("proof_state") or "").upper()
         requirement_id = str(row.get("requirement_id") or "")
+
+        for trace in row.get("applicability_trace") or []:
+            if not isinstance(trace,dict):
+                continue
+            applicability_rows.append({
+                "requirement_id": requirement_id,
+                "source": _source(row),
+                "paragraph": str(row.get("paragraph") or ""),
+                "topic": str(row.get("topic") or ""),
+                "reason_code": str(row.get("applicability_reason_code") or ""),
+                "document": str(trace.get("document") or ""),
+                "page": trace.get("page"),
+                "section": str(trace.get("section") or ""),
+                "matched_condition": str(trace.get("matched_condition") or ""),
+                "fragment": str(trace.get("fragment") or ""),
+            })
 
         if retrieval_kind == "VERIFIED_OK" and current_kind != "VERIFIED_OK":
             held_total += 1
@@ -232,6 +252,22 @@ def proof_frontier_summary(
                 blockers["SEMANTIC_REVIEWED_NO_PROMOTION"] += 1
         elif proof_state == "SET_PROOF_CONTRACT_REQUIRED":
             blockers["SET_COMPLETENESS_REQUIRED"] += 1
+            source = _source(row)
+            scope = _scope(row)
+            set_sources[source] += 1
+            set_sections[scope] += 1
+            set_rows.append({
+                "requirement_id": requirement_id,
+                "source": source,
+                "paragraph": str(row.get("paragraph") or ""),
+                "sections": scope,
+                "topic": str(row.get("topic") or ""),
+                "retrieval_candidate_count": int(
+                    row.get("retrieval_candidate_count")
+                    or len(row.get("evidence_candidates") or [])
+                ),
+                "reason": str(row.get("reason") or ""),
+            })
         elif proof_state == "STRUCTURED_PROOF_REQUIRED":
             blockers["STRUCTURED_PROOF_REQUIRED"] += 1
         elif proof_state == "VISUAL_PROOF_REQUIRED":
@@ -277,6 +313,16 @@ def proof_frontier_summary(
             "by_evidence_candidates": dict(semantic_evidence_buckets),
             "by_retrieval_admission": dict(semantic_admissions),
             "rows": semantic_rows,
+        },
+        "set_completeness": {
+            "total": len(set_rows),
+            "by_source": dict(set_sources),
+            "by_section": dict(set_sections),
+            "rows": set_rows,
+        },
+        "applicability_trace": {
+            "total": len(applicability_rows),
+            "rows": applicability_rows,
         },
         "retained_fail_closed": {
             "total": len(retained_rows),

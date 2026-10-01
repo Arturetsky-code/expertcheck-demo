@@ -348,3 +348,45 @@ def test_alpha9_explicit_proof_type_overrides_lexical_set_markers():
     assert row["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
     assert result["semantic_queue_total"] == 1
     assert result["set_completeness_queue_total"] == 0
+
+
+
+def test_alpha9_frontier_exposes_set_and_applicability_trace():
+    source = [{
+        "requirement_id": "SET-1",
+        "source": "ПП №87",
+        "paragraph": "п. 15",
+        "check_kind": "STRUCTURE",
+        "proof_type_hint": "SET_COMPLETENESS",
+        "requirement": "Должен быть предусмотрен состав применимых подразделов.",
+        "kind": "VERIFIED_OK",
+        "state": "Подтверждено",
+        "evidence_document": "ИОС1.pdf",
+        "evidence_page": 1,
+        "evidence_fragment": "Подраздел ИОС1.",
+        "retrieval_candidate_count": 1,
+        "evidence_candidates": [{
+            "evidence_id": "E-SET-1",
+            "document": "ИОС1.pdf",
+            "page": 1,
+            "section": "ИОС",
+            "fragment": "Подраздел ИОС1.",
+        }],
+        "applicability_reason_code": "PROJECT_CORPUS_CONDITION_PROVEN",
+        "applicability_trace": [{
+            "document": "ПЗ.pdf",
+            "page": 3,
+            "section": "ПЗ",
+            "matched_condition": "система электроснабжения",
+            "fragment": "На объекте предусмотрена система электроснабжения.",
+        }],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    frontier = result["proof_frontier"]
+
+    assert frontier["set_completeness"]["total"] == 1
+    assert frontier["set_completeness"]["rows"][0]["requirement_id"] == "SET-1"
+    assert frontier["applicability_trace"]["total"] == 1
+    assert frontier["applicability_trace"]["rows"][0]["document"] == "ПЗ.pdf"
+    assert result["set_completeness_queue_total"] == 1

@@ -133,14 +133,39 @@ def _project_profile(documents:list[dict[str,Any]]|None)->str:
     return ""
 
 
-def _conditional_applicability(
+def _applicability_negated(keyword:str,text:str)->bool:
+    normalized=_norm(text)
+    matched,_,position=_keyword_match(keyword,normalized)
+    if not matched or position<0:
+        return False
+    start=max(0,position-180)
+    end=min(len(normalized),position+360)
+    window=normalized[start:end]
+    negative_markers=(
+        "не распространя",
+        "не предъявл",
+        "не примен",
+        "не требуется",
+        "не подлеж",
+        "не относится",
+        "требования отсутств",
+    )
+    return any(marker in window for marker in negative_markers)
+
+
+def _conditional_applicability_decision(
     contract:dict[str,Any],
     documents:list[dict[str,Any]]|None,
     pages:list[dict[str,Any]]|None=None,
-)->tuple[bool,str]:
+)->dict[str,Any]:
     ec=dict(contract.get("evidence_contract") or {})
     if str(ec.get("applicability") or "").upper()!="CONDITIONAL":
-        return True,"SECTION_PRESENT"
+        return {
+            "applicable":True,
+            "reason_code":"SECTION_PRESENT",
+            "trace":[],
+            "negative_trace":[],
+        }
 
     applicability_keywords=[
         _norm(value) for value in (ec.get("applicability_keywords") or [])
@@ -148,24 +173,86 @@ def _conditional_applicability(
     ]
     if applicability_keywords:
         matched=set()
+        trace=[]
+        negative_trace=[]
+        seen=set()
         for page in pages or []:
-            text=str(page.get("text") or page.get("content") or "")
+            raw_text=str(page.get("text") or page.get("content") or "")
             for keyword in applicability_keywords:
-                ok,is_numeric,_=_keyword_match(keyword,text)
-                if ok and not is_numeric:
-                    matched.add(keyword)
+                ok,is_numeric,_=_keyword_match(keyword,raw_text)
+                if not ok or is_numeric:
+                    continue
+                document=str(page.get("document") or "").strip()
+                page_no=page.get("page")
+                key=(document,str(page_no),keyword)
+                if key in seen:
+                    continue
+                seen.add(key)
+                entry={
+                    "document":document,
+                    "page":page_no,
+                    "section":str(page.get("document_type") or page.get("section") or ""),
+                    "matched_condition":keyword,
+                    "fragment":_fragment(raw_text,[keyword],radius=180),
+                }
+                if _applicability_negated(keyword,raw_text):
+                    negative_trace.append(entry)
+                    continue
+                matched.add(keyword)
+                trace.append(entry)
         minimum=max(1,int(ec.get("applicability_min_hits") or 1))
         if len(matched)>=minimum:
-            return True,"PROJECT_CORPUS_CONDITION_PROVEN"
-        return False,"PROJECT_CORPUS_CONDITION_NOT_PROVEN"
+            return {
+                "applicable":True,
+                "reason_code":"PROJECT_CORPUS_CONDITION_PROVEN",
+                "trace":trace[:6],
+                "negative_trace":negative_trace[:6],
+            }
+        return {
+            "applicable":False,
+            "reason_code":"PROJECT_CORPUS_CONDITION_NOT_PROVEN",
+            "trace":trace[:6],
+            "negative_trace":negative_trace[:6],
+        }
 
     requirement=_norm(contract.get("requirement") or "")
     profile=_norm(_project_profile(documents))
     if "производственного назначения" in requirement:
         if "объект производственного назначения" in profile:
-            return True,"PROJECT_PROFILE_PRODUCTION"
-        return False,"PROJECT_PROFILE_PRODUCTION_NOT_PROVEN"
-    return False,"CONDITIONAL_APPLICABILITY_NOT_PROVEN"
+            return {
+                "applicable":True,
+                "reason_code":"PROJECT_PROFILE_PRODUCTION",
+                "trace":[{
+                    "document":"",
+                    "page":None,
+                    "section":"PROJECT_PROFILE",
+                    "matched_condition":"объект производственного назначения",
+                    "fragment":_project_profile(documents),
+                }],
+                "negative_trace":[],
+            }
+        return {
+            "applicable":False,
+            "reason_code":"PROJECT_PROFILE_PRODUCTION_NOT_PROVEN",
+            "trace":[],
+            "negative_trace":[],
+        }
+    return {
+        "applicable":False,
+        "reason_code":"CONDITIONAL_APPLICABILITY_NOT_PROVEN",
+        "trace":[],
+        "negative_trace":[],
+    }
+
+
+def _conditional_applicability(
+    contract:dict[str,Any],
+    documents:list[dict[str,Any]]|None,
+    pages:list[dict[str,Any]]|None=None,
+)->tuple[bool,str]:
+    """Compatibility wrapper for callers that only need the binary decision."""
+    decision=_conditional_applicability_decision(contract,documents,pages)
+    return bool(decision.get("applicable")),str(decision.get("reason_code") or "")
 
 
 def _inventory_roles(documents:list[dict[str,Any]]|None,target:str)->set[str]:
@@ -570,8 +657,12 @@ class NormativeExecutionEngine20:
             "evidence_candidates":[],
             "retrieval_near_misses":[],
         }
-        applicable,applicability_reason=_conditional_applicability(contract,documents,candidates)
+        applicability=_conditional_applicability_decision(contract,documents,candidates)
+        applicable=bool(applicability.get("applicable"))
+        applicability_reason=str(applicability.get("reason_code") or "")
         base["applicability_reason_code"]=applicability_reason
+        base["applicability_trace"]=list(applicability.get("trace") or [])
+        base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

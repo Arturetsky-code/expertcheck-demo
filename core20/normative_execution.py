@@ -87,6 +87,85 @@ def _keyword_match(keyword:str,text:str)->tuple[bool,bool,int]:
     return False,False,-1
 
 
+def _keyword_span_diagnostic(keyword:str,text:str)->dict[str,Any]:
+    """Explain why a phrase-level concept matched or failed without changing verdicts."""
+    normalized=_norm(text)
+    lexical,numeric,alpha_count=_keyword_signature(keyword)
+    if numeric and not lexical:
+        rendered=normalized.replace(".",",")
+        positions=[rendered.find(value) for value in numeric]
+        present=[value for value,pos in zip(numeric,positions) if pos>=0]
+        return {
+            "keyword":keyword,
+            "matched":len(present)==len(numeric),
+            "present_stems":present,
+            "missing_stems":[value for value,pos in zip(numeric,positions) if pos<0],
+            "span_chars":0 if present else None,
+            "reason":"NUMERIC",
+        }
+
+    if not lexical:
+        return {
+            "keyword":keyword,
+            "matched":False,
+            "present_stems":[],
+            "missing_stems":[],
+            "span_chars":None,
+            "reason":"NO_LEXICAL_TERMS",
+        }
+
+    position_sets=[]
+    missing=[]
+    present=[]
+    for stem in lexical:
+        positions=[m.start() for m in re.finditer(re.escape(stem),normalized)]
+        if positions:
+            present.append(stem)
+            position_sets.append(positions)
+        else:
+            missing.append(stem)
+    if missing:
+        return {
+            "keyword":keyword,
+            "matched":False,
+            "present_stems":present,
+            "missing_stems":missing,
+            "span_chars":None,
+            "reason":"MISSING_STEMS",
+        }
+
+    if alpha_count>1 and len(lexical)<2:
+        return {
+            "keyword":keyword,
+            "matched":False,
+            "present_stems":present,
+            "missing_stems":[],
+            "span_chars":None,
+            "reason":"INSUFFICIENT_LEXICAL_ANCHORS",
+        }
+
+    best_span=None
+    best_positions=[]
+    for anchor in position_sets[0]:
+        selected=[anchor]
+        for variants in position_sets[1:]:
+            nearest=min(variants,key=lambda pos:abs(pos-anchor))
+            selected.append(nearest)
+        span=max(selected)-min(selected)
+        if best_span is None or span<best_span:
+            best_span=span
+            best_positions=selected
+    return {
+        "keyword":keyword,
+        "matched":bool(best_span is not None and best_span<=320),
+        "present_stems":present,
+        "missing_stems":[],
+        "span_chars":best_span,
+        "positions":best_positions,
+        "reason":"LOCAL_MATCH" if best_span is not None and best_span<=320 else "TERMS_TOO_FAR_APART",
+    }
+
+
 def _page_section(page:dict[str,Any])->str:
     return _section_key(page.get("document_type") or page.get("section") or page.get("document") or "")
 
@@ -590,16 +669,40 @@ def _set_element_match(
             group_positions=[]
             missing_groups=[]
 
+            group_diagnostics=[]
             if evidence_groups:
                 total_groups=len(evidence_groups)+(1 if numeric_required else 0)
                 matched_groups=0
                 for group in evidence_groups:
                     group_label=str(group.get("label") or group.get("id") or "смысловая группа")
                     option_hits=[]
+                    option_diagnostics=[]
                     for option in group.get("aliases") or []:
-                        matched,is_numeric,position=_keyword_match(str(option),raw)
-                        if matched and not is_numeric and not _applicability_negated(str(option),raw):
-                            option_hits.append((position,str(option)))
+                        option_text=str(option)
+                        diag=_keyword_span_diagnostic(option_text,raw)
+                        option_diagnostics.append(diag)
+                        matched,is_numeric,position=_keyword_match(option_text,raw)
+                        if matched and not is_numeric and not _applicability_negated(option_text,raw):
+                            option_hits.append((position,option_text))
+                    best_diag=min(
+                        option_diagnostics,
+                        key=lambda item:(
+                            0 if item.get("matched") else 1,
+                            item.get("span_chars")
+                            if item.get("span_chars") is not None else 10**9,
+                            len(item.get("missing_stems") or []),
+                        ),
+                        default={},
+                    )
+                    group_diagnostics.append({
+                        "group":group_label,
+                        "matched":bool(option_hits),
+                        "best_alias":str(best_diag.get("keyword") or ""),
+                        "span_chars":best_diag.get("span_chars"),
+                        "reason":str(best_diag.get("reason") or ""),
+                        "present_stems":list(best_diag.get("present_stems") or []),
+                        "missing_stems":list(best_diag.get("missing_stems") or []),
+                    })
                     if option_hits:
                         position,selected=min(option_hits,key=lambda item:item[0])
                         matched_groups+=1
@@ -646,6 +749,7 @@ def _set_element_match(
                 "required_group_total":total_groups,
                 "required_group_matched":matched_groups,
                 "missing_groups":missing_groups,
+                "group_diagnostics":group_diagnostics,
                 "alias_group_hit":alias_group_hit,
                 "numeric_present":numeric_present,
             })

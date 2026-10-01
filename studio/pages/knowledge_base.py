@@ -266,8 +266,9 @@ def render(ctx):
                             expanded=True,
                         ):
                             st.caption(
-                                "Текстовый слой чертежа используется только для выбора адресных листов-кандидатов. "
-                                "Он не подтверждает графическое содержание и не меняет нормативный вердикт."
+                                "Для АР лист-кандидат должен быть подтверждён Drawing Intelligence по основной надписи и типу листа; "
+                                "для ПЗУ пока используется text-layer preflight. Ни один preflight сам по себе не подтверждает "
+                                "графическое содержание и не меняет нормативный вердикт."
                             )
                             visual_rows=list(visual_diag.get("rows") or [])
                             visual_kind_labels={
@@ -289,6 +290,11 @@ def render(ctx):
                                     "Покрытие preflight":(
                                         f"{row.get('coverage_count') or 0}/"
                                         f"{row.get('total_count') or 0}"
+                                    ),
+                                    "Источник отбора":(
+                                        "Drawing Intelligence 2.0"
+                                        if row.get("selection_source")=="DRAWING_INTELLIGENCE_V2"
+                                        else "Текстовый слой"
                                     ),
                                     "Листов-кандидатов":row.get("candidate_page_count") or 0,
                                     "Не найдено в text-layer":"; ".join(
@@ -315,6 +321,14 @@ def render(ctx):
                                         "Документ":page.get("document") or "",
                                         "Страница":page.get("page"),
                                         "Раздел":page.get("section") or "",
+                                        "Источник":(
+                                            "Drawing Intelligence 2.0"
+                                            if page.get("selection_source")=="DRAWING_INTELLIGENCE_V2"
+                                            else "Текстовый слой"
+                                        ),
+                                        "Типы листа":"; ".join(page.get("drawing_kinds") or []),
+                                        "Объект листа":page.get("object_name") or "",
+                                        "Обозначение":page.get("designation") or "",
                                         "Совпавшие элементы":"; ".join(
                                             page.get("element_hit_labels") or []
                                         ),
@@ -347,6 +361,29 @@ def render(ctx):
                                 ):
                                     st.dataframe(
                                         visual_page_rows,
+                                        hide_index=True,
+                                        width="stretch",
+                                    )
+
+                            rejected_rows=[]
+                            for row in visual_rows:
+                                for rejected in row.get("rejected_untrusted_pages") or []:
+                                    rejected_rows.append({
+                                        "ID":row.get("requirement_id") or "",
+                                        "Документ":rejected.get("document") or "",
+                                        "Страница":rejected.get("page"),
+                                        "Распознанные типы листа":"; ".join(
+                                            rejected.get("drawing_kinds") or []
+                                        ),
+                                        "Почему отклонено":rejected.get("reason") or "",
+                                    })
+                            if rejected_rows:
+                                with st.expander(
+                                    "Отклонённые текстовые страницы АР",
+                                    expanded=False,
+                                ):
+                                    st.dataframe(
+                                        rejected_rows,
                                         hide_index=True,
                                         width="stretch",
                                     )

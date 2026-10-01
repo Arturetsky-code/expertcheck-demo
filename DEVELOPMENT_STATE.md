@@ -3252,3 +3252,73 @@ The success criterion is:
 - existing completed decisions remain preserved;
 - each newly completed packet decreases pending rather than replacing prior checkpoint state;
 - provider failure leaves unfinished packets pending without deleting completed decisions.
+
+
+## Live validation — resumable semantic queue confirmed after expanded-root fix
+
+Validation date: 2026-10-01.
+
+Validated source checkpoint before the live run:
+`be5af9e60acd96aca0ff9ba1afb128fb547d9b2b`
+
+Relevant fix:
+`b057f33a65671d39f60306b5a1618ff96d4f0579` — `normative: preserve completed decisions across expanded pending roots`
+
+### Pre-run state
+
+- contracts: 64;
+- evidence candidates: 154;
+- proved: 12;
+- held by proof control: 40;
+- semantic proof applied: 4;
+- pending semantic queue: 30;
+- specialist questions: 49;
+- system limitations: 3;
+- addressable evidence: 78.1%.
+
+### Post-run state
+
+After exactly one bounded live semantic run:
+
+- contracts: 64;
+- evidence candidates: 154;
+- proved: 15;
+- held by proof control: 40;
+- semantic proof applied: 7;
+- pending semantic queue: 26;
+- specialist questions: 46;
+- system limitations: 3;
+- addressable evidence: 78.1%.
+
+Delta:
+
+- proved: +3;
+- semantic proof applied: +3;
+- pending semantic queue: -4;
+- specialist questions: -3.
+
+### Result
+
+The expanded-root resumable-queue fix is confirmed in the live project state.
+
+The critical acceptance criterion passed: the pending queue decreased from 30 to 26 while previously completed semantic decisions remained accumulated. Four newly completed packets were consumed from the pending queue; three of them promoted requirements to semantic VERIFIED_OK, while one completed without an additional VERIFIED_OK promotion.
+
+This confirms that a new partial semantic run now accumulates completed decisions on top of the persisted checkpoint instead of replacing earlier completed state.
+
+### Next development target
+
+Do not spend the next iteration on resumable-checkpoint mechanics unless a regression appears.
+
+The next quality investigation should focus on the remaining:
+- 26 pending semantic packets;
+- 40 contracts held by proof control;
+- 46 specialist questions.
+
+First separate those populations by machine-readable reason code and proof state, then identify whether the dominant blockers are:
+1. missing/weak addressable evidence;
+2. incomplete requirement/evidence binding;
+3. semantic ambiguity requiring Judge/Critic;
+4. missing normative knowledge;
+5. genuine project-side uncertainty.
+
+Preserve Test78 and the current live metrics as non-regression baselines.

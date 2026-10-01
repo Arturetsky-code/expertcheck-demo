@@ -232,6 +232,10 @@ def proof_frontier_summary(
                     row.get("retrieval_candidate_count")
                     or len(row.get("evidence_candidates") or [])
                 ),
+                "near_misses": [
+                    dict(item) for item in (row.get("retrieval_near_misses") or [])
+                    if isinstance(item,dict)
+                ],
                 "reason": str(row.get("reason") or ""),
             })
         else:

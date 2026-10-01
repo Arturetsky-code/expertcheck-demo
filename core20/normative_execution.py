@@ -274,6 +274,72 @@ def _near_miss_candidates(
     return output
 
 
+def _strong_near_miss_evidence(
+    contract:dict[str,Any],
+    candidates:list[dict[str,Any]],
+    requirement_id:str,
+    *,
+    limit:int=4,
+    minimum_distinct_sections:int=1,
+)->list[dict[str,Any]]:
+    """Admit only strong partial overlaps as semantic-review candidates.
+
+    This fallback never verifies a requirement by itself. It only creates
+    addressable evidence packets so the proof layer can keep the verdict
+    fail-closed and, when appropriate, send the packet to semantic review.
+    """
+    raw=[
+        item for item in _near_miss_candidates(contract,candidates,limit=12)
+        if int(item.get("overlap_count") or 0)>=3
+        and float(item.get("overlap_ratio") or 0)>=0.70
+    ]
+    if not raw:
+        return []
+
+    minimum_distinct_sections=max(1,min(int(minimum_distinct_sections or 1),limit))
+    selected=list(raw[:limit])
+    if minimum_distinct_sections>1:
+        seen={
+            _section_key(item.get("section") or item.get("document") or "")
+            for item in selected
+            if _section_key(item.get("section") or item.get("document") or "")
+        }
+        for item in raw[limit:]:
+            if len(seen)>=minimum_distinct_sections:
+                break
+            section=_section_key(item.get("section") or item.get("document") or "")
+            if not section or section in seen:
+                continue
+            if selected:
+                selected[-1]=item
+            else:
+                selected.append(item)
+            seen.add(section)
+
+    output=[]
+    seen_pages=set()
+    for item in selected[:limit]:
+        document=str(item.get("document") or "").strip()
+        page_no=item.get("page")
+        fragment=str(item.get("fragment") or "").strip()
+        key=(document,str(page_no))
+        if not document or page_no in (None,"") or not fragment or key in seen_pages:
+            continue
+        seen_pages.add(key)
+        output.append({
+            "evidence_id":f"NORM-E-{requirement_id}-NM-{len(output)+1:02d}",
+            "document":document,
+            "page":page_no,
+            "section":str(item.get("section") or ""),
+            "fragment":fragment,
+            "matched_keywords":list(item.get("matched_terms") or []),
+            "retrieval_keyword_score":int(item.get("overlap_count") or 0),
+            "retrieval_keyword_coverage":float(item.get("overlap_ratio") or 0),
+            "retrieval_admission":"STRONG_NEAR_MISS",
+        })
+    return output
+
+
 def _rank_candidates(
     contract:dict[str,Any],
     candidates:list[dict[str,Any]],
@@ -558,10 +624,42 @@ class NormativeExecutionEngine20:
         base["evidence_candidates"]=evidence_candidates
         base["retrieval_candidate_count"]=len(evidence_candidates)
         if not ranked or not evidence_candidates:
+            near_misses=_near_miss_candidates(contract,candidates)
+            fallback=_strong_near_miss_evidence(
+                contract,
+                candidates,
+                rid,
+                limit=4,
+                minimum_distinct_sections=(minimum_sources if cross_document else 1),
+            )
+            if fallback:
+                primary=fallback[0]
+                return {
+                    **base,
+                    "kind":"REVIEW_QUESTION",
+                    "state":KIND_LABELS["REVIEW_QUESTION"],
+                    "reason":(
+                        "Точное фразовое совпадение не прошло retrieval-порог, но найден сильный адресный "
+                        "token-level near-miss. Кандидат допускается только к доказательной/смысловой проверке "
+                        "и сам по себе не подтверждает выполнение требования."
+                    ),
+                    "reason_code":"NORMATIVE_STRONG_NEAR_MISS_CANDIDATE",
+                    "retrieval_near_misses":near_misses,
+                    "evidence_candidates":fallback,
+                    "retrieval_candidate_count":len(fallback),
+                    "evidence_id":primary.get("evidence_id") or "",
+                    "evidence_document":primary.get("document") or "",
+                    "evidence_page":primary.get("page"),
+                    "evidence_fragment":primary.get("fragment") or "",
+                    "matched_keywords":list(primary.get("matched_keywords") or []),
+                    "retrieval_keyword_score":int(primary.get("retrieval_keyword_score") or 0),
+                    "retrieval_keyword_coverage":primary.get("retrieval_keyword_coverage") or 0,
+                    "retrieval_minimum":minimum,
+                }
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД и профильный раздел подтверждены, но адресное положительное доказательство выполнения требования не найдено. Отсутствие совпадения не трактуется как нарушение.",
                 "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
-                "retrieval_near_misses":_near_miss_candidates(contract,candidates),
+                "retrieval_near_misses":near_misses,
                 "evidence_document":"","evidence_page":None,"evidence_fragment":"","matched_keywords":[]}
 
         primary=evidence_candidates[0]

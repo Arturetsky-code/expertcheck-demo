@@ -283,6 +283,24 @@ def proof_frontier_summary(
                     str(value) for value in (set_eval.get("observed_inventory") or [])
                     if str(value)
                 ],
+                "elements": [
+                    {
+                        "id": str(item.get("id") or ""),
+                        "label": str(item.get("label") or item.get("id") or ""),
+                        "matched": bool(item.get("matched")),
+                        "numeric_required": bool(item.get("numeric_required")),
+                        "evidence": [
+                            dict(value) for value in (item.get("evidence") or [])
+                            if isinstance(value,dict)
+                        ],
+                        "near_misses": [
+                            dict(value) for value in (item.get("near_misses") or [])
+                            if isinstance(value,dict)
+                        ],
+                    }
+                    for item in (set_eval.get("elements") or [])
+                    if isinstance(item,dict)
+                ],
                 "reason": str(row.get("reason") or ""),
             })
         elif proof_state == "STRUCTURED_PROOF_REQUIRED":

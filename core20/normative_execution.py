@@ -476,12 +476,21 @@ def _set_element_match(
         if len(evidence)>=2:
             break
 
+    near_misses=[]
+    if not evidence:
+        diagnostic_contract={
+            "keywords":[*aliases,*all_terms],
+            "requirement":" ".join([label,*aliases,*all_terms]),
+        }
+        near_misses=_near_miss_candidates(diagnostic_contract,pages,limit=3)
+
     return {
         "id":element_id,
         "label":label,
         "matched":bool(evidence),
         "numeric_required":numeric_required,
         "evidence":evidence,
+        "near_misses":near_misses,
     }
 
 

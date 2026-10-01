@@ -8,6 +8,7 @@ from core20.normative_execution import (
     _set_completeness_evaluation,
     _set_element_match,
     _keyword_span_diagnostic,
+    _general_plan_visual_kinds_from_text,
     _visual_preflight_evaluation,
     _rank_candidates,
 )
@@ -960,3 +961,102 @@ def test_alpha8_broad_page_kind_does_not_qualify_without_title_kind():
     assert result["candidate_pages"]==[]
     assert result["rejected_untrusted_pages"]
     assert result["rejected_untrusted_pages"][0]["broad_drawing_kinds"]==["facade"]
+
+
+
+def test_alpha8_pzu_visual_kind_rejects_drawing_index_page():
+    assert _general_plan_visual_kinds_from_text(
+        "Ведомость графической части. Лист 3 План земляных масс. Лист 4 Ситуационный план."
+    ) == []
+    assert _general_plan_visual_kinds_from_text(
+        "План земляных масс. Схема организации рельефа. Масштаб 1:1000."
+    ) == ["relief_earthworks"]
+
+
+def test_alpha8_pzu_visual_preflight_rejects_drawing_index_page():
+    contract={
+        "requirement_id":"VIS-PZU",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"PZU_RELIEF_EARTHWORKS",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["план земляных масс","схема организации рельефа"],
+                "trusted_general_plan_kinds":["relief_earthworks"],
+                "elements":[
+                    {
+                        "id":"earth",
+                        "label":"План земляных масс",
+                        "aliases":["план земляных масс"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[
+        {
+            "document":"ПЗУ2.pdf",
+            "document_type":"ПЗУ2",
+            "page":3,
+            "text":"Ведомость графической части. Лист 3 План земляных масс.",
+        },
+        {
+            "document":"ПЗУ2.pdf",
+            "document_type":"ПЗУ2",
+            "page":12,
+            "text":"План земляных масс. Схема организации рельефа. Масштаб 1:1000.",
+        },
+    ]
+
+    result=_visual_preflight_evaluation(contract,pages,[{}])
+
+    assert result["selection_source"]=="PZU_STRUCTURAL_PREFLIGHT"
+    assert result["coverage_count"]==1
+    assert len(result["candidate_pages"])==1
+    assert result["candidate_pages"][0]["page"]==12
+    assert result["candidate_pages"][0]["drawing_kinds"]==["relief_earthworks"]
+    assert result["rejected_untrusted_pages"]
+    assert result["rejected_untrusted_pages"][0]["page"]==3
+
+
+def test_alpha8_pzu_visual_preflight_prefers_general_plan_engine_audit():
+    contract={
+        "requirement_id":"VIS-PZU-SITUATION",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"PZU_SITUATION_PLAN",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["ситуационный план"],
+                "trusted_general_plan_kinds":["situation_plan"],
+                "elements":[
+                    {
+                        "id":"situation",
+                        "label":"Ситуационный план",
+                        "aliases":["ситуационный план"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[{
+        "document":"ПЗУ2.pdf",
+        "document_type":"ПЗУ2",
+        "page":4,
+        "text":"Ситуационный план. Условные обозначения.",
+    }]
+    documents=[{
+        "general_plan_audit":[{
+            "document":"ПЗУ2.pdf",
+            "page":4,
+            "decision":"visual_sheet_audit",
+            "general_plan_page":True,
+            "visual_kinds":["situation_plan"],
+            "position_count":3,
+            "has_explication":False,
+        }],
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages,documents)
+
+    assert result["selection_source"]=="GENERAL_PLAN_ENGINE"
+    assert result["candidate_pages"][0]["selection_source"]=="GENERAL_PLAN_ENGINE"
+    assert result["candidate_pages"][0]["drawing_kinds"]==["situation_plan"]

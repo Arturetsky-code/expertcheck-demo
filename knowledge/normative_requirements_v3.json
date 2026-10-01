@@ -1461,7 +1461,53 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "PZU_SITE_LAYOUT",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "схема планировочной организации",
+          "генеральный план",
+          "план земельного участка"
+        ],
+        "elements": [
+          {
+            "id": "land_plot",
+            "label": "Земельный участок и его границы",
+            "aliases": [
+              "земельный участок",
+              "граница земельного участка"
+            ]
+          },
+          {
+            "id": "existing_projected_objects",
+            "label": "Существующие и проектируемые объекты",
+            "aliases": [
+              "существующие и проектируемые",
+              "проектируемые объекты",
+              "существующие объекты"
+            ]
+          },
+          {
+            "id": "utilities",
+            "label": "Инженерные сети",
+            "aliases": [
+              "инженерные сети",
+              "сети инженерно-технического обеспечения"
+            ]
+          },
+          {
+            "id": "access",
+            "label": "Подъезды и подходы",
+            "aliases": [
+              "подъезд",
+              "подход",
+              "проезд"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1492,7 +1538,35 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "PZU_RELIEF_EARTHWORKS",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "схема организации рельефа",
+          "план земляных масс",
+          "вертикальная планировка"
+        ],
+        "elements": [
+          {
+            "id": "relief_scheme",
+            "label": "Схема организации рельефа",
+            "aliases": [
+              "схема организации рельефа",
+              "вертикальная планировка"
+            ]
+          },
+          {
+            "id": "earth_mass_plan",
+            "label": "План земляных масс",
+            "aliases": [
+              "план земляных масс",
+              "земляные массы"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1524,7 +1598,37 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "PZU_UTILITY_NETWORKS",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "сводный план сетей",
+          "инженерные сети",
+          "места подключения"
+        ],
+        "elements": [
+          {
+            "id": "utility_network_plan",
+            "label": "Сводный план инженерных сетей",
+            "aliases": [
+              "сводный план сетей",
+              "план инженерных сетей",
+              "сети инженерно-технического обеспечения"
+            ]
+          },
+          {
+            "id": "connection_points",
+            "label": "Места подключения проектируемого объекта",
+            "aliases": [
+              "места подключения",
+              "точки подключения",
+              "подключение проектируемого объекта"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1557,7 +1661,40 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "PZU_SITUATION_PLAN",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "ситуационный план"
+        ],
+        "elements": [
+          {
+            "id": "situation_plan",
+            "label": "Ситуационный план",
+            "aliases": [
+              "ситуационный план"
+            ]
+          },
+          {
+            "id": "boundaries",
+            "label": "Границы",
+            "aliases": [
+              "граница",
+              "границы"
+            ]
+          },
+          {
+            "id": "communications",
+            "label": "Коммуникации",
+            "aliases": [
+              "коммуникации",
+              "инженерные сети"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1985,7 +2122,26 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "AR_FACADES",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "фасад",
+          "фасады"
+        ],
+        "elements": [
+          {
+            "id": "facade_views",
+            "label": "Отображение фасадов",
+            "aliases": [
+              "фасад",
+              "фасады"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2017,7 +2173,44 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "AR_FLOOR_PLANS",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "план 1 этажа",
+          "план этажа",
+          "поэтажный план",
+          "экспликация помещений"
+        ],
+        "elements": [
+          {
+            "id": "floor_plans",
+            "label": "Поэтажные планы",
+            "aliases": [
+              "план 1 этажа",
+              "план этажа",
+              "поэтажный план"
+            ]
+          },
+          {
+            "id": "room_schedule",
+            "label": "Экспликация помещений",
+            "aliases": [
+              "экспликация помещений"
+            ]
+          },
+          {
+            "id": "equipment_layout",
+            "label": "Размещение технологического оборудования",
+            "aliases": [
+              "технологическое оборудование",
+              "размещение оборудования"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2049,7 +2242,52 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "GRAPHIC_CONTENT",
+      "visual_contract": {
+        "visual_kind": "AR_SECTIONS",
+        "review_policy": "VISUAL_CONFIRMATION_REQUIRED",
+        "candidate_markers": [
+          "разрез",
+          "характерный разрез"
+        ],
+        "elements": [
+          {
+            "id": "section_views",
+            "label": "Характерные разрезы",
+            "aliases": [
+              "характерный разрез",
+              "разрез"
+            ]
+          },
+          {
+            "id": "structures",
+            "label": "Конструкции",
+            "aliases": [
+              "конструкции",
+              "конструктивные элементы"
+            ]
+          },
+          {
+            "id": "elevations",
+            "label": "Высотные отметки",
+            "aliases": [
+              "отметка",
+              "отметки",
+              "высотные отметки"
+            ]
+          },
+          {
+            "id": "equipment_top_elevations",
+            "label": "Верхние отметки технологического оборудования",
+            "aliases": [
+              "технологическое оборудование",
+              "верхняя отметка оборудования",
+              "отметка оборудования"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

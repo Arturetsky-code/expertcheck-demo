@@ -266,7 +266,33 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     result["retrieval_state"] = str(result.get("state") or "")
     result["proof_engine_version"] = ENGINE_VERSION
 
-    if str(result.get("kind") or "").upper() != "VERIFIED_OK":
+    retrieval_kind = str(result.get("kind") or "").upper()
+    retrieval_reason = str(result.get("reason_code") or "").upper()
+
+    graphic_text_retrieval_reasons = {
+        "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+        "NORMATIVE_EVIDENCE_WEAK",
+        "NORMATIVE_SECTION_EVIDENCE_MISSING",
+        "NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
+    }
+    if (
+        proof_type == "GRAPHIC_CONTENT"
+        and (
+            retrieval_kind == "VERIFIED_OK"
+            or retrieval_reason in graphic_text_retrieval_reasons
+        )
+    ):
+        result["kind"] = "SYSTEM_LIMITATION"
+        result["state"] = "Не проверено системой"
+        result["proof_state"] = "VISUAL_PROOF_REQUIRED"
+        result["reason_code"] = "NORMATIVE_VISUAL_PROOF_REQUIRED"
+        result["reason"] = (
+            "Требование относится к графической части. Текстовый retrieval не является доказательством "
+            "содержания чертежа; требование направлено в отдельный визуальный proof-контракт."
+        )
+        return result
+
+    if retrieval_kind != "VERIFIED_OK":
         result["proof_state"] = "RETAINED_FAIL_CLOSED"
         return result
 
@@ -289,17 +315,6 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         result["proof_state"] = "PRESENCE_PROOF_NOT_ADDRESSABLE"
         result["reason_code"] = "NORMATIVE_PRESENCE_PROOF_NOT_ADDRESSABLE"
         result["reason"] = "Лексический кандидат найден, но адресное доказательство наличия требования не сформировано."
-        return result
-
-    if proof_type == "GRAPHIC_CONTENT":
-        result["kind"] = "SYSTEM_LIMITATION"
-        result["state"] = "Не проверено системой"
-        result["proof_state"] = "VISUAL_PROOF_REQUIRED"
-        result["reason_code"] = "NORMATIVE_VISUAL_PROOF_REQUIRED"
-        result["reason"] = (
-            "Требование относится к графической части. Текстовый слой страницы не доказывает состав и содержание чертежа; "
-            "до отдельного визуального контракта автоматическое подтверждение запрещено."
-        )
         return result
 
     if proof_type == "SET_COMPLETENESS":

@@ -557,7 +557,10 @@ def test_alpha8_conditional_set_element_separates_applicability_from_evidence():
         "id":"corridor_lighting",
         "label":"Эвакуационное освещение коридора",
         "applicability_aliases":["коридор"],
-        "aliases":["эвакуационное освещение коридор"],
+        "evidence_groups":[
+            {"label":"Эвакуационное освещение","aliases":["эвакуационное освещение"]},
+            {"label":"Коридор","aliases":["коридор"]},
+        ],
     }
 
     pending=_set_element_match(
@@ -615,6 +618,56 @@ def test_alpha8_sp52_set_contract_uses_conditional_element_applicability():
     set_contract=dict((contract.get("evidence_contract") or {}).get("set_contract") or {})
     elements=list(set_contract.get("elements") or [])
 
-    assert elements
+    assert len(elements)==6
     assert all(element.get("applicability_aliases") for element in elements)
-    assert all("эвакуационное освещение" in " ".join(element.get("aliases") or []) for element in elements)
+    assert all(element.get("evidence_groups") for element in elements)
+    assert all(
+        any(
+            "эвакуационное освещение" in " ".join(group.get("aliases") or [])
+            for group in element.get("evidence_groups") or []
+        )
+        for element in elements
+    )
+
+
+
+def test_alpha8_set_evidence_groups_require_local_colocation():
+    element={
+        "id":"stairs",
+        "label":"Лестничные марши",
+        "applicability_aliases":["лестница"],
+        "group_window_chars":220,
+        "evidence_groups":[
+            {"label":"Эвакуационное освещение","aliases":["эвакуационное освещение"]},
+            {"label":"Лестница/марш","aliases":["лестница","марш"]},
+        ],
+    }
+
+    matched=_set_element_match(
+        element,
+        [{
+            "document":"ИОС.pdf",
+            "document_type":"ИОС",
+            "page":25,
+            "text":"На лестничном марше предусмотрено эвакуационное освещение.",
+        }],
+        "SP52",
+    )
+    assert matched["matched"] is True
+    assert matched["evidence"]
+
+    far_text="Лестница предусмотрена у входа. " + ("общие сведения " * 80) + "Эвакуационное освещение предусмотрено в здании."
+    far=_set_element_match(
+        element,
+        [{
+            "document":"ИОС.pdf",
+            "document_type":"ИОС",
+            "page":26,
+            "text":far_text,
+        }],
+        "SP52",
+    )
+    assert far["matched"] is False
+    assert far["applicability_state"]=="REQUIRED"
+    assert far["near_misses"]
+    assert "локальная связь смысловых групп" in far["near_misses"][0]["missing_groups"]

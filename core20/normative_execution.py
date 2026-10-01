@@ -877,6 +877,38 @@ def _visual_marker_match(marker:str,text:str)->bool:
     return bool(diag.get("matched")) and not _applicability_negated(marker,text)
 
 
+def _title_drawing_kinds_near_designation(text:str,designation:str)->list[str]:
+    designation=str(designation or "").strip()
+    if not designation:
+        return []
+    lines=[str(line or "").strip() for line in str(text or "").splitlines()]
+    needle=_norm(designation)
+    anchor=None
+    for idx,line in enumerate(lines):
+        if needle and needle in _norm(line):
+            anchor=idx
+    if anchor is None:
+        return []
+
+    nearby=" ".join(lines[anchor:min(len(lines),anchor+7)])
+    low=_norm(nearby)
+    kinds=[]
+    tests=(
+        ("room_explication","экспликация помещений"),
+        ("floor_plan","план 1 этажа"),
+        ("floor_plan","план этажа"),
+        ("floor_plan","план на отм"),
+        ("roof_plan","план кровли"),
+        ("section_view","разрез"),
+        ("facade","фасад"),
+        ("drawing_index","ведомость документов графической части"),
+    )
+    for kind,token in tests:
+        if token in low and kind not in kinds:
+            kinds.append(kind)
+    return kinds
+
+
 def _drawing_sheet_index(
     documents:list[dict[str,Any]]|None,
 )->dict[tuple[str,str],dict[str,Any]]:
@@ -896,11 +928,39 @@ def _drawing_sheet_index(
                 str(value) for value in (sheet.get("drawing_kinds") or [])
                 if str(value)
             ],
+            "title_drawing_kinds":[
+                str(value) for value in (sheet.get("title_drawing_kinds") or [])
+                if str(value)
+            ],
+            "sheet_title":str(sheet.get("sheet_title") or ""),
             "designation":str(sheet.get("designation") or ""),
             "position":str(sheet.get("position") or ""),
             "object_name":str(sheet.get("object_name") or ""),
             "owner_binding":str(sheet.get("owner_binding") or ""),
+            "room_schedule":False,
         }
+
+    for schedule in graph.get("room_schedules") or []:
+        if not isinstance(schedule,dict):
+            continue
+        document=str(schedule.get("document") or "")
+        page=schedule.get("page")
+        if not document or page in (None,""):
+            continue
+        key=(document,str(page))
+        if key not in index:
+            index[key]={
+                "drawing_kinds":[],
+                "title_drawing_kinds":[],
+                "sheet_title":"",
+                "designation":str(schedule.get("designation") or ""),
+                "position":str(schedule.get("position") or ""),
+                "object_name":str(schedule.get("parent_object") or ""),
+                "owner_binding":str(schedule.get("owner_binding") or ""),
+                "room_schedule":True,
+            }
+        else:
+            index[key]["room_schedule"]=True
     return index
 
 
@@ -948,18 +1008,34 @@ def _visual_preflight_evaluation(
         document=str(page.get("document") or "")
         page_no=page.get("page")
         sheet_meta=drawing_sheet_index.get((document,str(page_no))) or {}
-        sheet_kinds={
+        broad_sheet_kinds={
             str(value) for value in (sheet_meta.get("drawing_kinds") or [])
             if str(value)
         }
-        if require_drawing_graph and not (sheet_kinds & trusted_drawing_kinds):
+        title_sheet_kinds={
+            str(value) for value in (sheet_meta.get("title_drawing_kinds") or [])
+            if str(value)
+        }
+        if not title_sheet_kinds and sheet_meta.get("designation"):
+            title_sheet_kinds=set(
+                _title_drawing_kinds_near_designation(
+                    raw,
+                    str(sheet_meta.get("designation") or ""),
+                )
+            )
+        structural_sheet_kinds=set(title_sheet_kinds)
+        if sheet_meta.get("room_schedule"):
+            structural_sheet_kinds.add("room_explication")
+        if require_drawing_graph and not (structural_sheet_kinds & trusted_drawing_kinds):
             if any(_visual_marker_match(marker,raw) for marker in candidate_markers):
                 rejected_untrusted_pages.append({
                     "document":document,
                     "page":page_no,
                     "section":str(page.get("document_type") or page.get("section") or ""),
-                    "drawing_kinds":sorted(sheet_kinds),
-                    "reason":"страница не подтверждена Drawing Intelligence как требуемый тип графического листа",
+                    "drawing_kinds":sorted(structural_sheet_kinds),
+                    "broad_drawing_kinds":sorted(broad_sheet_kinds),
+                    "sheet_title":str(sheet_meta.get("sheet_title") or ""),
+                    "reason":"тип листа не подтверждён названием листа/структурой Drawing Intelligence",
                 })
             continue
         marker_hits=[
@@ -977,7 +1053,7 @@ def _visual_preflight_evaluation(
                 str(value) for value in (element.get("drawing_kinds") or [])
                 if str(value)
             }
-            if element_drawing_kinds and not (sheet_kinds & element_drawing_kinds):
+            if element_drawing_kinds and not (structural_sheet_kinds & element_drawing_kinds):
                 matched_aliases=[]
             else:
                 matched_aliases=[
@@ -1003,7 +1079,9 @@ def _visual_preflight_evaluation(
             "page":page_no,
             "section":str(page.get("document_type") or page.get("section") or ""),
             "selection_source":"DRAWING_INTELLIGENCE_V2" if require_drawing_graph else "TEXT_LAYER",
-            "drawing_kinds":sorted(sheet_kinds),
+            "drawing_kinds":sorted(structural_sheet_kinds),
+            "broad_drawing_kinds":sorted(broad_sheet_kinds),
+            "sheet_title":str(sheet_meta.get("sheet_title") or ""),
             "designation":str(sheet_meta.get("designation") or ""),
             "object_name":str(sheet_meta.get("object_name") or ""),
             "marker_hits":marker_hits,

@@ -767,3 +767,132 @@ def test_alpha8_visual_preflight_selects_pages_but_never_claims_graphic_proof():
     assert result["candidate_pages"][0]["document"]=="АР.pdf"
     assert result["candidate_pages"][0]["page"]==12
     assert "preflight only" in result["principle"]
+
+
+
+def test_alpha8_ar_visual_preflight_requires_drawing_intelligence_sheet_kind():
+    contract={
+        "requirement_id":"VIS-AR",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"AR_FACADES",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["фасад"],
+                "trusted_drawing_kinds":["facade"],
+                "elements":[
+                    {
+                        "id":"facade_views",
+                        "label":"Отображение фасадов",
+                        "aliases":["фасад"],
+                        "drawing_kinds":["facade"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[
+        {
+            "document":"АР1.pdf",
+            "document_type":"АР",
+            "page":5,
+            "text":"Описание архитектурных решений. Фасады приняты в соответствии с заданием.",
+        },
+        {
+            "document":"АР2.pdf",
+            "document_type":"АР",
+            "page":22,
+            "text":"Фасад 1-8. Фасад А-Д.",
+        },
+    ]
+    documents=[{
+        "drawing_intelligence_v2":{
+            "sheets":[
+                {
+                    "document":"АР2.pdf",
+                    "page":22,
+                    "designation":"RAM-01-АР2",
+                    "object_name":"Производственное здание",
+                    "drawing_kinds":["facade","section_view"],
+                    "owner_binding":"TITLE_BLOCK_EXACT",
+                },
+            ],
+        },
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages,documents)
+
+    assert result["selection_source"]=="DRAWING_INTELLIGENCE_V2"
+    assert result["coverage_count"]==1
+    assert result["total_count"]==1
+    assert len(result["candidate_pages"])==1
+    assert result["candidate_pages"][0]["document"]=="АР2.pdf"
+    assert result["candidate_pages"][0]["page"]==22
+    assert result["candidate_pages"][0]["drawing_kinds"]==["facade","section_view"]
+    assert result["candidate_pages"][0]["designation"]=="RAM-01-АР2"
+    assert result["rejected_untrusted_pages"]
+    assert result["rejected_untrusted_pages"][0]["document"]=="АР1.pdf"
+    assert result["rejected_untrusted_pages"][0]["page"]==5
+
+
+def test_alpha8_ar_visual_element_kind_gate_blocks_wrong_sheet_kind():
+    contract={
+        "requirement_id":"VIS-PLAN",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"AR_FLOOR_PLANS",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["план этажа","экспликация помещений"],
+                "trusted_drawing_kinds":["floor_plan","room_explication"],
+                "elements":[
+                    {
+                        "id":"plan",
+                        "label":"План этажа",
+                        "aliases":["план этажа"],
+                        "drawing_kinds":["floor_plan"],
+                    },
+                    {
+                        "id":"schedule",
+                        "label":"Экспликация помещений",
+                        "aliases":["экспликация помещений"],
+                        "drawing_kinds":["room_explication"],
+                    },
+                ],
+            },
+        },
+    }
+    pages=[
+        {
+            "document":"АР2.pdf",
+            "document_type":"АР",
+            "page":10,
+            "text":"План этажа. Экспликация помещений.",
+        },
+        {
+            "document":"АР2.pdf",
+            "document_type":"АР",
+            "page":11,
+            "text":"Экспликация помещений.",
+        },
+    ]
+    documents=[{
+        "drawing_intelligence_v2":{
+            "sheets":[
+                {
+                    "document":"АР2.pdf",
+                    "page":10,
+                    "drawing_kinds":["floor_plan"],
+                },
+                {
+                    "document":"АР2.pdf",
+                    "page":11,
+                    "drawing_kinds":["room_explication"],
+                },
+            ],
+        },
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages,documents)
+    by_id={row["id"]:row for row in result["elements"]}
+
+    assert by_id["plan"]["candidate_locations"][0]["page"]==10
+    assert by_id["schedule"]["candidate_locations"][0]["page"]==11

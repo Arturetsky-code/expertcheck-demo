@@ -183,10 +183,12 @@ def render(ctx):
 
                     semantic_diag=dict(frontier.get("semantic_pending") or {})
                     if semantic_diag.get("total"):
-                        st.markdown("**Смысловая очередь — где сосредоточены 26 пакетов**")
+                        semantic_total=int(semantic_diag.get("total") or 0)
+                        st.markdown(f"**Смысловая очередь — где сосредоточены {semantic_total} пакетов**")
                         semantic_sources=dict(semantic_diag.get("by_source") or {})
                         semantic_sections=dict(semantic_diag.get("by_section") or {})
                         semantic_evidence=dict(semantic_diag.get("by_evidence_candidates") or {})
+                        semantic_admission=dict(semantic_diag.get("by_retrieval_admission") or {})
                         d1,d2,d3=st.columns(3)
                         with d1:
                             st.caption("По НТД")
@@ -215,7 +217,31 @@ def render(ctx):
                                     key=lambda item:item[0],
                                 )
                             ],hide_index=True,width="stretch")
+                        if semantic_admission:
+                            admission_labels={
+                                "STRICT_RETRIEVAL":"Обычный retrieval-кандидат",
+                                "WEAK_RETRIEVAL":"Слабый phrase-level retrieval → semantic",
+                                "STRONG_NEAR_MISS":"Сильный token-level near-miss → semantic",
+                                "OTHER":"Прочее происхождение",
+                            }
+                            st.caption("По происхождению evidence-кандидата")
+                            st.dataframe([
+                                {
+                                    "Маршрут admission":admission_labels.get(code,code),
+                                    "Пакетов":count,
+                                }
+                                for code,count in sorted(
+                                    semantic_admission.items(),
+                                    key=lambda item:(-int(item[1] or 0),item[0]),
+                                )
+                            ],hide_index=True,width="stretch")
                         with st.expander("Показать пакеты смысловой очереди",expanded=False):
+                            route_labels={
+                                "STRICT_RETRIEVAL":"обычный retrieval",
+                                "WEAK_RETRIEVAL":"weak → semantic",
+                                "STRONG_NEAR_MISS":"near-miss → semantic",
+                                "OTHER":"прочее",
+                            }
                             st.dataframe([
                                 {
                                     "ID":row.get("requirement_id") or "",
@@ -223,6 +249,10 @@ def render(ctx):
                                     "Пункт":row.get("paragraph") or "",
                                     "Разделы":row.get("sections") or "",
                                     "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
+                                    "Маршрут":route_labels.get(
+                                        row.get("retrieval_admission") or "OTHER",
+                                        "прочее",
+                                    ),
                                     "Тема":row.get("topic") or "",
                                 }
                                 for row in semantic_diag.get("rows") or []

@@ -414,10 +414,54 @@ def _set_element_match(
     aliases=[str(value) for value in (element.get("aliases") or []) if str(value).strip()]
     all_terms=[str(value) for value in (element.get("all_terms") or []) if str(value).strip()]
     numeric_required=bool(element.get("numeric_required"))
+    applicability_aliases=[
+        str(value) for value in (element.get("applicability_aliases") or [])
+        if str(value).strip()
+    ]
     element_id=str(element.get("id") or "element")
     label=str(element.get("label") or element_id)
 
+    applicability_state="REQUIRED"
+    applicability_trace=[]
+    if applicability_aliases:
+        applicability_state="APPLICABILITY_PENDING"
+        seen_applicability=set()
+        for page in pages or []:
+            raw=str(page.get("text") or page.get("content") or "")
+            for alias in applicability_aliases:
+                matched,is_numeric,_=_keyword_match(alias,raw)
+                if not matched or is_numeric or _applicability_negated(alias,raw):
+                    continue
+                key=(str(page.get("document") or ""),str(page.get("page")),alias)
+                if key in seen_applicability:
+                    continue
+                seen_applicability.add(key)
+                applicability_trace.append({
+                    "document":str(page.get("document") or ""),
+                    "page":page.get("page"),
+                    "section":str(page.get("document_type") or page.get("section") or ""),
+                    "matched_condition":alias,
+                    "fragment":_fragment(raw,[alias],radius=180),
+                })
+                if len(applicability_trace)>=2:
+                    break
+            if len(applicability_trace)>=2:
+                break
+        if applicability_trace:
+            applicability_state="REQUIRED"
+
     candidates=[]
+    if applicability_state!="REQUIRED":
+        return {
+            "id":element_id,
+            "label":label,
+            "matched":False,
+            "numeric_required":numeric_required,
+            "applicability_state":applicability_state,
+            "applicability_trace":applicability_trace,
+            "evidence":[],
+            "near_misses":[],
+        }
     for page in pages or []:
         raw=str(page.get("text") or page.get("content") or "")
         if not raw.strip():
@@ -541,6 +585,8 @@ def _set_element_match(
         "label":label,
         "matched":bool(evidence),
         "numeric_required":numeric_required,
+        "applicability_state":applicability_state,
+        "applicability_trace":applicability_trace,
         "evidence":evidence,
         "near_misses":near_misses,
     }
@@ -600,7 +646,14 @@ def _set_completeness_evaluation(
         _set_element_match(element,pages,str(contract.get("requirement_id") or ""))
         for element in elements
     ]
-    missing=[row for row in evaluated if not row.get("matched")]
+    missing=[
+        row for row in evaluated
+        if row.get("applicability_state")=="REQUIRED" and not row.get("matched")
+    ]
+    applicability_pending=[
+        row for row in evaluated
+        if row.get("applicability_state")=="APPLICABILITY_PENDING"
+    ]
     evidence=[]
     seen=set()
     for row in evaluated:
@@ -616,7 +669,12 @@ def _set_completeness_evaluation(
             })
 
     atomization_complete=bool(set_contract.get("atomization_complete",True))
-    complete=bool(elements) and not missing and atomization_complete
+    complete=(
+        bool(elements)
+        and not missing
+        and not applicability_pending
+        and atomization_complete
+    )
     return {
         "configured":True,
         "mode":mode,
@@ -624,10 +682,18 @@ def _set_completeness_evaluation(
         "atomization_complete":atomization_complete,
         "complete":complete,
         "matched_count":sum(bool(row.get("matched")) for row in evaluated),
+        "required_count":sum(row.get("applicability_state")=="REQUIRED" for row in evaluated),
+        "applicability_pending_count":len(applicability_pending),
         "total_count":len(evaluated),
         "elements":evaluated,
         "missing_ids":[str(row.get("id") or "") for row in missing],
         "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
+        "applicability_pending_ids":[
+            str(row.get("id") or "") for row in applicability_pending
+        ],
+        "applicability_pending_labels":[
+            str(row.get("label") or row.get("id") or "") for row in applicability_pending
+        ],
         "evidence":evidence,
     }
 

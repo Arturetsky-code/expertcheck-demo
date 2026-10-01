@@ -331,6 +331,23 @@ def render(ctx):
                                     if element.get("matched") or applicability_state=="APPLICABILITY_PENDING":
                                         continue
                                     for rank,candidate in enumerate(element.get("near_misses") or [],1):
+                                        group_diag_parts=[]
+                                        for diag in candidate.get("group_diagnostics") or []:
+                                            span=diag.get("span_chars")
+                                            if diag.get("matched"):
+                                                detail="OK"
+                                            elif diag.get("reason")=="TERMS_TOO_FAR_APART":
+                                                detail=f"слова далеко ({span} симв.)"
+                                            elif diag.get("missing_stems"):
+                                                detail=(
+                                                    "нет стемов: "
+                                                    + ", ".join(diag.get("missing_stems") or [])
+                                                )
+                                            else:
+                                                detail=diag.get("reason") or "не совпало"
+                                            group_diag_parts.append(
+                                                f"{diag.get('group') or 'группа'}: {detail}"
+                                            )
                                         set_near_miss_rows.append({
                                             "ID":requirement_id,
                                             "Элемент":element.get("label") or element.get("id") or "",
@@ -348,6 +365,7 @@ def render(ctx):
                                                 f"{candidate.get('required_group_total') or 0}"
                                             ),
                                             "Не хватает":"; ".join(candidate.get("missing_groups") or []),
+                                            "Диагностика групп":"; ".join(group_diag_parts),
                                             "Фрагмент":candidate.get("fragment") or "",
                                         })
 

@@ -151,3 +151,83 @@ def test_alpha9_frontier_diagnostics_split_semantic_and_retrieval_blockers():
     assert frontier["retained_fail_closed"]["by_source"] == {"СП retrieval": 1}
     assert frontier["retained_fail_closed"]["by_section"] == {"АР": 1}
     assert frontier["retained_fail_closed"]["rows"][0]["requirement_id"] == "RET-1"
+
+
+
+def test_alpha9_graphic_requirement_with_no_text_evidence_routes_to_visual_proof():
+    source = [{
+        "requirement_id": "PP87-13-L1-FLOOR-PLANS",
+        "check_kind": "SEMANTIC",
+        "requirement": "Графическая часть АР должна содержать поэтажные планы с экспликацией помещений.",
+        "kind": "REVIEW_QUESTION",
+        "state": "Вопрос специалисту",
+        "reason_code": "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+        "reason": "Адресное положительное доказательство не найдено.",
+        "sections": ["АР"],
+        "retrieval_candidate_count": 0,
+        "evidence_candidates": [],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["retrieval_kind"] == "REVIEW_QUESTION"
+    assert row["kind"] == "SYSTEM_LIMITATION"
+    assert row["proof_type"] == "GRAPHIC_CONTENT"
+    assert row["proof_state"] == "VISUAL_PROOF_REQUIRED"
+    assert row["reason_code"] == "NORMATIVE_VISUAL_PROOF_REQUIRED"
+    assert result["review_questions"] == 0
+    assert result["system_limitations"] == 1
+    assert result["proof_frontier"]["blocker_counts"]["VISUAL_PROOF_REQUIRED"] == 1
+    assert result["proof_frontier"]["retained_fail_closed"]["total"] == 0
+
+
+def test_alpha9_graphic_requirement_with_weak_text_candidate_routes_to_visual_proof():
+    source = [{
+        "requirement_id": "PP87-13-I-FACADES",
+        "check_kind": "SEMANTIC",
+        "requirement": "Графическая часть АР должна содержать отображение фасадов.",
+        "kind": "REVIEW_QUESTION",
+        "state": "Вопрос специалисту",
+        "reason_code": "NORMATIVE_EVIDENCE_WEAK",
+        "reason": "Найден адресный кандидат, но retrieval недостаточно сильный.",
+        "sections": ["АР"],
+        "retrieval_candidate_count": 4,
+        "evidence_candidates": [
+            {"document": "АР.pdf", "page": 1, "fragment": "Фасад 1"},
+            {"document": "АР.pdf", "page": 2, "fragment": "Фасад 2"},
+            {"document": "АР.pdf", "page": 3, "fragment": "Фасад 3"},
+            {"document": "АР.pdf", "page": 4, "fragment": "Фасад 4"},
+        ],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["kind"] == "SYSTEM_LIMITATION"
+    assert row["proof_state"] == "VISUAL_PROOF_REQUIRED"
+    assert result["system_limitations"] == 1
+
+
+def test_alpha9_graphic_requirement_with_unproven_applicability_stays_fail_closed():
+    source = [{
+        "requirement_id": "PP87-13-L2-SECTIONS",
+        "check_kind": "SEMANTIC",
+        "requirement": "Для применимого объекта графическая часть АР должна содержать характерные разрезы.",
+        "kind": "REVIEW_QUESTION",
+        "state": "Вопрос специалисту",
+        "reason_code": "NORMATIVE_APPLICABILITY_NOT_PROVEN",
+        "reason": "Условная применимость требования не доказана.",
+        "sections": ["АР"],
+        "retrieval_candidate_count": 0,
+        "evidence_candidates": [],
+    }]
+
+    result = NormativeProofEngine20().run(source)
+    row = result["rows"][0]
+
+    assert row["kind"] == "REVIEW_QUESTION"
+    assert row["proof_state"] == "RETAINED_FAIL_CLOSED"
+    assert row["reason_code"] == "NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    assert result["review_questions"] == 1
+    assert result["system_limitations"] == 0

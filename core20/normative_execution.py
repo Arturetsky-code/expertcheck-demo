@@ -406,6 +406,171 @@ def _near_miss_candidates(
     return output
 
 
+def _set_element_match(
+    element:dict[str,Any],
+    pages:list[dict[str,Any]],
+    requirement_id:str,
+)->dict[str,Any]:
+    aliases=[str(value) for value in (element.get("aliases") or []) if str(value).strip()]
+    all_terms=[str(value) for value in (element.get("all_terms") or []) if str(value).strip()]
+    numeric_required=bool(element.get("numeric_required"))
+    element_id=str(element.get("id") or "element")
+    label=str(element.get("label") or element_id)
+
+    candidates=[]
+    for page in pages or []:
+        raw=str(page.get("text") or page.get("content") or "")
+        if not raw.strip():
+            continue
+
+        alias_hits=[]
+        for alias in aliases:
+            matched,is_numeric,_=_keyword_match(alias,raw)
+            if matched and not is_numeric and not _applicability_negated(alias,raw):
+                alias_hits.append(alias)
+        if aliases and not alias_hits:
+            continue
+
+        required_hits=[]
+        failed=False
+        for term in all_terms:
+            matched,is_numeric,_=_keyword_match(term,raw)
+            if not matched or is_numeric or _applicability_negated(term,raw):
+                failed=True
+                break
+            required_hits.append(term)
+        if failed:
+            continue
+
+        matched_terms=list(dict.fromkeys([*alias_hits,*required_hits]))
+        if not matched_terms and not aliases and not all_terms:
+            continue
+
+        fragment=_fragment(raw,matched_terms or aliases or all_terms,radius=260)
+        if numeric_required and not re.search(r"\b\d+(?:[.,]\d+)?\b",fragment):
+            continue
+
+        score=len(matched_terms)+(1 if numeric_required else 0)
+        candidates.append((
+            score,
+            len(fragment),
+            {
+                "evidence_id":f"NORM-SET-{requirement_id}-{element_id}-{len(candidates)+1:02d}",
+                "document":str(page.get("document") or ""),
+                "page":page.get("page"),
+                "section":str(page.get("document_type") or page.get("section") or ""),
+                "fragment":fragment,
+                "matched_terms":matched_terms,
+            },
+        ))
+
+    candidates.sort(key=lambda item:(item[0],item[1]),reverse=True)
+    evidence=[]
+    seen=set()
+    for _,_,item in candidates:
+        key=(item.get("document"),str(item.get("page")))
+        if key in seen:
+            continue
+        seen.add(key)
+        evidence.append(item)
+        if len(evidence)>=2:
+            break
+
+    return {
+        "id":element_id,
+        "label":label,
+        "matched":bool(evidence),
+        "numeric_required":numeric_required,
+        "evidence":evidence,
+    }
+
+
+def _set_completeness_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+)->dict[str,Any]:
+    ec=dict(contract.get("evidence_contract") or {})
+    set_contract=dict(ec.get("set_contract") or {})
+    mode=str(set_contract.get("mode") or "ALL_REQUIRED").upper()
+    promotion_policy=str(
+        set_contract.get("promotion_policy") or "SEMANTIC_AFTER_COMPLETE"
+    ).upper()
+
+    if not set_contract:
+        return {
+            "configured":False,
+            "mode":"UNCONFIGURED",
+            "promotion_policy":"HOLD",
+            "complete":False,
+            "matched_count":0,
+            "total_count":0,
+            "elements":[],
+            "missing_ids":[],
+            "missing_labels":[],
+            "evidence":[],
+        }
+
+    if mode=="APPLICABILITY_AWARE_INVENTORY":
+        inventory=_ios_inventory(documents)
+        observed=[]
+        for item in inventory:
+            observed.extend(str(value) for value in (item.get("subsections") or []) if str(value))
+        observed=list(dict.fromkeys(observed))
+        return {
+            "configured":True,
+            "mode":mode,
+            "promotion_policy":"HOLD",
+            "complete":False,
+            "matched_count":len(observed),
+            "total_count":None,
+            "elements":[],
+            "missing_ids":["APPLICABILITY_MAP_REQUIRED"],
+            "missing_labels":["Требуется карта применимых подразделов ИОС"],
+            "observed_inventory":observed,
+            "evidence":[],
+        }
+
+    elements=[
+        dict(value) for value in (set_contract.get("elements") or [])
+        if isinstance(value,dict) and str(value.get("id") or "").strip()
+    ]
+    evaluated=[
+        _set_element_match(element,pages,str(contract.get("requirement_id") or ""))
+        for element in elements
+    ]
+    missing=[row for row in evaluated if not row.get("matched")]
+    evidence=[]
+    seen=set()
+    for row in evaluated:
+        for item in row.get("evidence") or []:
+            key=(item.get("document"),str(item.get("page")),row.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            evidence.append({
+                **item,
+                "set_element_id":row.get("id"),
+                "set_element_label":row.get("label"),
+            })
+
+    atomization_complete=bool(set_contract.get("atomization_complete",True))
+    complete=bool(elements) and not missing and atomization_complete
+    return {
+        "configured":True,
+        "mode":mode,
+        "promotion_policy":promotion_policy,
+        "atomization_complete":atomization_complete,
+        "complete":complete,
+        "matched_count":sum(bool(row.get("matched")) for row in evaluated),
+        "total_count":len(evaluated),
+        "elements":evaluated,
+        "missing_ids":[str(row.get("id") or "") for row in missing],
+        "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
+        "evidence":evidence,
+    }
+
+
 def _strong_near_miss_evidence(
     contract:dict[str,Any],
     candidates:list[dict[str,Any]],
@@ -713,6 +878,7 @@ class NormativeExecutionEngine20:
         base["applicability_reason_code"]=applicability_reason
         base["applicability_trace"]=list(applicability.get("trace") or [])
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
+        base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

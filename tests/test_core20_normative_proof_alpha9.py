@@ -510,3 +510,70 @@ def test_alpha9_incomplete_set_stays_set_proof_contract_required():
     assert "Второй элемент" in row["reason"]
     assert result["set_completeness_queue_total"]==1
     assert result["semantic_queue_total"]==0
+
+
+
+def test_alpha9_graphic_contract_enters_visual_queue_with_preflight():
+    source=[{
+        "requirement_id":"VIS-1",
+        "source":"ПП №87",
+        "paragraph":"п. 13",
+        "sections":["АР"],
+        "topic":"Фасады",
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"GRAPHIC_CONTENT",
+        "requirement":"Графическая часть АР должна содержать фасады.",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "reason_code":"NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
+        "evidence_document":"АР.pdf",
+        "evidence_page":5,
+        "evidence_fragment":"Фасады.",
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"E-1",
+            "document":"АР.pdf",
+            "page":5,
+            "section":"АР",
+            "fragment":"Фасады.",
+        }],
+        "visual_preflight":{
+            "configured":True,
+            "visual_kind":"AR_FACADES",
+            "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+            "ready_for_visual_review":True,
+            "coverage_count":1,
+            "total_count":1,
+            "missing_labels":[],
+            "elements":[{
+                "id":"facade_views",
+                "label":"Отображение фасадов",
+                "matched_in_text_layer":True,
+                "candidate_locations":[{"document":"АР.pdf","page":5,"section":"АР"}],
+            }],
+            "candidate_pages":[{
+                "document":"АР.pdf",
+                "page":5,
+                "section":"АР",
+                "marker_hits":["фасады"],
+                "element_hits":["facade_views"],
+                "element_hit_labels":["Отображение фасадов"],
+                "score":3,
+                "fragment":"Фасады.",
+            }],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="SYSTEM_LIMITATION"
+    assert row["proof_state"]=="VISUAL_PROOF_REQUIRED"
+    assert result["verified_ok"]==0
+    assert result["visual_queue_total"]==1
+    packet=result["visual_queue"][0]
+    assert packet["visual_kind"]=="AR_FACADES"
+    assert packet["ready_for_visual_review"] is True
+    assert packet["coverage_count"]==1
+    assert packet["candidate_pages"][0]["page"]==5
+    assert result["proof_frontier"]["visual_pending"]["total"]==1

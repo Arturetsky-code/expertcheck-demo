@@ -267,8 +267,8 @@ def render(ctx):
                         ):
                             st.caption(
                                 "Для АР лист-кандидат должен быть подтверждён Drawing Intelligence по основной надписи и типу листа; "
-                                "для ПЗУ пока используется text-layer preflight. Ни один preflight сам по себе не подтверждает "
-                                "графическое содержание и не меняет нормативный вердикт."
+                                "для ПЗУ используется General Plan Engine либо совместимый структурный preflight сохранённого проекта. "
+                                "Ни один preflight сам по себе не подтверждает графическое содержание и не меняет нормативный вердикт."
                             )
                             visual_rows=list(visual_diag.get("rows") or [])
                             visual_kind_labels={
@@ -291,10 +291,14 @@ def render(ctx):
                                         f"{row.get('coverage_count') or 0}/"
                                         f"{row.get('total_count') or 0}"
                                     ),
-                                    "Источник отбора":(
-                                        "Drawing Intelligence 2.0"
-                                        if row.get("selection_source")=="DRAWING_INTELLIGENCE_V2"
-                                        else "Текстовый слой"
+                                    "Источник отбора":{
+                                        "DRAWING_INTELLIGENCE_V2":"Drawing Intelligence 2.0",
+                                        "GENERAL_PLAN_ENGINE":"General Plan Engine",
+                                        "PZU_STRUCTURAL_PREFLIGHT":"ПЗУ structural preflight",
+                                        "TEXT_LAYER":"Текстовый слой",
+                                    }.get(
+                                        row.get("selection_source") or "",
+                                        row.get("selection_source") or "—",
                                     ),
                                     "Листов-кандидатов":row.get("candidate_page_count") or 0,
                                     "Не найдено в text-layer":"; ".join(
@@ -321,10 +325,14 @@ def render(ctx):
                                         "Документ":page.get("document") or "",
                                         "Страница":page.get("page"),
                                         "Раздел":page.get("section") or "",
-                                        "Источник":(
-                                            "Drawing Intelligence 2.0"
-                                            if page.get("selection_source")=="DRAWING_INTELLIGENCE_V2"
-                                            else "Текстовый слой"
+                                        "Источник":{
+                                            "DRAWING_INTELLIGENCE_V2":"Drawing Intelligence 2.0",
+                                            "GENERAL_PLAN_ENGINE":"General Plan Engine",
+                                            "PZU_STRUCTURAL_PREFLIGHT":"ПЗУ structural preflight",
+                                            "TEXT_LAYER":"Текстовый слой",
+                                        }.get(
+                                            page.get("selection_source") or "",
+                                            page.get("selection_source") or "—",
                                         ),
                                         "Типы листа":"; ".join(page.get("drawing_kinds") or []),
                                         "Объект листа":page.get("object_name") or "",
@@ -379,7 +387,7 @@ def render(ctx):
                                     })
                             if rejected_rows:
                                 with st.expander(
-                                    "Отклонённые текстовые страницы АР",
+                                    "Отклонённые страницы visual-preflight",
                                     expanded=False,
                                 ):
                                     st.dataframe(

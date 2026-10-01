@@ -157,6 +157,7 @@ def _visual_packet(row:dict[str,Any])->dict[str,Any]:
         "visual_kind":str(preflight.get("visual_kind") or ""),
         "review_policy":str(preflight.get("review_policy") or ""),
         "ready_for_visual_review":bool(preflight.get("ready_for_visual_review")),
+        "selection_source":str(preflight.get("selection_source") or "TEXT_LAYER"),
         "coverage_count":int(preflight.get("coverage_count") or 0),
         "total_count":int(preflight.get("total_count") or 0),
         "missing_labels":[
@@ -169,6 +170,10 @@ def _visual_packet(row:dict[str,Any])->dict[str,Any]:
         ],
         "candidate_pages":[
             dict(value) for value in (preflight.get("candidate_pages") or [])
+            if isinstance(value,dict)
+        ],
+        "rejected_untrusted_pages":[
+            dict(value) for value in (preflight.get("rejected_untrusted_pages") or [])
             if isinstance(value,dict)
         ],
         "policy":(
@@ -378,6 +383,7 @@ def proof_frontier_summary(
                 "visual_kind":visual_kind,
                 "configured":bool(preflight.get("configured")),
                 "ready_for_visual_review":bool(preflight.get("ready_for_visual_review")),
+                "selection_source":str(preflight.get("selection_source") or "TEXT_LAYER"),
                 "coverage_count":int(preflight.get("coverage_count") or 0),
                 "total_count":int(preflight.get("total_count") or 0),
                 "missing_labels":[
@@ -387,6 +393,11 @@ def proof_frontier_summary(
                 "candidate_page_count":len(candidate_pages),
                 "candidate_pages":[
                     dict(value) for value in candidate_pages[:6]
+                    if isinstance(value,dict)
+                ],
+                "rejected_untrusted_pages":[
+                    dict(value)
+                    for value in (preflight.get("rejected_untrusted_pages") or [])[:6]
                     if isinstance(value,dict)
                 ],
                 "elements":[

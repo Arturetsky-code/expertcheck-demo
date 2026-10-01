@@ -1074,7 +1074,12 @@
       "minimum_sources": 1,
       "requires_profile_owner": false,
       "requires_page_reference": true,
-      "proof_type": "SET_COMPLETENESS"
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "APPLICABILITY_AWARE_INVENTORY",
+        "promotion_policy": "HOLD",
+        "atomization_complete": false
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -1394,7 +1399,36 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "SEMANTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "transport_characteristics",
+            "label": "Характеристики транспортных коммуникаций",
+            "aliases": [
+              "характеристики транспортных коммуникаций",
+              "характеристика транспортных коммуникаций",
+              "транспортные коммуникации"
+            ],
+            "all_terms": [
+              "характеристики"
+            ]
+          },
+          {
+            "id": "transport_technical_indicators",
+            "label": "Технические показатели транспортных коммуникаций",
+            "aliases": [
+              "технические показатели транспортных коммуникаций",
+              "технические показатели"
+            ],
+            "numeric_required": true
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2690,7 +2724,79 @@
         "конвейерная галерея",
         "галерея конвейера"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "SEMANTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "flame_retardant_belt",
+            "label": "Трудновоспламеняющаяся конвейерная лента",
+            "aliases": [
+              "трудновоспламеняющаяся лента",
+              "трудновоспламеняющиеся ленты"
+            ]
+          },
+          {
+            "id": "noncombustible_gallery_structures",
+            "label": "Несгораемые конструкции галерей и эстакад",
+            "aliases": [
+              "несгораемые конструкции галерей",
+              "негорючие конструкции галерей",
+              "несгораемые конструкции"
+            ],
+            "all_terms": [
+              "галерея"
+            ]
+          },
+          {
+            "id": "automatic_fire_suppression_points",
+            "label": "Автоматическое пожаротушение на приводных станциях и перегрузочных пунктах",
+            "aliases": [
+              "автоматическое пожаротушение"
+            ],
+            "all_terms": [
+              "приводная станция",
+              "перегрузочный пункт"
+            ]
+          },
+          {
+            "id": "fire_alarm_points",
+            "label": "Пожарная сигнализация на приводных станциях и перегрузочных пунктах",
+            "aliases": [
+              "пожарная сигнализация"
+            ],
+            "all_terms": [
+              "приводная станция",
+              "перегрузочный пункт"
+            ]
+          },
+          {
+            "id": "fire_pipeline",
+            "label": "Пожарный трубопровод по галерее",
+            "aliases": [
+              "пожарный трубопровод",
+              "противопожарный водопровод"
+            ],
+            "all_terms": [
+              "галерея"
+            ]
+          },
+          {
+            "id": "gallery_alarm_dispatch",
+            "label": "Пожарная сигнализация по длине галереи с передачей сигнала диспетчеру",
+            "aliases": [
+              "пожарная сигнализация"
+            ],
+            "all_terms": [
+              "по длине галереи",
+              "диспетчер"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2839,7 +2945,56 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "HOLD",
+        "atomization_complete": false,
+        "elements": [
+          {
+            "id": "corridors_passages",
+            "label": "Коридоры и проходы",
+            "aliases": [
+              "коридор",
+              "проход"
+            ]
+          },
+          {
+            "id": "level_changes",
+            "label": "Места изменения уровня пути",
+            "aliases": [
+              "изменение уровня",
+              "перепад уровня"
+            ]
+          },
+          {
+            "id": "direction_changes",
+            "label": "Места изменения направления пути",
+            "aliases": [
+              "изменение направления",
+              "поворот пути"
+            ]
+          },
+          {
+            "id": "passage_intersections",
+            "label": "Пересечения проходов",
+            "aliases": [
+              "пересечение проходов",
+              "пересечения проходов"
+            ]
+          },
+          {
+            "id": "stairs",
+            "label": "Лестничные марши",
+            "aliases": [
+              "лестничный марш",
+              "лестничные марши",
+              "лестница"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

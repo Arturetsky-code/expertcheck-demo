@@ -486,3 +486,38 @@ def test_alpha8_ios_inventory_set_contract_stays_hold_without_applicability_map(
     assert result["promotion_policy"]=="HOLD"
     assert set(result["observed_inventory"])=={"ИОС1","ИОС2"}
     assert result["missing_ids"]==["APPLICABILITY_MAP_REQUIRED"]
+
+
+
+def test_alpha8_missing_set_element_keeps_near_miss_without_closing_element():
+    contract={
+        "requirement_id":"SET-FIRE",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"ALL_REQUIRED",
+                "promotion_policy":"SEMANTIC_AFTER_COMPLETE",
+                "atomization_complete":True,
+                "elements":[{
+                    "id":"fire_suppression_points",
+                    "label":"Пожаротушение на приводных станциях и перегрузочных пунктах",
+                    "aliases":["автоматическое пожаротушение"],
+                    "all_terms":["приводная станция","перегрузочный пункт"],
+                }],
+            },
+        },
+    }
+    pages=[{
+        "document":"ПБ.pdf",
+        "document_type":"ПБ",
+        "page":17,
+        "text":"На приводной станции предусмотрено автоматическое пожаротушение.",
+    }]
+
+    result=_set_completeness_evaluation(contract,pages,[])
+    element=result["elements"][0]
+
+    assert result["complete"] is False
+    assert element["matched"] is False
+    assert element["near_misses"]
+    assert element["near_misses"][0]["document"]=="ПБ.pdf"
+    assert element["near_misses"][0]["page"]==17

@@ -3,6 +3,7 @@ from pathlib import Path
 from core20.normative_execution import (
     NormativeExecutionEngine20,
     _candidate_payloads,
+    _near_miss_candidates,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -197,3 +198,56 @@ def test_alpha8_single_document_candidate_order_is_unchanged():
     assert [(x["document"],x["page"]) for x in plain] == [
         (x["document"],x["page"]) for x in explicit
     ]
+
+
+
+def test_alpha8_near_miss_diagnostics_rank_partial_overlap_without_changing_verdict():
+    contract={
+        "requirement_id":"X-TEP",
+        "keywords":[
+            "технико-экономические показатели",
+            "площадь участка",
+            "коэффициент",
+        ],
+    }
+    pages=[
+        {
+            "document":"ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":12,
+            "text":"Площадь земельного участка составляет 12500 м2.",
+        },
+        {
+            "document":"ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":13,
+            "text":"Общие сведения о проекте без релевантных показателей.",
+        },
+    ]
+
+    near=_near_miss_candidates(contract,pages)
+
+    assert near
+    assert near[0]["document"]=="ПЗУ.pdf"
+    assert near[0]["page"]==12
+    assert near[0]["overlap_count"] >= 1
+    assert "площадь" in near[0]["matched_terms"]
+    assert near[0]["fragment"]
+
+
+def test_alpha8_weak_retrieval_row_keeps_near_miss_diagnostics():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ1.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ1.pdf",
+        "document_type":"ПЗУ",
+        "page":7,
+        "text":"Технико-экономические показатели земельного участка приведены в таблице.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-D-TEP")
+
+    assert row["retrieval_kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_EVIDENCE_WEAK"
+    assert row["retrieval_near_misses"]
+    assert row["retrieval_near_misses"][0]["page"]==7

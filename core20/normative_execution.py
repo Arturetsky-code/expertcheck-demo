@@ -909,6 +909,66 @@ def _title_drawing_kinds_near_designation(text:str,designation:str)->list[str]:
     return kinds
 
 
+def _general_plan_visual_kinds_from_text(text:str)->list[str]:
+    low=_norm(text)
+    if (
+        "ведомость графической части" in low
+        or "ведомость документов графической части" in low
+    ):
+        return []
+    kinds=[]
+    tests=(
+        ("site_layout",(
+            "схема планировочной организации земельного участка",
+            "схема планировочной организации",
+            "генеральный план",
+        )),
+        ("relief_earthworks",(
+            "схема организации рельефа",
+            "план земляных масс",
+            "вертикальная планировка",
+        )),
+        ("utility_networks",(
+            "сводный план инженерных сетей",
+            "сводный план сетей",
+            "план инженерных сетей",
+        )),
+        ("situation_plan",("ситуационный план",)),
+    )
+    for kind,aliases in tests:
+        if any(alias in low for alias in aliases):
+            kinds.append(kind)
+    return kinds
+
+
+def _general_plan_sheet_index(
+    documents:list[dict[str,Any]]|None,
+)->dict[tuple[str,str],dict[str,Any]]:
+    if not documents or not isinstance(documents[0],dict):
+        return {}
+    index={}
+    for row in documents[0].get("general_plan_audit") or []:
+        if not isinstance(row,dict):
+            continue
+        if str(row.get("decision") or "")!="visual_sheet_audit":
+            continue
+        document=str(row.get("document") or "")
+        page=row.get("page")
+        if not document or page in (None,""):
+            continue
+        index[(document,str(page))]={
+            "visual_kinds":[
+                str(value) for value in (row.get("visual_kinds") or [])
+                if str(value)
+            ],
+            "general_plan_page":bool(row.get("general_plan_page")),
+            "position_count":int(row.get("position_count") or 0),
+            "has_explication":bool(row.get("has_explication")),
+            "source":"GENERAL_PLAN_ENGINE",
+        }
+    return index
+
+
 def _drawing_sheet_index(
     documents:list[dict[str,Any]]|None,
 )->dict[tuple[str,str],dict[str,Any]]:
@@ -996,8 +1056,14 @@ def _visual_preflight_evaluation(
         str(value) for value in (visual_contract.get("trusted_drawing_kinds") or [])
         if str(value)
     }
+    trusted_general_plan_kinds={
+        str(value) for value in (visual_contract.get("trusted_general_plan_kinds") or [])
+        if str(value)
+    }
     drawing_sheet_index=_drawing_sheet_index(documents)
+    general_plan_sheet_index=_general_plan_sheet_index(documents)
     require_drawing_graph=bool(trusted_drawing_kinds)
+    require_general_plan_graph=bool(trusted_general_plan_kinds)
     rejected_untrusted_pages=[]
 
     page_rows=[]
@@ -1008,6 +1074,7 @@ def _visual_preflight_evaluation(
         document=str(page.get("document") or "")
         page_no=page.get("page")
         sheet_meta=drawing_sheet_index.get((document,str(page_no))) or {}
+        gp_meta=general_plan_sheet_index.get((document,str(page_no))) or {}
         broad_sheet_kinds={
             str(value) for value in (sheet_meta.get("drawing_kinds") or [])
             if str(value)
@@ -1038,6 +1105,29 @@ def _visual_preflight_evaluation(
                     "reason":"тип листа не подтверждён названием листа/структурой Drawing Intelligence",
                 })
             continue
+
+        gp_sheet_kinds={
+            str(value) for value in (gp_meta.get("visual_kinds") or [])
+            if str(value)
+        }
+        gp_selection_source=str(gp_meta.get("source") or "")
+        if require_general_plan_graph and not gp_sheet_kinds:
+            page_section=_norm(str(page.get("document_type") or page.get("section") or ""))
+            if page_section.startswith("пзу"):
+                gp_sheet_kinds=set(_general_plan_visual_kinds_from_text(raw))
+                if gp_sheet_kinds:
+                    gp_selection_source="PZU_STRUCTURAL_PREFLIGHT"
+        if require_general_plan_graph and not (gp_sheet_kinds & trusted_general_plan_kinds):
+            if any(_visual_marker_match(marker,raw) for marker in candidate_markers):
+                rejected_untrusted_pages.append({
+                    "document":document,
+                    "page":page_no,
+                    "section":str(page.get("document_type") or page.get("section") or ""),
+                    "drawing_kinds":sorted(gp_sheet_kinds),
+                    "reason":"страница ПЗУ не подтверждена как требуемый графический тип; ведомости листов исключаются",
+                })
+            continue
+
         marker_hits=[
             marker for marker in candidate_markers
             if _visual_marker_match(marker,raw)
@@ -1074,12 +1164,22 @@ def _visual_preflight_evaluation(
                 str(value) for value in (element.get("aliases") or [])
                 if str(value).strip()
             )
+        if require_drawing_graph:
+            selection_source="DRAWING_INTELLIGENCE_V2"
+            selected_kinds=sorted(structural_sheet_kinds)
+        elif require_general_plan_graph:
+            selection_source=gp_selection_source or "PZU_STRUCTURAL_PREFLIGHT"
+            selected_kinds=sorted(gp_sheet_kinds)
+        else:
+            selection_source="TEXT_LAYER"
+            selected_kinds=[]
+
         page_rows.append({
             "document":document,
             "page":page_no,
             "section":str(page.get("document_type") or page.get("section") or ""),
-            "selection_source":"DRAWING_INTELLIGENCE_V2" if require_drawing_graph else "TEXT_LAYER",
-            "drawing_kinds":sorted(structural_sheet_kinds),
+            "selection_source":selection_source,
+            "drawing_kinds":selected_kinds,
             "broad_drawing_kinds":sorted(broad_sheet_kinds),
             "sheet_title":str(sheet_meta.get("sheet_title") or ""),
             "designation":str(sheet_meta.get("designation") or ""),
@@ -1138,7 +1238,22 @@ def _visual_preflight_evaluation(
         "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
         "elements":element_results,
         "candidate_pages":candidate_pages,
-        "selection_source":"DRAWING_INTELLIGENCE_V2" if require_drawing_graph else "TEXT_LAYER",
+        "selection_source":(
+            "DRAWING_INTELLIGENCE_V2"
+            if require_drawing_graph
+            else (
+                "GENERAL_PLAN_ENGINE"
+                if require_general_plan_graph and any(
+                    row.get("selection_source")=="GENERAL_PLAN_ENGINE"
+                    for row in candidate_pages
+                )
+                else (
+                    "PZU_STRUCTURAL_PREFLIGHT"
+                    if require_general_plan_graph
+                    else "TEXT_LAYER"
+                )
+            )
+        ),
         "rejected_untrusted_pages":rejected_untrusted_pages[:12],
         "principle":(
             "Text-layer drawing markers are preflight only. They select addressable pages "

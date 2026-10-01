@@ -32,6 +32,8 @@ def _proof_type(row: dict[str, Any]) -> str:
     requirement = _norm(row.get("requirement") or "")
     rid = str(row.get("requirement_id") or "").upper()
 
+    if rid == "PP87-CLAUSE-15-IOS":
+        return "SET_COMPLETENESS"
     if check_kind == "STRUCTURE" or rid.startswith("PP87-CLAUSE-"):
         return "STRUCTURE"
     if check_kind in {"CALC", "TYPED_VALUE"}:
@@ -88,7 +90,9 @@ def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
         document=str(candidate.get("document") or candidate.get("evidence_document") or "").strip()
         page=candidate.get("page") if candidate.get("page") not in (None,"") else candidate.get("evidence_page")
         fragment=str(candidate.get("fragment") or candidate.get("evidence_fragment") or "").strip()
-        if not document or page in (None,"") or not fragment:
+        locator_kind=str(candidate.get("locator_kind") or "PAGE").upper()
+        page_required=locator_kind!="DOCUMENT_INVENTORY"
+        if not document or (page_required and page in (None,"")) or not fragment:
             continue
         key=(document,str(page),fragment[:240])
         if key in seen:
@@ -101,7 +105,8 @@ def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
             "page":page,
             "section":str(candidate.get("section") or ((row.get("sections") or [""])[0] if row.get("sections") else "")),
             "text":fragment[:1200],
-            "source_locator":f"{document}, стр. {page}",
+            "source_locator":document if locator_kind=="DOCUMENT_INVENTORY" else f"{document}, стр. {page}",
+            "locator_kind":locator_kind,
             "matched_keywords":list(candidate.get("matched_keywords") or []),
             "retrieval_keyword_score":candidate.get("retrieval_keyword_score") or 0,
             "retrieval_keyword_coverage":candidate.get("retrieval_keyword_coverage") or 0,

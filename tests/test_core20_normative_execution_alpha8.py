@@ -4,6 +4,7 @@ from core20.normative_execution import (
     NormativeExecutionEngine20,
     _candidate_payloads,
     _near_miss_candidates,
+    _strong_near_miss_evidence,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -254,3 +255,33 @@ def test_alpha8_unresolved_retrieval_row_keeps_near_miss_diagnostics():
     }
     assert row["retrieval_near_misses"]
     assert row["retrieval_near_misses"][0]["page"]==7
+
+
+
+def test_alpha8_strong_near_miss_becomes_addressable_review_candidate():
+    contract={
+        "requirement_id":"X-RESP",
+        "keywords":[
+            "исходные данные",
+            "уровень ответственности",
+            "задание на проектирование",
+        ],
+    }
+    pages=[{
+        "document":"Задание.pdf",
+        "document_type":"Задание на проектирование",
+        "page":11,
+        "text":(
+            "Исходные сведения для разработки проекта. В задании заказчика определён уровень "
+            "ответственности объекта; требования для проектирования приведены ниже."
+        ),
+    }]
+
+    fallback=_strong_near_miss_evidence(contract,pages,"X-RESP")
+
+    assert fallback
+    assert fallback[0]["document"]=="Задание.pdf"
+    assert fallback[0]["page"]==11
+    assert fallback[0]["retrieval_admission"]=="STRONG_NEAR_MISS"
+    assert fallback[0]["retrieval_keyword_coverage"] >= 0.70
+    assert fallback[0]["fragment"]

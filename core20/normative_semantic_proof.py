@@ -157,6 +157,8 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
             "missing_critical_qualifiers":[],
             "contract_ready_for_judgement":True,
             "semantic_token_coverage":float(row.get("retrieval_keyword_coverage") or 1.0),
+            "set_element_id":str(row.get("set_element_id") or ""),
+            "set_element_label":str(row.get("set_element_label") or ""),
         })
     return {
         "packet_id":str(packet.get("packet_id") or ""),

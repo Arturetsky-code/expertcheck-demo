@@ -123,7 +123,7 @@ def render(ctx):
             p2.metric("Кандидатов доказательства",retrieval.get("candidate_evidence",0))
             p3.metric("Доказано",execution.get("verified_ok",0))
             p4.metric(
-                "Удержано из strict retrieval",
+                "Удержано proof-контролем",
                 execution.get("demoted_keyword_only_remaining",execution.get("demoted_keyword_only",0)),
             )
             p5.metric("Очередь смысловой проверки",execution.get("semantic_queue_total",0))
@@ -147,7 +147,7 @@ def render(ctx):
             )
             if initial_held != remaining_held:
                 st.caption(
-                    f"Из strict retrieval доказательный контроль исходно удержал {initial_held} контрактов; "
+                    f"Доказательный контроль исходно удержал {initial_held} контрактов после admissible retrieval/inventory; "
                     f"после накопленных смысловых решений в этом контуре осталось {remaining_held}. "
                     "Recoverable weak/near-miss кандидаты учитываются отдельно в смысловой очереди."
                 )
@@ -257,6 +257,47 @@ def render(ctx):
                                     "Тема":row.get("topic") or "",
                                 }
                                 for row in semantic_diag.get("rows") or []
+                            ],hide_index=True,width="stretch")
+
+                    set_diag=dict(frontier.get("set_completeness") or {})
+                    if set_diag.get("total"):
+                        with st.expander(
+                            f"Контракты полноты обязательного набора · {int(set_diag.get('total') or 0)}",
+                            expanded=True,
+                        ):
+                            st.dataframe([
+                                {
+                                    "ID":row.get("requirement_id") or "",
+                                    "НТД":row.get("source") or "",
+                                    "Пункт":row.get("paragraph") or "",
+                                    "Разделы":row.get("sections") or "",
+                                    "Кандидатов evidence":row.get("retrieval_candidate_count") or 0,
+                                    "Тема":row.get("topic") or "",
+                                }
+                                for row in set_diag.get("rows") or []
+                            ],hide_index=True,width="stretch")
+
+                    applicability_diag=dict(frontier.get("applicability_trace") or {})
+                    if applicability_diag.get("total"):
+                        with st.expander(
+                            f"Доказательства применимости · {int(applicability_diag.get('total') or 0)}",
+                            expanded=True,
+                        ):
+                            st.caption(
+                                "Эти адресные признаки разрешают перейти к proof-контракту, "
+                                "но сами по себе не подтверждают выполнение нормативного требования."
+                            )
+                            st.dataframe([
+                                {
+                                    "ID":row.get("requirement_id") or "",
+                                    "НТД":row.get("source") or "",
+                                    "Пункт":row.get("paragraph") or "",
+                                    "Документ":row.get("document") or "",
+                                    "Страница":row.get("page"),
+                                    "Признак":row.get("matched_condition") or "",
+                                    "Фрагмент":row.get("fragment") or "",
+                                }
+                                for row in applicability_diag.get("rows") or []
                             ],hide_index=True,width="stretch")
 
                     retained_diag=dict(frontier.get("retained_fail_closed") or {})

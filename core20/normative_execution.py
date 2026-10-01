@@ -695,6 +695,9 @@ class NormativeExecutionEngine20:
             "requirement":contract.get("requirement") or "",
             "sections":contract.get("sections") or [],
             "check_kind":contract.get("check_kind") or "",
+            "proof_type_hint":str(
+                (contract.get("evidence_contract") or {}).get("proof_type") or ""
+            ).strip().upper(),
             "trust_state":contract.get("trust_state") or "",
             "source_status":contract.get("source_status") or "",
             "history_occurrences":int(contract.get("expert_occurrences") or 0),

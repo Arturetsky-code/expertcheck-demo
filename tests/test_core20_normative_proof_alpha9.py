@@ -390,3 +390,123 @@ def test_alpha9_frontier_exposes_set_and_applicability_trace():
     assert frontier["applicability_trace"]["total"] == 1
     assert frontier["applicability_trace"]["rows"][0]["document"] == "ПЗ.pdf"
     assert result["set_completeness_queue_total"] == 1
+
+
+
+def test_alpha9_complete_set_moves_to_semantic_proof_not_verified_ok():
+    source=[{
+        "requirement_id":"SET-COMPLETE",
+        "source":"НТД",
+        "paragraph":"1.1",
+        "sections":["ПЗ"],
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"SET_COMPLETENESS",
+        "requirement":"Должны быть предусмотрены первый и второй обязательные элементы.",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "evidence_document":"ПЗ.pdf",
+        "evidence_page":5,
+        "evidence_fragment":"Первый обязательный элемент.",
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"R-1",
+            "document":"ПЗ.pdf",
+            "page":5,
+            "section":"ПЗ",
+            "fragment":"Первый обязательный элемент.",
+        }],
+        "set_completeness":{
+            "configured":True,
+            "mode":"ALL_REQUIRED",
+            "promotion_policy":"SEMANTIC_AFTER_COMPLETE",
+            "atomization_complete":True,
+            "complete":True,
+            "matched_count":2,
+            "total_count":2,
+            "missing_ids":[],
+            "missing_labels":[],
+            "evidence":[
+                {
+                    "evidence_id":"SET-1",
+                    "document":"ПЗ.pdf",
+                    "page":5,
+                    "section":"ПЗ",
+                    "fragment":"Первый обязательный элемент.",
+                    "matched_terms":["первый обязательный элемент"],
+                    "set_element_id":"first",
+                    "set_element_label":"Первый элемент",
+                },
+                {
+                    "evidence_id":"SET-2",
+                    "document":"ПЗ.pdf",
+                    "page":8,
+                    "section":"ПЗ",
+                    "fragment":"Второй обязательный элемент.",
+                    "matched_terms":["второй обязательный элемент"],
+                    "set_element_id":"second",
+                    "set_element_label":"Второй элемент",
+                },
+            ],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_COMPLETENESS_VERIFIED_SEMANTIC_REQUIRED"
+    assert result["verified_ok"]==0
+    assert result["set_completeness_queue_total"]==0
+    assert result["semantic_queue_total"]==1
+    assert len(result["semantic_queue"][0]["evidence"])==2
+    assert {
+        item["set_element_id"] for item in result["semantic_queue"][0]["evidence"]
+    }=={"first","second"}
+
+
+def test_alpha9_incomplete_set_stays_set_proof_contract_required():
+    source=[{
+        "requirement_id":"SET-INCOMPLETE",
+        "source":"НТД",
+        "paragraph":"1.1",
+        "sections":["ПЗ"],
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"SET_COMPLETENESS",
+        "requirement":"Должны быть предусмотрены первый и второй обязательные элементы.",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "evidence_document":"ПЗ.pdf",
+        "evidence_page":5,
+        "evidence_fragment":"Первый обязательный элемент.",
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"R-1",
+            "document":"ПЗ.pdf",
+            "page":5,
+            "section":"ПЗ",
+            "fragment":"Первый обязательный элемент.",
+        }],
+        "set_completeness":{
+            "configured":True,
+            "mode":"ALL_REQUIRED",
+            "promotion_policy":"SEMANTIC_AFTER_COMPLETE",
+            "atomization_complete":True,
+            "complete":False,
+            "matched_count":1,
+            "total_count":2,
+            "missing_ids":["second"],
+            "missing_labels":["Второй элемент"],
+            "evidence":[],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_COMPLETENESS_NOT_PROVEN"
+    assert "Второй элемент" in row["reason"]
+    assert result["set_completeness_queue_total"]==1
+    assert result["semantic_queue_total"]==0

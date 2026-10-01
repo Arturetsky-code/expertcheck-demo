@@ -311,10 +311,15 @@ def render(ctx):
                                             "Страница":candidate.get("page"),
                                             "Раздел":candidate.get("section") or "",
                                             "Совпавшие термины":", ".join(candidate.get("matched_terms") or []),
-                                            "Пересечение":(
+                                            "Лексическое пересечение":(
                                                 f"{candidate.get('overlap_count') or 0}/"
                                                 f"{candidate.get('query_term_count') or 0}"
                                             ),
+                                            "Обязательные группы":(
+                                                f"{candidate.get('required_group_matched') or 0}/"
+                                                f"{candidate.get('required_group_total') or 0}"
+                                            ),
+                                            "Не хватает":"; ".join(candidate.get("missing_groups") or []),
                                             "Фрагмент":candidate.get("fragment") or "",
                                         })
 

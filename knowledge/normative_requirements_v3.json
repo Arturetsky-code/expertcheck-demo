@@ -1506,6 +1506,9 @@
               "проезд"
             ]
           }
+        ],
+        "trusted_general_plan_kinds": [
+          "site_layout"
         ]
       }
     },
@@ -1565,6 +1568,9 @@
               "земляные массы"
             ]
           }
+        ],
+        "trusted_general_plan_kinds": [
+          "relief_earthworks"
         ]
       }
     },
@@ -1627,6 +1633,9 @@
               "подключение проектируемого объекта"
             ]
           }
+        ],
+        "trusted_general_plan_kinds": [
+          "utility_networks"
         ]
       }
     },
@@ -1693,6 +1702,9 @@
               "инженерные сети"
             ]
           }
+        ],
+        "trusted_general_plan_kinds": [
+          "situation_plan"
         ]
       }
     },

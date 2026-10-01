@@ -2138,8 +2138,14 @@
             "aliases": [
               "фасад",
               "фасады"
+            ],
+            "drawing_kinds": [
+              "facade"
             ]
           }
+        ],
+        "trusted_drawing_kinds": [
+          "facade"
         ]
       }
     },
@@ -2192,6 +2198,9 @@
               "план 1 этажа",
               "план этажа",
               "поэтажный план"
+            ],
+            "drawing_kinds": [
+              "floor_plan"
             ]
           },
           {
@@ -2199,6 +2208,9 @@
             "label": "Экспликация помещений",
             "aliases": [
               "экспликация помещений"
+            ],
+            "drawing_kinds": [
+              "room_explication"
             ]
           },
           {
@@ -2207,8 +2219,15 @@
             "aliases": [
               "технологическое оборудование",
               "размещение оборудования"
+            ],
+            "drawing_kinds": [
+              "floor_plan"
             ]
           }
+        ],
+        "trusted_drawing_kinds": [
+          "floor_plan",
+          "room_explication"
         ]
       }
     },
@@ -2258,6 +2277,9 @@
             "aliases": [
               "характерный разрез",
               "разрез"
+            ],
+            "drawing_kinds": [
+              "section_view"
             ]
           },
           {
@@ -2266,6 +2288,9 @@
             "aliases": [
               "конструкции",
               "конструктивные элементы"
+            ],
+            "drawing_kinds": [
+              "section_view"
             ]
           },
           {
@@ -2275,6 +2300,9 @@
               "отметка",
               "отметки",
               "высотные отметки"
+            ],
+            "drawing_kinds": [
+              "section_view"
             ]
           },
           {
@@ -2284,8 +2312,14 @@
               "технологическое оборудование",
               "верхняя отметка оборудования",
               "отметка оборудования"
+            ],
+            "drawing_kinds": [
+              "section_view"
             ]
           }
+        ],
+        "trusted_drawing_kinds": [
+          "section_view"
         ]
       }
     },

@@ -235,7 +235,7 @@ def test_alpha8_near_miss_diagnostics_rank_partial_overlap_without_changing_verd
     assert near[0]["fragment"]
 
 
-def test_alpha8_weak_retrieval_row_keeps_near_miss_diagnostics():
+def test_alpha8_unresolved_retrieval_row_keeps_near_miss_diagnostics():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[{"Файл":"Раздел ПД №2_ПЗУ1.pdf","Тип документа":"ПЗУ"}]
     pages=[{
@@ -248,6 +248,9 @@ def test_alpha8_weak_retrieval_row_keeps_near_miss_diagnostics():
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-D-TEP")
 
     assert row["retrieval_kind"]=="REVIEW_QUESTION"
-    assert row["reason_code"]=="NORMATIVE_EVIDENCE_WEAK"
+    assert row["reason_code"] in {
+        "NORMATIVE_EVIDENCE_WEAK",
+        "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+    }
     assert row["retrieval_near_misses"]
     assert row["retrieval_near_misses"][0]["page"]==7

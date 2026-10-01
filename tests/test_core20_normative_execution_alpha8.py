@@ -6,6 +6,7 @@ from core20.normative_execution import (
     _near_miss_candidates,
     _strong_near_miss_evidence,
     _set_completeness_evaluation,
+    _set_element_match,
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
@@ -548,3 +549,72 @@ def test_alpha8_conveyor_gallery_fire_contract_is_atomized_by_location():
         "fire_alarm_drive_stations",
         "fire_alarm_transfer_points",
     }.issubset(ids)
+
+
+
+def test_alpha8_conditional_set_element_separates_applicability_from_evidence():
+    element={
+        "id":"corridor_lighting",
+        "label":"Эвакуационное освещение коридора",
+        "applicability_aliases":["коридор"],
+        "aliases":["эвакуационное освещение коридор"],
+    }
+
+    pending=_set_element_match(
+        element,
+        [{
+            "document":"ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":1,
+            "text":"Общие сведения об объекте без описания коридоров.",
+        }],
+        "SET-COND",
+    )
+    assert pending["matched"] is False
+    assert pending["applicability_state"]=="APPLICABILITY_PENDING"
+    assert pending["evidence"]==[]
+    assert pending["near_misses"]==[]
+
+    required_missing=_set_element_match(
+        element,
+        [{
+            "document":"АР.pdf",
+            "document_type":"АР",
+            "page":5,
+            "text":"В здании предусмотрен коридор шириной 1,5 м.",
+        }],
+        "SET-COND",
+    )
+    assert required_missing["matched"] is False
+    assert required_missing["applicability_state"]=="REQUIRED"
+    assert required_missing["applicability_trace"]
+    assert required_missing["applicability_trace"][0]["page"]==5
+
+    matched=_set_element_match(
+        element,
+        [{
+            "document":"ИОС.pdf",
+            "document_type":"ИОС",
+            "page":12,
+            "text":"В коридоре предусмотрено эвакуационное освещение.",
+        }],
+        "SET-COND",
+    )
+    assert matched["matched"] is True
+    assert matched["applicability_state"]=="REQUIRED"
+    assert matched["evidence"]
+    assert matched["evidence"][0]["page"]==12
+
+
+def test_alpha8_sp52_set_contract_uses_conditional_element_applicability():
+    foundation=_foundation()
+    contract=next(
+        x for x in foundation.contracts()
+        if x["requirement_id"]=="SP52-7.6.3-EVACUATION-LIGHTING"
+    )
+    set_contract=dict((contract.get("evidence_contract") or {}).get("set_contract") or {})
+    elements=list(set_contract.get("elements") or [])
+
+    assert elements
+    assert all(element.get("applicability_aliases") for element in elements)
+    assert all("эвакуационное освещение" in " ".join(element.get("aliases") or []) for element in elements)

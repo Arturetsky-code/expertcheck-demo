@@ -285,3 +285,96 @@ def test_alpha8_strong_near_miss_becomes_addressable_review_candidate():
     assert fallback[0]["retrieval_admission"]=="STRONG_NEAR_MISS"
     assert fallback[0]["retrieval_keyword_coverage"] >= 0.70
     assert fallback[0]["fragment"]
+
+
+
+def test_alpha8_energy_efficiency_applicability_has_addressable_trace():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":8,
+        "text":"Для проектируемого здания требования энергетической эффективности применяются.",
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
+
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
+    assert row["applicability_trace"]
+    assert row["applicability_trace"][0]["document"]=="Раздел ПД №3_АР.pdf"
+    assert row["applicability_trace"][0]["page"]==8
+
+
+def test_alpha8_negative_energy_efficiency_text_does_not_prove_applicability():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":8,
+        "text":"Требования энергетической эффективности на проектируемый объект не распространяются.",
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_NOT_PROVEN"
+    assert not row["applicability_trace"]
+    assert row["applicability_negative_trace"]
+    assert row["applicability_negative_trace"][0]["page"]==8
+
+
+def test_alpha8_surface_complex_phrase_proves_only_applicability_not_compliance():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №6_ТХ1.pdf","Тип документа":"ТХ"}]
+    pages=[{
+        "document":"Раздел ПД №6_ТХ1.pdf",
+        "document_type":"ТХ",
+        "page":15,
+        "text":"Проектируемый объект относится к объектам поверхностного комплекса.",
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING"
+    )
+
+    assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
+    assert row["applicability_trace"]
+    assert row["kind"]!="VERIFIED_OK"
+
+
+def test_alpha8_ios_inventory_routes_to_set_completeness_without_auto_verification():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[
+        {
+            "Файл":"Раздел ПД №5_подраздел ПД №1_ИОС1.pdf",
+            "Тип документа":"ИОС1",
+        },
+        {
+            "Файл":"Раздел ПД №5_подраздел ПД №2_ИОС2.pdf",
+            "Тип документа":"ИОС2",
+        },
+    ]
+
+    result=engine.run(documents,[])
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-CLAUSE-15-IOS")
+
+    assert row["retrieval_kind"]=="VERIFIED_OK"
+    assert row["retrieval_reason_code"]=="NORMATIVE_IOS_INVENTORY_CANDIDATE"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_type"]=="SET_COMPLETENESS"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert result["set_completeness_queue_total"] >= 1
+    packet=next(
+        x for x in result["set_completeness_queue"]
+        if x["requirement_id"]=="PP87-CLAUSE-15-IOS"
+    )
+    assert packet["evidence"]
+    assert packet["evidence"][0]["locator_kind"]=="DOCUMENT_INVENTORY"
+    assert packet["evidence"][0]["page"] is None

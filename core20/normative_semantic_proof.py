@@ -488,7 +488,6 @@ def run_normative_semantic_proof(
         if (
             judge.get("valid")
             and str(judge.get("verdict") or "").upper()=="SUPPORTS"
-            and contract_gate.get("ready")
         ):
             cited={str(x) for x in judge.get("evidence_ids") or []}
             critic_packet={**packet,"evidence":[row for row in packet.get("evidence") or [] if str(row.get("evidence_id") or "") in cited]}

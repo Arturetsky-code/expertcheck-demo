@@ -15,6 +15,7 @@ PROOF_TYPE_LABELS={
 PROOF_STATE_LABELS={
     "RETAINED_FAIL_CLOSED":"Удержано исходное неопределённое состояние",
     "DETERMINISTIC_STRUCTURE_PROOF":"Структура подтверждена детерминированно",
+    "DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF":"Графическое наличие подтверждено структурно",
     "ADDRESSABLE_PRESENCE_PROOF":"Наличие подтверждено адресным фрагментом",
     "PRESENCE_PROOF_NOT_ADDRESSABLE":"Адресное доказательство наличия не сформировано",
     "VISUAL_PROOF_REQUIRED":"Требуется визуальная проверка графической части",

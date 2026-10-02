@@ -291,6 +291,11 @@ def render(ctx):
                                         f"{row.get('coverage_count') or 0}/"
                                         f"{row.get('total_count') or 0}"
                                     ),
+                                    "Структурно подтверждено":(
+                                        f"{row.get('structural_confirmed_count') or 0}/"
+                                        f"{row.get('total_count') or 0}"
+                                    ),
+                                    "Осталось визуально":row.get("visual_review_required_count") or 0,
                                     "Источник отбора":{
                                         "DRAWING_INTELLIGENCE_V2":"Drawing Intelligence 2.0",
                                         "GENERAL_PLAN_ENGINE":"General Plan Engine",
@@ -346,9 +351,26 @@ def render(ctx):
                                 for element in row.get("elements") or []:
                                     locations=list(element.get("candidate_locations") or [])
                                     first=locations[0] if locations else {}
+                                    status_labels={
+                                        "STRUCTURAL_CONFIRMED":"Подтверждено структурно",
+                                        "VISUAL_REVIEW_REQUIRED":"Нужна визуальная проверка",
+                                        "NOT_LOCATED":"Не локализовано",
+                                    }
+                                    mode_labels={
+                                        "SHEET_PRESENCE":"Наличие листа/таблицы",
+                                        "VISUAL_CONTENT":"Содержание графики",
+                                    }
                                     visual_element_rows.append({
                                         "ID":requirement_id,
                                         "Элемент":element.get("label") or element.get("id") or "",
+                                        "Режим":mode_labels.get(
+                                            element.get("verification_mode") or "",
+                                            element.get("verification_mode") or "—",
+                                        ),
+                                        "Статус proof":status_labels.get(
+                                            element.get("proof_status") or "",
+                                            element.get("proof_status") or "—",
+                                        ),
                                         "Text-layer":"Есть маркер" if element.get("matched_in_text_layer") else "Не найден",
                                         "Документ":first.get("document") or "",
                                         "Страница":first.get("page"),

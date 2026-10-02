@@ -295,6 +295,7 @@ def render(ctx):
                                         f"{row.get('structural_confirmed_count') or 0}/"
                                         f"{row.get('total_count') or 0}"
                                     ),
+                                    "Осталось структурно":row.get("structural_review_required_count") or 0,
                                     "Осталось визуально":row.get("visual_review_required_count") or 0,
                                     "Источник отбора":{
                                         "DRAWING_INTELLIGENCE_V2":"Drawing Intelligence 2.0",
@@ -353,8 +354,10 @@ def render(ctx):
                                     first=locations[0] if locations else {}
                                     status_labels={
                                         "STRUCTURAL_CONFIRMED":"Подтверждено структурно",
+                                        "STRUCTURAL_REINDEX_REQUIRED":"Нужна структурная переиндексация",
+                                        "STRUCTURAL_NOT_LOCATED":"Структурно не локализовано",
                                         "VISUAL_REVIEW_REQUIRED":"Нужна визуальная проверка",
-                                        "NOT_LOCATED":"Не локализовано",
+                                        "VISUAL_NOT_LOCATED":"Визуальный элемент не локализован",
                                     }
                                     mode_labels={
                                         "SHEET_PRESENCE":"Наличие листа/таблицы",

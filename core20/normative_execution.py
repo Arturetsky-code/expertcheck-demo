@@ -6,6 +6,7 @@ from typing import Any
 from .normative_foundation import NormativeKnowledgeFoundation20, _section_key, default_foundation
 from .normative_proof import NormativeProofEngine20
 from .normative_semantic_proof import apply_normative_semantic_proof
+from .normative_visual_proof import apply_normative_visual_proof
 
 
 ENGINE_VERSION="20.0-alpha9-normative-proof-multi-evidence"
@@ -1554,6 +1555,12 @@ class NormativeExecutionEngine20:
         if documents and isinstance(documents[0],dict):
             semantic_checkpoint=dict(documents[0].get("normative_semantic_proof") or {})
         proof=apply_normative_semantic_proof(proof,semantic_checkpoint)
+        visual_checkpoint={}
+        visual_cache={}
+        if documents and isinstance(documents[0],dict):
+            visual_checkpoint=dict(documents[0].get("normative_visual_proof") or {})
+            visual_cache=dict(documents[0].get("visual_evidence_cache") or {})
+        proof=apply_normative_visual_proof(proof,visual_checkpoint,visual_cache)
         rows=list(proof.get("rows") or [])
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
         graphic_structural_proof_count=sum(
@@ -1602,6 +1609,10 @@ class NormativeExecutionEngine20:
             "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
             "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
             "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),
+            "visual_proof_applied":int(proof.get("visual_proof_applied") or 0),
+            "visual_contracts_confirmed":int(proof.get("visual_contracts_confirmed") or 0),
+            "visual_proof_stale":bool(proof.get("visual_proof_stale")),
+            "visual_proof_summary":dict(proof.get("visual_proof_summary") or {}),
             "demoted_keyword_only":int(proof.get("demoted_keyword_only") or 0),
             "demoted_keyword_only_initial":int(
                 proof.get("demoted_keyword_only_initial")

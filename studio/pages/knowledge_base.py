@@ -8,6 +8,7 @@ from core.ai_gateway import provider_for_role
 from core20.normative_foundation import NormativeKnowledgeFoundation20
 from core20.expert_history import ExpertHistoryCorpus20
 from core20.normative_semantic_proof import run_normative_semantic_proof
+from core20.normative_visual_proof import run_normative_visual_proof
 from core20.proof_labels import judge_label, proof_state_label, proof_type_label
 
 
@@ -26,6 +27,31 @@ def _persist_normative_semantic_proof(value:dict) -> bool:
         documents[0]["normative_semantic_proof"]=dict(value or {})
         return True
     return False
+
+
+def _persist_normative_visual_proof(value:dict) -> bool:
+    """Persist resumable visual proof beside the project snapshot."""
+    result=st.session_state.get("result")
+    if not isinstance(result,(list,tuple)) or not result:
+        return False
+    documents=result[0]
+    if isinstance(documents,list) and documents and isinstance(documents[0],dict):
+        documents[0]["normative_visual_proof"]=dict(value or {})
+        return True
+    return False
+
+
+def _current_visual_state()->tuple[dict,dict]:
+    result=st.session_state.get("result")
+    if not isinstance(result,(list,tuple)) or not result:
+        return {},{}
+    documents=result[0]
+    if isinstance(documents,list) and documents and isinstance(documents[0],dict):
+        return (
+            dict(documents[0].get("visual_evidence_cache") or {}),
+            dict(documents[0].get("normative_visual_proof") or {}),
+        )
+    return {},{}
 
 
 def _semantic_trace(row:dict)->str:
@@ -427,6 +453,68 @@ def render(ctx):
                                         "После обновления достаточно один раз повторно проанализировать исходные PDF; "
                                         "после этого адресные страницы будут сохраняться вместе с проектом."
                                     )
+
+                            visual_proof_summary=dict(execution.get("visual_proof_summary") or {})
+                            if execution.get("visual_proof_applied"):
+                                st.success(
+                                    f"Независимый Visual Proof подтвердил элементов: {execution.get('visual_proof_applied',0)}; "
+                                    f"полностью закрыто графических контрактов: {execution.get('visual_contracts_confirmed',0)}."
+                                )
+                            if execution.get("visual_proof_stale"):
+                                st.warning(
+                                    "Часть сохранённого Visual Proof относится к другой версии страницы/элемента и не применена."
+                                )
+                            visual_provider_errors=[
+                                str(value) for value in (visual_proof_summary.get("provider_errors") or [])
+                                if str(value).strip()
+                            ]
+                            if visual_provider_errors:
+                                st.warning(_provider_error_summary(visual_provider_errors))
+
+                            if visual_item_queue and page_batches:
+                                st.caption(
+                                    "Visual AI получает только сохранённое изображение одной адресной страницы и список элементов для неё. "
+                                    "Положительный proof требует независимого согласия двух фактически разных vision-провайдеров; "
+                                    "NOT_PROVEN/UNREADABLE никогда не создают нарушение."
+                                )
+                                if st.button(
+                                    "Проверить графические элементы двумя vision-моделями",
+                                    type="primary",
+                                    key="normative_visual_proof",
+                                ):
+                                    visual_cache,visual_checkpoint=_current_visual_state()
+                                    judge=provider_for_role("judge",st.session_state,st.secrets)
+                                    critic=provider_for_role("critic",st.session_state,st.secrets)
+                                    if judge is None or critic is None:
+                                        st.error(
+                                            "Для Visual Proof настройте проверяющую и контрольную модели в разделе «Настройки → AI-модули»."
+                                        )
+                                    else:
+                                        with st.spinner(
+                                            "Проверяем сохранённые графические страницы Visual Judge → независимый Visual Critic..."
+                                        ):
+                                            visual_proof=run_normative_visual_proof(
+                                                visual_item_queue,
+                                                page_batches=page_batches,
+                                                visual_cache=visual_cache,
+                                                judge_provider=judge,
+                                                critic_provider=critic,
+                                                limit_batches=4,
+                                                checkpoint=visual_checkpoint,
+                                            )
+                                        if not _persist_normative_visual_proof(visual_proof):
+                                            st.error("Не удалось сохранить Visual Proof в цифровой снимок проекта.")
+                                        else:
+                                            errors=list(visual_proof.get("provider_errors") or [])
+                                            if errors:
+                                                st.warning(_provider_error_summary(errors))
+                                            else:
+                                                st.success(
+                                                    f"Visual Proof: новых подтверждений {visual_proof.get('newly_confirmed',0)}; "
+                                                    f"всего подтверждено {visual_proof.get('confirmed_total',0)} из {visual_proof.get('queue_total',0)}; "
+                                                    f"обработано page-batches {visual_proof.get('processed_batches',0)}."
+                                                )
+                                            st.rerun()
 
                             visual_page_rows=[]
                             visual_element_rows=[]

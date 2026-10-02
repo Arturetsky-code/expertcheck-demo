@@ -1149,7 +1149,9 @@ def test_alpha8_visual_preflight_separates_structural_and_visual_elements():
     assert by_id["schedule"]["structural_confirmed"] is True
     assert by_id["equipment"]["structural_confirmed"] is False
     assert by_id["equipment"]["proof_status"]=="VISUAL_REVIEW_REQUIRED"
+    assert result["structural_target_count"]==2
     assert result["structural_confirmed_count"]==2
+    assert result["structural_review_required_count"]==0
     assert result["visual_review_required_count"]==1
     assert result["structural_proof_complete"] is False
     assert result["remaining_visual_labels"]==["Размещение технологического оборудования"]
@@ -1182,7 +1184,11 @@ def test_alpha8_pzu_fallback_cannot_create_structural_proof():
 
     fallback=_visual_preflight_evaluation(contract,pages,[{}])
     assert fallback["selection_source"]=="PZU_STRUCTURAL_PREFLIGHT"
+    assert fallback["structural_target_count"]==1
     assert fallback["structural_confirmed_count"]==0
+    assert fallback["structural_review_required_count"]==1
+    assert fallback["visual_review_required_count"]==0
+    assert fallback["elements"][0]["proof_status"]=="STRUCTURAL_REINDEX_REQUIRED"
     assert fallback["structural_proof_complete"] is False
 
     trusted=_visual_preflight_evaluation(
@@ -1201,5 +1207,8 @@ def test_alpha8_pzu_fallback_cannot_create_structural_proof():
         }],
     )
     assert trusted["selection_source"]=="GENERAL_PLAN_ENGINE"
+    assert trusted["structural_target_count"]==1
     assert trusted["structural_confirmed_count"]==1
+    assert trusted["structural_review_required_count"]==0
+    assert trusted["visual_review_required_count"]==0
     assert trusted["structural_proof_complete"] is True

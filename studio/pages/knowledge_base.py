@@ -373,6 +373,42 @@ def render(ctx):
                                         for item in visual_item_queue
                                     ],hide_index=True,width="stretch")
 
+                                cache_summary=dict(execution.get("visual_evidence_cache_summary") or {})
+                                page_batches=list(execution.get("visual_page_batches") or [])
+                                if cache_summary.get("version"):
+                                    st.markdown("**Visual Evidence Cache**")
+                                    vc1,vc2,vc3,vc4=st.columns(4)
+                                    vc1.metric("Сохранено страниц",int(cache_summary.get("cached_pages") or 0))
+                                    vc2.metric("Page-batches",int(execution.get("visual_page_batch_total") or 0))
+                                    vc3.metric("Элементов в batches",int(execution.get("visual_page_batch_items") or 0))
+                                    vc4.metric("Без кэшированной страницы",int(execution.get("visual_page_batch_unresolved") or 0))
+                                    st.caption(
+                                        "В сохранённый проект попадают только страницы, реально адресованные очередью Visual Proof. "
+                                        "Несколько элементов на одной странице объединяются в один page-batch — будущую единицу вызова vision-модели."
+                                    )
+                                    if page_batches:
+                                        with st.expander(
+                                            "План группировки страниц для Visual AI",
+                                            expanded=True,
+                                        ):
+                                            st.dataframe([
+                                                {
+                                                    "Документ":batch.get("document") or "",
+                                                    "Страница":batch.get("page"),
+                                                    "Элементов":batch.get("item_count") or 0,
+                                                    "Элементы":"; ".join(batch.get("labels") or []),
+                                                    "Кэш":batch.get("cache_id") or "",
+                                                    "Размер, КБ":round(int(batch.get("image_bytes") or 0)/1024,1),
+                                                }
+                                                for batch in page_batches
+                                            ],hide_index=True,width="stretch")
+                                else:
+                                    st.caption(
+                                        "Visual Evidence Cache для этого сохранённого проекта ещё не сформирован. "
+                                        "После обновления достаточно один раз повторно проанализировать исходные PDF; "
+                                        "после этого адресные страницы будут сохраняться вместе с проектом."
+                                    )
+
                             visual_page_rows=[]
                             visual_element_rows=[]
                             for row in visual_rows:

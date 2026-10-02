@@ -135,6 +135,8 @@ def project_snapshot_bytes(
         "cross_section_verified_gate": first.get("cross_section_verified_gate") or {},
         "technology_proof_summary": first.get("technology_proof_summary") or {},
         "project_knowledge_model": first.get("project_knowledge_model") or {},
+        "visual_evidence_cache": first.get("visual_evidence_cache") or {},
+        "visual_evidence_cache_seed": first.get("visual_evidence_cache_seed") or {},
         "semantic_execution_checkpoint": dict(semantic_checkpoint or {}),
         "workspace_state": dict(workspace_state or {}),
     }
@@ -226,6 +228,8 @@ def snapshot_to_workspace_payload(
         "cross_section_verified_gate",
         "technology_proof_summary",
         "project_knowledge_model",
+        "visual_evidence_cache",
+        "visual_evidence_cache_seed",
     )
     for key in project_fields:
         if key in payload:

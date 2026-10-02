@@ -83,6 +83,7 @@ from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .coverage_acceleration import coverage_budget
 from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
+from .visual_evidence_cache import build_visual_evidence_cache
 from .project_knowledge_recovery import build_project_knowledge_manifest
 from .project_data_contract import enforce_project_data_contract
 from .evidence_reconstruction import reconstruct_high_value_evidence, sanitize_high_value_facts
@@ -1105,6 +1106,43 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         doc["expert_practice_summary"] = {**expert_practice.summary(), "enriched_comparisons": expert_practice_count}
         doc["remark_learning_summary"] = {"matched_comparisons": remark_learning_count, "case_count": len(remark_learning.cases)}
         doc["evidence_graph"] = evidence_graph
+
+    # Persist only the page pixels that the current deterministic Visual Proof
+    # routing can actually request. This keeps saved projects resumable without
+    # embedding complete source PDFs in the workspace snapshot.
+    if documents:
+        try:
+            from core20.normative_execution import NormativeExecutionEngine20
+            from core20.normative_foundation import default_foundation as _core20_foundation
+
+            visual_seed = NormativeExecutionEngine20(_core20_foundation()).run(
+                documents,
+                assignment_page_corpus,
+            )
+            visual_cache = build_visual_evidence_cache(
+                pdf_files,
+                visual_seed.get("visual_item_queue") or [],
+            )
+            documents[0]["visual_evidence_cache"] = visual_cache
+            documents[0]["visual_evidence_cache_seed"] = {
+                "visual_contracts": int(visual_seed.get("visual_queue_total") or 0),
+                "visual_items": int(visual_seed.get("visual_item_queue_total") or 0),
+                "addressed_items": int(visual_seed.get("visual_item_queue_addressed") or 0),
+                "sheet_fallback_items": int(visual_seed.get("visual_item_queue_sheet_fallback") or 0),
+                "unresolved_items": int(visual_seed.get("visual_item_queue_unresolved") or 0),
+            }
+        except Exception as exc:
+            documents[0]["visual_evidence_cache"] = {
+                "version": "25.2-visual-evidence-cache-alpha1",
+                "planned_pages": 0,
+                "cached_pages": 0,
+                "omitted_pages": 0,
+                "image_bytes": 0,
+                "entries": [],
+                "audit": [{"decision": "error", "reason": str(exc)[:500]}],
+                "persisted_for_resume": False,
+            }
+            pipeline_errors.append({"stage": "visual_evidence_cache", "error": str(exc)})
 
     progress(100, "Готово", "Проверка проекта завершена")
     return documents, findings, comparisons

@@ -7,6 +7,7 @@ from .parity import evaluate_golden_cases
 from .verification import VerificationEngine20
 from .normative_foundation import default_foundation
 from .normative_execution import NormativeExecutionEngine20
+from core.visual_evidence_cache import build_visual_page_batches
 
 
 DUAL_RUN_VERSION = "20.0-alpha8-normative-execution"
@@ -32,6 +33,23 @@ def build_dual_run_manifest(
     knowledge_routes=foundation.project_routes(documents)
     page_corpus=list(((documents[0] if documents else {}).get("analysis_snapshot") or {}).get("page_corpus") or [])
     normative_execution=NormativeExecutionEngine20(foundation).run(documents,page_corpus)
+    visual_cache=dict((documents[0] if documents else {}).get("visual_evidence_cache") or {})
+    visual_batch_plan=build_visual_page_batches(
+        normative_execution.get("visual_item_queue") or [],
+        visual_cache,
+    )
+    normative_execution["visual_evidence_cache_summary"]={
+        "version":visual_cache.get("version") or "",
+        "planned_pages":int(visual_cache.get("planned_pages") or 0),
+        "cached_pages":int(visual_cache.get("cached_pages") or 0),
+        "omitted_pages":int(visual_cache.get("omitted_pages") or 0),
+        "image_bytes":int(visual_cache.get("image_bytes") or 0),
+        "persisted_for_resume":bool(visual_cache.get("persisted_for_resume")),
+    }
+    normative_execution["visual_page_batches"]=list(visual_batch_plan.get("page_batches") or [])
+    normative_execution["visual_page_batch_total"]=int(visual_batch_plan.get("page_batch_total") or 0)
+    normative_execution["visual_page_batch_items"]=int(visual_batch_plan.get("unique_items_with_cached_page") or 0)
+    normative_execution["visual_page_batch_unresolved"]=int(visual_batch_plan.get("unresolved_item_total") or 0)
     audit_rows=[]
     for decision in verification.get("decision_rows") or []:
         meta=dict(decision.get("metadata") or {})

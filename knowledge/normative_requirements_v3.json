@@ -1478,7 +1478,8 @@
             "aliases": [
               "земельный участок",
               "граница земельного участка"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "existing_projected_objects",
@@ -1487,7 +1488,8 @@
               "существующие и проектируемые",
               "проектируемые объекты",
               "существующие объекты"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "utilities",
@@ -1495,7 +1497,8 @@
             "aliases": [
               "инженерные сети",
               "сети инженерно-технического обеспечения"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "access",
@@ -1504,7 +1507,8 @@
               "подъезд",
               "подход",
               "проезд"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           }
         ],
         "trusted_general_plan_kinds": [
@@ -1558,7 +1562,8 @@
             "aliases": [
               "схема организации рельефа",
               "вертикальная планировка"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "earth_mass_plan",
@@ -1566,7 +1571,8 @@
             "aliases": [
               "план земляных масс",
               "земляные массы"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           }
         ],
         "trusted_general_plan_kinds": [
@@ -1622,7 +1628,8 @@
               "сводный план сетей",
               "план инженерных сетей",
               "сети инженерно-технического обеспечения"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "connection_points",
@@ -1631,7 +1638,8 @@
               "места подключения",
               "точки подключения",
               "подключение проектируемого объекта"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           }
         ],
         "trusted_general_plan_kinds": [
@@ -1684,7 +1692,8 @@
             "label": "Ситуационный план",
             "aliases": [
               "ситуационный план"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "boundaries",
@@ -1692,7 +1701,8 @@
             "aliases": [
               "граница",
               "границы"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "communications",
@@ -1700,7 +1710,8 @@
             "aliases": [
               "коммуникации",
               "инженерные сети"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           }
         ],
         "trusted_general_plan_kinds": [
@@ -2153,7 +2164,8 @@
             ],
             "drawing_kinds": [
               "facade"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           }
         ],
         "trusted_drawing_kinds": [
@@ -2213,7 +2225,8 @@
             ],
             "drawing_kinds": [
               "floor_plan"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "room_schedule",
@@ -2223,7 +2236,8 @@
             ],
             "drawing_kinds": [
               "room_explication"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "equipment_layout",
@@ -2234,7 +2248,8 @@
             ],
             "drawing_kinds": [
               "floor_plan"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           }
         ],
         "trusted_drawing_kinds": [
@@ -2292,7 +2307,8 @@
             ],
             "drawing_kinds": [
               "section_view"
-            ]
+            ],
+            "verification_mode": "SHEET_PRESENCE"
           },
           {
             "id": "structures",
@@ -2303,7 +2319,8 @@
             ],
             "drawing_kinds": [
               "section_view"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "elevations",
@@ -2315,7 +2332,8 @@
             ],
             "drawing_kinds": [
               "section_view"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           },
           {
             "id": "equipment_top_elevations",
@@ -2327,7 +2345,8 @@
             ],
             "drawing_kinds": [
               "section_view"
-            ]
+            ],
+            "verification_mode": "VISUAL_CONTENT"
           }
         ],
         "trusted_drawing_kinds": [

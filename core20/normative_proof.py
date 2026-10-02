@@ -703,6 +703,69 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _visual_review_item_queue(
+    rows:list[dict[str,Any]],
+)->list[dict[str,Any]]:
+    """Flatten contract-level Visual Proof into element-level review work.
+
+    This queue is routing only. It never promotes or demotes a normative verdict.
+    """
+    items=[]
+    for row in rows:
+        if str(row.get("proof_state") or "")!="VISUAL_PROOF_REQUIRED":
+            continue
+        preflight=dict(row.get("visual_preflight") or {})
+        contract_pages=[
+            dict(value)
+            for value in (preflight.get("candidate_pages") or [])
+            if isinstance(value,dict)
+        ]
+        for element in preflight.get("elements") or []:
+            if not isinstance(element,dict):
+                continue
+            if str(element.get("verification_mode") or "VISUAL_CONTENT").upper()!="VISUAL_CONTENT":
+                continue
+            element_locations=[
+                dict(value)
+                for value in (element.get("candidate_locations") or [])
+                if isinstance(value,dict)
+            ]
+            if element_locations:
+                candidate_pages=element_locations[:3]
+                localization_source="ELEMENT_ADDRESS"
+            elif contract_pages:
+                candidate_pages=contract_pages[:3]
+                localization_source="CONTRACT_SHEET_FALLBACK"
+            else:
+                candidate_pages=[]
+                localization_source="UNRESOLVED"
+
+            requirement_id=str(row.get("requirement_id") or "")
+            element_id=str(element.get("id") or "")
+            label=str(element.get("label") or element_id)
+            items.append({
+                "item_id":f"NORM-VIS-ITEM-{requirement_id}-{element_id}",
+                "requirement_id":requirement_id,
+                "element_id":element_id,
+                "label":label,
+                "source":row.get("source") or row.get("document_id") or "",
+                "paragraph":row.get("paragraph") or "",
+                "topic":row.get("topic") or "",
+                "sections":list(row.get("sections") or []),
+                "visual_kind":str(preflight.get("visual_kind") or ""),
+                "selection_source":str(preflight.get("selection_source") or "TEXT_LAYER"),
+                "localization_source":localization_source,
+                "status":"READY_VISUAL_REVIEW" if candidate_pages else "VISUAL_PAGE_NOT_LOCALIZED",
+                "candidate_page_count":len(candidate_pages),
+                "candidate_pages":candidate_pages,
+                "review_question":(
+                    f"Проверьте графическое содержание и установите, показан ли обязательный элемент "
+                    f"«{label}». Текстовые маркеры и название листа сами по себе не являются доказательством."
+                ),
+            })
+    return items
+
+
 class NormativeProofEngine20:
     """Turn retrieval results into proof-appropriate verdicts.
 
@@ -735,6 +798,7 @@ class NormativeProofEngine20:
             _visual_packet(row) for row in gated
             if row.get("proof_state") == "VISUAL_PROOF_REQUIRED"
         ]
+        visual_item_queue=_visual_review_item_queue(gated)
         initial_demoted = max(0, raw_verified - verified)
         frontier = proof_frontier_summary(
             gated,
@@ -765,6 +829,20 @@ class NormativeProofEngine20:
             "set_completeness_queue_total": len(set_queue),
             "visual_queue": visual_queue,
             "visual_queue_total": len(visual_queue),
+            "visual_item_queue":visual_item_queue,
+            "visual_item_queue_total":len(visual_item_queue),
+            "visual_item_queue_addressed":sum(
+                item.get("localization_source")=="ELEMENT_ADDRESS"
+                for item in visual_item_queue
+            ),
+            "visual_item_queue_sheet_fallback":sum(
+                item.get("localization_source")=="CONTRACT_SHEET_FALLBACK"
+                for item in visual_item_queue
+            ),
+            "visual_item_queue_unresolved":sum(
+                item.get("localization_source")=="UNRESOLVED"
+                for item in visual_item_queue
+            ),
             "principle": (
                 "Retrieval is not proof: PRESENCE/STRUCTURE may be deterministic; SET/SEMANTIC/GRAPHIC/TYPED/CROSS_SECTION "
                 "require their own proof contract. Missing proof never becomes a normative non-compliance."

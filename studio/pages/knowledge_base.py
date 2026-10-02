@@ -321,6 +321,58 @@ def render(ctx):
                                 for row in visual_rows
                             ],hide_index=True,width="stretch")
 
+                            visual_item_queue=list(execution.get("visual_item_queue") or [])
+                            if visual_item_queue:
+                                st.markdown(
+                                    f"**Очередь визуальной проверки · {len(visual_item_queue)} элементов**"
+                                )
+                                vq1,vq2,vq3=st.columns(3)
+                                vq1.metric(
+                                    "Адресно локализовано",
+                                    int(execution.get("visual_item_queue_addressed") or 0),
+                                )
+                                vq2.metric(
+                                    "Только на уровне листа",
+                                    int(execution.get("visual_item_queue_sheet_fallback") or 0),
+                                )
+                                vq3.metric(
+                                    "Без листа-кандидата",
+                                    int(execution.get("visual_item_queue_unresolved") or 0),
+                                )
+                                st.caption(
+                                    "Адресная локализация означает, что элемент уже привязан к конкретной странице. "
+                                    "«Только на уровне листа» означает: нужный лист известен, но сам элемент ещё надо найти на графике. "
+                                    "Эта очередь не меняет нормативный вердикт и не вызывает AI."
+                                )
+                                localization_labels={
+                                    "ELEMENT_ADDRESS":"Адрес элемента",
+                                    "CONTRACT_SHEET_FALLBACK":"Лист-кандидат",
+                                    "UNRESOLVED":"Лист не локализован",
+                                }
+                                with st.expander(
+                                    "Показать элементную очередь Visual Proof",
+                                    expanded=True,
+                                ):
+                                    st.dataframe([
+                                        {
+                                            "ID":item.get("requirement_id") or "",
+                                            "Элемент":item.get("label") or "",
+                                            "Локализация":localization_labels.get(
+                                                item.get("localization_source") or "",
+                                                item.get("localization_source") or "—",
+                                            ),
+                                            "Листов":item.get("candidate_page_count") or 0,
+                                            "Документ":(
+                                                (item.get("candidate_pages") or [{}])[0].get("document") or ""
+                                            ),
+                                            "Страница":(
+                                                (item.get("candidate_pages") or [{}])[0].get("page")
+                                            ),
+                                            "Тема":item.get("topic") or "",
+                                        }
+                                        for item in visual_item_queue
+                                    ],hide_index=True,width="stretch")
+
                             visual_page_rows=[]
                             visual_element_rows=[]
                             for row in visual_rows:

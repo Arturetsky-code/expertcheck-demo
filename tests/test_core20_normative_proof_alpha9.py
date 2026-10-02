@@ -577,3 +577,103 @@ def test_alpha9_graphic_contract_enters_visual_queue_with_preflight():
     assert packet["coverage_count"]==1
     assert packet["candidate_pages"][0]["page"]==5
     assert result["proof_frontier"]["visual_pending"]["total"]==1
+
+
+
+def test_alpha9_graphic_sheet_presence_can_close_from_trusted_structural_proof():
+    source=[{
+        "requirement_id":"VIS-FACADE-STRUCTURAL",
+        "source":"ПП №87",
+        "paragraph":"п. 13",
+        "sections":["АР"],
+        "topic":"Фасады",
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"GRAPHIC_CONTENT",
+        "requirement":"Графическая часть АР должна содержать отображение фасадов.",
+        "kind":"REVIEW_QUESTION",
+        "state":"Вопрос специалисту",
+        "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+        "evidence_candidates":[],
+        "visual_preflight":{
+            "configured":True,
+            "visual_kind":"AR_FACADES",
+            "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+            "ready_for_visual_review":True,
+            "selection_source":"DRAWING_INTELLIGENCE_V2",
+            "coverage_count":1,
+            "total_count":1,
+            "structural_confirmed_count":1,
+            "visual_review_required_count":0,
+            "structural_proof_complete":True,
+            "remaining_visual_labels":[],
+            "elements":[{
+                "id":"facade_views",
+                "label":"Отображение фасадов",
+                "verification_mode":"SHEET_PRESENCE",
+                "matched_in_text_layer":True,
+                "structural_confirmed":True,
+                "visual_review_required":False,
+                "proof_status":"STRUCTURAL_CONFIRMED",
+                "candidate_locations":[{
+                    "document":"АР2.pdf",
+                    "page":22,
+                    "selection_source":"DRAWING_INTELLIGENCE_V2",
+                }],
+            }],
+            "candidate_pages":[{
+                "document":"АР2.pdf",
+                "page":22,
+                "section":"АР",
+                "selection_source":"DRAWING_INTELLIGENCE_V2",
+                "drawing_kinds":["facade"],
+                "sheet_title":"Фасады",
+                "designation":"RAM-АР2-22",
+                "fragment":"Фасады",
+            }],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["state"]=="Подтверждено"
+    assert row["proof_state"]=="DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF"
+    assert row["reason_code"]=="NORMATIVE_GRAPHIC_STRUCTURE_PROOF_CONFIRMED"
+    assert row["evidence_document"]=="АР2.pdf"
+    assert row["evidence_page"]==22
+    assert result["verified_ok"]==1
+    assert result["visual_queue_total"]==0
+
+
+def test_alpha9_structural_graphic_proof_cannot_override_unproven_applicability():
+    source=[{
+        "requirement_id":"VIS-CONDITIONAL",
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"GRAPHIC_CONTENT",
+        "requirement":"Для применимого объекта должен быть графический лист.",
+        "kind":"REVIEW_QUESTION",
+        "state":"Вопрос специалисту",
+        "reason_code":"NORMATIVE_APPLICABILITY_NOT_PROVEN",
+        "reason":"Условная применимость требования не доказана.",
+        "sections":["АР"],
+        "evidence_candidates":[],
+        "visual_preflight":{
+            "configured":True,
+            "structural_proof_complete":True,
+            "candidate_pages":[{
+                "document":"АР.pdf",
+                "page":2,
+                "selection_source":"DRAWING_INTELLIGENCE_V2",
+                "sheet_title":"Разрез",
+            }],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="RETAINED_FAIL_CLOSED"
+    assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    assert result["verified_ok"]==0

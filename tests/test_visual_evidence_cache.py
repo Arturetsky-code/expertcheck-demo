@@ -5,6 +5,7 @@ import fitz
 from core.visual_evidence_cache import (
     build_visual_evidence_cache,
     build_visual_page_batches,
+    build_visual_page_cover_plan,
     visual_page_requests,
 )
 
@@ -118,3 +119,109 @@ def test_visual_page_batches_fail_closed_without_cached_page():
     assert plan["page_batch_total"] == 0
     assert plan["unique_items_with_cached_page"] == 0
     assert plan["unresolved_item_total"] == 1
+
+
+
+def test_visual_cover_plan_prefers_one_shared_page_over_many_alternatives():
+    items = [
+        {
+            "item_id": "I-1",
+            "requirement_id": "R-1",
+            "label": "Границы",
+            "candidate_pages": [
+                {"document": "ПЗУ.pdf", "page": 9},
+                {"document": "ПЗУ.pdf", "page": 70},
+                {"document": "ПЗУ.pdf", "page": 2},
+            ],
+        },
+        {
+            "item_id": "I-2",
+            "requirement_id": "R-1",
+            "label": "Объекты",
+            "candidate_pages": [
+                {"document": "ПЗУ.pdf", "page": 9},
+                {"document": "ПЗУ.pdf", "page": 70},
+                {"document": "ПЗУ.pdf", "page": 18},
+            ],
+        },
+        {
+            "item_id": "I-3",
+            "requirement_id": "R-1",
+            "label": "Инженерные сети",
+            "candidate_pages": [{"document": "ПЗУ.pdf", "page": 9}],
+        },
+        {
+            "item_id": "I-4",
+            "requirement_id": "R-1",
+            "label": "Подъезды",
+            "candidate_pages": [
+                {"document": "ПЗУ.pdf", "page": 9},
+                {"document": "ПЗУ.pdf", "page": 18},
+                {"document": "ПЗУ.pdf", "page": 26},
+            ],
+        },
+    ]
+    plan = build_visual_page_cover_plan(items)
+    assert plan["candidate_page_total"] == 5
+    assert plan["primary_page_total"] == 1
+    assert plan["primary_pages"][0]["page"] == 9
+    assert plan["primary_pages"][0]["item_count"] == 4
+    assert plan["fallback_page_total"] == 4
+    assert plan["covered_item_total"] == 4
+    assert plan["unresolved_item_total"] == 0
+
+
+def test_visual_page_batches_use_primary_cover_and_keep_cached_fallbacks():
+    items = [
+        {
+            "item_id": "I-1",
+            "requirement_id": "R-1",
+            "label": "Границы",
+            "candidate_pages": [
+                {"document": "ПЗУ.pdf", "page": 9},
+                {"document": "ПЗУ.pdf", "page": 70},
+            ],
+        },
+        {
+            "item_id": "I-2",
+            "requirement_id": "R-1",
+            "label": "Объекты",
+            "candidate_pages": [
+                {"document": "ПЗУ.pdf", "page": 9},
+                {"document": "ПЗУ.pdf", "page": 18},
+            ],
+        },
+        {
+            "item_id": "I-3",
+            "requirement_id": "R-2",
+            "label": "Подключение",
+            "candidate_pages": [{"document": "ПЗУ2.pdf", "page": 11}],
+        },
+    ]
+    cache = {
+        "entries": [
+            {
+                "cache_id": f"VIS-{index}",
+                "document": document,
+                "page": page,
+                "mime_type": "image/jpeg",
+                "image_sha256": str(index),
+                "image_bytes": 100,
+            }
+            for index, (document, page) in enumerate([
+                ("ПЗУ.pdf", 9),
+                ("ПЗУ.pdf", 70),
+                ("ПЗУ.pdf", 18),
+                ("ПЗУ2.pdf", 11),
+            ], 1)
+        ]
+    }
+    result = build_visual_page_batches(items, cache)
+    assert result["candidate_page_total"] == 4
+    assert result["page_batch_total"] == 2
+    assert result["unique_items_with_cached_page"] == 3
+    assert result["fallback_page_total"] == 2
+    assert result["unresolved_item_total"] == 0
+    shared = next(row for row in result["page_batches"] if row["document"] == "ПЗУ.pdf")
+    assert shared["page"] == 9
+    assert shared["item_count"] == 2

@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover - optional runtime dependency
     fitz = None
 
 
-CACHE_VERSION = "25.2-visual-evidence-cache-alpha1"
+CACHE_VERSION = "25.2-visual-evidence-cache-alpha2-min-cover"
 
 
 def _uploaded_name(value: Any) -> str:
@@ -278,11 +278,174 @@ def build_visual_evidence_cache(
     return base
 
 
+def build_visual_page_cover_plan(
+    visual_item_queue: Iterable[dict[str, Any]] | None,
+    *,
+    available_pages: set[tuple[str, int]] | None = None,
+) -> dict[str, Any]:
+    """Select a small deterministic primary page set for all visual items.
+
+    All candidate pages may remain cached for resume/fallback. Only primary pages
+    become first-pass vision batches. The heuristic maximises newly covered
+    elements, then prefers lower candidate ranks.
+    """
+    item_candidates: dict[str, list[dict[str, Any]]] = {}
+    item_meta: dict[str, dict[str, Any]] = {}
+    page_items: dict[tuple[str, int], dict[str, int]] = defaultdict(dict)
+    page_meta: dict[tuple[str, int], dict[str, Any]] = {}
+
+    for index, item in enumerate(visual_item_queue or [], 1):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("item_id") or f"VIS-ITEM-{index:03d}")
+        candidates=[]
+        seen=set()
+        for rank, page in enumerate(item.get("candidate_pages") or [], 1):
+            if not isinstance(page, dict):
+                continue
+            document=str(page.get("document") or "").strip()
+            try:
+                page_no=int(page.get("page") or 0)
+            except (TypeError, ValueError):
+                page_no=0
+            key=(document,page_no)
+            if not document or page_no<=0 or key in seen:
+                continue
+            if available_pages is not None and key not in available_pages:
+                continue
+            seen.add(key)
+            candidate={**dict(page),"document":document,"page":page_no,"rank":rank}
+            candidates.append(candidate)
+            page_items[key][item_id]=min(rank,page_items[key].get(item_id,rank))
+            page_meta.setdefault(key,{
+                "document":document,
+                "page":page_no,
+                "section":str(page.get("section") or ""),
+            })
+        item_candidates[item_id]=candidates
+        item_meta[item_id]=dict(item)
+
+    coverable={item_id for item_id,candidates in item_candidates.items() if candidates}
+    uncovered=set(coverable)
+    selected_keys=[]
+
+    while uncovered:
+        ranked=[]
+        for key,rank_map in page_items.items():
+            newly=sorted(item_id for item_id in rank_map if item_id in uncovered)
+            if not newly:
+                continue
+            ranks=[int(rank_map[item_id]) for item_id in newly]
+            ranked.append((
+                -len(newly),
+                sum(ranks),
+                max(ranks),
+                str(key[0]),
+                int(key[1]),
+                key,
+                newly,
+            ))
+        if not ranked:
+            break
+        ranked.sort()
+        *_, key, newly = ranked[0]
+        selected_keys.append(key)
+        uncovered.difference_update(newly)
+
+    selected_set=set(selected_keys)
+    assignments={}
+    for item_id,candidates in item_candidates.items():
+        choices=[
+            row for row in candidates
+            if (str(row.get("document") or ""),int(row.get("page") or 0)) in selected_set
+        ]
+        if not choices:
+            continue
+        best=min(
+            choices,
+            key=lambda row:(
+                int(row.get("rank") or 99),
+                str(row.get("document") or ""),
+                int(row.get("page") or 0),
+            ),
+        )
+        assignments[item_id]={
+            "document":str(best.get("document") or ""),
+            "page":int(best.get("page") or 0),
+            "rank":int(best.get("rank") or 0),
+        }
+
+    all_keys=set(page_items)
+    fallback_keys=sorted(
+        all_keys-selected_set,
+        key=lambda key:(str(key[0]),int(key[1])),
+    )
+    primary_pages=[]
+    for key in selected_keys:
+        assigned=[
+            item_id for item_id,value in assignments.items()
+            if (value.get("document"),value.get("page"))==key
+        ]
+        if not assigned:
+            continue
+        row={**page_meta.get(key,{}),"item_ids":assigned}
+        row["item_count"]=len(assigned)
+        row["labels"]=list(dict.fromkeys(
+            str(item_meta[item_id].get("label") or "")
+            for item_id in assigned
+            if str(item_meta[item_id].get("label") or "")
+        ))
+        primary_pages.append(row)
+
+    fallback_pages=[]
+    for key in fallback_keys:
+        item_ids=sorted(page_items.get(key) or {})
+        row={**page_meta.get(key,{}),"item_ids":item_ids}
+        row["item_count"]=len(item_ids)
+        row["labels"]=list(dict.fromkeys(
+            str(item_meta[item_id].get("label") or "")
+            for item_id in item_ids
+            if item_id in item_meta and str(item_meta[item_id].get("label") or "")
+        ))
+        row["best_rank"]=min(page_items[key].values()) if page_items.get(key) else 0
+        fallback_pages.append(row)
+
+    unresolved=[
+        {
+            "item_id":item_id,
+            "requirement_id":item_meta.get(item_id,{}).get("requirement_id") or "",
+            "label":item_meta.get(item_id,{}).get("label") or "",
+            "candidate_page_count":len(item_candidates.get(item_id) or []),
+        }
+        for item_id in item_meta
+        if item_id not in assignments
+    ]
+
+    return {
+        "version":CACHE_VERSION,
+        "strategy":"GREEDY_SET_COVER_RANK_AWARE",
+        "candidate_page_total":len(all_keys),
+        "primary_pages":primary_pages,
+        "primary_page_total":len(primary_pages),
+        "fallback_pages":fallback_pages,
+        "fallback_page_total":len(fallback_pages),
+        "assignments":assignments,
+        "coverable_item_total":len(coverable),
+        "covered_item_total":len(assignments),
+        "unresolved_items":unresolved,
+        "unresolved_item_total":len(unresolved),
+    }
+
+
 def build_visual_page_batches(
     visual_item_queue: Iterable[dict[str, Any]] | None,
     cache: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Group element-level visual work by cached page for a future vision call."""
+    """Build first-pass vision batches from a rank-aware minimal page cover.
+
+    Cached alternative pages stay available as fallback but do not create an AI
+    call until a primary page fails to resolve an element.
+    """
     entries = [
         dict(row) for row in ((cache or {}).get("entries") or [])
         if isinstance(row, dict)
@@ -292,81 +455,78 @@ def build_visual_page_batches(
         for row in entries
         if row.get("document") and int(row.get("page") or 0) > 0
     }
-    batches: dict[tuple[str, int], dict[str, Any]] = {}
-    unresolved = []
-    unique_items = set()
-
-    for item in visual_item_queue or []:
-        if not isinstance(item, dict):
-            continue
-        item_id = str(item.get("item_id") or "")
-        matched = False
-        for rank, page in enumerate(item.get("candidate_pages") or [], 1):
-            if not isinstance(page, dict):
-                continue
-            document = str(page.get("document") or "")
-            try:
-                page_no = int(page.get("page") or 0)
-            except (TypeError, ValueError):
-                page_no = 0
-            cached = by_page.get((document, page_no))
-            if cached is None:
-                continue
-            matched = True
-            unique_items.add(item_id)
-            key = (document, page_no)
-            batch = batches.setdefault(key, {
-                "batch_id": f"VIS-BATCH-{cached.get('cache_id') or len(batches)+1}",
-                "cache_id": cached.get("cache_id") or "",
-                "document": document,
-                "page": page_no,
-                "mime_type": cached.get("mime_type") or "",
-                "image_sha256": cached.get("image_sha256") or "",
-                "image_bytes": int(cached.get("image_bytes") or 0),
-                "items": [],
-            })
-            batch["items"].append({
-                "item_id": item_id,
-                "requirement_id": item.get("requirement_id") or "",
-                "element_id": item.get("element_id") or "",
-                "label": item.get("label") or "",
-                "topic": item.get("topic") or "",
-                "candidate_rank": rank,
-                "localization_source": item.get("localization_source") or "",
-                "review_question": item.get("review_question") or "",
-            })
-        if not matched:
-            unresolved.append({
-                "item_id": item_id,
-                "requirement_id": item.get("requirement_id") or "",
-                "label": item.get("label") or "",
-                "candidate_page_count": item.get("candidate_page_count") or 0,
-            })
-
-    ordered = sorted(
-        batches.values(),
-        key=lambda batch: (
-            str(batch.get("document") or ""),
-            int(batch.get("page") or 0),
-        ),
+    plan=build_visual_page_cover_plan(
+        visual_item_queue,
+        available_pages=set(by_page),
     )
-    for batch in ordered:
-        batch["item_count"] = len(batch.get("items") or [])
-        batch["labels"] = list(dict.fromkeys(
+    assignments=dict(plan.get("assignments") or {})
+    items_by_id={
+        str(item.get("item_id") or ""):dict(item)
+        for item in (visual_item_queue or [])
+        if isinstance(item,dict) and str(item.get("item_id") or "")
+    }
+
+    batches=[]
+    for primary in plan.get("primary_pages") or []:
+        document=str(primary.get("document") or "")
+        page_no=int(primary.get("page") or 0)
+        cached=by_page.get((document,page_no))
+        if cached is None:
+            continue
+        batch={
+            "batch_id":f"VIS-BATCH-{cached.get('cache_id') or len(batches)+1}",
+            "cache_id":cached.get("cache_id") or "",
+            "document":document,
+            "page":page_no,
+            "mime_type":cached.get("mime_type") or "",
+            "image_sha256":cached.get("image_sha256") or "",
+            "image_bytes":int(cached.get("image_bytes") or 0),
+            "items":[],
+        }
+        for item_id in primary.get("item_ids") or []:
+            item=items_by_id.get(str(item_id)) or {}
+            assigned=assignments.get(str(item_id)) or {}
+            batch["items"].append({
+                "item_id":str(item_id),
+                "requirement_id":item.get("requirement_id") or "",
+                "element_id":item.get("element_id") or "",
+                "label":item.get("label") or "",
+                "topic":item.get("topic") or "",
+                "candidate_rank":int(assigned.get("rank") or 0),
+                "localization_source":item.get("localization_source") or "",
+                "review_question":item.get("review_question") or "",
+            })
+        batch["item_count"]=len(batch["items"])
+        batch["labels"]=list(dict.fromkeys(
             str(item.get("label") or "")
-            for item in batch.get("items") or []
+            for item in batch["items"]
             if str(item.get("label") or "")
         ))
+        batches.append(batch)
+
+    fallback_pages=[]
+    for row in plan.get("fallback_pages") or []:
+        cached=by_page.get((str(row.get("document") or ""),int(row.get("page") or 0)))
+        fallback_pages.append({
+            **dict(row),
+            "cache_id":(cached or {}).get("cache_id") or "",
+            "image_bytes":int((cached or {}).get("image_bytes") or 0),
+        })
 
     return {
-        "version": CACHE_VERSION,
-        "page_batches": ordered,
-        "page_batch_total": len(ordered),
-        "unique_items_with_cached_page": len(unique_items),
-        "unresolved_items": unresolved,
-        "unresolved_item_total": len(unresolved),
-        "principle": (
-            "Один page-batch объединяет все элементы, проверяемые на одной сохранённой странице. "
-            "Это будущая единица вызова vision-модели; verdict здесь не формируется."
+        "version":CACHE_VERSION,
+        "strategy":plan.get("strategy") or "",
+        "candidate_page_total":int(plan.get("candidate_page_total") or 0),
+        "page_batches":batches,
+        "page_batch_total":len(batches),
+        "unique_items_with_cached_page":int(plan.get("covered_item_total") or 0),
+        "fallback_pages":fallback_pages,
+        "fallback_page_total":len(fallback_pages),
+        "unresolved_items":list(plan.get("unresolved_items") or []),
+        "unresolved_item_total":int(plan.get("unresolved_item_total") or 0),
+        "principle":(
+            "Первый проход vision использует rank-aware минимальное покрытие страницами. "
+            "Альтернативные кэшированные страницы остаются fallback и не создают AI-вызов, "
+            "пока основной лист не оказался недостаточным."
         ),
     }

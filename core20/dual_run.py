@@ -49,6 +49,10 @@ def build_dual_run_manifest(
     normative_execution["visual_page_batches"]=list(visual_batch_plan.get("page_batches") or [])
     normative_execution["visual_page_batch_total"]=int(visual_batch_plan.get("page_batch_total") or 0)
     normative_execution["visual_page_batch_items"]=int(visual_batch_plan.get("unique_items_with_cached_page") or 0)
+    normative_execution["visual_page_batch_fallback_total"]=int(visual_batch_plan.get("fallback_page_total") or 0)
+    normative_execution["visual_page_batch_candidate_total"]=int(visual_batch_plan.get("candidate_page_total") or 0)
+    normative_execution["visual_page_batch_strategy"]=str(visual_batch_plan.get("strategy") or "")
+    normative_execution["visual_page_fallbacks"]=list(visual_batch_plan.get("fallback_pages") or [])
     normative_execution["visual_page_batch_unresolved"]=int(visual_batch_plan.get("unresolved_item_total") or 0)
     audit_rows=[]
     for decision in verification.get("decision_rows") or []:

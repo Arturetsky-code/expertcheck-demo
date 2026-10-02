@@ -377,18 +377,20 @@ def render(ctx):
                                 page_batches=list(execution.get("visual_page_batches") or [])
                                 if cache_summary.get("version"):
                                     st.markdown("**Visual Evidence Cache**")
-                                    vc1,vc2,vc3,vc4=st.columns(4)
+                                    vc1,vc2,vc3,vc4,vc5=st.columns(5)
                                     vc1.metric("Сохранено страниц",int(cache_summary.get("cached_pages") or 0))
-                                    vc2.metric("Page-batches",int(execution.get("visual_page_batch_total") or 0))
-                                    vc3.metric("Элементов в batches",int(execution.get("visual_page_batch_items") or 0))
-                                    vc4.metric("Без кэшированной страницы",int(execution.get("visual_page_batch_unresolved") or 0))
+                                    vc2.metric("Основных page-batches",int(execution.get("visual_page_batch_total") or 0))
+                                    vc3.metric("Элементов покрыто",int(execution.get("visual_page_batch_items") or 0))
+                                    vc4.metric("Резервных страниц",int(execution.get("visual_page_batch_fallback_total") or 0))
+                                    vc5.metric("Без кэшированной страницы",int(execution.get("visual_page_batch_unresolved") or 0))
                                     st.caption(
-                                        "В сохранённый проект попадают только страницы, реально адресованные очередью Visual Proof. "
-                                        "Несколько элементов на одной странице объединяются в один page-batch — будущую единицу вызова vision-модели."
+                                        "Кэш сохраняет адресные страницы Visual Proof для повторного открытия проекта. "
+                                        "Первый проход vision использует минимальное rank-aware покрытие: один основной лист может закрывать несколько элементов; "
+                                        "остальные кэшированные листы остаются резервными и не создают AI-вызов до необходимости."
                                     )
                                     if page_batches:
                                         with st.expander(
-                                            "План группировки страниц для Visual AI",
+                                            "Основной план страниц для Visual AI",
                                             expanded=True,
                                         ):
                                             st.dataframe([
@@ -401,6 +403,23 @@ def render(ctx):
                                                     "Размер, КБ":round(int(batch.get("image_bytes") or 0)/1024,1),
                                                 }
                                                 for batch in page_batches
+                                            ],hide_index=True,width="stretch")
+                                    fallback_pages=list(execution.get("visual_page_fallbacks") or [])
+                                    if fallback_pages:
+                                        with st.expander(
+                                            f"Резервные страницы · {len(fallback_pages)}",
+                                            expanded=False,
+                                        ):
+                                            st.dataframe([
+                                                {
+                                                    "Документ":row.get("document") or "",
+                                                    "Страница":row.get("page"),
+                                                    "Может помочь элементам":row.get("item_count") or 0,
+                                                    "Элементы":"; ".join(row.get("labels") or []),
+                                                    "Лучший ранг":row.get("best_rank") or "",
+                                                    "Кэш":row.get("cache_id") or "",
+                                                }
+                                                for row in fallback_pages
                                             ],hide_index=True,width="stretch")
                                 else:
                                     st.caption(

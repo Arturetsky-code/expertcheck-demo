@@ -648,6 +648,7 @@ def apply_normative_visual_proof(
         if str(item.get("item_id") or "")
     }
     accepted = {}
+    accepted_by_element: dict[tuple[str, str], dict[str, Any]] = {}
     stale = 0
     for item_id, decision in decisions.items():
         item = item_by_id.get(item_id)
@@ -672,6 +673,12 @@ def apply_normative_visual_proof(
             stale += 1
             continue
         accepted[item_id] = decision
+        key = (
+            str(decision.get("requirement_id") or item.get("requirement_id") or ""),
+            str(decision.get("element_id") or item.get("element_id") or ""),
+        )
+        if all(key):
+            accepted_by_element[key] = decision
 
     confirmed_requirements = set()
     evidence_by_requirement: dict[str, list[dict[str, Any]]] = {}
@@ -689,8 +696,12 @@ def apply_normative_visual_proof(
             current = dict(element)
             if str(current.get("verification_mode") or "VISUAL_CONTENT").upper() == "VISUAL_CONTENT":
                 visual_total += 1
-                item_id = f"NORM-VIS-ITEM-{requirement_id}-{str(current.get('id') or '')}"
-                decision = accepted.get(item_id)
+                element_id = str(current.get("id") or "")
+                item_id = f"NORM-VIS-ITEM-{requirement_id}-{element_id}"
+                decision = (
+                    accepted.get(item_id)
+                    or accepted_by_element.get((requirement_id, element_id))
+                )
                 if decision:
                     current["proof_status"] = "VISUAL_CONFIRMED"
                     current["visual_ai_proof"] = dict(decision)

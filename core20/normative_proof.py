@@ -161,8 +161,13 @@ def _visual_packet(row:dict[str,Any])->dict[str,Any]:
         "coverage_count":int(preflight.get("coverage_count") or 0),
         "total_count":int(preflight.get("total_count") or 0),
         "structural_confirmed_count":int(preflight.get("structural_confirmed_count") or 0),
+        "structural_review_required_count":int(preflight.get("structural_review_required_count") or 0),
         "visual_review_required_count":int(preflight.get("visual_review_required_count") or 0),
         "structural_proof_complete":bool(preflight.get("structural_proof_complete")),
+        "remaining_structural_labels":[
+            str(value) for value in (preflight.get("remaining_structural_labels") or [])
+            if str(value)
+        ],
         "remaining_visual_labels":[
             str(value) for value in (preflight.get("remaining_visual_labels") or [])
             if str(value)
@@ -394,8 +399,13 @@ def proof_frontier_summary(
                 "coverage_count":int(preflight.get("coverage_count") or 0),
                 "total_count":int(preflight.get("total_count") or 0),
                 "structural_confirmed_count":int(preflight.get("structural_confirmed_count") or 0),
+                "structural_review_required_count":int(preflight.get("structural_review_required_count") or 0),
                 "visual_review_required_count":int(preflight.get("visual_review_required_count") or 0),
                 "structural_proof_complete":bool(preflight.get("structural_proof_complete")),
+                "remaining_structural_labels":[
+                    str(value) for value in (preflight.get("remaining_structural_labels") or [])
+                    if str(value)
+                ],
                 "remaining_visual_labels":[
                     str(value) for value in (preflight.get("remaining_visual_labels") or [])
                     if str(value)

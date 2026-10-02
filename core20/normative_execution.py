@@ -1556,6 +1556,10 @@ class NormativeExecutionEngine20:
         proof=apply_normative_semantic_proof(proof,semantic_checkpoint)
         rows=list(proof.get("rows") or [])
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
+        graphic_structural_proof_count=sum(
+            str(row.get("proof_state") or "")=="DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF"
+            for row in rows
+        )
         addressed=sum(
             1 for row in rows
             if row.get("evidence_document") and row.get("evidence_page") not in (None,"")
@@ -1569,6 +1573,7 @@ class NormativeExecutionEngine20:
             "project_findings":counts["PROJECT_FINDING"],
             "review_questions":counts["REVIEW_QUESTION"],
             "system_limitations":counts["SYSTEM_LIMITATION"],
+            "graphic_structural_proof_count":graphic_structural_proof_count,
             "evidence_coverage_pct":round(100.0*addressed/max(1,len(rows)),1),
             "retrieval_candidate_count":sum(int(row.get("retrieval_candidate_count") or 0) for row in rows),
             "rows":rows,

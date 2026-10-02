@@ -577,6 +577,73 @@ def test_alpha9_graphic_contract_enters_visual_queue_with_preflight():
     assert packet["coverage_count"]==1
     assert packet["candidate_pages"][0]["page"]==5
     assert result["proof_frontier"]["visual_pending"]["total"]==1
+    assert result["visual_item_queue_total"]==1
+    assert result["visual_item_queue_addressed"]==1
+    assert result["visual_item_queue_sheet_fallback"]==0
+    assert result["visual_item_queue_unresolved"]==0
+    assert result["visual_item_queue"][0]["element_id"]=="facade_views"
+    assert result["visual_item_queue"][0]["localization_source"]=="ELEMENT_ADDRESS"
+
+
+
+def test_alpha9_visual_item_queue_falls_back_to_contract_sheet():
+    source=[{
+        "requirement_id":"VIS-FALLBACK",
+        "source":"ПП №87",
+        "paragraph":"п. 13",
+        "sections":["АР"],
+        "topic":"Поэтажные планы",
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"GRAPHIC_CONTENT",
+        "requirement":"На плане должно быть показано технологическое оборудование.",
+        "kind":"REVIEW_QUESTION",
+        "state":"Вопрос специалисту",
+        "reason_code":"NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+        "evidence_candidates":[],
+        "visual_preflight":{
+            "configured":True,
+            "visual_kind":"AR_FLOOR_PLANS",
+            "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+            "ready_for_visual_review":True,
+            "selection_source":"DRAWING_INTELLIGENCE_V2",
+            "coverage_count":0,
+            "total_count":1,
+            "structural_target_count":0,
+            "structural_confirmed_count":0,
+            "structural_review_required_count":0,
+            "visual_review_required_count":1,
+            "structural_proof_complete":False,
+            "elements":[{
+                "id":"equipment_layout",
+                "label":"Размещение технологического оборудования",
+                "verification_mode":"VISUAL_CONTENT",
+                "matched_in_text_layer":False,
+                "structural_confirmed":False,
+                "visual_review_required":True,
+                "proof_status":"VISUAL_NOT_LOCATED",
+                "candidate_locations":[],
+            }],
+            "candidate_pages":[{
+                "document":"АР2.pdf",
+                "page":37,
+                "section":"АР",
+                "selection_source":"DRAWING_INTELLIGENCE_V2",
+                "drawing_kinds":["floor_plan"],
+                "sheet_title":"План",
+            }],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+
+    assert result["visual_item_queue_total"]==1
+    assert result["visual_item_queue_addressed"]==0
+    assert result["visual_item_queue_sheet_fallback"]==1
+    assert result["visual_item_queue_unresolved"]==0
+    item=result["visual_item_queue"][0]
+    assert item["localization_source"]=="CONTRACT_SHEET_FALLBACK"
+    assert item["candidate_pages"][0]["page"]==37
+    assert item["status"]=="READY_VISUAL_REVIEW"
 
 
 

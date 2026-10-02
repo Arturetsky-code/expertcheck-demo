@@ -134,6 +134,7 @@ def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | N
         "topic": row.get("topic") or "",
         "requirement": row.get("requirement") or "",
         "sections": list(row.get("sections") or []),
+        "semantic_proof_contract":dict(row.get("semantic_proof_contract") or {}),
         "evidence": evidence,
         "policy": (
             "Retrieval is not proof. VERIFIED_OK requires a proof contract appropriate to proof_type. "

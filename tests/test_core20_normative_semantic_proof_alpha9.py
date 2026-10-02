@@ -269,3 +269,257 @@ def test_alpha9_requirement_change_invalidates_selected_evidence_proof():
     applied = apply_normative_semantic_proof(changed, semantic)
     assert applied["semantic_proof_applied"] == 0
     assert applied["semantic_proof_stale"] is True
+
+
+def _gate2_queue(requirement_id, requirement, evidence, contract):
+    return [{
+        "packet_id": f"NORM-{requirement_id}",
+        "requirement_id": requirement_id,
+        "proof_type": "SEMANTIC_REQUIREMENT",
+        "source": "Федеральный закон №384-ФЗ",
+        "paragraph": "ст. 15",
+        "topic": "Semantic Proof Gate 2.0",
+        "requirement": requirement,
+        "sections": ["ALL"],
+        "semantic_proof_contract": contract,
+        "evidence": evidence,
+    }]
+
+
+def test_gate2_blocks_responsibility_level_found_only_in_kr_even_when_both_models_support():
+    contract = {
+        "version": "2.0",
+        "source_scope": {
+            "label": "Источник доказательства — исходные данные или задание на проектирование",
+            "fields": ["document", "section", "text"],
+            "any_of": ["исходные данн", "задание на проектир"],
+        },
+        "required_groups": [{
+            "id": "RESPONSIBILITY_IN_INPUT",
+            "label": "Уровень ответственности указан именно в исходных данных/задании",
+            "scope": "SAME_EVIDENCE",
+            "fields": ["document", "section", "text"],
+            "all_of_groups": [
+                ["уровень ответствен"],
+                ["исходные данн", "задание на проектир"],
+            ],
+        }],
+    }
+    queue = _gate2_queue(
+        "FZ384-15-2-RESP-INPUT",
+        "В исходных данных для проектирования должен быть указан уровень ответственности.",
+        [{
+            "evidence_id": "E-KR",
+            "document": "Раздел ПД №4_КР1.pdf",
+            "page": 109,
+            "section": "КР",
+            "text": "Уровень ответственности здания — II, класс сооружения КС-2.",
+            "retrieval_keyword_score": 100,
+            "retrieval_keyword_coverage": 1.0,
+        }],
+        contract,
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision = semantic["decisions"]["FZ384-15-2-RESP-INPUT"]
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert decision["semantic_contract_source_scope_satisfied"] is False
+    assert decision["semantic_contract_missing_groups"]
+    assert "Semantic Proof Gate 2.0" in decision["reason"]
+
+
+def test_gate2_allows_responsibility_level_when_same_evidence_is_assignment_input():
+    contract = {
+        "version": "2.0",
+        "source_scope": {
+            "label": "Источник доказательства — исходные данные или задание на проектирование",
+            "fields": ["document", "section", "text"],
+            "any_of": ["исходные данн", "задание на проектир"],
+        },
+        "required_groups": [{
+            "id": "RESPONSIBILITY_IN_INPUT",
+            "label": "Уровень ответственности указан именно в исходных данных/задании",
+            "scope": "SAME_EVIDENCE",
+            "fields": ["document", "section", "text"],
+            "all_of_groups": [
+                ["уровень ответствен"],
+                ["исходные данн", "задание на проектир"],
+            ],
+        }],
+    }
+    queue = _gate2_queue(
+        "FZ384-15-2-RESP-INPUT",
+        "В исходных данных для проектирования должен быть указан уровень ответственности.",
+        [{
+            "evidence_id": "E-TASK",
+            "document": "Задание на проектирование (ДСК).pdf",
+            "page": 11,
+            "section": "Задание",
+            "text": "Уровень ответственности проектируемых зданий и сооружений — II.",
+            "retrieval_keyword_score": 100,
+            "retrieval_keyword_coverage": 1.0,
+        }],
+        contract,
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision = semantic["decisions"]["FZ384-15-2-RESP-INPUT"]
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["semantic_contract_ready"] is True
+    assert decision["state"] == "VERIFIED_OK"
+
+
+def test_gate2_blocks_mere_384fz_mention_as_safety_justification():
+    contract = {
+        "version": "2.0",
+        "required_groups": [
+            {
+                "id": "DESIGN_SAFETY_JUSTIFICATION",
+                "label": "Обоснование соответствия относится к проектным решениям",
+                "scope": "COLLECTIVE",
+                "fields": ["text"],
+                "all_of_groups": [
+                    ["обосн", "соответств"],
+                    ["проектн"],
+                    ["решен"],
+                ],
+            },
+            {
+                "id": "APPLIED_NORMATIVE_BASIS",
+                "label": "Указаны применённые положения/документы для соблюдения требований 384-ФЗ",
+                "scope": "COLLECTIVE",
+                "fields": ["text"],
+                "all_of_groups": [
+                    ["384-фз", "384 фз", "техническ регламент"],
+                    ["положен", "нормативн документ", "документ"],
+                    ["примен", "использ", "обеспеч"],
+                ],
+            },
+        ],
+    }
+    queue = _gate2_queue(
+        "FZ384-15-5.1-SAFETY-JUSTIFICATION",
+        "Проектная документация должна содержать обоснование соответствия проектных решений требованиям 384-ФЗ.",
+        [{
+            "evidence_id": "E-PZ-LIST",
+            "document": "Раздел ПД №1_ПЗ.pdf",
+            "page": 8,
+            "section": "ПЗ",
+            "text": "Нормативные документы: Федеральный закон № 384-ФЗ «Технический регламент о безопасности зданий и сооружений».",
+            "retrieval_keyword_score": 100,
+            "retrieval_keyword_coverage": 1.0,
+        }],
+        contract,
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision = semantic["decisions"]["FZ384-15-5.1-SAFETY-JUSTIFICATION"]
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["semantic_contract_ready"] is False
+    assert "Обоснование соответствия" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_accepts_explicit_design_solution_justification_and_applied_basis():
+    contract = {
+        "version": "2.0",
+        "required_groups": [
+            {
+                "id": "DESIGN_SAFETY_JUSTIFICATION",
+                "label": "Обоснование соответствия относится к проектным решениям",
+                "scope": "COLLECTIVE",
+                "fields": ["text"],
+                "all_of_groups": [
+                    ["обосн", "соответств"],
+                    ["проектн"],
+                    ["решен"],
+                ],
+            },
+            {
+                "id": "APPLIED_NORMATIVE_BASIS",
+                "label": "Указаны применённые положения/документы для соблюдения требований 384-ФЗ",
+                "scope": "COLLECTIVE",
+                "fields": ["text"],
+                "all_of_groups": [
+                    ["384-фз", "384 фз", "техническ регламент"],
+                    ["положен", "нормативн документ", "документ"],
+                    ["примен", "использ", "обеспеч"],
+                ],
+            },
+        ],
+    }
+    queue = _gate2_queue(
+        "FZ384-15-5.1-SAFETY-JUSTIFICATION",
+        "Проектная документация должна содержать обоснование соответствия проектных решений требованиям 384-ФЗ.",
+        [{
+            "evidence_id": "E-PZ-JUST",
+            "document": "Раздел ПД №1_ПЗ.pdf",
+            "page": 12,
+            "section": "ПЗ",
+            "text": (
+                "Соответствие проектных решений требованиям 384-ФЗ обосновано принятыми решениями. "
+                "Для обеспечения соблюдения требований применены положения закона и нормативные документы, "
+                "перечисленные в настоящем разделе."
+            ),
+            "retrieval_keyword_score": 100,
+            "retrieval_keyword_coverage": 1.0,
+        }],
+        contract,
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision = semantic["decisions"]["FZ384-15-5.1-SAFETY-JUSTIFICATION"]
+    assert semantic["verified_ok"] == 1
+    assert decision["semantic_contract_ready"] is True
+    assert decision["state"] == "VERIFIED_OK"
+
+
+def test_gate2_contract_change_invalidates_previous_selected_proof():
+    proof = _proof_result()
+    proof["semantic_queue"][0]["semantic_proof_contract"] = {
+        "version": "2.0",
+        "required_groups": [{
+            "id": "JUSTIFICATION",
+            "label": "Обоснование",
+            "all_of_groups": [["обосн"]],
+        }],
+    }
+    semantic = run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    changed = _proof_result()
+    changed["semantic_queue"][0]["semantic_proof_contract"] = {
+        "version": "2.0",
+        "required_groups": [{
+            "id": "JUSTIFICATION",
+            "label": "Обоснование + расчёт",
+            "all_of_groups": [["обосн"], ["расчет"]],
+        }],
+    }
+    applied = apply_normative_semantic_proof(changed, semantic)
+    assert applied["semantic_proof_applied"] == 0
+    assert applied["semantic_proof_stale"] is True
+    assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"

@@ -2485,7 +2485,45 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "semantic_proof_contract": {
+        "version": "2.0",
+        "minimum_selected_evidence": 1,
+        "source_scope": {
+          "label": "Источник доказательства — исходные данные или задание на проектирование",
+          "fields": [
+            "document",
+            "section",
+            "text"
+          ],
+          "mode": "ANY_SELECTED_EVIDENCE",
+          "any_of": [
+            "исходные данн",
+            "задание на проектир"
+          ]
+        },
+        "required_groups": [
+          {
+            "id": "RESPONSIBILITY_IN_INPUT",
+            "label": "Уровень ответственности указан именно в исходных данных/задании",
+            "scope": "SAME_EVIDENCE",
+            "fields": [
+              "document",
+              "section",
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "уровень ответствен"
+              ],
+              [
+                "исходные данн",
+                "задание на проектир"
+              ]
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -2518,7 +2556,58 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "semantic_proof_contract": {
+        "version": "2.0",
+        "minimum_selected_evidence": 1,
+        "required_groups": [
+          {
+            "id": "DESIGN_SAFETY_JUSTIFICATION",
+            "label": "Обоснование соответствия относится к проектным решениям",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "обосн",
+                "соответств"
+              ],
+              [
+                "проектн"
+              ],
+              [
+                "решен"
+              ]
+            ]
+          },
+          {
+            "id": "APPLIED_NORMATIVE_BASIS",
+            "label": "Указаны применённые положения/документы для соблюдения требований 384-ФЗ",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "384-фз",
+                "384 фз",
+                "техническ регламент"
+              ],
+              [
+                "положен",
+                "нормативн документ",
+                "документ"
+              ],
+              [
+                "примен",
+                "использ",
+                "обеспеч"
+              ]
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

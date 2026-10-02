@@ -1638,6 +1638,9 @@ class NormativeExecutionEngine20:
             "proof_type_hint":str(
                 (contract.get("evidence_contract") or {}).get("proof_type") or ""
             ).strip().upper(),
+            "semantic_proof_contract":dict(
+                (contract.get("evidence_contract") or {}).get("semantic_proof_contract") or {}
+            ),
             "trust_state":contract.get("trust_state") or "",
             "source_status":contract.get("source_status") or "",
             "history_occurrences":int(contract.get("expert_occurrences") or 0),

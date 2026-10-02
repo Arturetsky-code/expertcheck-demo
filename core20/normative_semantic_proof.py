@@ -13,7 +13,7 @@ from core.semantic_evidence_engine import (
 )
 
 
-ENGINE_VERSION = "20.0-alpha9-normative-semantic-proof-multi-evidence"
+ENGINE_VERSION = "20.0-alpha10-semantic-proof-gate2"
 
 
 def _fingerprint(queue: list[dict[str, Any]]) -> str:
@@ -25,6 +25,7 @@ def _fingerprint(queue: list[dict[str, Any]]) -> str:
             "requirement_id":packet.get("requirement_id"),
             "requirement":packet.get("requirement"),
             "proof_type":packet.get("proof_type"),
+            "semantic_proof_contract":dict(packet.get("semantic_proof_contract") or {}),
             "evidence":[{
                 "evidence_id":row.get("evidence_id"),
                 "document":row.get("document"),
@@ -47,6 +48,7 @@ def _packet_fingerprint(packet:dict[str,Any])->str:
         "requirement_id":packet.get("requirement_id"),
         "requirement":packet.get("requirement"),
         "proof_type":packet.get("proof_type"),
+        "semantic_proof_contract":dict(packet.get("semantic_proof_contract") or {}),
         "evidence":[{
             "evidence_id":row.get("evidence_id"),
             "document":row.get("document"),
@@ -63,6 +65,7 @@ def _requirement_fingerprint(packet:dict[str,Any])->str:
         "requirement_id":packet.get("requirement_id"),
         "requirement":packet.get("requirement"),
         "proof_type":packet.get("proof_type"),
+        "semantic_proof_contract":dict(packet.get("semantic_proof_contract") or {}),
     }
     raw=json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":"))
     return hashlib.sha256(raw.encode("utf-8","ignore")).hexdigest()
@@ -134,7 +137,197 @@ def _independent(
     return True,"Провайдеры независимы; при доступных идентификаторах модели также различаются."
 
 
+def _norm_contract_text(value:Any)->str:
+    return " ".join(
+        str(value or "").replace("ё","е").replace("\xa0"," ").casefold().split()
+    )
+
+
+def _evidence_text(row:dict[str,Any],fields:list[str]|None=None)->str:
+    requested=list(fields or ["text"])
+    values=[]
+    for field in requested:
+        if field=="text":
+            values.append(row.get("text") or row.get("fragment") or "")
+        elif field=="document":
+            values.append(row.get("document") or "")
+        elif field=="section":
+            values.append(row.get("section") or "")
+        elif field=="source_locator":
+            values.append(row.get("source_locator") or "")
+        else:
+            values.append(row.get(field) or "")
+    return _norm_contract_text(" ".join(str(value or "") for value in values))
+
+
+def _terms_match(text:str,values:list[Any]|None)->bool:
+    terms=[_norm_contract_text(value) for value in (values or []) if _norm_contract_text(value)]
+    return any(term in text for term in terms) if terms else True
+
+
+def _group_matches_text(group:dict[str,Any],text:str)->bool:
+    any_of=list(group.get("any_of") or [])
+    all_of=list(group.get("all_of") or [])
+    all_of_groups=[
+        list(value) for value in (group.get("all_of_groups") or [])
+        if isinstance(value,(list,tuple))
+    ]
+    configured=bool(any_of or all_of or all_of_groups)
+    if not configured:
+        return False
+    if any_of and not _terms_match(text,any_of):
+        return False
+    for value in all_of:
+        term=_norm_contract_text(value)
+        if term and term not in text:
+            return False
+    for alternatives in all_of_groups:
+        if not _terms_match(text,alternatives):
+            return False
+    return True
+
+
+def _contract_group_result(
+    group:dict[str,Any],
+    selected:list[dict[str,Any]],
+)->dict[str,Any]:
+    fields=[str(value) for value in (group.get("fields") or ["text"]) if str(value)]
+    scope=str(group.get("scope") or "COLLECTIVE").upper()
+    if scope=="SAME_EVIDENCE":
+        matched=any(
+            _group_matches_text(group,_evidence_text(row,fields))
+            for row in selected
+        )
+    else:
+        matched=_group_matches_text(
+            group,
+            " ".join(_evidence_text(row,fields) for row in selected),
+        )
+    return {
+        "id":str(group.get("id") or ""),
+        "label":str(group.get("label") or group.get("id") or "Обязательный смысловой компонент"),
+        "scope":scope,
+        "matched":bool(matched),
+    }
+
+
+def _source_scope_result(
+    scope:dict[str,Any],
+    selected:list[dict[str,Any]],
+)->dict[str,Any]:
+    if not scope:
+        return {"configured":False,"matched":True,"label":""}
+    fields=[str(value) for value in (scope.get("fields") or ["document","section","text"]) if str(value)]
+    mode=str(scope.get("mode") or "ANY_SELECTED_EVIDENCE").upper()
+    matcher={
+        "any_of":list(scope.get("any_of") or []),
+        "all_of":list(scope.get("all_of") or []),
+        "all_of_groups":list(scope.get("all_of_groups") or []),
+    }
+    per_row=[
+        _group_matches_text(matcher,_evidence_text(row,fields))
+        for row in selected
+    ]
+    matched=all(per_row) if mode=="ALL_SELECTED_EVIDENCE" else any(per_row)
+    return {
+        "configured":True,
+        "matched":bool(matched),
+        "label":str(scope.get("label") or "Допустимый источник доказательства"),
+        "mode":mode,
+        "fields":fields,
+    }
+
+
+def _semantic_contract_gate(
+    packet:dict[str,Any],
+    evidence_ids:list[str]|None,
+)->dict[str,Any]:
+    contract=dict(packet.get("semantic_proof_contract") or {})
+    if not contract:
+        return {
+            "configured":False,
+            "version":"",
+            "ready":True,
+            "selected_evidence_count":len(evidence_ids or []),
+            "minimum_selected_evidence":0,
+            "source_scope_satisfied":True,
+            "missing_groups":[],
+            "group_results":[],
+            "reason":"Для требования не задан дополнительный декларативный semantic proof-contract.",
+        }
+
+    wanted={str(value) for value in (evidence_ids or []) if str(value)}
+    selected=[
+        dict(row) for row in (packet.get("evidence") or [])
+        if str(row.get("evidence_id") or "") in wanted
+    ]
+    minimum=max(1,int(contract.get("minimum_selected_evidence") or 1))
+    source_result=_source_scope_result(dict(contract.get("source_scope") or {}),selected)
+    group_results=[
+        _contract_group_result(dict(group),selected)
+        for group in (contract.get("required_groups") or [])
+        if isinstance(group,dict)
+    ]
+    missing=[
+        str(row.get("label") or row.get("id") or "")
+        for row in group_results
+        if not row.get("matched")
+    ]
+    count_ok=len(selected)>=minimum
+    ready=bool(
+        count_ok
+        and source_result.get("matched")
+        and not missing
+    )
+    reasons=[]
+    if not count_ok:
+        reasons.append(
+            f"выбрано доказательств {len(selected)}, требуется не менее {minimum}"
+        )
+    if not source_result.get("matched"):
+        reasons.append(
+            "не подтверждён допустимый источник: "
+            + str(source_result.get("label") or "источник доказательства")
+        )
+    if missing:
+        reasons.append("не доказаны обязательные компоненты: " + "; ".join(missing))
+    return {
+        "configured":True,
+        "version":str(contract.get("version") or "2.0"),
+        "ready":ready,
+        "selected_evidence_count":len(selected),
+        "minimum_selected_evidence":minimum,
+        "source_scope_satisfied":bool(source_result.get("matched")),
+        "source_scope":source_result,
+        "missing_groups":missing,
+        "group_results":group_results,
+        "reason":(
+            "Semantic Proof Gate 2.0 пройден."
+            if ready else
+            "Semantic Proof Gate 2.0 удержал автоматическое подтверждение: "
+            + "; ".join(reasons)
+            + "."
+        ),
+    }
+
+
+def _semantic_contract_qualifiers(contract:dict[str,Any])->list[str]:
+    values=[]
+    source_scope=dict(contract.get("source_scope") or {})
+    source_label=str(source_scope.get("label") or "").strip()
+    if source_label:
+        values.append(source_label)
+    for group in contract.get("required_groups") or []:
+        if not isinstance(group,dict):
+            continue
+        label=str(group.get("label") or group.get("id") or "").strip()
+        if label:
+            values.append(label)
+    return list(dict.fromkeys(values))
+
+
 def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
+    semantic_contract=dict(packet.get("semantic_proof_contract") or {})
     evidence=[]
     for row in packet.get("evidence") or []:
         evidence.append({
@@ -172,7 +365,8 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
         "scope":"PROJECT_WIDE",
         "expected_sections":list(packet.get("sections") or []),
         "required_modality":"TEXT_OR_TABLE",
-        "critical_qualifiers":[],
+        "critical_qualifiers":_semantic_contract_qualifiers(semantic_contract),
+        "semantic_proof_contract":semantic_contract,
         "binding_contract":{
             "scope":"PROJECT_WIDE",
             "requires_same_owner":False,
@@ -191,7 +385,7 @@ def _as_semantic_packet(packet:dict[str,Any])->dict[str,Any]:
         "evidence":evidence,
         "policy":(
             "Retrieval is not proof. SUPPORTS is allowed only when cited addressable evidence directly proves the whole verified normative requirement. "
-            "The Judge may cite one or several candidates. CONTRADICTS or missing evidence is not an automatic project non-compliance in Alpha 9."
+            "The Judge may cite one or several candidates. A declarative Semantic Proof Gate 2.0 is applied after Judge selection and before Critic promotion. CONTRADICTS or missing evidence is not an automatic project non-compliance."
         ),
     }
 
@@ -246,7 +440,8 @@ def run_normative_semantic_proof(
         "review_questions":len(source),
         "provider_errors":[],
         "preflight":{},
-        "principle":"Only independent Judge/Critic SUPPORTS may promote semantic normative proof; no automatic negative verdict is emitted.",
+        "contract_gate_blocked":0,
+        "principle":"Only independent Judge/Critic SUPPORTS that also pass Semantic Proof Gate 2.0 may promote semantic normative proof; no automatic negative verdict is emitted.",
     }
     if not packets or judge_provider is None or critic_provider is None:
         return base
@@ -283,11 +478,18 @@ def run_normative_semantic_proof(
     raw_judges,judge_errors,_=_call_batches(judge_provider,public,critic=False,batch_size=4,max_calls=24)
     critic_packets=[]
     validated_judges={}
+    semantic_contract_gates={}
     for packet in packets:
         pid=packet["packet_id"]
         judge=_validate_judge(packet,raw_judges.get(pid))
         validated_judges[pid]=judge
-        if judge.get("valid") and str(judge.get("verdict") or "").upper()=="SUPPORTS":
+        contract_gate=_semantic_contract_gate(packet,list(judge.get("evidence_ids") or []))
+        semantic_contract_gates[pid]=contract_gate
+        if (
+            judge.get("valid")
+            and str(judge.get("verdict") or "").upper()=="SUPPORTS"
+            and contract_gate.get("ready")
+        ):
             cited={str(x) for x in judge.get("evidence_ids") or []}
             critic_packet={**packet,"evidence":[row for row in packet.get("evidence") or [] if str(row.get("evidence_id") or "") in cited]}
             public_critic=_public_packet(critic_packet)
@@ -311,6 +513,9 @@ def run_normative_semantic_proof(
         pid=packet["packet_id"]
         requirement_id=pid.removeprefix("NORM-")
         judge=validated_judges.get(pid) or {}
+        contract_gate=semantic_contract_gates.get(pid) or _semantic_contract_gate(
+            packet,list(judge.get("evidence_ids") or [])
+        )
         critic=_validate_critic(packet,judge,raw_critics.get(pid))
         actual_judge=str(judge.get("provider") or configured_judge)
         actual_critic=str(critic.get("provider") or configured_critic)
@@ -320,6 +525,7 @@ def run_normative_semantic_proof(
         supports=bool(
             judge.get("valid")
             and str(judge.get("verdict") or "").upper()=="SUPPORTS"
+            and contract_gate.get("ready")
             and critic.get("valid")
             and independent
         )
@@ -332,7 +538,13 @@ def run_normative_semantic_proof(
             )
         else:
             state="REVIEW_QUESTION"
-            if not independent and judge.get("valid") and str(judge.get("verdict") or "").upper()=="SUPPORTS":
+            if (
+                judge.get("valid")
+                and str(judge.get("verdict") or "").upper()=="SUPPORTS"
+                and not contract_gate.get("ready")
+            ):
+                reason=str(contract_gate.get("reason") or "Semantic Proof Gate 2.0 не пройден.")
+            elif not independent and judge.get("valid") and str(judge.get("verdict") or "").upper()=="SUPPORTS":
                 reason=independence_reason
             elif str(judge.get("verdict") or "").upper()!="SUPPORTS":
                 reason=str(judge.get("reason") or "Недостаточно доказательств для смыслового подтверждения.")
@@ -362,10 +574,26 @@ def run_normative_semantic_proof(
             "evidence_ids":selected_ids,
             "selected_evidence":selected_evidence,
             "blocking_concerns":list(critic.get("blocking_concerns") or []),
+            "semantic_contract_configured":bool(contract_gate.get("configured")),
+            "semantic_contract_version":str(contract_gate.get("version") or ""),
+            "semantic_contract_ready":bool(contract_gate.get("ready")),
+            "semantic_contract_source_scope_satisfied":bool(contract_gate.get("source_scope_satisfied")),
+            "semantic_contract_missing_groups":list(contract_gate.get("missing_groups") or []),
+            "semantic_contract_group_results":list(contract_gate.get("group_results") or []),
+            "semantic_contract_reason":str(contract_gate.get("reason") or ""),
         }
     base["decisions"]=decisions
     base["verified_ok"]=verified
     base["review_questions"]=max(0,len(source)-verified)
+    base["contract_gate_blocked"]=sum(
+        1 for pid,gate in semantic_contract_gates.items()
+        if (
+            str((validated_judges.get(pid) or {}).get("verdict") or "").upper()=="SUPPORTS"
+            and (validated_judges.get(pid) or {}).get("valid")
+            and gate.get("configured")
+            and not gate.get("ready")
+        )
+    )
     base["provider_errors"]=list(dict.fromkeys([*judge_errors,*critic_errors]))
     return base
 

@@ -1060,3 +1060,146 @@ def test_alpha8_pzu_visual_preflight_prefers_general_plan_engine_audit():
     assert result["selection_source"]=="GENERAL_PLAN_ENGINE"
     assert result["candidate_pages"][0]["selection_source"]=="GENERAL_PLAN_ENGINE"
     assert result["candidate_pages"][0]["drawing_kinds"]==["situation_plan"]
+
+
+
+def test_alpha8_visual_preflight_separates_structural_and_visual_elements():
+    contract={
+        "requirement_id":"VIS-AR-PLAN-PROOF",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"AR_FLOOR_PLANS",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["план этажа","экспликация помещений"],
+                "trusted_drawing_kinds":["floor_plan","room_explication"],
+                "elements":[
+                    {
+                        "id":"plan",
+                        "label":"Поэтажный план",
+                        "aliases":["план этажа"],
+                        "drawing_kinds":["floor_plan"],
+                        "verification_mode":"SHEET_PRESENCE",
+                    },
+                    {
+                        "id":"schedule",
+                        "label":"Экспликация помещений",
+                        "aliases":["экспликация помещений"],
+                        "drawing_kinds":["room_explication"],
+                        "verification_mode":"SHEET_PRESENCE",
+                    },
+                    {
+                        "id":"equipment",
+                        "label":"Размещение технологического оборудования",
+                        "aliases":["технологическое оборудование"],
+                        "drawing_kinds":["floor_plan"],
+                        "verification_mode":"VISUAL_CONTENT",
+                    },
+                ],
+            },
+        },
+    }
+    pages=[
+        {
+            "document":"АР2.pdf",
+            "document_type":"АР",
+            "page":10,
+            "text":"План этажа. Технологическое оборудование.",
+        },
+        {
+            "document":"АР2.pdf",
+            "document_type":"АР",
+            "page":11,
+            "text":"Экспликация помещений.",
+        },
+    ]
+    documents=[{
+        "drawing_intelligence_v2":{
+            "sheets":[
+                {
+                    "document":"АР2.pdf",
+                    "page":10,
+                    "designation":"RAM-АР2-10",
+                    "drawing_kinds":["floor_plan"],
+                    "title_drawing_kinds":["floor_plan"],
+                    "sheet_title":"План этажа",
+                },
+                {
+                    "document":"АР2.pdf",
+                    "page":11,
+                    "designation":"RAM-АР2-11",
+                    "drawing_kinds":["room_explication"],
+                    "title_drawing_kinds":[],
+                    "sheet_title":"",
+                },
+            ],
+            "room_schedules":[{
+                "document":"АР2.pdf",
+                "page":11,
+                "designation":"RAM-АР2-11",
+                "parent_object":"Здание",
+                "owner_binding":"TITLE_BLOCK_EXACT",
+            }],
+        },
+    }]
+
+    result=_visual_preflight_evaluation(contract,pages,documents)
+    by_id={row["id"]:row for row in result["elements"]}
+
+    assert by_id["plan"]["structural_confirmed"] is True
+    assert by_id["schedule"]["structural_confirmed"] is True
+    assert by_id["equipment"]["structural_confirmed"] is False
+    assert by_id["equipment"]["proof_status"]=="VISUAL_REVIEW_REQUIRED"
+    assert result["structural_confirmed_count"]==2
+    assert result["visual_review_required_count"]==1
+    assert result["structural_proof_complete"] is False
+    assert result["remaining_visual_labels"]==["Размещение технологического оборудования"]
+
+
+def test_alpha8_pzu_fallback_cannot_create_structural_proof():
+    contract={
+        "requirement_id":"VIS-PZU-STRUCTURAL",
+        "evidence_contract":{
+            "visual_contract":{
+                "visual_kind":"PZU_RELIEF_EARTHWORKS",
+                "review_policy":"VISUAL_CONFIRMATION_REQUIRED",
+                "candidate_markers":["план земляных масс"],
+                "trusted_general_plan_kinds":["relief_earthworks"],
+                "elements":[{
+                    "id":"earth",
+                    "label":"План земляных масс",
+                    "aliases":["план земляных масс"],
+                    "verification_mode":"SHEET_PRESENCE",
+                }],
+            },
+        },
+    }
+    pages=[{
+        "document":"ПЗУ2.pdf",
+        "document_type":"ПЗУ2",
+        "page":12,
+        "text":"План земляных масс. Масштаб 1:1000.",
+    }]
+
+    fallback=_visual_preflight_evaluation(contract,pages,[{}])
+    assert fallback["selection_source"]=="PZU_STRUCTURAL_PREFLIGHT"
+    assert fallback["structural_confirmed_count"]==0
+    assert fallback["structural_proof_complete"] is False
+
+    trusted=_visual_preflight_evaluation(
+        contract,
+        pages,
+        [{
+            "general_plan_audit":[{
+                "document":"ПЗУ2.pdf",
+                "page":12,
+                "decision":"visual_sheet_audit",
+                "general_plan_page":True,
+                "visual_kinds":["relief_earthworks"],
+                "position_count":0,
+                "has_explication":False,
+            }],
+        }],
+    )
+    assert trusted["selection_source"]=="GENERAL_PLAN_ENGINE"
+    assert trusted["structural_confirmed_count"]==1
+    assert trusted["structural_proof_complete"] is True

@@ -133,6 +133,12 @@ def render(ctx):
             e2.metric("Вопросов специалисту",execution.get("review_questions",0))
             e3.metric("Не проверено системой",execution.get("system_limitations",0))
             e4.metric("Адресное доказательство",f"{execution.get('evidence_coverage_pct',0)}%")
+            graphic_structural_count=int(execution.get("graphic_structural_proof_count") or 0)
+            if graphic_structural_count:
+                st.caption(
+                    f"Графических требований закрыто структурным proof без AI: {graphic_structural_count}. "
+                    "Они не потеряны: после подтверждения доверенной структурой листа они выходят из очереди Visual Proof."
+                )
             st.caption(
                 "ExpertCheck разделяет поиск кандидата и доказательство. Совпадение терминов — это только поиск, а не нормативное подтверждение. "
                 "Для смыслового требования система сохраняет до четырёх адресных кандидатов, а проверяющая модель должна выбрать конкретные доказательства. "

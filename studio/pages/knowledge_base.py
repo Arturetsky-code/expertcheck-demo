@@ -293,7 +293,7 @@ def render(ctx):
                                     ),
                                     "Структурно подтверждено":(
                                         f"{row.get('structural_confirmed_count') or 0}/"
-                                        f"{row.get('total_count') or 0}"
+                                        f"{row.get('structural_target_count') or 0}"
                                     ),
                                     "Осталось структурно":row.get("structural_review_required_count") or 0,
                                     "Осталось визуально":row.get("visual_review_required_count") or 0,

@@ -160,6 +160,13 @@ def _visual_packet(row:dict[str,Any])->dict[str,Any]:
         "selection_source":str(preflight.get("selection_source") or "TEXT_LAYER"),
         "coverage_count":int(preflight.get("coverage_count") or 0),
         "total_count":int(preflight.get("total_count") or 0),
+        "structural_confirmed_count":int(preflight.get("structural_confirmed_count") or 0),
+        "visual_review_required_count":int(preflight.get("visual_review_required_count") or 0),
+        "structural_proof_complete":bool(preflight.get("structural_proof_complete")),
+        "remaining_visual_labels":[
+            str(value) for value in (preflight.get("remaining_visual_labels") or [])
+            if str(value)
+        ],
         "missing_labels":[
             str(value) for value in (preflight.get("missing_labels") or [])
             if str(value)
@@ -386,6 +393,13 @@ def proof_frontier_summary(
                 "selection_source":str(preflight.get("selection_source") or "TEXT_LAYER"),
                 "coverage_count":int(preflight.get("coverage_count") or 0),
                 "total_count":int(preflight.get("total_count") or 0),
+                "structural_confirmed_count":int(preflight.get("structural_confirmed_count") or 0),
+                "visual_review_required_count":int(preflight.get("visual_review_required_count") or 0),
+                "structural_proof_complete":bool(preflight.get("structural_proof_complete")),
+                "remaining_visual_labels":[
+                    str(value) for value in (preflight.get("remaining_visual_labels") or [])
+                    if str(value)
+                ],
                 "missing_labels":[
                     str(value) for value in (preflight.get("missing_labels") or [])
                     if str(value)
@@ -492,6 +506,33 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         "NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
         "NORMATIVE_STRONG_NEAR_MISS_CANDIDATE",
     }
+    visual_preflight=dict(result.get("visual_preflight") or {})
+    if (
+        proof_type=="GRAPHIC_CONTENT"
+        and bool(visual_preflight.get("structural_proof_complete"))
+        and retrieval_reason!="NORMATIVE_APPLICABILITY_NOT_PROVEN"
+    ):
+        candidate_pages=list(visual_preflight.get("candidate_pages") or [])
+        first_page=candidate_pages[0] if candidate_pages else {}
+        result["kind"]="VERIFIED_OK"
+        result["state"]="Подтверждено"
+        result["proof_state"]="DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF"
+        result["reason_code"]="NORMATIVE_GRAPHIC_STRUCTURE_PROOF_CONFIRMED"
+        result["reason"]=(
+            "Все обязательные элементы данного графического требования относятся к наличию листа/таблицы "
+            "и подтверждены доверенным структурным источником без интерпретации изображения."
+        )
+        if first_page:
+            result["evidence_document"]=first_page.get("document") or result.get("evidence_document") or ""
+            result["evidence_page"]=first_page.get("page")
+            result["evidence_fragment"]=(
+                first_page.get("sheet_title")
+                or first_page.get("fragment")
+                or result.get("evidence_fragment")
+                or ""
+            )
+        return result
+
     if (
         proof_type == "GRAPHIC_CONTENT"
         and (

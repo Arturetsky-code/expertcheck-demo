@@ -1264,6 +1264,10 @@ def _visual_preflight_evaluation(
         row for row in element_results
         if not row.get("matched_in_text_layer")
     ]
+    structural_target_count=sum(
+        str(row.get("verification_mode") or "")=="SHEET_PRESENCE"
+        for row in element_results
+    )
     structural_confirmed_count=sum(
         bool(row.get("structural_confirmed")) for row in element_results
     )
@@ -1288,6 +1292,7 @@ def _visual_preflight_evaluation(
         "ready_for_visual_review":bool(candidate_pages),
         "coverage_count":sum(bool(row.get("matched_in_text_layer")) for row in element_results),
         "total_count":len(element_results),
+        "structural_target_count":structural_target_count,
         "structural_confirmed_count":structural_confirmed_count,
         "structural_review_required_count":len(structural_review_required),
         "visual_review_required_count":len(visual_review_required),

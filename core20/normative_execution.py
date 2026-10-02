@@ -1232,12 +1232,21 @@ def _visual_preflight_evaluation(
                 for location in matches
             )
         )
+        structural_review_required=(
+            verification_mode=="SHEET_PRESENCE"
+            and not structural_confirmed
+        )
+        visual_review_required=(verification_mode=="VISUAL_CONTENT")
         if structural_confirmed:
             proof_status="STRUCTURAL_CONFIRMED"
-        elif matches:
+        elif structural_review_required and matches:
+            proof_status="STRUCTURAL_REINDEX_REQUIRED"
+        elif structural_review_required:
+            proof_status="STRUCTURAL_NOT_LOCATED"
+        elif visual_review_required and matches:
             proof_status="VISUAL_REVIEW_REQUIRED"
         else:
-            proof_status="NOT_LOCATED"
+            proof_status="VISUAL_NOT_LOCATED"
 
         element_results.append({
             "id":element_id,
@@ -1245,7 +1254,8 @@ def _visual_preflight_evaluation(
             "verification_mode":verification_mode,
             "matched_in_text_layer":bool(matches),
             "structural_confirmed":bool(structural_confirmed),
-            "visual_review_required":not bool(structural_confirmed),
+            "structural_review_required":bool(structural_review_required),
+            "visual_review_required":bool(visual_review_required),
             "proof_status":proof_status,
             "candidate_locations":matches[:3],
         })
@@ -1257,6 +1267,10 @@ def _visual_preflight_evaluation(
     structural_confirmed_count=sum(
         bool(row.get("structural_confirmed")) for row in element_results
     )
+    structural_review_required=[
+        row for row in element_results
+        if row.get("structural_review_required")
+    ]
     visual_review_required=[
         row for row in element_results
         if row.get("visual_review_required")
@@ -1275,8 +1289,13 @@ def _visual_preflight_evaluation(
         "coverage_count":sum(bool(row.get("matched_in_text_layer")) for row in element_results),
         "total_count":len(element_results),
         "structural_confirmed_count":structural_confirmed_count,
+        "structural_review_required_count":len(structural_review_required),
         "visual_review_required_count":len(visual_review_required),
         "structural_proof_complete":structural_proof_complete,
+        "remaining_structural_labels":[
+            str(row.get("label") or row.get("id") or "")
+            for row in structural_review_required
+        ],
         "remaining_visual_labels":[
             str(row.get("label") or row.get("id") or "")
             for row in visual_review_required

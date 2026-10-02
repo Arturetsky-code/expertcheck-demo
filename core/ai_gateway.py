@@ -36,6 +36,79 @@ class AIProvider:
     def generate(self, prompt: str, system: str = '') -> AIResult:
         raise NotImplementedError
 
+    def generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+    ) -> AIResult:
+        return AIResult(
+            False, self.name,
+            error='Выбранный AI-провайдер не поддерживает визуальный контур ExpertCheck.',
+            status_code=412, model=self.model,
+        )
+
+    def generate_vision_structured(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self.generate_vision(prompt, image_base64, mime_type, system)
+
+    def generate_vision_validated(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+        validator: Callable[[str], bool] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        result = self.generate_vision_structured(
+            prompt, image_base64, mime_type, system, json_schema=json_schema,
+        )
+        valid = True
+        if result.ok and validator is not None:
+            try:
+                valid = bool(validator(result.text))
+            except Exception:
+                valid = False
+        if result.ok and valid:
+            return result
+        if not result.ok:
+            return result
+        repair_system = (
+            system + "\n\nПредыдущий ответ не прошёл машинную проверку. "
+            "Повторно проанализируйте ТО ЖЕ изображение и верните только JSON требуемой схемы."
+        )
+        repair_prompt = (
+            prompt + "\n\nПРЕДЫДУЩИЙ ОТВЕТ ДЛЯ ИСПРАВЛЕНИЯ:\n"
+            + str(result.text or '')[:5000]
+        )
+        repaired = self.generate_vision_structured(
+            repair_prompt, image_base64, mime_type, repair_system, json_schema=json_schema,
+        )
+        repaired_valid = False
+        if repaired.ok and validator is not None:
+            try:
+                repaired_valid = bool(validator(repaired.text))
+            except Exception:
+                repaired_valid = False
+        if repaired.ok and repaired_valid:
+            return repaired
+        return AIResult(
+            False, repaired.provider or result.provider,
+            text=repaired.text or result.text,
+            error='Vision AI вернул ответ, не соответствующий JSON-контракту, включая попытку автоматического исправления.',
+            status_code=422, model=repaired.model or result.model,
+            latency_ms=repaired.latency_ms or result.latency_ms,
+            schema_mode=repaired.schema_mode or result.schema_mode,
+        )
+
     def generate_validated(
         self, prompt: str, system: str = '',
         validator: Callable[[str], bool] | None = None,
@@ -190,6 +263,87 @@ class GeminiProvider(AIProvider):
         )
 
 
+    def generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+    ) -> AIResult:
+        return self._generate_vision(prompt, image_base64, mime_type, system)
+
+    def generate_vision_structured(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self._generate_vision(
+            prompt, image_base64, mime_type, system, json_schema=json_schema,
+        )
+
+    def _generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str,
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        if not self.api_key:
+            return AIResult(False, self.name, error='API-ключ Gemini не задан.', model=self.model)
+        if not image_base64:
+            return AIResult(False, self.name, error='Изображение visual evidence не передано.', status_code=422, model=self.model)
+        model = self.model or 'gemini-2.5-flash'
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+        generation_config: dict[str, Any] = {
+            'temperature': 0.0,
+            'maxOutputTokens': 1800,
+        }
+        if json_schema:
+            generation_config.update({
+                'responseMimeType': 'application/json',
+                'responseJsonSchema': json_schema,
+            })
+        elif 'JSON' in system.upper():
+            generation_config['responseMimeType'] = 'application/json'
+        payload: dict[str, Any] = {
+            'contents': [{
+                'role': 'user',
+                'parts': [
+                    {'text': prompt},
+                    {'inlineData': {'mimeType': mime_type or 'image/jpeg', 'data': image_base64}},
+                ],
+            }],
+            'generationConfig': generation_config,
+        }
+        if system:
+            payload['systemInstruction'] = {'parts': [{'text': system}]}
+        started = time.perf_counter()
+        status, body = self._post(url, {'x-goog-api-key': self.api_key}, payload)
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        schema_mode = 'STRICT_JSON_SCHEMA' if json_schema else 'JSON_OBJECT' if 'JSON' in system.upper() else 'VISION_TEXT'
+        if status != 200:
+            message = (((body.get('error') or {}).get('message')) or str(body))
+            return AIResult(
+                False, self.name, error=message, status_code=status,
+                model=model, latency_ms=latency_ms, schema_mode=schema_mode,
+            )
+        try:
+            text = body['candidates'][0]['content']['parts'][0]['text']
+        except (KeyError, IndexError, TypeError):
+            return AIResult(
+                False, self.name, error='Gemini vision вернул ответ без текста.',
+                status_code=status, model=model, latency_ms=latency_ms, schema_mode=schema_mode,
+            )
+        return AIResult(
+            True, self.name, text=text, status_code=status, model=model,
+            latency_ms=latency_ms, schema_mode=schema_mode,
+        )
+
+
 class GroqProvider(AIProvider):
     name = 'Groq'
 
@@ -259,6 +413,128 @@ class GroqProvider(AIProvider):
         json_schema: dict[str, Any] | None = None,
     ) -> AIResult:
         return self._generate(prompt, system, json_schema=json_schema)
+
+    VISION_MODEL_HINTS = (
+        'vision',
+        'llama-4-scout',
+        'llama-4-maverick',
+        'qwen2.5-vl',
+        'qwen3-vl',
+        'qwen-vl',
+    )
+
+    def _vision_candidate_models(self, available: list[str]) -> list[str]:
+        configured=(self.model or '').strip()
+        candidates=[]
+        if configured and configured in available and any(
+            hint in configured.casefold() for hint in self.VISION_MODEL_HINTS
+        ):
+            candidates.append(configured)
+        for model in available:
+            low=model.casefold()
+            if any(hint in low for hint in self.VISION_MODEL_HINTS) and model not in candidates:
+                candidates.append(model)
+        return candidates[:3]
+
+    def generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+    ) -> AIResult:
+        return self._generate_vision(prompt, image_base64, mime_type, system)
+
+    def generate_vision_structured(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        return self._generate_vision(
+            prompt, image_base64, mime_type, system, json_schema=json_schema,
+        )
+
+    def _generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str,
+        system: str = '',
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        if not self.api_key:
+            return AIResult(False, self.name, error='API-ключ Groq не задан.', model=self.model)
+        if not image_base64:
+            return AIResult(False, self.name, error='Изображение visual evidence не передано.', status_code=422, model=self.model)
+        model_result, available = self.available_models()
+        if not model_result.ok:
+            return model_result
+        models=self._vision_candidate_models(available)
+        if not models:
+            return AIResult(
+                False, self.name,
+                error='Для текущего проекта Groq не найдено доступной мультимодальной модели.',
+                status_code=412, model=self.model,
+            )
+
+        attempts=[]
+        last_result=None
+        for model in models:
+            messages=[]
+            if system:
+                messages.append({'role':'system','content':system})
+            messages.append({
+                'role':'user',
+                'content':[
+                    {'type':'text','text':prompt},
+                    {'type':'image_url','image_url':{'url':f'data:{mime_type or "image/jpeg"};base64,{image_base64}'}},
+                ],
+            })
+            payload={
+                'model':model,
+                'messages':messages,
+                'temperature':0.0,
+                'max_tokens':1800,
+            }
+            wants_json=bool(json_schema) or 'JSON' in system.upper()
+            strict_schema=bool(json_schema) and model in self.STRICT_SCHEMA_MODELS
+            if strict_schema:
+                payload['response_format']={
+                    'type':'json_schema',
+                    'json_schema':{
+                        'name':'expertcheck_visual_response',
+                        'strict':True,
+                        'schema':json_schema,
+                    },
+                }
+            elif wants_json:
+                payload['response_format']={'type':'json_object'}
+            started=time.perf_counter()
+            status,body=self._post('https://api.groq.com/openai/v1/chat/completions',self.headers,payload)
+            latency_ms=round((time.perf_counter()-started)*1000)
+            schema_mode='STRICT_JSON_SCHEMA' if strict_schema else 'JSON_OBJECT' if wants_json else 'VISION_TEXT'
+            if status==200:
+                try:
+                    text=body['choices'][0]['message']['content']
+                except (KeyError,IndexError,TypeError):
+                    return AIResult(False,self.name,error='Groq vision вернул ответ без текста.',status_code=status,model=model,latency_ms=latency_ms,schema_mode=schema_mode)
+                return AIResult(True,self.name,text=text,status_code=status,model=model,latency_ms=latency_ms,schema_mode=schema_mode)
+            message=(((body.get('error') or {}).get('message')) or str(body))
+            attempts.append(f'{model}: HTTP {status} — {message}')
+            last_result=AIResult(False,self.name,error=message,status_code=status,model=model,latency_ms=latency_ms,schema_mode=schema_mode)
+            if status in {401,429,500,502,503,504}:
+                break
+        if last_result is None:
+            return AIResult(False,self.name,error='Groq не предоставил доступную мультимодальную модель.',status_code=412)
+        return AIResult(
+            False,self.name,
+            error='Не удалось выполнить visual-запрос. '+' | '.join(attempts),
+            status_code=last_result.status_code,model=last_result.model,
+            latency_ms=last_result.latency_ms,schema_mode=last_result.schema_mode,
+        )
 
     def _generate(
         self, prompt: str, system: str = '',
@@ -550,6 +826,57 @@ class FailoverProvider(AIProvider):
             # later fallback is temporarily rate-limited.
             status_code=422 if errors and any('JSON-контракту' in error for error in errors) else last_status,
         )
+
+    def generate_vision(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+    ) -> AIResult:
+        if not self.providers:
+            return AIResult(False,self.name,error='Не задан ни один API-ключ для visual-режима.')
+        errors=[]
+        last_status=None
+        for provider in self.providers:
+            result=provider.generate_vision(prompt,image_base64,mime_type,system)
+            last_status=result.status_code
+            if result.ok:
+                return result
+            errors.append(f'{provider.name}: {diagnostic_message(result)}')
+        return AIResult(False,self.name,error='; '.join(errors),status_code=last_status)
+
+    def generate_vision_validated(
+        self,
+        prompt: str,
+        image_base64: str,
+        mime_type: str = 'image/jpeg',
+        system: str = '',
+        validator: Callable[[str], bool] | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> AIResult:
+        if not self.providers:
+            return AIResult(False,self.name,error='Не задан ни один API-ключ для visual-режима.')
+        errors=[]
+        last_status=None
+        for provider in self.providers:
+            result=provider.generate_vision_structured(
+                prompt,image_base64,mime_type,system,json_schema=json_schema,
+            )
+            last_status=result.status_code
+            valid=False
+            if result.ok:
+                try:
+                    valid=True if validator is None else bool(validator(result.text))
+                except Exception:
+                    valid=False
+            if result.ok and valid:
+                return result
+            if result.ok:
+                errors.append(f'{provider.name}: visual-ответ не соответствует JSON-контракту')
+            else:
+                errors.append(f'{provider.name}: {diagnostic_message(result)}')
+        return AIResult(False,self.name,error='; '.join(errors),status_code=422 if any('JSON-контракту' in x for x in errors) else last_status)
 
 
 def provider_from_settings(provider: str, secrets: Any = None) -> AIProvider | None:

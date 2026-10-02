@@ -1211,12 +1211,42 @@ def _visual_preflight_evaluation(
                 "document":page.get("document") or "",
                 "page":page.get("page"),
                 "section":page.get("section") or "",
+                "selection_source":page.get("selection_source") or "",
+                "drawing_kinds":list(page.get("drawing_kinds") or []),
+                "sheet_title":page.get("sheet_title") or "",
+                "designation":page.get("designation") or "",
+                "object_name":page.get("object_name") or "",
                 "fragment":page.get("fragment") or "",
             })
+        verification_mode=str(
+            element.get("verification_mode") or "VISUAL_CONTENT"
+        ).upper()
+        trusted_structural_sources={
+            "DRAWING_INTELLIGENCE_V2",
+            "GENERAL_PLAN_ENGINE",
+        }
+        structural_confirmed=(
+            verification_mode=="SHEET_PRESENCE"
+            and any(
+                str(location.get("selection_source") or "") in trusted_structural_sources
+                for location in matches
+            )
+        )
+        if structural_confirmed:
+            proof_status="STRUCTURAL_CONFIRMED"
+        elif matches:
+            proof_status="VISUAL_REVIEW_REQUIRED"
+        else:
+            proof_status="NOT_LOCATED"
+
         element_results.append({
             "id":element_id,
             "label":str(element.get("label") or element_id),
+            "verification_mode":verification_mode,
             "matched_in_text_layer":bool(matches),
+            "structural_confirmed":bool(structural_confirmed),
+            "visual_review_required":not bool(structural_confirmed),
+            "proof_status":proof_status,
             "candidate_locations":matches[:3],
         })
 
@@ -1224,6 +1254,16 @@ def _visual_preflight_evaluation(
         row for row in element_results
         if not row.get("matched_in_text_layer")
     ]
+    structural_confirmed_count=sum(
+        bool(row.get("structural_confirmed")) for row in element_results
+    )
+    visual_review_required=[
+        row for row in element_results
+        if row.get("visual_review_required")
+    ]
+    structural_proof_complete=bool(element_results) and (
+        structural_confirmed_count==len(element_results)
+    )
     return {
         "configured":True,
         "visual_kind":visual_kind,
@@ -1234,6 +1274,13 @@ def _visual_preflight_evaluation(
         "ready_for_visual_review":bool(candidate_pages),
         "coverage_count":sum(bool(row.get("matched_in_text_layer")) for row in element_results),
         "total_count":len(element_results),
+        "structural_confirmed_count":structural_confirmed_count,
+        "visual_review_required_count":len(visual_review_required),
+        "structural_proof_complete":structural_proof_complete,
+        "remaining_visual_labels":[
+            str(row.get("label") or row.get("id") or "")
+            for row in visual_review_required
+        ],
         "missing_ids":[str(row.get("id") or "") for row in missing],
         "missing_labels":[str(row.get("label") or row.get("id") or "") for row in missing],
         "elements":element_results,
@@ -1256,8 +1303,9 @@ def _visual_preflight_evaluation(
         ),
         "rejected_untrusted_pages":rejected_untrusted_pages[:12],
         "principle":(
-            "Text-layer drawing markers are preflight only. They select addressable pages "
-            "for visual proof and never confirm graphical content by themselves."
+            "Text-layer markers are preflight only. SHEET_PRESENCE may be confirmed only "
+            "by a trusted structural source (Drawing Intelligence 2.0 or General Plan Engine); "
+            "VISUAL_CONTENT always remains for graphical review."
         ),
     }
 

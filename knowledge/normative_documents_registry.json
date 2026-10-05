@@ -81,7 +81,13 @@
     "effective_from": "2026-04-01",
     "scope": [
       "DESIGN_DOCUMENTATION_FORMAT"
-    ]
+    ],
+    "status": "Действует",
+    "verification_status": "Статус, дата введения и замена ГОСТ Р 21.101-2020 сверены по Росстандарту; учтена опубликованная поправка ИУС 11-2026",
+    "verified_on": "2026-10-05",
+    "official_source": "https://protect.gost.ru/gost/details/17bc12e8-6579-4145-b141-56855e772e7f",
+    "edition_reference": "ГОСТ Р 21.101-2026, приказ Росстандарта №129-ст от 12.02.2026; действует с 01.04.2026; опубликована поправка ИУС 11-2026",
+    "effective_to": null
   },
   {
     "document_id": "GOST-R-21.101-2020",
@@ -92,7 +98,13 @@
     "validity_canonical_id": "GOST:21.101-2020",
     "scope": [
       "DESIGN_DOCUMENTATION_FORMAT"
-    ]
+    ],
+    "status": "Заменён",
+    "verification_status": "Заменён ГОСТ Р 21.101-2026 с 01.04.2026; статус сверён по Росстандарту",
+    "verified_on": "2026-10-05",
+    "official_source": "https://protect.gost.ru/gost/details/ba2db0a2-01aa-45da-a9dd-e5525bd69ec3",
+    "edition_reference": "ГОСТ Р 21.101-2020; заменён ГОСТ Р 21.101-2026",
+    "effective_to": "2026-03-31"
   },
   {
     "document_id": "SP-47.13330.2016",

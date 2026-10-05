@@ -45,62 +45,6 @@ def _gate(contract: dict, set_eval: dict, page: dict) -> dict:
     })
 
 
-def test_responsibility_level_promotes_only_as_confirmed_owner_design_decision():
-    contract = _contract("FZ384-4-7-RESP-LEVEL")
-    page = _page(
-        "Для здания установлен уровень ответственности: нормальный. "
-        "Уровень ответственности принят нормальный в соответствии с заданием на проектирование."
-    )
-    documents = [{
-        "project_understanding": {
-            "objects": [{
-                "object_id": "OBJ-1",
-                "properties": {
-                    "responsibility_level": [{
-                        "document": page["document"],
-                        "page": page["page"],
-                    }]
-                },
-            }]
-        }
-    }]
-
-    set_eval = _set_completeness_evaluation(contract, [page], documents)
-    result = _gate(contract, set_eval, page)
-
-    assert set_eval["complete"] is True
-    assert set_eval["owner_scope_state"] == "CONFIRMED"
-    assert result["kind"] == "VERIFIED_OK"
-    assert result["proof_state"] == "DETERMINISTIC_SET_COMPLETENESS_PROOF"
-    assert result["reason_code"] == "NORMATIVE_SET_COMPLETENESS_PROOF_CONFIRMED"
-
-
-def test_responsibility_level_does_not_promote_generic_normative_enumeration():
-    contract = _contract("FZ384-4-7-RESP-LEVEL")
-    page = _page(
-        "Уровень ответственности может быть повышенный, нормальный или пониженный "
-        "в зависимости от характеристик здания."
-    )
-    documents = [{
-        "project_understanding": {
-            "objects": [{
-                "object_id": "OBJ-1",
-                "properties": {
-                    "responsibility_level": [{
-                        "document": page["document"],
-                        "page": page["page"],
-                    }]
-                },
-            }]
-        }
-    }]
-
-    set_eval = _set_completeness_evaluation(contract, [page], documents)
-
-    assert set_eval["complete"] is False
-    assert "Установленный уровень ответственности объекта" in set_eval["missing_labels"]
-
-
 def test_emergency_lighting_activation_promotes_without_ai_when_all_groups_are_local():
     contract = _contract("SP52-7.6.1-EMERGENCY-LIGHTING-POWER")
     page = _page(

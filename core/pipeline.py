@@ -727,6 +727,7 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         )
         normative_compliance_summary = NormativeComplianceEngine.summary(normative_compliance_audit)
         normative_compliance_summary["knowledge_coverage"] = normative_engine.coverage()
+        normative_compliance_summary["activation"] = normative_engine.activation_summary()
     except Exception as exc:
         normative_compliance_audit = []
         normative_compliance_summary = {"requirements":0,"verified_clause":0,"ai_review_ready":0,"requires_kb_verification":0,"project_review":0,"error":str(exc)}

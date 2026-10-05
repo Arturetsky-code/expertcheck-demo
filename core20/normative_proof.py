@@ -37,6 +37,8 @@ def _proof_type(row: dict[str, Any]) -> str:
         return explicit
     if rid == "PP87-CLAUSE-15-IOS":
         return "SET_COMPLETENESS"
+    if check_kind == "PRESENCE":
+        return "PRESENCE"
     if check_kind == "STRUCTURE" or rid.startswith("PP87-CLAUSE-"):
         return "STRUCTURE"
     if check_kind in {"CALC", "TYPED_VALUE"}:

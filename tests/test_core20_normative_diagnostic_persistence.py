@@ -34,6 +34,7 @@ def _manifest():
                 "reviewed_total": 1,
                 "pending_total": 22,
                 "provider_error_count": 5,
+                "provider_error_categories": {"RATE_LIMIT": 3, "TIMEOUT": 2},
                 "contract_gate_blocked": 1,
                 "decisions": [{
                     "requirement_id": "SP8-TEST",
@@ -43,6 +44,7 @@ def _manifest():
                     "independent": True,
                     "semantic_contract_configured": True,
                     "semantic_contract_ready": False,
+                    "semantic_contract_missing_groups": ["APPLIED_NORMATIVE_BASIS"],
                     "blocker": "SEMANTIC_CONTRACT_GATE",
                     "reason": "project-sensitive model explanation",
                 }],
@@ -111,6 +113,7 @@ def test_compact_normative_diagnostic_keeps_counts_not_project_text():
     assert diagnostic["review_questions"] == 46
     assert diagnostic["semantic_run"]["selected_this_run"] == 24
     assert diagnostic["semantic_run"]["provider_error_count"] == 5
+    assert diagnostic["semantic_run"]["provider_error_categories"] == {"RATE_LIMIT": 3, "TIMEOUT": 2}
     assert diagnostic["semantic_run"]["decisions"] == [{
         "requirement_id": "SP8-TEST",
         "state": "REVIEW_QUESTION",
@@ -119,6 +122,7 @@ def test_compact_normative_diagnostic_keeps_counts_not_project_text():
         "independent": True,
         "semantic_contract_configured": True,
         "semantic_contract_ready": False,
+        "semantic_contract_missing_groups": ["APPLIED_NORMATIVE_BASIS"],
         "blocker": "SEMANTIC_CONTRACT_GATE",
     }]
     assert diagnostic["evidence_coverage_pct"] == 78.1

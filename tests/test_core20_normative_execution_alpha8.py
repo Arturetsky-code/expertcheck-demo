@@ -1310,3 +1310,85 @@ def test_alpha8_owner_scoped_set_holds_when_page_owner_is_ambiguous():
     assert result["complete"] is False
     assert result["owner_scope_state"]=="AMBIGUOUS_OWNER"
     assert result["owner_object_id"]==""
+
+
+
+def test_alpha8_fz123_category_basis_owner_scoped_set_can_close_without_ai():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contract={
+        row["requirement_id"]:row for row in foundation.contracts()
+    }["FZ123-27-3-CATEGORY-BASIS"]
+
+    assert contract["evidence_contract"]["proof_type"]=="SET_COMPLETENESS"
+    set_contract=contract["evidence_contract"]["set_contract"]
+    assert set_contract["promotion_policy"]=="DETERMINISTIC_AFTER_COMPLETE"
+    assert set_contract["owner_scope"]=="SAME_CONFIRMED_OBJECT"
+
+    pages=[
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":10,
+            "text":"В обращении находятся горючие вещества. Масса горючих веществ 125 кг.",
+        },
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":11,
+            "text":"Для веществ приведены пожароопасные свойства и показатели пожарной опасности.",
+        },
+        {
+            "document":"АР.pdf","document_type":"АР","page":12,
+            "text":"Объёмно-планировочные решения производственного помещения приведены в разделе.",
+        },
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":13,
+            "text":"Характеристики технологического процесса приняты для расчёта категории помещения.",
+        },
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-A","ТХ.pdf",10),
+        ("OBJ-A","ТХ.pdf",11),
+        ("OBJ-A","АР.pdf",12),
+        ("OBJ-A","ТХ.pdf",13),
+    )]
+
+    result=_set_completeness_evaluation(contract,pages,documents)
+
+    assert result["complete"] is True
+    assert result["owner_scope_state"]=="CONFIRMED"
+    assert result["owner_object_id"]=="OBJ-A"
+    assert result["matched_count"]==4
+    assert {row["set_element_id"] for row in result["evidence"]}=={
+        "substance_quantity","fire_hazard_properties","space_planning","process_characteristics"
+    }
+
+
+def test_alpha8_fz123_category_basis_does_not_merge_different_objects():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contract={
+        row["requirement_id"]:row for row in foundation.contracts()
+    }["FZ123-27-3-CATEGORY-BASIS"]
+
+    pages=[
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":10,
+            "text":"В обращении находятся горючие вещества. Масса горючих веществ 125 кг. "
+                   "Для веществ приведены пожароопасные свойства.",
+        },
+        {
+            "document":"АР.pdf","document_type":"АР","page":12,
+            "text":"Объёмно-планировочные решения производственного помещения приведены в разделе.",
+        },
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":13,
+            "text":"Характеристики технологического процесса приняты для расчёта категории помещения.",
+        },
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-A","ТХ.pdf",10),
+        ("OBJ-B","АР.pdf",12),
+        ("OBJ-B","ТХ.pdf",13),
+    )]
+
+    result=_set_completeness_evaluation(contract,pages,documents)
+
+    assert result["complete"] is False
+    assert result["owner_scope_state"]=="OWNER_NOT_PROVEN"
+    assert result["owner_object_id"]==""

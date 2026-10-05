@@ -11,6 +11,11 @@ _RESPONSIBILITY_CLASS_RE = re.compile(
     r"(?<![A-Za-zА-Яа-яЁё0-9])к\s*с\s*[-–—]?\s*([1-3])(?=$|[^0-9])",
     re.I,
 )
+_RESPONSIBILITY_LEVEL_RE = re.compile(
+    r"уров(?:ень|ня)\s+ответственност\w*.{0,80}?\b(повышенн\w*|нормальн\w*|пониженн\w*)\b",
+    re.I | re.S,
+)
+
 _GAMMA_DIRECT_RE = re.compile(
     r"(?:γ|Γ|гамм[аы]?)(?:\s*[_\-]?\s*n)?\s*[=:]?\s*(0[.,]\d+|1(?:[.,]\d+)?)",
     re.I,
@@ -62,10 +67,16 @@ def _owner_present(name: str, text: str) -> bool:
 _ANY_POSITION_RE = re.compile(r"(?<![\d.])(\d{1,3}(?:\.\d{1,3}){1,5})(?![\d.])")
 
 
-def _attribute_value_sets(text: str) -> tuple[set[str], set[float]]:
+def _attribute_value_sets(text: str) -> tuple[set[str], set[str], set[float]]:
     classes = {
         f"КС-{match.group(1)}"
         for match in _RESPONSIBILITY_CLASS_RE.finditer(str(text or ""))
+    }
+    levels = {
+        "повышенный" if match.group(1).lower().startswith("повыш")
+        else "пониженный" if match.group(1).lower().startswith("пониж")
+        else "нормальный"
+        for match in _RESPONSIBILITY_LEVEL_RE.finditer(str(text or ""))
     }
     gammas: set[float] = set()
     for regex in (_GAMMA_DIRECT_RE, _GAMMA_WORD_RE):
@@ -76,12 +87,12 @@ def _attribute_value_sets(text: str) -> tuple[set[str], set[float]]:
                 continue
             if 0.5 <= value <= 1.5:
                 gammas.add(round(value, 3))
-    return classes, gammas
+    return classes, levels, gammas
 
 
 def _record_is_unambiguous(text: str) -> bool:
-    classes, gammas = _attribute_value_sets(text)
-    return len(classes) <= 1 and len(gammas) <= 1
+    classes, levels, gammas = _attribute_value_sets(text)
+    return len(classes) <= 1 and len(levels) <= 1 and len(gammas) <= 1
 
 
 def _looks_like_position_only_line(line: str) -> bool:
@@ -169,6 +180,15 @@ def extract_identification_attributes(text: str) -> dict[str, Any]:
     class_match = _RESPONSIBILITY_CLASS_RE.search(raw)
     if class_match:
         result["responsibility_class"] = f"КС-{class_match.group(1)}"
+
+    level_match = _RESPONSIBILITY_LEVEL_RE.search(raw)
+    if level_match:
+        value=level_match.group(1).lower()
+        result["responsibility_level"] = (
+            "повышенный" if value.startswith("повыш")
+            else "пониженный" if value.startswith("пониж")
+            else "нормальный"
+        )
 
     gamma_match = _GAMMA_DIRECT_RE.search(raw) or _GAMMA_WORD_RE.search(raw)
     if gamma_match:

@@ -614,3 +614,13 @@ def test_alpha9_reviewed_semantic_decision_is_completed_not_pending():
 def test_alpha9_semantic_runner_exposes_checkpoint_for_resumable_waves():
     signature=inspect.signature(run_normative_semantic_proof)
     assert "checkpoint" in signature.parameters
+
+
+
+def test_alpha9_semantic_packet_carries_retrieval_quality_metadata():
+    proof=_proof_result(multi=True)
+    packet=proof["semantic_queue"][0]
+
+    assert packet["retrieval_kind"]=="VERIFIED_OK"
+    assert packet["retrieval_candidate_count"]==2
+    assert packet["retrieval_reason_code"]

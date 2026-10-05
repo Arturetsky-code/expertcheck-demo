@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from core.workspace_store import session_snapshot
+from core.workspace_store import session_snapshot, snapshot_signature
 from core20.dual_run import compact_normative_diagnostic
 
 
@@ -92,3 +92,18 @@ def test_workspace_snapshot_includes_compact_diagnostic():
 
     assert payload["canonical_core_20_diagnostic"]["active_contracts"] == 64
     assert payload["canonical_core_20_diagnostic"]["semantic_queue_total"] == 26
+
+
+def test_compact_diagnostic_changes_workspace_signature():
+    base = session_snapshot({
+        "project_name": "Тест",
+        "analysis_time": "2026-10-05T12:00:00+03:00",
+        "canonical_core_20_diagnostic": {},
+    })
+    enriched = session_snapshot({
+        "project_name": "Тест",
+        "analysis_time": "2026-10-05T12:00:00+03:00",
+        "canonical_core_20_diagnostic": compact_normative_diagnostic(_manifest()),
+    })
+
+    assert snapshot_signature(base) != snapshot_signature(enriched)

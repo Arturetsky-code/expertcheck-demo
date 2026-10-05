@@ -13,7 +13,7 @@ from core.semantic_evidence_engine import (
 )
 
 
-ENGINE_VERSION = "20.0-alpha10-semantic-proof-gate2"
+ENGINE_VERSION = "20.0-alpha10.1-semantic-proof-resumable"
 
 
 def _fingerprint(queue: list[dict[str, Any]]) -> str:

@@ -2399,7 +2399,7 @@
       "ПЗ",
       "КР"
     ],
-    "check_kind": "PRESENCE",
+    "check_kind": "SEMANTIC",
     "automation": "AUTO",
     "keywords": [
       "уровень ответственности",
@@ -2418,56 +2418,9 @@
       "minimum_sources": 1,
       "requires_profile_owner": true,
       "requires_page_reference": true,
-      "execution_mode": "POSITIVE_PRESENCE_ONLY",
+      "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT",
-      "proof_type": "SET_COMPLETENESS",
-      "set_contract": {
-        "mode": "ALL_REQUIRED",
-        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
-        "atomization_complete": true,
-        "owner_scope": "SAME_CONFIRMED_OBJECT",
-        "elements": [
-          {
-            "id": "responsibility_level_decision",
-            "label": "Установленный уровень ответственности объекта",
-            "evidence_groups": [
-              {
-                "id": "subject",
-                "label": "Параметр уровня ответственности",
-                "aliases": [
-                  "уровень ответственности"
-                ]
-              },
-              {
-                "id": "value",
-                "label": "Допустимое значение",
-                "aliases": [
-                  "уровень ответственности повышенный",
-                  "уровень ответственности нормальный",
-                  "уровень ответственности пониженный",
-                  "повышенный уровень ответственности",
-                  "нормальный уровень ответственности",
-                  "пониженный уровень ответственности"
-                ]
-              },
-              {
-                "id": "design_assertion",
-                "label": "Принятое проектное значение",
-                "aliases": [
-                  "принят уровень ответственности",
-                  "уровень ответственности принят",
-                  "установлен уровень ответственности",
-                  "уровень ответственности установлен",
-                  "назначен уровень ответственности",
-                  "уровень ответственности назначен"
-                ]
-              }
-            ],
-            "group_window_chars": 420
-          }
-        ]
-      }
+      "applicability": "SECTION_PRESENT"
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

@@ -523,3 +523,87 @@ def test_gate2_contract_change_invalidates_previous_selected_proof():
     assert applied["semantic_proof_applied"] == 0
     assert applied["semantic_proof_stale"] is True
     assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
+
+
+
+def _proof_result_many(count=3):
+    rows=[]
+    for index in range(count):
+        suffix=index+1
+        rows.append({
+            "requirement_id": f"PP87-X-SEM-{suffix}",
+            "source": "ПП РФ №87",
+            "paragraph": f"п. X.{suffix}",
+            "topic": "Инженерная защита",
+            "sections": ["ПЗУ"],
+            "check_kind": "SEMANTIC",
+            "requirement": f"Требование {suffix}: в ПЗУ должны быть обоснованы решения по инженерной защите территории.",
+            "kind": "VERIFIED_OK",
+            "state": "Подтверждено",
+            "evidence_id": f"NORM-E-PP87-X-SEM-{suffix}-01",
+            "evidence_document": "ПЗУ.pdf",
+            "evidence_page": 10 + suffix,
+            "evidence_fragment": f"Для требования {suffix} решения по инженерной защите территории обоснованы расчётами.",
+        })
+    return NormativeProofEngine20().run(rows)
+
+
+def test_alpha9_semantic_proof_resumes_after_first_bounded_wave():
+    proof=_proof_result_many(3)
+
+    wave1=run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=2,
+    )
+    assert wave1["new_decisions"] == 2
+    assert wave1["completed_before"] == 0
+    assert wave1["pending_unprocessed"] == 1
+    assert len(wave1["decisions"]) == 2
+
+    applied1=apply_normative_semantic_proof(proof,wave1)
+    assert applied1["semantic_proof_applied"] == 2
+    assert applied1["semantic_completed_total"] == 2
+    assert applied1["semantic_queue_total"] == 1
+
+    wave2=run_normative_semantic_proof(
+        applied1["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=2,
+        checkpoint=wave1,
+    )
+    assert wave2["completed_before"] == 2
+    assert wave2["new_decisions"] == 1
+    assert wave2["pending_unprocessed"] == 0
+    assert len(wave2["decisions"]) == 3
+    assert wave2["newly_verified_ok"] == 1
+    assert wave2["verified_ok"] == 3
+
+    applied2=apply_normative_semantic_proof(proof,wave2)
+    assert applied2["semantic_proof_applied"] == 3
+    assert applied2["semantic_completed_total"] == 3
+    assert applied2["semantic_queue_total"] == 0
+    assert all(row["kind"] == "VERIFIED_OK" for row in applied2["rows"])
+
+
+def test_alpha9_reviewed_semantic_decision_is_completed_not_pending():
+    proof=_proof_result_many(2)
+    wave=run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=1,
+    )
+    rid=next(iter(wave["decisions"]))
+    wave["decisions"][rid]["state"]="REVIEW_QUESTION"
+    wave["decisions"][rid]["reason"]="Evidence reviewed but not sufficient for promotion."
+
+    applied=apply_normative_semantic_proof(proof,wave)
+
+    assert applied["semantic_proof_applied"] == 0
+    assert applied["semantic_completed_total"] == 1
+    assert applied["semantic_reviewed_no_promotion"] == 1
+    assert applied["semantic_queue_total"] == 1
+    assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"

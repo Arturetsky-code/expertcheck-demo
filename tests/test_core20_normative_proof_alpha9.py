@@ -885,3 +885,53 @@ def test_alpha9_complete_set_can_promote_deterministically_when_contract_allows(
     assert row["reason_code"]=="NORMATIVE_SET_COMPLETENESS_PROOF_CONFIRMED"
     assert result["semantic_queue_total"]==0
     assert result["set_completeness_queue_total"]==0
+
+
+
+def test_alpha9_fz384_responsibility_level_is_deterministic_presence():
+    foundation=_foundation()
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+    contract=contracts["FZ384-4-7-RESP-LEVEL"]
+
+    assert contract["check_kind"]=="PRESENCE"
+    assert contract["evidence_contract"]["execution_mode"]=="POSITIVE_PRESENCE_ONLY"
+
+    engine=NormativeExecutionEngine20(foundation)
+    documents=[
+        {"Файл":"ПЗ.pdf","Тип документа":"ПЗ"},
+        {"Файл":"КР.pdf","Тип документа":"КР"},
+    ]
+    pages=[{
+        "document":"ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":6,
+        "text":"Для проектируемого здания установлен нормальный уровень ответственности.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-4-7-RESP-LEVEL")
+
+    assert row["retrieval_kind"]=="VERIFIED_OK"
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_type"]=="PRESENCE"
+    assert row["proof_state"]=="ADDRESSABLE_PRESENCE_PROOF"
+    assert row["reason_code"]=="NORMATIVE_PRESENCE_PROOF_CONFIRMED"
+    assert not any(
+        packet["requirement_id"]=="FZ384-4-7-RESP-LEVEL"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha9_fz384_responsibility_level_never_invents_negative_without_evidence():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"ПЗ.pdf","Тип документа":"ПЗ"}]
+    pages=[{
+        "document":"ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":6,
+        "text":"Общие сведения о проектируемом объекте.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-4-7-RESP-LEVEL")
+
+    assert row["kind"]!="PROJECT_FINDING"
+    assert row["kind"] in {"REVIEW_QUESTION","SYSTEM_LIMITATION"}

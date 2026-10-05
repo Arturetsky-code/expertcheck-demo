@@ -1,3 +1,4 @@
+import inspect
 import json
 from types import SimpleNamespace
 
@@ -607,3 +608,9 @@ def test_alpha9_reviewed_semantic_decision_is_completed_not_pending():
     assert applied["semantic_reviewed_no_promotion"] == 1
     assert applied["semantic_queue_total"] == 1
     assert applied["rows"][0]["kind"] == "REVIEW_QUESTION"
+
+
+
+def test_alpha9_semantic_runner_exposes_checkpoint_for_resumable_waves():
+    signature=inspect.signature(run_normative_semantic_proof)
+    assert "checkpoint" in signature.parameters

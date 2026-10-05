@@ -1403,7 +1403,7 @@
       "proof_type": "SET_COMPLETENESS",
       "set_contract": {
         "mode": "ALL_REQUIRED",
-        "promotion_policy": "SEMANTIC_AFTER_COMPLETE",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
         "atomization_complete": true,
         "elements": [
           {

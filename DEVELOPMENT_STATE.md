@@ -4096,3 +4096,100 @@ Before allowing automatic promotion:
 
 Checklist work remains paused.
 AI semantic proof remains a residual fallback.
+
+
+## Deterministic normative proof expansion — 2026-10-05
+
+Goal restored to the original product architecture:
+- deterministic proof first;
+- Semantic Gate second;
+- Judge/Critic only for the irreducible semantic remainder.
+
+### Live saved-project caveat
+
+The saved project `Тест для чтения чертежей` still reports 43 semantic pending from
+its 2026-10-02 analysis snapshot. Comparing those IDs with the current registry shows
+that 8 of the 43 are now deterministic in the current codebase:
+
+- FZ384-4-7-RESP-LEVEL → PRESENCE;
+- PP87-12-K-TRANSPORT-PARAMS → SET_COMPLETENESS;
+- FZ123-27-22-CATEGORY-IN-PD → PRESENCE;
+- FZ123-27-3-CATEGORY-BASIS → SET_COMPLETENESS;
+- SP18-5.52-CLOSED-STORM-SEWER → PRESENCE;
+- SP52-7.6.1-EMERGENCY-LIGHTING-POWER → SET_COMPLETENESS;
+- SP12-4.2-CATEGORY-INPUTS → SET_COMPLETENESS;
+- SP6-2025-5.3-SPZ-PANEL → SET_COMPLETENESS.
+
+Therefore the saved 43-item semantic queue is not a reliable representation of the
+current normative engine. Do not keep feeding all 43 to AI without recomputation.
+
+### New deterministic contract: SP52 7.6.1
+
+`SP52-7.6.1-EMERGENCY-LIGHTING-POWER` was converted from semantic proof to an
+ALL_REQUIRED deterministic set contract.
+
+Required local evidence groups:
+1. emergency lighting;
+2. relation to failure/disconnection of working lighting;
+3. automatic activation or manual activation after automation failure.
+
+Promotion:
+- `DETERMINISTIC_AFTER_COMPLETE`;
+- no Judge/Critic needed;
+- mere presence of the words “аварийное освещение” is insufficient.
+
+Regression tests:
+- complete local clause promotes to `DETERMINISTIC_SET_COMPLETENESS_PROOF`;
+- presence-only text remains unproven.
+
+### New deterministic contract: SP6 5.3
+
+`SP6-2025-5.3-SPZ-PANEL` was converted to an owner-scoped deterministic set contract.
+
+Required proof for the same confirmed Project Understanding object:
+1. SPZ electric receivers are assigned I reliability category;
+2. SPZ power is provided from the dedicated SPZ supply panel;
+3. the panel belongs to / is implemented in NКУ.
+
+Owner scope:
+- `SAME_CONFIRMED_OBJECT`;
+- evidence from different objects is never merged into one proof.
+
+Regression tests:
+- two evidence pages mapped to one object promote without AI;
+- evidence split across two different objects remains unproven.
+
+### Important correction caught by regression tests
+
+`FZ384-4-7-RESP-LEVEL` was already a deterministic PRESENCE contract.
+An attempted conversion to SET_COMPLETENESS was correctly rejected by the existing
+regression suite. The exact pre-change contract was restored. This requirement must
+not be reworked again unless a concrete false-positive case is demonstrated.
+
+### Validation
+
+Final functional/test head before this documentation checkpoint:
+`5fd3cd3daabb15af4cd6966a1ad7c25a2fff8dcc`
+
+Validation:
+- Core20 quality gates: success;
+- Core25 Quality Leap gates: success;
+- full alpha1 release gate: success;
+- Source Snapshot Artifact: success;
+- Test78 deterministic A/B on the SP6 registry change: success;
+- Test78 classification: NO_CHANGE;
+- baseline/current: 56 requirements, 25 VERIFIED_OK, 2 PROJECT_FINDING, 29 REVIEW_QUESTION;
+- changed IDs: none.
+
+### Next course
+
+Do not run another semantic AI wave yet.
+
+Next development pass:
+1. recompute the 35 still-semantic IDs against the current registry;
+2. select only requirements with a truly formalizable proof contract;
+3. prefer PRESENCE / SET_COMPLETENESS / typed or cross-document deterministic
+   contracts where the engineering semantics can be made explicit;
+4. leave threshold comparisons and conditional exceptions semantic until a typed
+   comparison/applicability contract exists;
+5. only after this reduction, use Judge/Critic on the residual semantic frontier.

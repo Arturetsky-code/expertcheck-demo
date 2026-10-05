@@ -102,6 +102,8 @@ def project_snapshot_bytes(
         "version": SNAPSHOT_VERSION,
         "analysis_snapshot": first.get("analysis_snapshot") or {},
         "core_version": first.get("core_version"),
+        "documentation_stage": first.get("documentation_stage"),
+        "checklist_profile": first.get("checklist_profile"),
         "documents": document_rows,
         "findings": finding_rows,
         "comparisons": comparison_rows,
@@ -230,6 +232,8 @@ def snapshot_to_workspace_payload(
         "project_knowledge_model",
         "visual_evidence_cache",
         "visual_evidence_cache_seed",
+        "documentation_stage",
+        "checklist_profile",
     )
     for key in project_fields:
         if key in payload:
@@ -329,6 +333,12 @@ def snapshot_to_workspace_payload(
     )
     return {
         "project_name": restored_name,
+        "documentation_stage": (
+            workspace.get("documentation_stage")
+            or payload.get("documentation_stage")
+            or first.get("documentation_stage")
+            or "ПД"
+        ),
         "analysis_time": workspace.get("analysis_time"),
         "result": (documents, findings, comparisons),
         "object_registry_confirmed": bool(workspace.get("object_registry_confirmed", False)),

@@ -135,6 +135,11 @@ def _semantic_packet(row: dict[str, Any], proof_type: str) -> dict[str, Any] | N
         "requirement": row.get("requirement") or "",
         "sections": list(row.get("sections") or []),
         "semantic_proof_contract":dict(row.get("semantic_proof_contract") or {}),
+        "retrieval_kind":str(row.get("retrieval_kind") or ""),
+        "retrieval_reason_code":str(row.get("retrieval_reason_code") or row.get("reason_code") or ""),
+        "retrieval_candidate_count":int(
+            row.get("retrieval_candidate_count") or len(row.get("evidence_candidates") or evidence)
+        ),
         "evidence": evidence,
         "policy": (
             "Retrieval is not proof. VERIFIED_OK requires a proof contract appropriate to proof_type. "

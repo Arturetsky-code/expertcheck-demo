@@ -3620,3 +3620,149 @@ First validate the expanded foundation against the preserved live project:
 
 Then choose the next NTD clauses from the dominant real blocker/expert-history family rather
 than expanding documents sequentially.
+
+
+## Normative knowledge expansion — SP 48.13330.2019 wave 1 + compact frontier persistence
+
+Development date: 2026-10-05.
+
+### Purpose
+
+Continue NTD expansion without returning to checklist development and without bulk-growing
+the active normative denominator blindly.
+
+Two connected improvements were made:
+1. persist a compact, non-sensitive normative proof-frontier diagnostic for saved projects;
+2. add one high-priority, expert-history-backed SP 48.13330.2019 clause.
+
+### Compact normative diagnostic
+
+Added `compact_normative_diagnostic()` to the Core20 dual-run layer.
+
+The diagnostic persists only aggregate data:
+- registered/active/inactive-triggered contract counts;
+- VERIFIED_OK / PROJECT_FINDING / REVIEW_QUESTION / SYSTEM_LIMITATION counts;
+- held-by-proof-control count;
+- semantic/set/visual queue totals;
+- evidence coverage percentage;
+- proof-frontier blocker counts;
+- semantic pending distribution by source, section, candidate-count bucket and retrieval admission;
+- set-completeness distribution by source/section;
+- visual pending distribution by kind/section;
+- retained fail-closed distribution by reason/source/section.
+
+It deliberately excludes:
+- project text;
+- evidence fragments;
+- page excerpts;
+- row-level proof packets;
+- visual payloads.
+
+The compact diagnostic is now:
+- stored in session snapshot;
+- part of the autosave signature;
+- stored in new analysis history rows;
+- backfilled into the latest existing history summary on ordinary project autosave when the
+  analysis timestamp is unchanged and the old history row has no diagnostic yet.
+
+This means an old saved project only needs to be opened in the updated application for the
+current Core20 normative frontier to become queryable from the lightweight analysis history;
+a new analysis run is not required.
+
+### SP 48.13330.2019 selection
+
+Expert-history priority:
+- SP 48.13330.2019 appears in 173 verified remarks across 16 projects;
+- it had no strict atomic contract before this wave.
+
+The first clause was chosen from recurring real expert remarks, not by sequentially walking
+through the standard.
+
+Added:
+- `SP48-5.16-SUPPLY-TRANSPORT-TEP`;
+- source: SP 48.13330.2019, clause 5.16;
+- route: POS;
+- proof type: SEMANTIC_REQUIREMENT;
+- policy: VERIFIED_ONLY.
+
+The contract checks whether transport schemes for delivery of the principal construction
+materials are justified by comparison of techno-economic indicators of supply alternatives.
+
+Retrieval alone cannot close the clause. Semantic proof requires:
+1. identifiable alternatives/supply options;
+2. comparable techno-economic indicators;
+3. traceable selection of the adopted supply/transport scheme based on the comparison.
+
+The contract does not extend clause 5.16 to unrelated waste-transport claims merely because
+historical expert remarks sometimes cite the clause in broader logistics comments.
+
+### Knowledge metrics after this wave
+
+- total knowledge rules: 96;
+- normative rules: 78;
+- strict registered normative contracts: 67;
+- triggered-only contracts: 2;
+- default-active strict contract pool: 65;
+- clause-verification backlog: 11;
+- SP 48.13330.2019 strict contracts: 1.
+
+Compared with the previous checkpoint:
+- strict registered: 66 -> 67;
+- default-active pool: 64 -> 65;
+- verification backlog: unchanged at 11.
+
+### Validation
+
+SP48 production contract commit:
+`fbddec8eb285ef0c4b96dc2767bca9effb532d58`
+
+Test78 deterministic A/B on that exact NTD commit:
+- workflow: success;
+- classification: NO_CHANGE;
+- requirements: 56 -> 56;
+- VERIFIED_OK: 25 -> 25;
+- PROJECT_FINDING: 2 -> 2;
+- REVIEW_QUESTION: 29 -> 29;
+- changed IDs: none.
+
+Final test checkpoint:
+`daf3c3ac48b5fb96add61dbe4df974fed6ca9a44`
+
+GitHub Actions on final checkpoint:
+- Source Snapshot Artifact: success;
+- Core20 quality gates: success;
+- Core25 Quality Leap gates: success.
+
+### Expert-history rationale for next candidates
+
+The expert-practice corpus shows repeated POS/logistics comments tied to SP 48:
+- transport schemes and supply-source justification;
+- techno-economic comparison of alternative suppliers/routes;
+- construction-duration/source-data consistency;
+- shift/rotational-work assumptions and cost/logistics justification;
+- graphical completeness of POS.
+
+Next SP 48 candidates remain:
+- clause 5.14 — justification that organisational/technological decisions account for all
+  associated works/costs in estimate documentation;
+- clause 5.15 — comparison of techno-economic indicators of competitive organisational/
+  technological alternatives;
+- clause 9.3.1 — NTS for non-standard design and organisational-technological solutions.
+
+Do not add these clauses until the compact frontier from the preserved live project has been
+backfilled and ranked.
+
+### Next target
+
+Open the preserved project in the updated application (no new analysis required), allow
+autosave to backfill the compact normative diagnostic, then query the latest analysis history
+summary from Supabase.
+
+Use that live frontier to decide whether the next improvement should target:
+- semantic proof throughput;
+- set completeness;
+- visual proof;
+- applicability;
+- or another NTD family.
+
+Checklist PD/RD work remains paused.

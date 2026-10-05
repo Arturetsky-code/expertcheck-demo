@@ -1392,3 +1392,47 @@ def test_alpha8_fz123_category_basis_does_not_merge_different_objects():
     assert result["complete"] is False
     assert result["owner_scope_state"]=="OWNER_NOT_PROVEN"
     assert result["owner_object_id"]==""
+
+
+
+def test_alpha8_sp12_category_inputs_reuse_owner_scoped_deterministic_set():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+    contract=contracts["SP12-4.2-CATEGORY-INPUTS"]
+
+    assert contract["evidence_contract"]["proof_type"]=="SET_COMPLETENESS"
+    set_contract=contract["evidence_contract"]["set_contract"]
+    assert set_contract["promotion_policy"]=="DETERMINISTIC_AFTER_COMPLETE"
+    assert set_contract["owner_scope"]=="SAME_CONFIRMED_OBJECT"
+
+    pages=[
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":20,
+            "text":"В помещении обращаются горючие материалы. Количество материалов 80 кг.",
+        },
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":21,
+            "text":"Приведены пожароопасные свойства обращающихся материалов.",
+        },
+        {
+            "document":"АР.pdf","document_type":"АР","page":22,
+            "text":"Объемно-планировочные решения помещения приведены на планах и в пояснениях.",
+        },
+        {
+            "document":"ТХ.pdf","document_type":"ТХ","page":23,
+            "text":"Особенности технологического процесса учтены при определении категории.",
+        },
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-CAT","ТХ.pdf",20),
+        ("OBJ-CAT","ТХ.pdf",21),
+        ("OBJ-CAT","АР.pdf",22),
+        ("OBJ-CAT","ТХ.pdf",23),
+    )]
+
+    result=_set_completeness_evaluation(contract,pages,documents)
+
+    assert result["complete"] is True
+    assert result["owner_scope_state"]=="CONFIRMED"
+    assert result["owner_object_id"]=="OBJ-CAT"
+    assert result["matched_count"]==4

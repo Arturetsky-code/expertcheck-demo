@@ -233,6 +233,96 @@ def _applicability_negated(keyword:str,text:str)->bool:
     return any(marker in window for marker in negative_markers)
 
 
+def _triggered_activation_decision(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]]|None=None,
+)->dict[str,Any]:
+    """Activate event-driven contracts only when the project corpus proves the trigger.
+
+    This is intentionally different from CONDITIONAL applicability.  A dormant
+    triggered contract is part of the curated KB but is not an active project
+    check, so it must not inflate review questions or proof queues.
+    """
+    ec=dict(contract.get("evidence_contract") or {})
+    mode=str(ec.get("activation") or "").strip().upper()
+    if mode!="TRIGGERED_ONLY":
+        return {
+            "active":True,
+            "reason_code":"ALWAYS_ACTIVE",
+            "trace":[],
+        }
+
+    keywords=[
+        str(value).strip() for value in (
+            ec.get("activation_keywords")
+            or ec.get("applicability_keywords")
+            or []
+        )
+        if str(value or "").strip()
+    ]
+    regexes=[
+        str(value).strip() for value in (ec.get("activation_regexes") or [])
+        if str(value or "").strip()
+    ]
+    expected={_section_key(x) for x in (contract.get("sections") or []) if _section_key(x)}
+    expected.discard("all")
+
+    trace=[]
+    seen=set()
+    for page in pages or []:
+        if not isinstance(page,dict):
+            continue
+        section=_page_section(page)
+        if expected and section not in expected:
+            continue
+        raw_text=str(page.get("text") or page.get("content") or "")
+        if not raw_text:
+            continue
+
+        matches=[]
+        for keyword in keywords:
+            ok,is_numeric,_=_keyword_match(keyword,raw_text)
+            if ok and not is_numeric:
+                matches.append(keyword)
+
+        for pattern in regexes:
+            try:
+                match=re.search(pattern,raw_text,re.I)
+            except re.error:
+                match=None
+            if match:
+                matches.append(match.group(0)[:120])
+
+        if not matches:
+            continue
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        key=(document,str(page_no))
+        if key in seen:
+            continue
+        seen.add(key)
+        trace.append({
+            "document":document,
+            "page":page_no,
+            "section":str(page.get("document_type") or page.get("section") or ""),
+            "matched_trigger":matches[0],
+            "fragment":_fragment(raw_text,matches[:2],radius=180),
+        })
+
+    minimum=max(1,int(ec.get("activation_min_hits") or 1))
+    if len(trace)>=minimum:
+        return {
+            "active":True,
+            "reason_code":"PROJECT_TRIGGER_PROVEN",
+            "trace":trace[:6],
+        }
+    return {
+        "active":False,
+        "reason_code":"PROJECT_TRIGGER_NOT_FOUND",
+        "trace":trace[:6],
+    }
+
+
 def _conditional_applicability_decision(
     contract:dict[str,Any],
     documents:list[dict[str,Any]]|None,
@@ -1538,10 +1628,28 @@ class NormativeExecutionEngine20:
         routes=self.foundation.project_routes(documents)
         pages=[dict(x) for x in (page_corpus or []) if isinstance(x,dict)]
         retrieval_rows=[]
+        inactive_triggered_contracts=[]
         for contract in routes.get("rows") or []:
             if not contract.get("project_relevant") or not contract.get("automatic_contract_ready"):
                 continue
-            retrieval_rows.append(self._execute(contract,pages,documents))
+            activation=_triggered_activation_decision(contract,pages)
+            if not activation.get("active"):
+                inactive_triggered_contracts.append({
+                    "requirement_id":str(contract.get("requirement_id") or ""),
+                    "source":str(contract.get("document_title") or ""),
+                    "paragraph":str(contract.get("paragraph") or ""),
+                    "topic":str(contract.get("topic") or ""),
+                    "sections":list(contract.get("sections") or []),
+                    "activation_reason_code":str(activation.get("reason_code") or ""),
+                    "activation_trace":list(activation.get("trace") or []),
+                })
+                continue
+            row=self._execute(contract,pages,documents)
+            if str((contract.get("evidence_contract") or {}).get("activation") or "").upper()=="TRIGGERED_ONLY":
+                row["activation_state"]="ACTIVE"
+                row["activation_reason_code"]=str(activation.get("reason_code") or "")
+                row["activation_trace"]=list(activation.get("trace") or [])
+            retrieval_rows.append(row)
 
         retrieval_counts={kind:sum(1 for row in retrieval_rows if row.get("kind")==kind) for kind in KIND_LABELS}
         retrieval_addressed=sum(
@@ -1573,7 +1681,14 @@ class NormativeExecutionEngine20:
         )
         return {
             "version":ENGINE_VERSION,
+            "registered_contracts":sum(
+                bool(contract.get("project_relevant") and contract.get("automatic_contract_ready"))
+                for contract in routes.get("rows") or []
+            ),
             "contracts":len(rows),
+            "active_contracts":len(rows),
+            "inactive_triggered_contracts":len(inactive_triggered_contracts),
+            "inactive_triggered_contract_rows":inactive_triggered_contracts,
             "addressed":addressed,
             "counts":counts,
             "verified_ok":counts["VERIFIED_OK"],

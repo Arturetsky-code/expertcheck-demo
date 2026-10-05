@@ -624,3 +624,35 @@ def test_alpha9_semantic_packet_carries_retrieval_quality_metadata():
     assert packet["retrieval_kind"]=="VERIFIED_OK"
     assert packet["retrieval_candidate_count"]==2
     assert packet["retrieval_reason_code"]
+
+
+
+def test_qualified_provider_reuses_benchmark_without_live_preflight_calls():
+    class QualifiedProvider(FakeProvider):
+        qualification_required=True
+        qualification_passed=True
+
+        def __init__(self,name):
+            super().__init__(name)
+            self.qualification_summary={
+                "actual_routes":[{"provider":name,"model":self.model,"calls":8}],
+                "completed":True,
+                "qualified":True,
+            }
+
+        def test_connection(self):
+            raise AssertionError("live preflight must not run for qualified provider")
+
+    proof=_proof_result()
+    semantic=run_normative_semantic_proof(
+        proof["semantic_queue"],
+        judge_provider=QualifiedProvider("Judge-A"),
+        critic_provider=QualifiedProvider("Critic-B"),
+        limit=1,
+    )
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["preflight"]["judge"]["state"] == "QUALIFICATION_REUSED"
+    assert semantic["preflight"]["critic"]["state"] == "QUALIFICATION_REUSED"
+    assert semantic["preflight"]["judge"]["contract_probe_requested"] == 0
+    assert semantic["preflight"]["critic"]["contract_probe_requested"] == 0

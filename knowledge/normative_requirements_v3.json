@@ -2399,7 +2399,7 @@
       "ПЗ",
       "КР"
     ],
-    "check_kind": "SEMANTIC",
+    "check_kind": "PRESENCE",
     "automation": "AUTO",
     "keywords": [
       "уровень ответственности",
@@ -2418,7 +2418,7 @@
       "minimum_sources": 1,
       "requires_profile_owner": true,
       "requires_page_reference": true,
-      "execution_mode": "SEMANTIC_PROOF",
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
       "applicability": "SECTION_PRESENT"
     },

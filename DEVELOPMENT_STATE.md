@@ -3413,3 +3413,78 @@ selection into the analysis runtime. Then activate exactly one canonical checkli
 run a bounded regression before allowing profile results into public readiness metrics.
 
 Do not activate PD and RD simultaneously by default.
+
+
+## Checklist stage routing — explicit PD/RD project context
+
+Development date: 2026-10-05.
+
+The project setup now has an explicit documentation-stage selector:
+- ПД — project documentation;
+- РД — working documentation.
+
+The UI maps the selected stage to exactly one canonical checklist profile:
+- ПД -> PD;
+- РД -> RD.
+
+The stage is carried through the existing `ai_options` runtime contract into
+`analyze_uploaded_core`, where it is normalized and attached to project context and
+lightweight document metadata.
+
+### Persistence
+
+`documentation_stage` is now part of:
+- application session defaults;
+- new-project reset state;
+- workspace session payload;
+- workspace autosave signature;
+- project open/restore defaults;
+- portable project snapshot export and restore.
+
+Changing the project stage therefore changes the workspace signature and is persisted.
+
+### Runtime safety
+
+The selected profile is currently recorded in `automatic_checklist_review.profile_selection`
+with state `REGISTERED_NOT_ACTIVATED`.
+
+The canonical profile summary is loaded and validated, but its 571/296 checklist questions
+are intentionally not merged into:
+- `automatic_checklist_review.results`;
+- `project_review_plan`;
+- coverage/readiness metrics;
+- report Quality Gate.
+
+This preserves the current Test78 and live-project baseline while the stage-selection path is
+validated.
+
+### Commits
+
+- `21985ab011cec5a102aebd8f14ba7b342fb28141` — checklist: persist documentation stage in app session
+- `fb9a3062e1b5e406cbfc7ce18852e75e89233fdf` — workspace: persist documentation stage
+- `ab68be4d2cf28a0937d355fb649584ebc968a970` — workspace: restore documentation stage default
+- `b465a4443bfd7bd3edec530310b917fe667aba78` — ui: add explicit PD/RD documentation stage
+- `b2cb849d4c84c66c38d8671a1cbc65e2ddda976b` — pipeline: carry PD/RD stage without activating profile metrics
+- `4a15ed4e19450f22bbf09f06698686136cde7011` — test: persist PD/RD documentation stage
+- `6354dfe51e8b7aa873e7e39cc3936c818f9c7cad` — ui: make review mode guidance stage-aware
+- `586d4203415335d777538108f7b937a082a12755` — snapshot: preserve PD/RD documentation stage
+
+### Validation state
+
+Source/diff inspection passed:
+- branch is ahead of the prior checklist checkpoint only by the expected stage-routing files;
+- stage-specific UI text is present;
+- pipeline normalization accepts only PD/RD;
+- workspace stage participates in the autosave signature;
+- snapshot restore has a safe PD fallback for older snapshots.
+
+GitHub combined commit status remains empty and there is no open PR for the branch.
+Therefore this checkpoint is not labelled green.
+
+### Next target
+
+Build a bounded shadow execution of the selected canonical profile:
+1. run exactly one selected profile, never PD+RD together;
+2. keep shadow results outside public readiness metrics;
+3. measure atomic expansion, deterministic completion, candidate evidence, runtime and snapshot size;
+4. only after regression validation decide how profile results enter the public checklist ledger.

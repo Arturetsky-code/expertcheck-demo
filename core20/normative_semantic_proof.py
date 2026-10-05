@@ -406,6 +406,43 @@ def _selected_evidence(packet:dict[str,Any],ids:list[str])->list[dict[str,Any]]:
     return result
 
 
+def _qualified_preflight(provider:Any,role:str)->dict[str,Any]|None:
+    """Reuse the current provider benchmark instead of spending live API calls.
+
+    Production providers attached by provider_for_role carry a version-checked
+    qualification summary. Test doubles and unqualified providers still use the
+    normal live preflight path.
+    """
+    if provider is None:
+        return None
+    if not bool(getattr(provider,"qualification_required",False)):
+        return None
+    if not bool(getattr(provider,"qualification_passed",False)):
+        return None
+    summary=getattr(provider,"qualification_summary",{}) or {}
+    routes=[
+        dict(row) for row in (summary.get("actual_routes") or [])
+        if isinstance(row,dict)
+    ]
+    route=routes[0] if routes else {}
+    actual_provider=str(route.get("provider") or getattr(provider,"name","") or "")
+    model=str(route.get("model") or getattr(provider,"model","") or "")
+    return {
+        "role":str(role or "").upper(),
+        "configured_provider":str(getattr(provider,"name","") or ""),
+        "actual_provider":actual_provider,
+        "model":model,
+        "status_code":200,
+        "state":"QUALIFICATION_REUSED",
+        "error":"",
+        "ok":True,
+        "connection_ok":True,
+        "contract_probe_requested":0,
+        "contract_probe_responses":0,
+        "response_excerpt":"",
+    }
+
+
 def run_normative_semantic_proof(
     queue:list[dict[str,Any]]|None,
     *,
@@ -446,8 +483,12 @@ def run_normative_semantic_proof(
     if not packets or judge_provider is None or critic_provider is None:
         return base
 
-    judge_preflight=preflight_provider(judge_provider,"JUDGE",structured=True)
-    critic_preflight=preflight_provider(critic_provider,"CRITIC",structured=True)
+    judge_preflight=_qualified_preflight(judge_provider,"JUDGE") or preflight_provider(
+        judge_provider,"JUDGE",structured=True
+    )
+    critic_preflight=_qualified_preflight(critic_provider,"CRITIC") or preflight_provider(
+        critic_provider,"CRITIC",structured=True
+    )
     base["preflight"]={"judge":judge_preflight,"critic":critic_preflight}
     if not judge_preflight.get("ok") or not critic_preflight.get("ok"):
         base["provider_errors"]=[

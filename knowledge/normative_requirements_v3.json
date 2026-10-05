@@ -2710,9 +2710,72 @@
       "minimum_sources": 1,
       "requires_profile_owner": true,
       "requires_page_reference": true,
-      "execution_mode": "SEMANTIC_PROOF",
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "substance_quantity",
+            "label": "Вид и количество веществ и материалов",
+            "evidence_groups": [
+              {
+                "id": "substances",
+                "label": "Вещества или материалы",
+                "aliases": [
+                  "вещества",
+                  "материалы",
+                  "горючие вещества",
+                  "горючие материалы"
+                ]
+              },
+              {
+                "id": "quantity",
+                "label": "Количество",
+                "aliases": [
+                  "количество",
+                  "масса",
+                  "объем",
+                  "объём"
+                ]
+              }
+            ],
+            "group_window_chars": 500,
+            "numeric_required": true
+          },
+          {
+            "id": "fire_hazard_properties",
+            "label": "Пожароопасные свойства веществ и материалов",
+            "aliases": [
+              "пожароопасные свойства",
+              "пожароопасных свойств",
+              "показатели пожарной опасности"
+            ]
+          },
+          {
+            "id": "space_planning",
+            "label": "Объёмно-планировочные решения",
+            "aliases": [
+              "объемно-планировочные решения",
+              "объёмно-планировочные решения"
+            ]
+          },
+          {
+            "id": "process_characteristics",
+            "label": "Характеристики технологического процесса",
+            "aliases": [
+              "характеристики технологического процесса",
+              "технологический процесс",
+              "особенности технологического процесса"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

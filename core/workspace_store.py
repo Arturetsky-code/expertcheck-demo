@@ -40,6 +40,19 @@ def _from_json_bytes(value: Any) -> Any:
         with io.TextIOWrapper(compressed,encoding="utf-8") as text:
             return json.load(text)
 
+def _normative_diagnostic_changed(latest_summary:dict[str,Any]|None, diagnostic:dict[str,Any]|None)->bool:
+    latest=dict(latest_summary or {})
+    current=dict(diagnostic or {})
+    if not current:
+        return False
+    previous=latest.get("normative_diagnostic")
+    if not isinstance(previous,dict):
+        return True
+    return json.dumps(previous,ensure_ascii=False,sort_keys=True,default=str)!=json.dumps(
+        current,ensure_ascii=False,sort_keys=True,default=str
+    )
+
+
 def _session_payload(session_state) -> dict[str,Any]:
     keys=(
         "project_name","documentation_stage","analysis_time","result","object_registry_confirmed","object_assembly_rows",
@@ -261,7 +274,7 @@ class WorkspaceStore:
                                "object_registry_confirmed":payload.get("object_registry_confirmed",False),
                                "normative_diagnostic":normative_diagnostic
                            },ensure_ascii=False)))
-            elif analysis_time and normative_diagnostic and not latest_summary.get("normative_diagnostic"):
+            elif analysis_time and _normative_diagnostic_changed(latest_summary,normative_diagnostic):
                 enriched=dict(latest_summary)
                 enriched["normative_diagnostic"]=normative_diagnostic
                 latest_row=self._exec(

@@ -89,6 +89,20 @@ def _upload(ctx):
     )
     with st.container(border=True):
         name = st.text_input('Наименование проекта', value=st.session_state.project_name)
+        current_stage = str(st.session_state.get('documentation_stage') or 'ПД').upper()
+        stage_label = st.radio(
+            'Стадия документации',
+            ['ПД — проектная документация', 'РД — рабочая документация'],
+            index=1 if current_stage == 'РД' else 0,
+            horizontal=True,
+            help=(
+                'Стадия определяет канонический профиль чек-листа. '
+                'ExpertCheck не запускает профили ПД и РД одновременно.'
+            ),
+        )
+        documentation_stage = 'РД' if stage_label.startswith('РД') else 'ПД'
+        checklist_profile = 'RD' if documentation_stage == 'РД' else 'PD'
+        st.session_state.documentation_stage = documentation_stage
         mode_label=st.radio(
             'Режим проверки',
             ['Быстрая','Расширенная — рекомендуется','Полная'],
@@ -360,6 +374,8 @@ def _upload(ctx):
                 'critic_provider': critic_provider, 'reviewer_provider': critic_provider,
                 'learning_examples': st.session_state.get('object_learning_examples', []),
                 'review_mode': mode_code,
+                'documentation_stage': documentation_stage,
+                'checklist_profile': checklist_profile,
                 'semantic_checkpoint': st.session_state.setdefault('semantic_execution_checkpoint', {})}
             try:
                 st.session_state.result = ctx.analyze(files, ctx.config_dir, progress_callback=update_progress, ai_options=ai_options)
@@ -393,6 +409,7 @@ def _upload(ctx):
                 st.error(f'Проверка остановлена без сброса проекта: {type(exc).__name__}: {exc}')
                 st.stop()
             st.session_state.project_name = name.strip() or 'Новый проект'
+            st.session_state.documentation_stage = documentation_stage
             st.session_state.review_mode = mode_code
             st.session_state.review_mode_label = mode_label
             st.session_state.analysis_time = datetime.now().isoformat(timespec='minutes')

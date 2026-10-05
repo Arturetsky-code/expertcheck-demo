@@ -19,7 +19,34 @@ def _manifest():
             "system_limitations": 3,
             "demoted_keyword_only_remaining": 40,
             "semantic_queue_total": 26,
+            "semantic_completed_total": 8,
+            "semantic_reviewed_no_promotion": 1,
             "semantic_proof_applied": 7,
+            "semantic_run": {
+                "version": "20.0-alpha10.1-quality-integrity",
+                "selected_this_run": 24,
+                "pending_before_run": 30,
+                "processed_total": 8,
+                "completed_before": 4,
+                "new_decisions": 4,
+                "verified_ok": 7,
+                "newly_verified_ok": 3,
+                "reviewed_total": 1,
+                "pending_total": 22,
+                "provider_error_count": 5,
+                "contract_gate_blocked": 1,
+                "decisions": [{
+                    "requirement_id": "SP8-TEST",
+                    "state": "REVIEW_QUESTION",
+                    "judge_verdict": "SUPPORTS",
+                    "critic_accept": True,
+                    "independent": True,
+                    "semantic_contract_configured": True,
+                    "semantic_contract_ready": False,
+                    "blocker": "SEMANTIC_CONTRACT_GATE",
+                    "reason": "project-sensitive model explanation",
+                }],
+            },
             "set_completeness_queue_total": 3,
             "visual_queue_total": 2,
             "evidence_coverage_pct": 78.1,
@@ -79,7 +106,21 @@ def test_compact_normative_diagnostic_keeps_counts_not_project_text():
     assert diagnostic["verified_ok"] == 15
     assert diagnostic["held_by_proof_control"] == 40
     assert diagnostic["semantic_queue_total"] == 26
+    assert diagnostic["semantic_completed_total"] == 8
+    assert diagnostic["semantic_reviewed_no_promotion"] == 1
     assert diagnostic["review_questions"] == 46
+    assert diagnostic["semantic_run"]["selected_this_run"] == 24
+    assert diagnostic["semantic_run"]["provider_error_count"] == 5
+    assert diagnostic["semantic_run"]["decisions"] == [{
+        "requirement_id": "SP8-TEST",
+        "state": "REVIEW_QUESTION",
+        "judge_verdict": "SUPPORTS",
+        "critic_accept": True,
+        "independent": True,
+        "semantic_contract_configured": True,
+        "semantic_contract_ready": False,
+        "blocker": "SEMANTIC_CONTRACT_GATE",
+    }]
     assert diagnostic["evidence_coverage_pct"] == 78.1
     assert diagnostic["blocker_counts"]["SEMANTIC_PENDING"] == 26
     assert diagnostic["semantic_pending"]["by_source"]["ПП №87"] == 12
@@ -99,6 +140,7 @@ def test_compact_normative_diagnostic_keeps_counts_not_project_text():
     assert "project-sensitive text" not in serialized
     assert "fragment" not in serialized
     assert "candidate_pages" not in serialized
+    assert "project-sensitive model explanation" not in serialized
 
 
 def test_workspace_snapshot_includes_compact_diagnostic():

@@ -76,3 +76,83 @@ def test_emergency_lighting_presence_alone_is_not_deterministic_proof():
 
     assert set_eval["complete"] is False
     assert "Питание и включение аварийного освещения" in set_eval["missing_labels"]
+
+
+
+def test_spz_panel_promotes_without_ai_only_for_same_confirmed_object():
+    contract = _contract("SP6-2025-5.3-SPZ-PANEL")
+    category_page = _page(
+        "Электроприёмники систем противопожарной защиты относятся к I категории "
+        "по надёжности электроснабжения.",
+        document="ИОС1.pdf",
+        page=30,
+        section="ИОС1",
+    )
+    panel_page = _page(
+        "Питание электроприёмников СПЗ выполняется от панели питания электрооборудования СПЗ "
+        "в составе НКУ.",
+        document="ИОС1.pdf",
+        page=31,
+        section="ИОС1",
+    )
+    documents = [{
+        "project_understanding": {
+            "objects": [{
+                "object_id": "OBJ-1",
+                "properties": {
+                    "spz_reliability": [{"document": "ИОС1.pdf", "page": 30}],
+                    "spz_panel": [{"document": "ИОС1.pdf", "page": 31}],
+                },
+            }]
+        }
+    }]
+
+    set_eval = _set_completeness_evaluation(contract, [category_page, panel_page], documents)
+    result = _gate(contract, set_eval, category_page)
+
+    assert set_eval["complete"] is True
+    assert set_eval["owner_scope_state"] == "CONFIRMED"
+    assert set_eval["owner_object_id"] == "OBJ-1"
+    assert result["kind"] == "VERIFIED_OK"
+    assert result["proof_state"] == "DETERMINISTIC_SET_COMPLETENESS_PROOF"
+
+
+def test_spz_panel_does_not_merge_evidence_from_different_objects():
+    contract = _contract("SP6-2025-5.3-SPZ-PANEL")
+    category_page = _page(
+        "Электроприёмники систем противопожарной защиты относятся к I категории "
+        "по надёжности электроснабжения.",
+        document="ИОС1.pdf",
+        page=30,
+        section="ИОС1",
+    )
+    panel_page = _page(
+        "Питание электроприёмников СПЗ выполняется от панели питания электрооборудования СПЗ "
+        "в составе НКУ.",
+        document="ИОС1.pdf",
+        page=31,
+        section="ИОС1",
+    )
+    documents = [{
+        "project_understanding": {
+            "objects": [
+                {
+                    "object_id": "OBJ-1",
+                    "properties": {
+                        "spz_reliability": [{"document": "ИОС1.pdf", "page": 30}],
+                    },
+                },
+                {
+                    "object_id": "OBJ-2",
+                    "properties": {
+                        "spz_panel": [{"document": "ИОС1.pdf", "page": 31}],
+                    },
+                },
+            ]
+        }
+    }]
+
+    set_eval = _set_completeness_evaluation(contract, [category_page, panel_page], documents)
+
+    assert set_eval["complete"] is False
+    assert set_eval["owner_scope_state"] in {"OWNER_NOT_PROVEN", "AMBIGUOUS_OWNER"}

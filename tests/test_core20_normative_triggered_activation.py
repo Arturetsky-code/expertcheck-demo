@@ -125,3 +125,5 @@ def test_gost_21101_2026_is_verified_and_adds_two_ready_kb_contracts():
     assert doc["status"] == "Действует"
     assert doc["verified_on"] == "2026-10-05"
     assert summary["automatic_contract_ready"] >= 66
+    assert summary["triggered_only_contracts"] >= 2
+    assert summary["default_active_contracts"] >= 64

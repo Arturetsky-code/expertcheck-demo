@@ -110,11 +110,19 @@ def _upload(ctx):
             help='Быстрая — основные разделы ПД; Расширенная — ПД + ИИ + ключевая ИРД; Полная — весь комплект.'
         )
         mode_code={'Быстрая':'quick','Расширенная — рекомендуется':'extended','Полная':'full'}[mode_label]
-        st.caption({
-            'quick':'Основные разделы ПД: быстрее, подходит для ранней предпроверки.',
-            'extended':'Рекомендуемый режим перед экспертизой: ПД + ИИ + ключевая ИРД.',
-            'full':'Максимальная глубина. Для больших комплектов обработка может занимать существенно больше времени.'
-        }[mode_code])
+        stage_mode_text = {
+            'ПД': {
+                'quick':'Основные разделы ПД: быстрее, подходит для ранней предпроверки.',
+                'extended':'Рекомендуемый режим перед экспертизой: ПД + ИИ + ключевая ИРД.',
+                'full':'Максимальная глубина по комплекту ПД и доступным исходным материалам.'
+            },
+            'РД': {
+                'quick':'Основные комплекты РД: быстрее, подходит для ранней проверки выпуска.',
+                'extended':'Рекомендуемый режим: РД + ключевые исходные данные и междисциплинарные связи.',
+                'full':'Максимальная глубина по комплекту РД и доступным исходным материалам.'
+            },
+        }
+        st.caption(stage_mode_text[documentation_stage][mode_code])
         # A prepared package is kept across one Streamlit rerun so the original
         # uploader widget can disappear before expensive engineering analysis.
         # This is especially important for ZIP mode: extracted members are already

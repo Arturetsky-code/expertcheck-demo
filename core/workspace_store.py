@@ -105,6 +105,7 @@ def snapshot_signature(payload: dict[str,Any]) -> str:
         "risk_user_decisions":payload.get("risk_user_decisions") or {},
         "object_learning_examples":payload.get("object_learning_examples") or [],
         "semantic_checkpoint_packets":checkpoint_packets,
+        "canonical_core_20_diagnostic":payload.get("canonical_core_20_diagnostic") or {},
         "project_knowledge_recovery": (
             first_document.get("project_knowledge_recovery") or {}
         ),
@@ -252,13 +253,30 @@ class WorkspaceStore:
                 raw=(dict(latest).get("summary") if not isinstance(latest,dict) else latest.get("summary")) or "{}"
                 try: latest_summary=json.loads(raw)
                 except Exception: latest_summary={}
+            normative_diagnostic=payload.get("canonical_core_20_diagnostic") or {}
             if analysis_time and latest_summary.get("analysis_time") != analysis_time:
                 self._exec(con,"INSERT INTO analysis_runs(id,project_id,owner_id,created_at,app_version,summary) VALUES(?,?,?,?,?,?)",
                            (str(uuid.uuid4()),project_id,owner_id,now,app_version,json.dumps({
                                "analysis_time":analysis_time,
                                "object_registry_confirmed":payload.get("object_registry_confirmed",False),
-                               "normative_diagnostic":payload.get("canonical_core_20_diagnostic") or {}
+                               "normative_diagnostic":normative_diagnostic
                            },ensure_ascii=False)))
+            elif analysis_time and normative_diagnostic and not latest_summary.get("normative_diagnostic"):
+                enriched=dict(latest_summary)
+                enriched["normative_diagnostic"]=normative_diagnostic
+                latest_row=self._exec(
+                    con,
+                    "SELECT id FROM analysis_runs WHERE project_id=? AND owner_id=? ORDER BY created_at DESC LIMIT 1",
+                    (project_id,owner_id),
+                ).fetchone()
+                if latest_row:
+                    latest_id=(dict(latest_row).get("id") if not isinstance(latest_row,dict) else latest_row.get("id"))
+                    if latest_id:
+                        self._exec(
+                            con,
+                            "UPDATE analysis_runs SET summary=? WHERE id=? AND project_id=? AND owner_id=?",
+                            (json.dumps(enriched,ensure_ascii=False),latest_id,project_id,owner_id),
+                        )
             con.commit()
 
     def delete_project(self,owner_id:str,project_id:str) -> bool:

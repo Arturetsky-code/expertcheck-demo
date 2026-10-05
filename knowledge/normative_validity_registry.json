@@ -406,7 +406,7 @@
       ],
       "document_kind": "GOST",
       "status": "Заменён",
-      "verified_on": "2026-08-19",
+      "verified_on": "2026-10-05",
       "verified_revision": "ГОСТ Р 21.101-2020",
       "official_source_kind": "ROSSTANDART",
       "status_basis": "Росстандарт указывает ГОСТ Р 21.101-2026 как действующий с 01.04.2026 и заменяющий ГОСТ Р 21.101-2020.",
@@ -5658,14 +5658,15 @@
       ],
       "document_kind": "GOST",
       "status": "Действует",
-      "verified_on": "2026-08-19",
-      "verified_revision": "ГОСТ Р 21.101-2026",
+      "verified_on": "2026-10-05",
+      "verified_revision": "ГОСТ Р 21.101-2026 с опубликованной поправкой ИУС 11-2026",
       "effective_from": "2026-04-01",
       "official_source_kind": "ROSSTANDART",
       "verification_method": "OFFICIAL_SOURCE_SNAPSHOT",
-      "status_basis": "Росстандарт: ГОСТ Р 21.101-2026 действует с 01.04.2026; заменяет ГОСТ Р 21.101-2020.",
+      "status_basis": "Росстандарт: ГОСТ Р 21.101-2026 действует с 01.04.2026, заменяет ГОСТ Р 21.101-2020; в карточке стандарта опубликована поправка ИУС 11-2026.",
       "verification_evidence": [
-        "ROSSTANDART: приказ 129-ст от 12.02.2026"
+        "ROSSTANDART: ГОСТ Р 21.101-2026, приказ 129-ст от 12.02.2026",
+        "ROSSTANDART: поправка к ГОСТ Р 21.101-2026, ИУС 11-2026"
       ],
       "expert_occurrences": 0,
       "expert_projects": [],
@@ -5673,7 +5674,7 @@
       "expert_sections": [],
       "source_remark_ids": [],
       "priority_score": 0,
-      "verification_priority": "P3"
+      "verification_priority": "P1"
     },
     {
       "canonical_id": "SP:12.13130.2009",

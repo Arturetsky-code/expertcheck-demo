@@ -83,6 +83,74 @@ def _pp87_structural_evidence(req:dict[str,Any], page_corpus:list[dict[str,Any]]
     return {'complete':complete,'evidence':evidence,'missing':sorted({'TEXT_PART','GRAPHIC_PART'}-set(parts))}
 
 
+def _triggered_requirement_activation(
+    req:dict[str,Any],
+    page_corpus:list[dict[str,Any]]|None,
+)->dict[str,Any]:
+    """Keep event-driven KB clauses outside the legacy public ledger until triggered."""
+    contract=dict(req.get("evidence_contract") or {})
+    if str(contract.get("activation") or "").strip().upper()!="TRIGGERED_ONLY":
+        return {"active":True,"reason_code":"ALWAYS_ACTIVE","trace":[]}
+
+    expected={
+        canonical_section(value)
+        for value in (req.get("sections") or [])
+        if str(value or "").strip() and str(value).strip().upper()!="ALL"
+    }
+    keywords=[
+        normalize_text(value)
+        for value in (
+            contract.get("activation_keywords")
+            or contract.get("applicability_keywords")
+            or []
+        )
+        if normalize_text(value)
+    ]
+    regexes=[
+        str(value).strip()
+        for value in (contract.get("activation_regexes") or [])
+        if str(value or "").strip()
+    ]
+    trace=[]
+    seen=set()
+    for page in page_corpus or []:
+        if not isinstance(page,dict):
+            continue
+        document=str(page.get("document") or page.get("filename") or "")
+        section=canonical_section(page.get("document_type") or page.get("section") or document)
+        if expected and section not in expected:
+            continue
+        raw=str(page.get("text") or page.get("content") or "")
+        low=normalize_text(raw)
+        matches=[keyword for keyword in keywords if keyword and keyword in low]
+        for pattern in regexes:
+            try:
+                match=__import__("re").search(pattern,raw,__import__("re").I)
+            except Exception:
+                match=None
+            if match:
+                matches.append(str(match.group(0))[:120])
+        if not matches:
+            continue
+        key=(document,str(page.get("page")))
+        if key in seen:
+            continue
+        seen.add(key)
+        trace.append({
+            "document":document,
+            "page":page.get("page"),
+            "section":section,
+            "matched_trigger":matches[0],
+        })
+
+    minimum=max(1,int(contract.get("activation_min_hits") or 1))
+    return {
+        "active":len(trace)>=minimum,
+        "reason_code":"PROJECT_TRIGGER_PROVEN" if len(trace)>=minimum else "PROJECT_TRIGGER_NOT_FOUND",
+        "trace":trace[:6],
+    }
+
+
 class NormativeComplianceEngine:
     """Evidence-driven normative compliance over Normative KB 4.0.
 
@@ -94,10 +162,24 @@ class NormativeComplianceEngine:
         self.kb=NormativeKnowledgeBaseV4(knowledge_root)
         self.requirements=self.kb.compliance_requirements()
         self.docs=self.kb.documents_by_id
+        self.activation_audit={"registered":0,"active":0,"inactive_triggered":0,"inactive_rows":[]}
 
     def review(self, findings:list[dict[str,Any]], *, project_type:str='', limit:int=500, page_corpus:list[dict[str,Any]]|None=None)->list[dict[str,Any]]:
         rows=[]
-        for req in self.requirements[:limit]:
+        registered=self.requirements[:limit]
+        inactive=[]
+        for req in registered:
+            activation=_triggered_requirement_activation(req,page_corpus)
+            if not activation.get("active"):
+                inactive.append({
+                    "requirement_id":str(req.get("id") or ""),
+                    "source":str(req.get("source") or ""),
+                    "paragraph":str(req.get("paragraph") or ""),
+                    "topic":str(req.get("topic") or ""),
+                    "reason_code":str(activation.get("reason_code") or ""),
+                    "trace":list(activation.get("trace") or []),
+                })
+                continue
             doc=self.docs.get(str(req.get('document_id') or ''))
             quality=requirement_quality(req,doc)
             evidence=_evidence_candidates(req,findings,limit=8)
@@ -142,6 +224,7 @@ class NormativeComplianceEngine:
             }
             rows.append({
                 'requirement_id':req.get('id'),'knowledge_kind':'LAW_REQUIREMENT','source':req.get('source'),'paragraph':req.get('paragraph') or '',
+                'activation_state':'ACTIVE' if str((req.get('evidence_contract') or {}).get('activation') or '').upper()=='TRIGGERED_ONLY' else 'ALWAYS_ACTIVE',
                 'topic':req.get('topic') or '','requirement':req.get('requirement') or '','check_kind':check_kind,
                 'expected_evidence_route':sections,
                 'verification_status':req.get('verification_status') or req.get('status') or '',
@@ -157,7 +240,16 @@ class NormativeComplianceEngine:
                 'evidence_contract':contract,'evidence_packet':packet,
                 'guardrail':'Непроверенная норма или ненайденное доказательство не формируют нормативный риск проекта.',
             })
+        self.activation_audit={
+            "registered":len(registered),
+            "active":len(rows),
+            "inactive_triggered":len(inactive),
+            "inactive_rows":inactive,
+        }
         return rows
+
+    def activation_summary(self)->dict[str,Any]:
+        return dict(self.activation_audit)
 
     def coverage(self)->dict[str,Any]:
         return self.kb.coverage()

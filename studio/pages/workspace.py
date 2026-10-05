@@ -6,7 +6,7 @@ from core.project_snapshot import load_project_snapshot, snapshot_to_workspace_p
 
 def _reset_project_session():
     for k,v in {
-        "project_name":"Новый проект","result":None,"analysis_time":None,
+        "project_name":"Новый проект","documentation_stage":"ПД","result":None,"analysis_time":None,
         "object_registry_confirmed":False,"object_assembly_rows":[],
         "completeness_user_confirmed":False,"completeness_decisions":{},
         "checklist_run":None,"checklist_user_results":{},"risk_user_decisions":{},

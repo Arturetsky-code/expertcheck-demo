@@ -13,6 +13,81 @@ from core.visual_evidence_cache import build_visual_page_batches
 DUAL_RUN_VERSION = "20.0-alpha8-normative-execution"
 
 
+def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, Any]:
+    """Persist only non-sensitive aggregate normative diagnostics.
+
+    No project text, evidence fragments, page excerpts or visual payloads are
+    copied here.  The structure is intentionally small so it can be stored in
+    workspace history and queried without unpacking the full project snapshot.
+    """
+    source = dict(manifest or {})
+    execution = dict(source.get("normative_execution") or {})
+    frontier = dict(execution.get("proof_frontier") or {})
+    semantic = dict(frontier.get("semantic_pending") or {})
+    set_pending = dict(frontier.get("set_completeness") or {})
+    visual = dict(frontier.get("visual_pending") or {})
+    retained = dict(frontier.get("retained_fail_closed") or {})
+
+    def _small_counts(value: Any) -> dict[str, int]:
+        if not isinstance(value, dict):
+            return {}
+        result = {}
+        for key, raw in value.items():
+            try:
+                count = int(raw or 0)
+            except (TypeError, ValueError):
+                continue
+            if count:
+                result[str(key)] = count
+        return result
+
+    return {
+        "version": "1.0",
+        "manifest_version": str(source.get("version") or ""),
+        "registered_contracts": int(execution.get("registered_contracts") or execution.get("contracts") or 0),
+        "active_contracts": int(execution.get("active_contracts") or execution.get("contracts") or 0),
+        "inactive_triggered_contracts": int(execution.get("inactive_triggered_contracts") or 0),
+        "verified_ok": int(execution.get("verified_ok") or 0),
+        "project_findings": int(execution.get("project_findings") or 0),
+        "review_questions": int(execution.get("review_questions") or 0),
+        "system_limitations": int(execution.get("system_limitations") or 0),
+        "held_by_proof_control": int(
+            execution.get("demoted_keyword_only_remaining")
+            if execution.get("demoted_keyword_only_remaining") is not None
+            else execution.get("demoted_keyword_only") or 0
+        ),
+        "semantic_queue_total": int(execution.get("semantic_queue_total") or 0),
+        "semantic_proof_applied": int(execution.get("semantic_proof_applied") or 0),
+        "set_completeness_queue_total": int(execution.get("set_completeness_queue_total") or 0),
+        "visual_queue_total": int(execution.get("visual_queue_total") or 0),
+        "evidence_coverage_pct": float(execution.get("evidence_coverage_pct") or 0.0),
+        "blocker_counts": _small_counts(frontier.get("blocker_counts")),
+        "semantic_pending": {
+            "total": int(semantic.get("total") or 0),
+            "by_source": _small_counts(semantic.get("by_source")),
+            "by_section": _small_counts(semantic.get("by_section")),
+            "by_evidence_candidates": _small_counts(semantic.get("by_evidence_candidates")),
+            "by_retrieval_admission": _small_counts(semantic.get("by_retrieval_admission")),
+        },
+        "set_completeness": {
+            "total": int(set_pending.get("total") or 0),
+            "by_source": _small_counts(set_pending.get("by_source")),
+            "by_section": _small_counts(set_pending.get("by_section")),
+        },
+        "visual_pending": {
+            "total": int(visual.get("total") or 0),
+            "by_kind": _small_counts(visual.get("by_kind")),
+            "by_section": _small_counts(visual.get("by_section")),
+        },
+        "retained_fail_closed": {
+            "total": int(retained.get("total") or 0),
+            "by_reason": _small_counts(retained.get("by_reason")),
+            "by_source": _small_counts(retained.get("by_source")),
+            "by_section": _small_counts(retained.get("by_section")),
+        },
+    }
+
+
 def build_dual_run_manifest(
     *,
     project_name: str,

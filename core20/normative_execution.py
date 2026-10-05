@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from .normative_foundation import NormativeKnowledgeFoundation20, _section_key, default_foundation
-from .normative_proof import NormativeProofEngine20
+from .normative_proof import NormativeProofEngine20, proof_frontier_summary
 from .normative_semantic_proof import apply_normative_semantic_proof
 from .normative_visual_proof import apply_normative_visual_proof
 
@@ -1670,6 +1670,20 @@ class NormativeExecutionEngine20:
             visual_cache=dict(documents[0].get("visual_evidence_cache") or {})
         proof=apply_normative_visual_proof(proof,visual_checkpoint,visual_cache)
         rows=list(proof.get("rows") or [])
+        pending_semantic_ids={
+            str(packet.get("requirement_id") or str(packet.get("packet_id") or "").removeprefix("NORM-"))
+            for packet in (proof.get("semantic_queue") or [])
+            if str(packet.get("requirement_id") or packet.get("packet_id") or "")
+        }
+        proof["proof_frontier"]=proof_frontier_summary(
+            rows,
+            pending_requirement_ids=pending_semantic_ids,
+        )
+        proof["demoted_keyword_only_remaining"]=sum(
+            str(row.get("retrieval_kind") or "").upper()=="VERIFIED_OK"
+            and str(row.get("kind") or "").upper()!="VERIFIED_OK"
+            for row in rows
+        )
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
         graphic_structural_proof_count=sum(
             str(row.get("proof_state") or "")=="DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF"

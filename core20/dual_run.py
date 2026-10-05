@@ -41,8 +41,26 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
                 result[str(key)] = count
         return result
 
+    def _safe_frontier_rows(value: Any, *, limit: int = 100) -> list[dict[str, Any]]:
+        rows=[]
+        for raw in value or []:
+            if not isinstance(raw,dict):
+                continue
+            rows.append({
+                "requirement_id":str(raw.get("requirement_id") or ""),
+                "source":str(raw.get("source") or ""),
+                "paragraph":str(raw.get("paragraph") or ""),
+                "sections":str(raw.get("sections") or ""),
+                "topic":str(raw.get("topic") or ""),
+                "retrieval_admission":str(raw.get("retrieval_admission") or ""),
+                "retrieval_candidate_count":int(raw.get("retrieval_candidate_count") or 0),
+            })
+            if len(rows)>=max(0,int(limit or 0)):
+                break
+        return rows
+
     return {
-        "version": "1.0",
+        "version": "1.1",
         "manifest_version": str(source.get("version") or ""),
         "registered_contracts": int(execution.get("registered_contracts") or execution.get("contracts") or 0),
         "active_contracts": int(execution.get("active_contracts") or execution.get("contracts") or 0),
@@ -57,6 +75,8 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
             else execution.get("demoted_keyword_only") or 0
         ),
         "semantic_queue_total": int(execution.get("semantic_queue_total") or 0),
+        "semantic_completed_total": int(execution.get("semantic_completed_total") or 0),
+        "semantic_reviewed_no_promotion": int(execution.get("semantic_reviewed_no_promotion") or 0),
         "semantic_proof_applied": int(execution.get("semantic_proof_applied") or 0),
         "set_completeness_queue_total": int(execution.get("set_completeness_queue_total") or 0),
         "visual_queue_total": int(execution.get("visual_queue_total") or 0),
@@ -68,6 +88,7 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
             "by_section": _small_counts(semantic.get("by_section")),
             "by_evidence_candidates": _small_counts(semantic.get("by_evidence_candidates")),
             "by_retrieval_admission": _small_counts(semantic.get("by_retrieval_admission")),
+            "rows": _safe_frontier_rows(semantic.get("rows"), limit=100),
         },
         "set_completeness": {
             "total": int(set_pending.get("total") or 0),

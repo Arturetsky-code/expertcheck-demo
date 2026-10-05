@@ -857,6 +857,106 @@ def _set_element_match(
     }
 
 
+def _confirmed_owner_page_index(documents:list[dict[str,Any]]|None)->dict[tuple[str,str],set[str]]:
+    """Map addressable project-understanding evidence pages to confirmed owners.
+
+    Only evidence already admitted into Project Understanding participates.
+    Ambiguous pages intentionally retain multiple owners and are never treated
+    as a unique owner proof.
+    """
+    first=(documents or [None])[0] if documents else None
+    if not isinstance(first,dict):
+        return {}
+    model=first.get("project_understanding") or {}
+    index:dict[tuple[str,str],set[str]]={}
+    for obj in model.get("objects") or []:
+        if not isinstance(obj,dict):
+            continue
+        oid=str(obj.get("object_id") or "").strip()
+        if not oid:
+            continue
+        for evidence_rows in (obj.get("properties") or {}).values():
+            for ev in evidence_rows or []:
+                if not isinstance(ev,dict):
+                    continue
+                document=str(ev.get("document") or "").strip()
+                page=ev.get("page")
+                if not document or page in (None,""):
+                    continue
+                index.setdefault((document,str(page)),set()).add(oid)
+    return index
+
+
+def _owner_scoped_set_resolution(
+    evaluated:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+)->dict[str,Any]:
+    owner_index=_confirmed_owner_page_index(documents)
+    required=[row for row in evaluated if row.get("applicability_state")=="REQUIRED"]
+    if not required:
+        return {
+            "complete":False,
+            "owner_scope_state":"NO_REQUIRED_ELEMENTS",
+            "owner_object_id":"",
+            "evidence":[],
+        }
+
+    owner_candidates:set[str]=set()
+    evidence_by_element:dict[str,dict[str,list[dict[str,Any]]]]={}
+    ambiguous_addresses=0
+    for row in required:
+        element_id=str(row.get("id") or "")
+        per_owner:dict[str,list[dict[str,Any]]]={}
+        for item in row.get("evidence") or []:
+            document=str(item.get("document") or "").strip()
+            page=item.get("page")
+            owners=owner_index.get((document,str(page)),set()) if document and page not in (None,"") else set()
+            if len(owners)!=1:
+                if len(owners)>1:
+                    ambiguous_addresses+=1
+                continue
+            oid=next(iter(owners))
+            per_owner.setdefault(oid,[]).append({**item,"object_id":oid})
+            owner_candidates.add(oid)
+        evidence_by_element[element_id]=per_owner
+
+    complete_owners=[]
+    for oid in sorted(owner_candidates):
+        if all(evidence_by_element.get(str(row.get("id") or ""),{}).get(oid) for row in required):
+            complete_owners.append(oid)
+
+    if len(complete_owners)!=1:
+        state="AMBIGUOUS_OWNER" if len(complete_owners)>1 or ambiguous_addresses else "OWNER_NOT_PROVEN"
+        return {
+            "complete":False,
+            "owner_scope_state":state,
+            "owner_object_id":"",
+            "complete_owner_candidates":complete_owners,
+            "ambiguous_address_count":ambiguous_addresses,
+            "evidence":[],
+        }
+
+    oid=complete_owners[0]
+    evidence=[]
+    for row in required:
+        element_id=str(row.get("id") or "")
+        item=(evidence_by_element.get(element_id,{}) .get(oid) or [None])[0]
+        if isinstance(item,dict):
+            evidence.append({
+                **item,
+                "set_element_id":element_id,
+                "set_element_label":str(row.get("label") or element_id),
+            })
+    return {
+        "complete":len(evidence)==len(required),
+        "owner_scope_state":"CONFIRMED",
+        "owner_object_id":oid,
+        "complete_owner_candidates":[oid],
+        "ambiguous_address_count":ambiguous_addresses,
+        "evidence":evidence,
+    }
+
+
 def _set_completeness_evaluation(
     contract:dict[str,Any],
     pages:list[dict[str,Any]],
@@ -934,17 +1034,34 @@ def _set_completeness_evaluation(
             })
 
     atomization_complete=bool(set_contract.get("atomization_complete",True))
-    complete=(
-        bool(elements)
-        and not missing
-        and not applicability_pending
-        and atomization_complete
-    )
+    owner_scope=str(set_contract.get("owner_scope") or "").upper()
+    owner_resolution={}
+    if owner_scope=="SAME_CONFIRMED_OBJECT":
+        owner_resolution=_owner_scoped_set_resolution(evaluated,documents)
+        if owner_resolution.get("complete"):
+            evidence=list(owner_resolution.get("evidence") or [])
+        complete=(
+            bool(elements)
+            and not missing
+            and not applicability_pending
+            and atomization_complete
+            and bool(owner_resolution.get("complete"))
+        )
+    else:
+        complete=(
+            bool(elements)
+            and not missing
+            and not applicability_pending
+            and atomization_complete
+        )
     return {
         "configured":True,
         "mode":mode,
         "promotion_policy":promotion_policy,
         "atomization_complete":atomization_complete,
+        "owner_scope":owner_scope,
+        "owner_scope_state":str(owner_resolution.get("owner_scope_state") or ""),
+        "owner_object_id":str(owner_resolution.get("owner_object_id") or ""),
         "complete":complete,
         "matched_count":sum(bool(row.get("matched")) for row in evaluated),
         "required_count":sum(row.get("applicability_state")=="REQUIRED" for row in evaluated),

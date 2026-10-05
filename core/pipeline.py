@@ -82,6 +82,7 @@ from .atomic_verification_engine import (
 from .categorical_consistency import build_categorical_consistency_checks
 from .coverage_matrix import build_coverage_matrix
 from .coverage_acceleration import coverage_budget
+from .checklist_profiles import ChecklistProfileRegistry, normalize_profile_code
 from .project_snapshot import build_analysis_snapshot, corpus_fingerprint
 from .visual_evidence_cache import build_visual_evidence_cache
 from .project_knowledge_recovery import build_project_knowledge_manifest
@@ -222,6 +223,14 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     if not isinstance(semantic_checkpoint, dict):
         semantic_checkpoint = {}
     review_mode = str(ai_options.get("review_mode") or "extended").lower()
+    documentation_stage = str(ai_options.get("documentation_stage") or "").strip().upper()
+    checklist_profile = normalize_profile_code(
+        ai_options.get("checklist_profile") or documentation_stage
+    )
+    if checklist_profile not in {"PD", "RD"}:
+        checklist_profile = ""
+    if not documentation_stage and checklist_profile:
+        documentation_stage = "ПД" if checklist_profile == "PD" else "РД"
     acceleration_budget = coverage_budget(review_mode, semantic_level)
     assignment_semantic_limit = acceleration_budget.assignment_semantic_limit
     initial_checklist_semantic_limit = acceleration_budget.initial_checklist_semantic_limit
@@ -735,6 +744,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         "project_type": str(pp87_project_profile.get("project_type") or pp87_project_profile.get("profile") or "") if isinstance(pp87_project_profile, dict) else str(pp87_project_profile or ""),
         "name": " ".join(str(x.get("Файл") or "") for x in documents[:5]),
         "description": " ".join(str(x.get("Раздел") or x.get("Тип документа") or "") for x in documents),
+        "documentation_stage": documentation_stage,
+        "checklist_profile": checklist_profile,
     }
     checklist_atomic_review = {"version":"1.0","atoms":[],"summary":{"atomic_conditions":0}}
     automatic_review = {"programme":[],"runs":[],"results":[],"summary":{"automatic":True}}
@@ -742,6 +753,19 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
         automatic_review = AutomaticProjectReview(root / "knowledge").execute(
             documents, comparisons, findings, project_context=project_context
         )
+        if checklist_profile:
+            profile_summary = ChecklistProfileRegistry(root / "knowledge").summary(checklist_profile)
+            automatic_review["profile_selection"] = {
+                "documentation_stage": documentation_stage,
+                "checklist_profile": checklist_profile,
+                "canonical_profile": profile_summary,
+                "runtime_state": "REGISTERED_NOT_ACTIVATED",
+                "public_metrics_included": False,
+                "reason": (
+                    "Канонический профиль зарегистрирован в runtime, но пока не добавлен "
+                    "в публичные результаты до отдельной регрессионной проверки."
+                ),
+            }
     except Exception as exc:
         automatic_review["summary"]["error"] = str(exc)
         pipeline_errors.append({"stage":"automatic_checklist_programme","error":str(exc)})
@@ -961,6 +985,8 @@ def analyze_uploaded_core(files, config_dir, progress_callback=None, ai_options=
     # all UI/report consumers already read these structures from documents[0].
     for doc_index, doc in enumerate(documents):
         doc["core_version"] = "18.0-stage1-project-data-contract"
+        doc["documentation_stage"] = documentation_stage
+        doc["checklist_profile"] = checklist_profile
         doc["Распознано страниц с таблицами"] = table_pages_by_doc.get(doc.get("Файл", ""), 0)
         if doc_index:
             continue

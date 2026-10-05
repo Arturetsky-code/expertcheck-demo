@@ -3488,3 +3488,135 @@ Build a bounded shadow execution of the selected canonical profile:
 2. keep shadow results outside public readiness metrics;
 3. measure atomic expansion, deterministic completion, candidate evidence, runtime and snapshot size;
 4. only after regression validation decide how profile results enter the public checklist ledger.
+
+
+## Normative knowledge expansion — GOST R 21.101-2026 wave 1
+
+Development date: 2026-10-05.
+
+### Baseline preserved
+
+The verified live normative baseline before this wave remains:
+- active contracts: 64;
+- proved: 15;
+- held by proof control: 40;
+- semantic proof applied: 7;
+- pending semantic queue: 26;
+- specialist questions: 46;
+- system limitations: 3;
+- addressable evidence: 78.1%.
+
+The purpose of this wave is to grow the curated NTD knowledge base without automatically
+inflating the active project denominator or specialist-question queue.
+
+### Knowledge-base split
+
+Before this wave:
+- total normative rules: 75;
+- strict verified/categorical contracts: 64;
+- clause-verification backlog: 11.
+
+After this wave:
+- normative rules: 77;
+- strict registered contracts: 66;
+- triggered-only contracts: 2;
+- default active contract pool: 64;
+- clause-verification backlog: 11 (PP87: 10; 384-FZ: 1).
+
+This introduces an explicit distinction between:
+1. registered verified NTD knowledge;
+2. contracts active for a concrete project run.
+
+### GOST R 21.101-2026 status
+
+The document/status registry and validity registry were refreshed:
+- GOST R 21.101-2026: active from 2026-04-01;
+- replaces GOST R 21.101-2020;
+- current trace includes the published correction IUS 11-2026;
+- GOST R 21.101-2020 is recorded as replaced.
+
+### New verified contracts
+
+Added two clause-addressed contracts:
+- `GOST21101-2026-7.3.1-CHANGE-NUMBER` — change number is assigned at document level;
+- `GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES` — PD document changes are performed independently within each document.
+
+Both are `TRIGGERED_ONLY`.
+
+A project with no addressable change marker does not receive these checks in:
+- Core20 normative execution;
+- legacy `NormativeComplianceEngine`;
+- public review plan;
+- semantic proof queue;
+- readiness/coverage denominator.
+
+When an addressable change marker is present, the clause is activated and proceeds through
+the ordinary applicability/retrieval/proof contract.
+
+### Runtime changes
+
+Core20 normative execution now exposes:
+- `registered_contracts`;
+- `active_contracts`;
+- `inactive_triggered_contracts`;
+- `inactive_triggered_contract_rows`.
+
+Normative foundation summary now separates:
+- `automatic_contract_ready`;
+- `triggered_only_contracts`;
+- `default_active_contracts`.
+
+Legacy normative compliance exposes the same activation audit through the pipeline summary.
+
+Existing `CONDITIONAL` fail-closed semantics were preserved. Event-driven activation is a
+new mode and does not weaken applicability handling for fire/mining/other conditional clauses.
+
+### Validation
+
+Production checkpoint:
+`cc983cd35942098d788ee1f5f5616619e3107c44`
+
+GitHub Actions:
+- Source Snapshot Artifact: success;
+- Core20 quality gates: success;
+- Core25 Quality Leap gates: success.
+
+Test78 on the latest production-pipeline commit in this wave:
+- classification: NO_CHANGE;
+- baseline/current: 56 requirements;
+- VERIFIED_OK: 25 -> 25;
+- PROJECT_FINDING: 2 -> 2;
+- REVIEW_QUESTION: 29 -> 29;
+- changed IDs: none.
+
+The earlier Core25 release-gate failure was traced to three checklist-profile tests using a
+cwd-dependent `knowledge` path. The tests were repaired to use a repository-root absolute
+fixture path. Core25 then returned to success; checklist production behavior was not changed.
+
+### Key commits
+
+- `3cd858384f76b0efc7701401c166f3b4752cd7cf` — verify GOST R 21.101-2026 status
+- `c8aeb59b221ee4de3cc427278fbc32b4bde1ac35` — refresh GOST 21.101 validity trace
+- `c47a3f9588ad7b6501bb664c74a7262ea9492337` — add GOST 21.101-2026 change contracts
+- `d33bc72b4b687337d151711ca6abe487114a7cc6` — triggered-only Core20 activation
+- `0e6ff359989ec6256514f08220bbc333a17a583a` — activate change clauses only on change evidence
+- `d372a26639124641c8741a138416c7e0f7681e9f` — triggered-only legacy ledger
+- `b9f1af9b9fc8665e9f1b307697763445ccb86bde` — expose activation audit in pipeline
+- `e1cb82894cf9492c83ece76659492a708b54ce57` — fix cwd-independent checklist test fixtures
+- `9ed86f164d20fe30557cb957d3bc44dc04cd1f79` — separate registered/default-active summary
+- `cc983cd35942098d788ee1f5f5616619e3107c44` — lock normative activation tests
+
+### Next target
+
+Do not add a large second NTD wave yet.
+
+First validate the expanded foundation against the preserved live project:
+1. registered strict contracts should become 66;
+2. if the project has no actual document-change trigger, active contracts should remain 64;
+3. existing 15 proved / 40 held / 26 pending / 46 specialist-question baseline must not worsen
+   merely because the KB grew;
+4. extract the existing `proof_frontier` diagnostic and rank the unresolved population by
+   blocker/reason/source/section/evidence-admission state.
+
+Then choose the next NTD clauses from the dominant real blocker/expert-history family rather
+than expanding documents sequentially.

@@ -874,6 +874,56 @@ def atomic_evidence_facts(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]
     return result
 
 
+def _checklist_profile_code(row: dict[str, Any]) -> str:
+    raw = str(row.get("checklist_profile") or row.get("profile_code") or "").strip().upper()
+    aliases = {
+        "ПД": "PD", "PD": "PD", "PROJECT": "PD", "PROJECT_DOCUMENTATION": "PD",
+        "РД": "RD", "RD": "RD", "WORKING": "RD", "WORKING_DOCUMENTATION": "RD",
+    }
+    if raw in aliases:
+        return aliases[raw]
+    return re.sub(r"[^A-Z0-9_-]+", "-", raw).strip("-")[:24]
+
+
+def _checklist_parent_identity(row: dict[str, Any], index: int) -> tuple[str, str]:
+    explicit = str(row.get("checklist_parent_id") or "").strip()
+    profile = _checklist_profile_code(row)
+    if explicit:
+        return explicit, profile
+    source_id = row.get("checklist_item_id")
+    if source_id in (None, ""):
+        source_id = row.get("source_question_id")
+    if source_id in (None, ""):
+        source_id = row.get("question_id")
+    if source_id in (None, ""):
+        source_id = row.get("id")
+    if profile and source_id not in (None, ""):
+        source = str(source_id).strip()
+        if source.isdigit():
+            source = f"{int(source):04d}"
+        else:
+            source = re.sub(r"[^A-Za-zА-Яа-я0-9_-]+", "-", source).strip("-")[:40]
+        if source:
+            return f"CHECK-{profile}-{source}", profile
+    return f"CHECK-{index:04d}", profile
+
+
+def _checklist_expected_sections(row: dict[str, Any]) -> list[str]:
+    raw = row.get("expected_sections")
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    else:
+        values = []
+    values = [str(value).strip() for value in values if str(value or "").strip()]
+    if not values:
+        section = str(row.get("automatic_section") or row.get("section") or row.get("Раздел") or "").strip()
+        if section:
+            values = [section]
+    return list(dict.fromkeys(values))
+
+
 def verify_checklist_rows(
     checklist_rows: list[dict[str, Any]], *, knowledge_root: str,
     fact_graph: dict[str, Any], page_corpus: list[dict[str, Any]],
@@ -894,29 +944,42 @@ def verify_checklist_rows(
     for index, row in enumerate(checklist_rows or [], 1):
         if row.get("is_heading"):
             continue
-        parent_id = f"CHECK-{index:04d}"
+        parent_id, profile = _checklist_parent_identity(row, index)
+        if parent_id in row_by_parent:
+            raise ValueError(f"Duplicate checklist parent id: {parent_id}")
         question = str(row.get("question") or row.get("Позиция по чек-листу") or "").strip()
         if not question:
             continue
-        section = str(row.get("automatic_section") or row.get("section") or row.get("Раздел") or "").strip()
+        criteria = str(row.get("criteria") or row.get("criterion") or row.get("Критерий") or "").strip()
+        expected_sections = _checklist_expected_sections(row)
         requirement = {
             "requirement_id": parent_id,
             "requirement_text": question,
             "domain": "checklist",
-            "source_row": row.get("item_no") or row.get("position") or index,
+            "source_row": row.get("item_no") or row.get("position") or row.get("source_question_id") or row.get("id") or index,
             "source_row_title": row.get("automatic_checklist") or row.get("source_file") or "",
             "object_name": row.get("object_name") or row.get("entity") or "",
+            "expected_evidence": criteria,
+            "checklist_profile": profile,
+            "checklist_priority": row.get("priority"),
             "compiled_rule": dict(row.get("compiled_rule") or {}),
             "typed_check": row.get("typed_check") or (row.get("compiled_rule") or {}).get("typed_check") or "",
         }
         children = atomize_requirement(requirement, domain="checklist")
         for child in children:
-            if section:
-                child["expected_sections"] = [section]
+            if expected_sections:
+                child["expected_sections"] = list(expected_sections)
+                child["expected_evidence_route"] = list(expected_sections)
                 contract = dict(child.get("evidence_contract_v2") or {})
-                contract["expected_sections"] = [section]
+                contract["expected_sections"] = list(expected_sections)
                 child["evidence_contract_v2"] = contract
             child["checklist_parent_id"] = parent_id
+            child["checklist_profile"] = profile
+            child["checklist_priority"] = row.get("priority")
+            child["checklist_criteria"] = criteria
+        row["checklist_parent_id"] = parent_id
+        if profile:
+            row["checklist_profile"] = profile
         atoms.extend(children)
         row_by_parent[parent_id] = row
 

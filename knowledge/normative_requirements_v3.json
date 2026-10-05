@@ -3985,5 +3985,124 @@
       "applicability_min_hits": 1
     },
     "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "GOST21101-2026-7.3.1-CHANGE-NUMBER",
+    "source": "ГОСТ Р 21.101-2026",
+    "topic": "Нумерация изменений документа",
+    "requirement": "При внесении изменений каждому изменению документа присваивается очередной порядковый номер; один номер относится ко всем изменениям данного документа по одному разрешению и действует для документа в целом независимо от числа его листов.",
+    "sections": [
+      "ПЗ",
+      "ПЗУ",
+      "АР",
+      "КР",
+      "ИОС",
+      "ТХ",
+      "ПОС",
+      "ООС",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "SEMANTIC",
+    "keywords": [
+      "номер изменения",
+      "порядковый номер изменения",
+      "Изм. 1",
+      "Изм. 2",
+      "таблица изменений",
+      "регистрация изменений"
+    ],
+    "document_id": "GOST-R-21.101-2026",
+    "paragraph": "п. 7.3.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 1,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "Изм.",
+        "изменение",
+        "таблица изменений",
+        "регистрация изменений",
+        "Зам."
+      ],
+      "applicability_min_hits": 1,
+      "proof_type": "SEMANTIC_REQUIREMENT",
+      "semantic_proof_contract": {
+        "decision_question": "Подтверждает ли адресное доказательство, что номер изменения ведётся на уровне конкретного документа и применяется к документу в целом?",
+        "required_facts": [
+          "Идентифицирован конкретный документ",
+          "Зафиксирован номер изменения этого документа"
+        ]
+      }
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
+    "id": "GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES",
+    "source": "ГОСТ Р 21.101-2026",
+    "topic": "Самостоятельное внесение изменений в документы ПД",
+    "requirement": "Изменения в документы разделов и подразделов проектной документации выполняются самостоятельно в пределах каждого документа независимо от комплектования документации.",
+    "sections": [
+      "ПЗ",
+      "ПЗУ",
+      "АР",
+      "КР",
+      "ИОС",
+      "ТХ",
+      "ПОС",
+      "ООС",
+      "ПБ"
+    ],
+    "check_kind": "CROSS_DOCUMENT",
+    "automation": "SEMANTIC",
+    "keywords": [
+      "номер изменения",
+      "Изм.",
+      "таблица изменений",
+      "ведомость графической части",
+      "содержание тома"
+    ],
+    "document_id": "GOST-R-21.101-2026",
+    "paragraph": "п. 7.4.1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "applicability": {
+      "object_types": [],
+      "project_types": []
+    },
+    "evidence_contract": {
+      "minimum_sources": 2,
+      "requires_profile_owner": false,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 1,
+      "applicability": "CONDITIONAL",
+      "applicability_keywords": [
+        "Изм.",
+        "изменение",
+        "таблица изменений",
+        "регистрация изменений",
+        "Зам."
+      ],
+      "applicability_min_hits": 1,
+      "proof_type": "SEMANTIC_REQUIREMENT",
+      "semantic_proof_contract": {
+        "decision_question": "Показывают ли адресные сведения из изменённых документов ПД, что изменения учитываются самостоятельно для каждого документа, а не глобально для всего комплекта?",
+        "required_facts": [
+          "Есть как минимум два адресных источника из изменённых документов ПД",
+          "Номер/версия изменения прослеживается по каждому документу отдельно"
+        ]
+      }
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
   }
 ]

@@ -3322,3 +3322,94 @@ First separate those populations by machine-readable reason code and proof state
 5. genuine project-side uncertainty.
 
 Preserve Test78 and the current live metrics as non-regression baselines.
+
+
+## Checklist profiles foundation — PD/RD reference integration
+
+Development date: 2026-10-05.
+
+Reference source:
+- RAM project-documentation checklist (PD): 571 questions / 20 disciplines;
+- RAM working-documentation checklist (RD): 296 questions / 13 disciplines.
+
+### Architectural decision
+
+The new PD/RD checklists are not merged into the legacy `knowledge/checklist_catalog.json`.
+The legacy catalog remains unchanged and continues to drive the existing automatic checklist router.
+
+The new checklists are stored as independent canonical stage profiles:
+- `knowledge/checklist_profiles/pd.json`;
+- `knowledge/checklist_profiles/rd.json`.
+
+This prevents duplicate rules, keeps the existing 761-row corporate catalog stable, and allows
+the application to select exactly one stage profile when the project/documentation stage is known.
+
+### Core contract added
+
+Checklist atomic verification now supports:
+- stable namespaced parent IDs for stage profiles:
+  - `CHECK-PD-0001`;
+  - `CHECK-RD-0001`;
+- unchanged legacy sequence IDs when no profile is supplied;
+- checklist profile metadata on every atomic condition;
+- checklist priority and criteria propagation;
+- multiple expected evidence sections per checklist item;
+- duplicate parent-ID rejection instead of silent overwriting.
+
+Review-plan construction now preserves:
+- `checklist_parent_id`;
+- `checklist_profile`;
+- priority;
+- criteria;
+- multi-section evidence routes.
+
+### Canonical profile registry
+
+Added `core/checklist_profiles.py`.
+
+The registry validates:
+- profile code;
+- unique positive question IDs;
+- priority in {1, 2, 3};
+- non-empty discipline and question;
+- declared question count;
+- normalized multi-section evidence routes.
+
+Static source validation after import:
+- PD: 571 unique IDs, 20 disciplines, priorities P1=206 / P2=364 / P3=1;
+- RD: 296 unique IDs, 13 disciplines, priorities P1=109 / P2=182 / P3=5;
+- empty criteria: 0;
+- broken linked/dependency references: 0.
+
+Intentionally unresolved routing remains fail-closed:
+- PD: Общие решения, ОПО Промбез, ТБЭ, Энергоэффективность;
+- RD: Общие требования, Финальная проверка.
+
+These groups must not be mapped to arbitrary project sections.
+
+### Commits
+
+- `be0264d203403a462f98d59e93593993bf343e02` — checklist: preserve PD/RD profile identity and evidence routes
+- `e87420bd0659c08c45446c8f37ef284bff87d75e` — test: lock PD/RD checklist profile contract
+- `ddc76297260409a2d38a874f18c033cf43538da6` — checklist: add PD canonical profile
+- `efa6da106e416a4b2d1edbef51bdb070a8b34d1c` — checklist: add RD canonical profile
+- `daebba8b1d2cb042f9e3fb04e675313f6f52f4db` — checklist: add PD/RD profile registry
+- `2c3b0a14750c2130b47058cdd774699384ff7b83` — test: validate canonical PD/RD profiles
+- `f5f57304f20d021c2f8d9b9f3209ca96deef2ed3` — checklist: preserve profile trace in review plan
+- `01e9ef359f0e5094641c70f440a5ef201f554bb1` — test: preserve checklist profile trace in review plan
+
+### Validation state
+
+Static profile validation passed. GitHub combined status currently exposes no CI statuses for
+the latest commits through the connector, so this checkpoint must not yet be called green.
+
+No existing runtime path automatically activates PD or RD profiles yet. This is intentional:
+the current ExpertCheck behavior and Test78 baseline are not changed by the profile data itself.
+
+### Next development target
+
+Add an explicit documentation-stage selection (PD / RD) to the project setup and carry that
+selection into the analysis runtime. Then activate exactly one canonical checklist profile and
+run a bounded regression before allowing profile results into public readiness metrics.
+
+Do not activate PD and RD simultaneously by default.

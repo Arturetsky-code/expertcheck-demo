@@ -60,7 +60,7 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
         return rows
 
     return {
-        "version": "1.2",
+        "version": "1.3",
         "manifest_version": str(source.get("version") or ""),
         "registered_contracts": int(execution.get("registered_contracts") or execution.get("contracts") or 0),
         "active_contracts": int(execution.get("active_contracts") or execution.get("contracts") or 0),
@@ -90,6 +90,9 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
             "reviewed_total": int((execution.get("semantic_run") or {}).get("reviewed_total") or 0),
             "pending_total": int((execution.get("semantic_run") or {}).get("pending_total") or 0),
             "provider_error_count": int((execution.get("semantic_run") or {}).get("provider_error_count") or 0),
+            "provider_error_categories": _small_counts(
+                (execution.get("semantic_run") or {}).get("provider_error_categories")
+            ),
             "contract_gate_blocked": int((execution.get("semantic_run") or {}).get("contract_gate_blocked") or 0),
             "decisions": [
                 {
@@ -100,6 +103,10 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
                     "independent": bool(item.get("independent",True)),
                     "semantic_contract_configured": bool(item.get("semantic_contract_configured")),
                     "semantic_contract_ready": bool(item.get("semantic_contract_ready")),
+                    "semantic_contract_missing_groups": [
+                        str(value) for value in (item.get("semantic_contract_missing_groups") or [])
+                        if str(value)
+                    ][:12],
                     "blocker": str(item.get("blocker") or ""),
                 }
                 for item in ((execution.get("semantic_run") or {}).get("decisions") or [])

@@ -44,7 +44,7 @@ def _session_payload(session_state) -> dict[str,Any]:
     keys=(
         "project_name","documentation_stage","analysis_time","result","object_registry_confirmed","object_assembly_rows",
         "completeness_user_confirmed","completeness_decisions","checklist_run","checklist_user_results",
-        "risk_user_decisions","object_learning_examples","semantic_execution_checkpoint",
+        "risk_user_decisions","object_learning_examples","semantic_execution_checkpoint","canonical_core_20_diagnostic",
     )
     out={}
     for k in keys:
@@ -256,7 +256,8 @@ class WorkspaceStore:
                 self._exec(con,"INSERT INTO analysis_runs(id,project_id,owner_id,created_at,app_version,summary) VALUES(?,?,?,?,?,?)",
                            (str(uuid.uuid4()),project_id,owner_id,now,app_version,json.dumps({
                                "analysis_time":analysis_time,
-                               "object_registry_confirmed":payload.get("object_registry_confirmed",False)
+                               "object_registry_confirmed":payload.get("object_registry_confirmed",False),
+                               "normative_diagnostic":payload.get("canonical_core_20_diagnostic") or {}
                            },ensure_ascii=False)))
             con.commit()
 

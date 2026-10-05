@@ -28,6 +28,32 @@ def _packet_requirement_id(packet: dict[str, Any]) -> str:
     return pid.removeprefix("NORM-")
 
 
+def _semantic_priority(packet: dict[str, Any]) -> tuple[int, int, int, str]:
+    """Prefer the most addressable proof packets without changing verdict policy."""
+    retrieval_kind=str(packet.get("retrieval_kind") or "").upper()
+    reason=str(packet.get("retrieval_reason_code") or "").upper()
+    if retrieval_kind=="VERIFIED_OK":
+        admission=3
+    elif reason=="NORMATIVE_STRONG_NEAR_MISS_CANDIDATE":
+        admission=2
+    elif reason=="NORMATIVE_EVIDENCE_WEAK":
+        admission=1
+    else:
+        admission=0
+    contract=1 if isinstance(packet.get("semantic_proof_contract"),dict) and packet.get("semantic_proof_contract") else 0
+    candidates=int(packet.get("retrieval_candidate_count") or len(packet.get("evidence") or []))
+    rid=_packet_requirement_id(packet)
+    return (admission,contract,candidates,rid)
+
+
+def _prioritize_pending(queue: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        [dict(packet) for packet in queue if isinstance(packet,dict)],
+        key=_semantic_priority,
+        reverse=True,
+    )
+
+
 def _positive_confidence(value: Any) -> bool:
     try:
         return float(value or 0) > 0
@@ -202,12 +228,14 @@ def run_normative_semantic_proof(
         root_fingerprint = queue_fp
         root_total = len(source) + len(carried)
 
+    prioritized_pending=_prioritize_pending(pending)
     current = _ORIGINAL_RUN(
-        pending,
+        prioritized_pending,
         judge_provider=judge_provider,
         critic_provider=critic_provider,
         limit=limit,
     )
+    current["priority_policy"]="STRICT_RETRIEVAL > STRONG_NEAR_MISS > WEAK_RETRIEVAL; then Semantic Gate 2.0; then candidate count"
     current["selected_this_run"] = int(current.get("selected") or 0)
     current["pending_before_run"] = len(pending)
     return _merge_result(

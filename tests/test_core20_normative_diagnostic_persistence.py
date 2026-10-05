@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from core.workspace_store import session_snapshot, snapshot_signature
+from core.workspace_store import _normative_diagnostic_changed, session_snapshot, snapshot_signature
 from core20.dual_run import compact_normative_diagnostic
 
 
@@ -125,3 +125,14 @@ def test_compact_diagnostic_changes_workspace_signature():
     })
 
     assert snapshot_signature(base) != snapshot_signature(enriched)
+
+
+
+def test_history_backfill_refreshes_when_diagnostic_version_or_content_changes():
+    old={"normative_diagnostic":{"version":"1.0","semantic_queue_total":47}}
+    upgraded={"version":"1.1","semantic_queue_total":47,"semantic_pending":{"rows":[{"requirement_id":"R1"}]}}
+    same=dict(upgraded)
+
+    assert _normative_diagnostic_changed(old,upgraded) is True
+    assert _normative_diagnostic_changed({"normative_diagnostic":same},upgraded) is False
+    assert _normative_diagnostic_changed({},upgraded) is True

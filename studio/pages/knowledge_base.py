@@ -29,6 +29,16 @@ def _persist_normative_semantic_proof(value:dict) -> bool:
     return False
 
 
+def _current_semantic_checkpoint() -> dict:
+    result=st.session_state.get("result")
+    if not isinstance(result,(list,tuple)) or not result:
+        return {}
+    documents=result[0]
+    if isinstance(documents,list) and documents and isinstance(documents[0],dict):
+        return dict(documents[0].get("normative_semantic_proof") or {})
+    return {}
+
+
 def _persist_normative_visual_proof(value:dict) -> bool:
     """Persist resumable visual proof beside the project snapshot."""
     result=st.session_state.get("result")
@@ -893,6 +903,7 @@ def render(ctx):
                                 judge_provider=judge,
                                 critic_provider=critic,
                                 limit=24,
+                                checkpoint=_current_semantic_checkpoint(),
                             )
                         if not _persist_normative_semantic_proof(proof):
                             st.error("Не удалось сохранить результат смысловой проверки в цифровой снимок проекта.")
@@ -901,7 +912,10 @@ def render(ctx):
                                 st.warning(_provider_error_summary(proof.get("provider_errors") or []))
                             else:
                                 st.success(
-                                    f"Смысловая проверка завершена: подтверждено {proof.get('verified_ok',0)} из {proof.get('selected',0)} выбранных пакетов."
+                                    f"Смысловая волна завершена: обработано {proof.get('new_decisions',proof.get('selected',0))}; "
+                                    f"новых подтверждений {proof.get('newly_verified_ok',proof.get('verified_ok',0))}; "
+                                    f"ещё не обработано {proof.get('pending_unprocessed',0)}. "
+                                    f"Ранее завершённые решения сохранены: {proof.get('completed_before',0)}."
                                 )
                             st.rerun()
 

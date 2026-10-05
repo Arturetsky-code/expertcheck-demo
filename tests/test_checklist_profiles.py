@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from core.checklist_profiles import ChecklistProfileRegistry, normalize_profile_code
 from core.project_review_planner import build_review_plan
+
+
+ROOT = Path(__file__).resolve().parents[1] / "knowledge"
 
 
 def test_profile_aliases_are_stage_safe():
@@ -12,7 +17,7 @@ def test_profile_aliases_are_stage_safe():
 
 
 def test_pd_profile_loads_canonical_question_set():
-    registry = ChecklistProfileRegistry("knowledge")
+    registry = ChecklistProfileRegistry(ROOT)
     rows = registry.load("PD")
 
     assert len(rows) == 571
@@ -24,7 +29,7 @@ def test_pd_profile_loads_canonical_question_set():
 
 
 def test_rd_profile_loads_canonical_question_set():
-    registry = ChecklistProfileRegistry("knowledge")
+    registry = ChecklistProfileRegistry(ROOT)
     rows = registry.load("РД")
 
     assert len(rows) == 296
@@ -36,7 +41,7 @@ def test_rd_profile_loads_canonical_question_set():
 
 
 def test_same_numeric_question_id_is_unique_between_profiles():
-    registry = ChecklistProfileRegistry("knowledge")
+    registry = ChecklistProfileRegistry(ROOT)
     pd_first = registry.load("PD")[0]
     rd_first = registry.load("RD")[0]
 

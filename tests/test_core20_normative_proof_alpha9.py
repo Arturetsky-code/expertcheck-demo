@@ -744,3 +744,70 @@ def test_alpha9_structural_graphic_proof_cannot_override_unproven_applicability(
     assert row["proof_state"]=="RETAINED_FAIL_CLOSED"
     assert row["reason_code"]=="NORMATIVE_APPLICABILITY_NOT_PROVEN"
     assert result["verified_ok"]==0
+
+
+
+def test_alpha9_explicit_presence_check_kind_bypasses_semantic_queue():
+    source=[{
+        "requirement_id":"PRESENCE-EXPLICIT",
+        "source":"НТД",
+        "paragraph":"1.1",
+        "sections":["ПЗ"],
+        "check_kind":"PRESENCE",
+        "requirement":"Сведения должны быть указаны в проектной документации.",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "reason_code":"NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
+        "evidence_document":"ПЗ.pdf",
+        "evidence_page":7,
+        "evidence_fragment":"Категория помещения В1 указана в проектной документации.",
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"E-PRESENCE-1",
+            "document":"ПЗ.pdf",
+            "page":7,
+            "section":"ПЗ",
+            "fragment":"Категория помещения В1 указана в проектной документации.",
+        }],
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["proof_type"]=="PRESENCE"
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="ADDRESSABLE_PRESENCE_PROOF"
+    assert result["semantic_queue_total"]==0
+
+
+def test_alpha9_explicit_presence_does_not_promote_weak_retrieval():
+    source=[{
+        "requirement_id":"PRESENCE-WEAK",
+        "source":"НТД",
+        "paragraph":"1.1",
+        "sections":["ПЗ"],
+        "check_kind":"PRESENCE",
+        "requirement":"Сведения должны быть указаны в проектной документации.",
+        "kind":"REVIEW_QUESTION",
+        "state":"Вопрос специалисту",
+        "reason_code":"NORMATIVE_EVIDENCE_WEAK",
+        "evidence_document":"ПЗ.pdf",
+        "evidence_page":7,
+        "evidence_fragment":"Категория.",
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"E-PRESENCE-WEAK",
+            "document":"ПЗ.pdf",
+            "page":7,
+            "section":"ПЗ",
+            "fragment":"Категория.",
+        }],
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["proof_type"]=="PRESENCE"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert result["verified_ok"]==0

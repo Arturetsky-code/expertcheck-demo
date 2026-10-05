@@ -60,7 +60,7 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
         return rows
 
     return {
-        "version": "1.1",
+        "version": "1.2",
         "manifest_version": str(source.get("version") or ""),
         "registered_contracts": int(execution.get("registered_contracts") or execution.get("contracts") or 0),
         "active_contracts": int(execution.get("active_contracts") or execution.get("contracts") or 0),
@@ -78,6 +78,34 @@ def compact_normative_diagnostic(manifest: dict[str, Any] | None) -> dict[str, A
         "semantic_completed_total": int(execution.get("semantic_completed_total") or 0),
         "semantic_reviewed_no_promotion": int(execution.get("semantic_reviewed_no_promotion") or 0),
         "semantic_proof_applied": int(execution.get("semantic_proof_applied") or 0),
+        "semantic_run": {
+            "version": str((execution.get("semantic_run") or {}).get("version") or ""),
+            "selected_this_run": int((execution.get("semantic_run") or {}).get("selected_this_run") or 0),
+            "pending_before_run": int((execution.get("semantic_run") or {}).get("pending_before_run") or 0),
+            "processed_total": int((execution.get("semantic_run") or {}).get("processed_total") or 0),
+            "completed_before": int((execution.get("semantic_run") or {}).get("completed_before") or 0),
+            "new_decisions": int((execution.get("semantic_run") or {}).get("new_decisions") or 0),
+            "verified_ok": int((execution.get("semantic_run") or {}).get("verified_ok") or 0),
+            "newly_verified_ok": int((execution.get("semantic_run") or {}).get("newly_verified_ok") or 0),
+            "reviewed_total": int((execution.get("semantic_run") or {}).get("reviewed_total") or 0),
+            "pending_total": int((execution.get("semantic_run") or {}).get("pending_total") or 0),
+            "provider_error_count": int((execution.get("semantic_run") or {}).get("provider_error_count") or 0),
+            "contract_gate_blocked": int((execution.get("semantic_run") or {}).get("contract_gate_blocked") or 0),
+            "decisions": [
+                {
+                    "requirement_id": str(item.get("requirement_id") or ""),
+                    "state": str(item.get("state") or ""),
+                    "judge_verdict": str(item.get("judge_verdict") or ""),
+                    "critic_accept": bool(item.get("critic_accept")),
+                    "independent": bool(item.get("independent",True)),
+                    "semantic_contract_configured": bool(item.get("semantic_contract_configured")),
+                    "semantic_contract_ready": bool(item.get("semantic_contract_ready")),
+                    "blocker": str(item.get("blocker") or ""),
+                }
+                for item in ((execution.get("semantic_run") or {}).get("decisions") or [])
+                if isinstance(item,dict)
+            ][:100],
+        },
         "set_completeness_queue_total": int(execution.get("set_completeness_queue_total") or 0),
         "visual_queue_total": int(execution.get("visual_queue_total") or 0),
         "evidence_coverage_pct": float(execution.get("evidence_coverage_pct") or 0.0),

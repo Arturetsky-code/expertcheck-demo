@@ -902,7 +902,7 @@ def render(ctx):
                                 semantic_queue,
                                 judge_provider=judge,
                                 critic_provider=critic,
-                                limit=24,
+                                limit=4,
                                 checkpoint=_current_semantic_checkpoint(),
                             )
                         if not _persist_normative_semantic_proof(proof):

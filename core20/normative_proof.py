@@ -616,6 +616,47 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     if proof_type == "SET_COMPLETENESS":
         set_eval=dict(result.get("set_completeness") or {})
         promotion=str(set_eval.get("promotion_policy") or "HOLD").upper()
+        if bool(set_eval.get("complete")) and promotion=="DETERMINISTIC_AFTER_COMPLETE":
+            set_evidence=[]
+            seen_elements=set()
+            for item in set_eval.get("evidence") or []:
+                if not isinstance(item,dict):
+                    continue
+                element_id=str(item.get("set_element_id") or "")
+                if element_id and element_id in seen_elements:
+                    continue
+                if element_id:
+                    seen_elements.add(element_id)
+                set_evidence.append({
+                    "evidence_id":str(item.get("evidence_id") or ""),
+                    "document":str(item.get("document") or ""),
+                    "page":item.get("page"),
+                    "section":str(item.get("section") or ""),
+                    "fragment":str(item.get("fragment") or ""),
+                    "matched_keywords":list(item.get("matched_terms") or []),
+                    "set_element_id":element_id,
+                    "set_element_label":str(item.get("set_element_label") or ""),
+                })
+            if set_evidence:
+                result["evidence_candidates"]=set_evidence
+                result["retrieval_candidate_count"]=len(set_evidence)
+                primary=set_evidence[0]
+                result["evidence_id"]=primary.get("evidence_id") or ""
+                result["evidence_document"]=primary.get("document") or ""
+                result["evidence_page"]=primary.get("page")
+                result["evidence_fragment"]=primary.get("fragment") or ""
+                result["matched_keywords"]=list(primary.get("matched_keywords") or [])
+            result["kind"]="VERIFIED_OK"
+            result["state"]="Подтверждено"
+            result["proof_state"]="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+            result["reason_code"]="NORMATIVE_SET_COMPLETENESS_PROOF_CONFIRMED"
+            result["reason"]=(
+                "Все атомизированные обязательные элементы набора имеют адресные доказательства; "
+                "атомизация завершена, применимость элементов разрешена, поэтому требование "
+                "подтверждено детерминированным set-contract без AI."
+            )
+            return result
+
         if bool(set_eval.get("complete")) and promotion=="SEMANTIC_AFTER_COMPLETE":
             set_evidence=[]
             seen_elements=set()

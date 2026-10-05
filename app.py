@@ -35,7 +35,7 @@ WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
 if not st.session_state.get('auth_user'):
     auth_screen(WORKSPACE_STORE)
     st.stop()
-for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None}.items():
+for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None,'documentation_stage':'ПД'}.items():
     st.session_state.setdefault(k,v)
 if not st.session_state.get('_verified_core_ai_migrated'):
     if st.session_state.get('ai_judge_provider') == 'Авто: OpenRouter → Groq':
@@ -74,6 +74,7 @@ with st.sidebar:
         st.session_state.result=None
         st.session_state.analysis_time=None
         st.session_state.project_name='Новый проект'
+        st.session_state.documentation_stage='ПД'
         st.session_state.object_registry_confirmed=False
         st.session_state.object_assembly_rows=[]
         st.session_state.checklist_run=None

@@ -3953,3 +3953,146 @@ Next live action:
 - run one more resumable semantic wave after provider rate-limit recovery;
 - the four completed decisions must be skipped;
 - analyze the new completed/pending delta before changing retry policy or adding NTD.
+
+
+## Deterministic normative proof expansion — owner-scoped wave
+
+Development date: 2026-10-05.
+
+### Direction
+
+ExpertCheck keeps deterministic proof as the primary normative path:
+1. verified NTD clause;
+2. applicability;
+3. addressable retrieval;
+4. deterministic proof contract where the requirement is formalizable;
+5. Semantic Gate / independent Judge-Critic only for the genuine semantic remainder.
+
+The live semantic runs confirmed that provider reliability is not a suitable primary
+proof mechanism. AI remains a residual layer, not the normative engine.
+
+### Deterministic responsibility-level proof
+
+Requirement:
+- `FZ384-4-7-RESP-LEVEL`
+
+Changed from generic semantic proof to positive deterministic presence:
+- `check_kind=PRESENCE`;
+- `execution_mode=POSITIVE_PRESENCE_ONLY`.
+
+Positive addressable evidence that establishes one lawful responsibility level may
+close the requirement without AI. Missing evidence never creates a project finding.
+
+Registry commit:
+- `5406d2f4bfb4dbd68848febde6021cfdc042891d`
+
+Regression commit:
+- `fe1a5334bacbc4ecc1a00f8f68f7f2f76cd4f957`
+
+Validation:
+- Core20: success;
+- Core25 release gate: success;
+- Test78: NO_CHANGE, 56 requirements, 25 VERIFIED_OK / 2 PROJECT_FINDING / 29 REVIEW,
+  changed IDs none.
+
+### Owner-scoped SET_COMPLETENESS
+
+A safety gap was found in generic set completeness: section-scoped evidence could
+theoretically satisfy different required elements using pages belonging to different
+objects in a multi-object project.
+
+Normative execution now supports:
+- `set_contract.owner_scope=SAME_CONFIRMED_OBJECT`.
+
+The owner index is built only from evidence already admitted into
+`documents[0].project_understanding`, therefore it inherits:
+- stable Project Understanding `object_id`;
+- owner-lineage checks;
+- scope binding;
+- Fact Admission Gate.
+
+Rules:
+- all required set elements must be evidenced for the same confirmed object_id;
+- evidence split across two objects does not close the set;
+- a page mapped to more than one owner is ambiguous and cannot close the set;
+- absent/ambiguous owner binding is fail-closed.
+
+Core commits:
+- `be85395743227909709ec1d169a18a9f874f87b3`
+- `2332895e75471426be507a2929b5face1746b58a`
+
+Regression commit:
+- `bd05942cf719d198531fae4fe22aa69d1d0fe080`
+
+Validation:
+- two-object split is blocked;
+- one confirmed owner closes the complete set;
+- ambiguous owner page is blocked;
+- Core20 and full Core25 release gate: success.
+
+### Fire categorization without AI
+
+Requirement:
+- `FZ123-27-3-CATEGORY-BASIS`
+
+Converted to owner-scoped deterministic `SET_COMPLETENESS`,
+`DETERMINISTIC_AFTER_COMPLETE`.
+
+Required elements:
+1. kind and quantity of substances/materials, with a numeric quantity;
+2. fire-hazard properties;
+3. space-planning solutions;
+4. characteristics of the technological process.
+
+The complete set must belong to one confirmed Project Understanding object.
+
+Registry commit:
+- `9405016d7f1749c00f9e31945ad00d855e47b512`
+
+Regression commit:
+- `52c2ef9916420f8e480d397cf685ddb850a4364d`
+
+Validation:
+- one-owner complete set closes;
+- cross-object evidence does not close;
+- Core20 success;
+- full Core25 success;
+- Test78 NO_CHANGE.
+
+Requirement:
+- `SP12-4.2-CATEGORY-INPUTS`
+
+Reuses the same owner-scoped categorization input set because the clause requires
+the same formalizable evidence dimensions.
+
+Registry commit:
+- `bfc041b9813453f61e5c70b1d124bfb22b689cfe`
+
+Regression commit:
+- `88548528918a285a81d843258074c54642f99da9`
+
+Validation:
+- Core20 success;
+- full Core25 release gate success;
+- Test78 NO_CHANGE;
+- Test78 baseline/current remains 56 requirements,
+  25 VERIFIED_OK / 2 PROJECT_FINDING / 29 REVIEW, changed IDs none.
+
+### Next proof archetype
+
+Do not bulk-convert semantic contracts by topic/keyword.
+
+Next target is a typed, owner-bound engineering proof archetype for requirements
+that relate multiple structured properties. Candidate:
+`GOST27751-10.1-CLASS-LEVEL-GAMMA`.
+
+Before allowing automatic promotion:
+- prove that class, responsibility level and reliability coefficient belong to
+  the same confirmed object;
+- implement typed value normalization and minimum-threshold mapping;
+- explicitly hold special cases/exceptions unless applicability is proven;
+- absence/conflict must remain REVIEW/SYSTEM_LIMITATION unless a dedicated
+  machine-readable negative deviation contract exists.
+
+Checklist work remains paused.
+AI semantic proof remains a residual fallback.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -125,7 +126,7 @@ def _triggered_requirement_activation(
         matches=[keyword for keyword in keywords if keyword and keyword in low]
         for pattern in regexes:
             try:
-                match=__import__("re").search(pattern,raw,__import__("re").I)
+                match=re.search(pattern,raw,re.I)
             except Exception:
                 match=None
             if match:

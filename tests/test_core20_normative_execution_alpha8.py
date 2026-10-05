@@ -1212,3 +1212,101 @@ def test_alpha8_pzu_fallback_cannot_create_structural_proof():
     assert trusted["structural_review_required_count"]==0
     assert trusted["visual_review_required_count"]==0
     assert trusted["structural_proof_complete"] is True
+
+
+
+def _owner_model_document(*rows):
+    objects={}
+    for object_id,document,page in rows:
+        obj=objects.setdefault(object_id,{
+            "object_id":object_id,
+            "name":object_id,
+            "properties":{"TEST":[]},
+        })
+        obj["properties"]["TEST"].append({
+            "document":document,
+            "page":page,
+            "section":"ПЗ",
+            "fact_admission_decision":"ADMIT",
+        })
+    return {"project_understanding":{"objects":list(objects.values())}}
+
+
+def _owner_scoped_set_contract():
+    return {
+        "requirement_id":"OWNER-SET-TEST",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"ALL_REQUIRED",
+                "promotion_policy":"DETERMINISTIC_AFTER_COMPLETE",
+                "atomization_complete":True,
+                "owner_scope":"SAME_CONFIRMED_OBJECT",
+                "elements":[
+                    {
+                        "id":"first",
+                        "label":"Первый признак",
+                        "aliases":["первый признак"],
+                    },
+                    {
+                        "id":"second",
+                        "label":"Второй признак",
+                        "aliases":["второй признак"],
+                    },
+                ],
+            }
+        },
+    }
+
+
+def test_alpha8_owner_scoped_set_cannot_merge_two_project_objects():
+    pages=[
+        {"document":"ПЗ.pdf","document_type":"ПЗ","page":10,"text":"Первый признак подтвержден."},
+        {"document":"ПЗ.pdf","document_type":"ПЗ","page":20,"text":"Второй признак подтвержден."},
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-A","ПЗ.pdf",10),
+        ("OBJ-B","ПЗ.pdf",20),
+    )]
+
+    result=_set_completeness_evaluation(_owner_scoped_set_contract(),pages,documents)
+
+    assert result["complete"] is False
+    assert result["owner_scope"]=="SAME_CONFIRMED_OBJECT"
+    assert result["owner_scope_state"]=="OWNER_NOT_PROVEN"
+    assert result["owner_object_id"]==""
+    assert result["evidence"]
+
+
+def test_alpha8_owner_scoped_set_confirms_one_project_object_only():
+    pages=[
+        {"document":"ПЗ.pdf","document_type":"ПЗ","page":10,"text":"Первый признак подтвержден."},
+        {"document":"ПЗ.pdf","document_type":"ПЗ","page":11,"text":"Второй признак подтвержден."},
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-A","ПЗ.pdf",10),
+        ("OBJ-A","ПЗ.pdf",11),
+    )]
+
+    result=_set_completeness_evaluation(_owner_scoped_set_contract(),pages,documents)
+
+    assert result["complete"] is True
+    assert result["owner_scope_state"]=="CONFIRMED"
+    assert result["owner_object_id"]=="OBJ-A"
+    assert {row["object_id"] for row in result["evidence"]}=={"OBJ-A"}
+    assert {row["set_element_id"] for row in result["evidence"]}=={"first","second"}
+
+
+def test_alpha8_owner_scoped_set_holds_when_page_owner_is_ambiguous():
+    pages=[
+        {"document":"ПЗ.pdf","document_type":"ПЗ","page":10,"text":"Первый признак подтвержден. Второй признак подтвержден."},
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-A","ПЗ.pdf",10),
+        ("OBJ-B","ПЗ.pdf",10),
+    )]
+
+    result=_set_completeness_evaluation(_owner_scoped_set_contract(),pages,documents)
+
+    assert result["complete"] is False
+    assert result["owner_scope_state"]=="AMBIGUOUS_OWNER"
+    assert result["owner_object_id"]==""

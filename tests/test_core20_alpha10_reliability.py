@@ -448,3 +448,33 @@ def test_alpha10_recalculates_live_held_frontier_after_accumulated_semantic_deci
     assert result["proof_frontier"]["blocker_counts"]["SEMANTIC_REVIEWED_NO_PROMOTION"] == 1
     assert result["proof_frontier"]["semantic_pending"]["total"] == 1
     assert result["proof_frontier"]["semantic_pending"]["rows"][0]["requirement_id"] == "R3"
+
+
+
+def test_alpha10_bounded_wave_prioritizes_strict_retrieval_over_weak(monkeypatch):
+    weak=_packet("WEAK")
+    weak["retrieval_kind"]="REVIEW_QUESTION"
+    weak["retrieval_reason_code"]="NORMATIVE_EVIDENCE_WEAK"
+    weak["retrieval_candidate_count"]=4
+
+    strict=_packet("STRICT")
+    strict["retrieval_kind"]="VERIFIED_OK"
+    strict["retrieval_reason_code"]="NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED"
+    strict["retrieval_candidate_count"]=2
+
+    captured={}
+    monkeypatch.setattr(a10,"_previous_checkpoint",lambda:{})
+    def fake_run(queue,judge_provider=None,critic_provider=None,limit=24):
+        captured["queue"]=[packet["requirement_id"] for packet in queue]
+        return {"decisions":{},"selected":min(limit,len(queue)),"provider_errors":[]}
+    monkeypatch.setattr(a10,"_ORIGINAL_RUN",fake_run)
+
+    result=a10.run_normative_semantic_proof(
+        [weak,strict],
+        judge_provider=object(),
+        critic_provider=object(),
+        limit=1,
+    )
+
+    assert captured["queue"][0]=="STRICT"
+    assert result["priority_policy"].startswith("STRICT_RETRIEVAL")

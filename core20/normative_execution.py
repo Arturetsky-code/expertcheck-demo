@@ -940,7 +940,7 @@ def _owner_scoped_set_resolution(
     evidence=[]
     for row in required:
         element_id=str(row.get("id") or "")
-        item=(evidence_by_element.get(element_id,{}) .get(oid) or [None])[0]
+        item=(evidence_by_element.get(element_id,{}).get(oid) or [None])[0]
         if isinstance(item,dict):
             evidence.append({
                 **item,

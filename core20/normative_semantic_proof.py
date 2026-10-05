@@ -13,7 +13,7 @@ from core.semantic_evidence_engine import (
 )
 
 
-ENGINE_VERSION = "20.0-alpha10.1-semantic-proof-resumable"
+ENGINE_VERSION = "20.0-alpha10-semantic-proof-gate2"
 
 
 def _fingerprint(queue: list[dict[str, Any]]) -> str:
@@ -412,7 +412,6 @@ def run_normative_semantic_proof(
     judge_provider:Any=None,
     critic_provider:Any=None,
     limit:int=24,
-    checkpoint:dict[str,Any]|None=None,
 )->dict[str,Any]:
     """Run bounded independent semantic proof over normative packets.
 
@@ -423,33 +422,12 @@ def run_normative_semantic_proof(
     """
     source=[dict(x) for x in (queue or []) if isinstance(x,dict)]
     fp=_fingerprint(source)
-    pending_ids={
-        str(packet.get("requirement_id") or str(packet.get("packet_id") or "").removeprefix("NORM-"))
-        for packet in source
-        if str(packet.get("requirement_id") or packet.get("packet_id") or "")
-    }
-    previous=dict(checkpoint or {})
-    previous_decisions={
-        str(key):dict(value)
-        for key,value in (previous.get("decisions") or {}).items()
-        if isinstance(value,dict)
-    }
-    # The queue supplied by NormativeExecutionEngine is already the pending-only
-    # queue after checkpoint validation. Therefore any previous decision whose
-    # requirement is absent from this queue is a completed/reusable decision and
-    # must survive the next bounded wave.
-    preserved_decisions={
-        rid:decision
-        for rid,decision in previous_decisions.items()
-        if rid not in pending_ids
-    }
     source_packet_fingerprints={
         str(packet.get("packet_id") or ""):_packet_fingerprint(packet)
         for packet in source
         if str(packet.get("packet_id") or "")
     }
-    selected_source=source[:max(0,int(limit or 0))]
-    packets=[_as_semantic_packet(x) for x in selected_source]
+    packets=[_as_semantic_packet(x) for x in source[:max(0,int(limit or 0))]]
     packets=[x for x in packets if x.get("evidence")]
     base={
         "version":ENGINE_VERSION,
@@ -457,23 +435,13 @@ def run_normative_semantic_proof(
         "queue_total":len(source),
         "selected":len(packets),
         "evidence_candidates":sum(len(packet.get("evidence") or []) for packet in packets),
-        "decisions":dict(preserved_decisions),
-        "completed_before":len(preserved_decisions),
-        "new_decisions":0,
-        "pending_unprocessed":len(source),
-        "newly_verified_ok":0,
-        "verified_ok":sum(
-            str(value.get("state") or "").upper()=="VERIFIED_OK"
-            for value in preserved_decisions.values()
-        ),
-        "review_questions":sum(
-            str(value.get("state") or "").upper()=="REVIEW_QUESTION"
-            for value in preserved_decisions.values()
-        )+len(source),
+        "decisions":{},
+        "verified_ok":0,
+        "review_questions":len(source),
         "provider_errors":[],
         "preflight":{},
         "contract_gate_blocked":0,
-        "principle":"Only independent Judge/Critic SUPPORTS that also pass Semantic Proof Gate 2.0 may promote semantic normative proof; completed decisions are preserved across bounded resumable waves; no automatic negative verdict is emitted.",
+        "principle":"Only independent Judge/Critic SUPPORTS that also pass Semantic Proof Gate 2.0 may promote semantic normative proof; no automatic negative verdict is emitted.",
     }
     if not packets or judge_provider is None or critic_provider is None:
         return base
@@ -613,20 +581,9 @@ def run_normative_semantic_proof(
             "semantic_contract_group_results":list(contract_gate.get("group_results") or []),
             "semantic_contract_reason":str(contract_gate.get("reason") or ""),
         }
-    merged_decisions=dict(preserved_decisions)
-    merged_decisions.update(decisions)
-    base["decisions"]=merged_decisions
-    base["new_decisions"]=len(decisions)
-    base["pending_unprocessed"]=max(0,len(source)-len(decisions))
-    base["newly_verified_ok"]=verified
-    base["verified_ok"]=sum(
-        str(value.get("state") or "").upper()=="VERIFIED_OK"
-        for value in merged_decisions.values()
-    )
-    base["review_questions"]=sum(
-        str(value.get("state") or "").upper()=="REVIEW_QUESTION"
-        for value in merged_decisions.values()
-    )+base["pending_unprocessed"]
+    base["decisions"]=decisions
+    base["verified_ok"]=verified
+    base["review_questions"]=max(0,len(source)-verified)
     base["contract_gate_blocked"]=sum(
         1 for pid,gate in semantic_contract_gates.items()
         if (
@@ -728,20 +685,7 @@ def apply_normative_semantic_proof(
             row["reason_code"]="NORMATIVE_SEMANTIC_PROOF_CONFIRMED"
             row["reason"]=str(decision.get("reason") or "Нормативное требование подтверждено независимым semantic proof.")
             applied+=1
-    completed_ids={str(value) for value in reusable if str(value)}
-    pending_queue=[
-        dict(packet) for packet in queue
-        if str(packet.get("requirement_id") or str(packet.get("packet_id") or "").removeprefix("NORM-"))
-        not in completed_ids
-    ]
     result["rows"]=rows
-    result["semantic_queue"]=pending_queue
-    result["semantic_queue_total"]=len(pending_queue)
-    result["semantic_completed_total"]=len(completed_ids)
-    result["semantic_reviewed_no_promotion"]=sum(
-        str((reusable.get(rid) or {}).get("state") or "").upper()=="REVIEW_QUESTION"
-        for rid in completed_ids
-    )
     result["verified_ok"]=sum(str(x.get("kind") or "").upper()=="VERIFIED_OK" for x in rows)
     result["review_questions"]=sum(str(x.get("kind") or "").upper()=="REVIEW_QUESTION" for x in rows)
     result["system_limitations"]=sum(str(x.get("kind") or "").upper()=="SYSTEM_LIMITATION" for x in rows)

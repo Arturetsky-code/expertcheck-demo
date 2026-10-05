@@ -1685,6 +1685,52 @@ class NormativeExecutionEngine20:
             for row in rows
         )
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
+        semantic_run_decisions=[]
+        for rid,raw in dict(semantic_checkpoint.get("decisions") or {}).items():
+            if not isinstance(raw,dict):
+                continue
+            state=str(raw.get("state") or "").upper()
+            if state not in {"VERIFIED_OK","REVIEW_QUESTION"}:
+                continue
+            if bool(raw.get("semantic_contract_configured")) and not bool(raw.get("semantic_contract_ready")):
+                blocker="SEMANTIC_CONTRACT_GATE"
+            elif str(raw.get("judge_verdict") or "").upper()!="SUPPORTS":
+                blocker="JUDGE_NOT_SUPPORTS"
+            elif not bool(raw.get("independent",True)):
+                blocker="MODEL_INDEPENDENCE"
+            elif not bool(raw.get("critic_accept")):
+                blocker="CRITIC_NOT_ACCEPT"
+            else:
+                blocker=""
+            semantic_run_decisions.append({
+                "requirement_id":str(rid),
+                "state":state,
+                "judge_verdict":str(raw.get("judge_verdict") or ""),
+                "critic_accept":bool(raw.get("critic_accept")),
+                "independent":bool(raw.get("independent",True)),
+                "semantic_contract_configured":bool(raw.get("semantic_contract_configured")),
+                "semantic_contract_ready":bool(raw.get("semantic_contract_ready")),
+                "blocker":blocker,
+            })
+        semantic_run={
+            "version":str(semantic_checkpoint.get("version") or ""),
+            "selected_this_run":int(semantic_checkpoint.get("selected_this_run") or semantic_checkpoint.get("selected") or 0),
+            "pending_before_run":int(semantic_checkpoint.get("pending_before_run") or semantic_checkpoint.get("queue_total") or 0),
+            "processed_total":int(semantic_checkpoint.get("processed_total") or len(semantic_run_decisions)),
+            "completed_before":int(semantic_checkpoint.get("completed_before") or 0),
+            "new_decisions":int(semantic_checkpoint.get("new_decisions") or 0),
+            "verified_ok":int(semantic_checkpoint.get("verified_ok") or 0),
+            "newly_verified_ok":int(semantic_checkpoint.get("newly_verified_ok") or 0),
+            "reviewed_total":int(semantic_checkpoint.get("reviewed_total") or 0),
+            "pending_total":int(semantic_checkpoint.get("pending_total") or 0),
+            "provider_error_count":len([
+                value for value in (semantic_checkpoint.get("provider_errors") or [])
+                if str(value)
+            ]),
+            "contract_gate_blocked":int(semantic_checkpoint.get("contract_gate_blocked") or 0),
+            "decisions":semantic_run_decisions,
+        }
+
         graphic_structural_proof_count=sum(
             str(row.get("proof_state") or "")=="DETERMINISTIC_GRAPHIC_STRUCTURE_PROOF"
             for row in rows
@@ -1735,9 +1781,15 @@ class NormativeExecutionEngine20:
             "visual_item_queue_addressed":int(proof.get("visual_item_queue_addressed") or 0),
             "visual_item_queue_sheet_fallback":int(proof.get("visual_item_queue_sheet_fallback") or 0),
             "visual_item_queue_unresolved":int(proof.get("visual_item_queue_unresolved") or 0),
+            "semantic_queue_processed":int(proof.get("semantic_queue_processed") or 0),
+            "semantic_completed_total":int(proof.get("semantic_completed_total") or 0),
+            "semantic_queue_confirmed":int(proof.get("semantic_queue_confirmed") or 0),
+            "semantic_queue_reviewed":int(proof.get("semantic_queue_reviewed") or 0),
+            "semantic_reviewed_no_promotion":int(proof.get("semantic_reviewed_no_promotion") or 0),
             "semantic_proof_applied":int(proof.get("semantic_proof_applied") or 0),
             "semantic_proof_stale":bool(proof.get("semantic_proof_stale")),
             "semantic_proof_summary":dict(proof.get("semantic_proof_summary") or {}),
+            "semantic_run":semantic_run,
             "visual_proof_applied":int(proof.get("visual_proof_applied") or 0),
             "visual_contracts_confirmed":int(proof.get("visual_contracts_confirmed") or 0),
             "visual_proof_stale":bool(proof.get("visual_proof_stale")),

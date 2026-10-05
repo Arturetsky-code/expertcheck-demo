@@ -163,11 +163,14 @@ def build_review_plan(
         if row.get('is_heading'):continue
         q=classify_verification(row,'checklist')
         items.append({
-            'plan_id':f'CHECK-{i:04d}','domain':'Чек-листы','domain_code':'checklist',
+            'plan_id':_txt(row.get('checklist_parent_id')) or f'CHECK-{i:04d}','domain':'Чек-листы','domain_code':'checklist',
             'title':_txt(row.get('question') or row.get('Позиция по чек-листу')),'check_type':_txt(row.get('typed_check') or row.get('execution_class') or row.get('check_type')),
-            'scope':_txt(row.get('automatic_section') or row.get('section') or row.get('Раздел')),'expected_evidence':_txt(row.get('expected_evidence') or row.get('required_evidence')),
+            'scope':_txt(row.get('automatic_section') or row.get('section') or row.get('Раздел')),'expected_evidence':_txt(row.get('criteria') or row.get('expected_evidence') or row.get('required_evidence')),
             'entity':_txt(row.get('object_name') or row.get('entity')),
             'metric':_txt(row.get('parameter_code') or row.get('parameter_name')),
+            'checklist_profile':_txt(row.get('checklist_profile')),
+            'checklist_priority':row.get('priority'),
+            'checklist_criteria':_txt(row.get('criteria')),
             'proof_kind':_txt(row.get('proof_kind')),
             'deep_evidence_state':_txt(row.get('deep_evidence_state')),
             'adversarial_state':_txt(row.get('adversarial_state') or row.get('deep_evidence_state')),
@@ -177,8 +180,8 @@ def build_review_plan(
                 row.get('deep_evidence_candidate_count')
                 or len(row.get('verification_evidence') or row.get('evidence_candidates') or [])
             ),
-            'expected_sections':[row.get('automatic_section')] if row.get('automatic_section') else [],'status':_legacy_status(q['verification_kind']),**q,
-            'source_id':_txt(row.get('item_no') or row.get('position')),
+            'expected_sections':_as_list(row.get('expected_sections')) or ([row.get('automatic_section')] if row.get('automatic_section') else []),'status':_legacy_status(q['verification_kind']),**q,
+            'source_id':_txt(row.get('checklist_parent_id') or row.get('source_question_id') or row.get('item_no') or row.get('position')),
             'recommendation':_txt(row.get('recommendation')),
             'coverage_archetype':_txt(row.get('coverage_archetype')),
             'coverage_state':_txt(row.get('coverage_state')),

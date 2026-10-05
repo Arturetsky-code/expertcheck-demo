@@ -3921,7 +3921,7 @@
       "minimum_sources": 1,
       "requires_profile_owner": true,
       "requires_page_reference": true,
-      "execution_mode": "SEMANTIC_PROOF",
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
       "applicability": "CONDITIONAL",
       "applicability_keywords": [
@@ -3929,7 +3929,86 @@
         "первая категория",
         "АВР"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "spz_first_category",
+            "label": "I категория надёжности электроприёмников СПЗ",
+            "evidence_groups": [
+              {
+                "id": "spz",
+                "label": "Система противопожарной защиты",
+                "aliases": [
+                  "систем противопожарной защиты",
+                  "электроприемники СПЗ",
+                  "электроприёмники СПЗ",
+                  "электрооборудование СПЗ"
+                ]
+              },
+              {
+                "id": "category",
+                "label": "I категория надёжности",
+                "aliases": [
+                  "I категория",
+                  "1 категория",
+                  "первая категория"
+                ]
+              },
+              {
+                "id": "reliability",
+                "label": "Признак надёжности электроснабжения",
+                "aliases": [
+                  "категория надежности",
+                  "категория надёжности",
+                  "надежности электроснабжения",
+                  "надёжности электроснабжения"
+                ]
+              }
+            ],
+            "group_window_chars": 520
+          },
+          {
+            "id": "spz_panel_nku",
+            "label": "Питание СПЗ от выделенной панели НКУ",
+            "evidence_groups": [
+              {
+                "id": "spz",
+                "label": "Система противопожарной защиты",
+                "aliases": [
+                  "электроприемников СПЗ",
+                  "электроприёмников СПЗ",
+                  "электрооборудования СПЗ",
+                  "систем противопожарной защиты"
+                ]
+              },
+              {
+                "id": "panel",
+                "label": "Панель питания СПЗ",
+                "aliases": [
+                  "панель питания электрооборудования СПЗ",
+                  "панель питания СПЗ"
+                ]
+              },
+              {
+                "id": "nku",
+                "label": "НКУ",
+                "aliases": [
+                  "НКУ",
+                  "низковольтного комплектного устройства",
+                  "низковольтное комплектное устройство"
+                ]
+              }
+            ],
+            "group_window_chars": 520
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

@@ -13,7 +13,7 @@ try:
     from studio.pages import PAGES
     from studio.auth import auth_screen
     from core.workspace_store import get_store, session_snapshot, snapshot_signature
-    from core20.dual_run import build_dual_run_manifest
+    from core20.dual_run import build_dual_run_manifest, compact_normative_diagnostic
     from core.free_ai_patch import install as install_free_ai_patch
     from core.gemini_runtime_preference import install as install_gemini_runtime_preference
     from core.quality_gates_patch import install as install_quality_gates
@@ -35,7 +35,7 @@ WORKSPACE_STORE=get_store(st.secrets, base_dir=BASE_DIR/'.expertcheck_data')
 if not st.session_state.get('auth_user'):
     auth_screen(WORKSPACE_STORE)
     st.stop()
-for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None,'documentation_stage':'ПД'}.items():
+for k,v in {'project_name':'Новый проект','result':None,'analysis_time':None,'page':'Проект','expert_mode':False,'completeness_profile':'Капитальный объект','completeness_forming':True,'completeness_user_confirmed':False,'completeness_decisions':{},'object_registry_confirmed':False,'object_assembly_rows':[],'checklist_run':None,'checklist_user_results':{},'external_ai_provider':'Отключён','ai_extraction_provider':'Groq','ai_judge_provider':'Groq','ai_critic_provider':'Gemini','ai_reviewer_provider':'Gemini','ai_assisted_extraction':True,'ai_pipeline_level':'Умный автоматический','ai_object_reviews':{},'ai_checklist_reviews':{},'risk_user_decisions':{},'object_learning_examples':[],'semantic_execution_checkpoint':{},'provider_benchmark_results':{},'provider_benchmark_runs':{},'active_project_id':None,'documentation_stage':'ПД','canonical_core_20_diagnostic':{}}.items():
     st.session_state.setdefault(k,v)
 if not st.session_state.get('_verified_core_ai_migrated'):
     if st.session_state.get('ai_judge_provider') == 'Авто: OpenRouter → Groq':
@@ -173,8 +173,10 @@ if st.session_state.result:
             assembly_rows=rows,
         )
         st.session_state.canonical_core_20_manifest=manifest
+        st.session_state.canonical_core_20_diagnostic=compact_normative_diagnostic(manifest)
     except Exception as exc:
         st.session_state.canonical_core_20_manifest={}
+        st.session_state.canonical_core_20_diagnostic={}
         if st.session_state.get('expert_mode'):
             st.sidebar.caption(f'Core20 shadow: {type(exc).__name__}')
     ctx=StudioContext(
@@ -190,6 +192,7 @@ if st.session_state.result:
     _autosave_current_project()
 else:
     st.session_state.canonical_core_20_manifest={}
+    st.session_state.canonical_core_20_diagnostic={}
     ctx=StudioContext(
         data=(None,None,None,None,None,None,None),
         version=VERSION,

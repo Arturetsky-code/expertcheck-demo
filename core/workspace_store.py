@@ -42,7 +42,7 @@ def _from_json_bytes(value: Any) -> Any:
 
 def _session_payload(session_state) -> dict[str,Any]:
     keys=(
-        "project_name","analysis_time","result","object_registry_confirmed","object_assembly_rows",
+        "project_name","documentation_stage","analysis_time","result","object_registry_confirmed","object_assembly_rows",
         "completeness_user_confirmed","completeness_decisions","checklist_run","checklist_user_results",
         "risk_user_decisions","object_learning_examples","semantic_execution_checkpoint",
     )
@@ -90,6 +90,7 @@ def snapshot_signature(payload: dict[str,Any]) -> str:
             }
     marker={
         "project_name":payload.get("project_name"),
+        "documentation_stage":payload.get("documentation_stage"),
         "analysis_time":payload.get("analysis_time"),
         "result_identity":id(result),
         "result_counts":counts,

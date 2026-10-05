@@ -1685,6 +1685,31 @@ class NormativeExecutionEngine20:
             for row in rows
         )
         counts={kind:sum(1 for row in rows if row.get("kind")==kind) for kind in KIND_LABELS}
+        def _provider_error_category(value:Any)->str:
+            text=" ".join(str(value or "").upper().split())
+            if not text:
+                return "UNKNOWN"
+            if "429" in text or "RATE LIMIT" in text or "TOO MANY REQUEST" in text:
+                return "RATE_LIMIT"
+            if "402" in text or "PAYMENT" in text or "CREDIT" in text or "BALANCE" in text:
+                return "BILLING_LIMIT"
+            if "401" in text or "UNAUTHORIZED" in text or "INVALID API KEY" in text:
+                return "AUTH"
+            if "403" in text or "FORBIDDEN" in text or "ACCESS DENIED" in text:
+                return "ACCESS_DENIED"
+            if "TIMEOUT" in text or "TIMED OUT" in text or "408" in text:
+                return "TIMEOUT"
+            if any(code in text for code in ("500","502","503","504")) or "SERVER ERROR" in text:
+                return "SERVER_ERROR"
+            if "JSON" in text or "CONTRACT" in text or "SCHEMA" in text:
+                return "STRUCTURED_OUTPUT"
+            return "OTHER"
+
+        semantic_provider_errors=[
+            _provider_error_category(value)
+            for value in (semantic_checkpoint.get("provider_errors") or [])
+            if str(value)
+        ]
         semantic_run_decisions=[]
         for rid,raw in dict(semantic_checkpoint.get("decisions") or {}).items():
             if not isinstance(raw,dict):
@@ -1710,6 +1735,10 @@ class NormativeExecutionEngine20:
                 "independent":bool(raw.get("independent",True)),
                 "semantic_contract_configured":bool(raw.get("semantic_contract_configured")),
                 "semantic_contract_ready":bool(raw.get("semantic_contract_ready")),
+                "semantic_contract_missing_groups":[
+                    str(value) for value in (raw.get("semantic_contract_missing_groups") or [])
+                    if str(value)
+                ],
                 "blocker":blocker,
             })
         semantic_run={
@@ -1723,10 +1752,11 @@ class NormativeExecutionEngine20:
             "newly_verified_ok":int(semantic_checkpoint.get("newly_verified_ok") or 0),
             "reviewed_total":int(semantic_checkpoint.get("reviewed_total") or 0),
             "pending_total":int(semantic_checkpoint.get("pending_total") or 0),
-            "provider_error_count":len([
-                value for value in (semantic_checkpoint.get("provider_errors") or [])
-                if str(value)
-            ]),
+            "provider_error_count":len(semantic_provider_errors),
+            "provider_error_categories":{
+                key:semantic_provider_errors.count(key)
+                for key in sorted(set(semantic_provider_errors))
+            },
             "contract_gate_blocked":int(semantic_checkpoint.get("contract_gate_blocked") or 0),
             "decisions":semantic_run_decisions,
         }

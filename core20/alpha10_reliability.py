@@ -125,15 +125,22 @@ def _merge_result(
     merged["queue_total"] = int(root_total)
     merged["decisions"] = decisions
     merged["processed_total"] = len(decisions)
+    merged["completed_before"] = len(previous_decisions)
+    merged["new_decisions"] = len(current_decisions)
     merged["verified_ok"] = sum(
         str(value.get("state") or "").upper() == "VERIFIED_OK"
         for value in decisions.values() if isinstance(value, dict)
+    )
+    merged["newly_verified_ok"] = sum(
+        str(value.get("state") or "").upper() == "VERIFIED_OK"
+        for value in current_decisions.values() if isinstance(value, dict)
     )
     merged["reviewed_total"] = sum(
         str(value.get("state") or "").upper() == "REVIEW_QUESTION"
         for value in decisions.values() if isinstance(value, dict)
     )
     merged["pending_total"] = max(0, int(root_total) - len(decisions))
+    merged["pending_unprocessed"] = merged["pending_total"]
 
     previous_errors = [str(x) for x in previous.get("provider_errors") or [] if str(x)]
     current_errors = [str(x) for x in merged.get("provider_errors") or [] if str(x)]
@@ -152,10 +159,15 @@ def run_normative_semantic_proof(
     judge_provider: Any = None,
     critic_provider: Any = None,
     limit: int = 24,
+    checkpoint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run only unprocessed packets and accumulate completed decisions."""
+    """Run only unprocessed packets and accumulate completed decisions.
+
+    ``checkpoint`` is optional for deterministic non-Streamlit callers. The
+    interactive app still falls back to the persisted project checkpoint.
+    """
     source = [dict(x) for x in (queue or []) if isinstance(x, dict)]
-    previous = _previous_checkpoint()
+    previous = dict(checkpoint) if isinstance(checkpoint, dict) else _previous_checkpoint()
     queue_fp = _semantic.queue_fingerprint(source)
     previous_root = str(previous.get("root_fingerprint") or previous.get("fingerprint") or "")
     previous_total = int(previous.get("root_queue_total") or previous.get("queue_total") or 0)
@@ -257,8 +269,10 @@ def apply_normative_semantic_proof(
 
     result["semantic_queue_full_total"] = len(full_queue)
     result["semantic_queue_processed"] = len(processed_ids)
+    result["semantic_completed_total"] = len(processed_ids)
     result["semantic_queue_confirmed"] = confirmed
     result["semantic_queue_reviewed"] = reviewed
+    result["semantic_reviewed_no_promotion"] = reviewed
     result["semantic_queue"] = pending
     result["semantic_queue_total"] = len(pending)
     result["semantic_queue_evidence"] = sum(len(packet.get("evidence") or []) for packet in pending)

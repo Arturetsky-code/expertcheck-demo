@@ -203,13 +203,20 @@ class NormativeKnowledgeFoundation20:
             projects.update(str(x) for x in (row.get("expert_projects") or []) if str(x).strip())
         verified_status=sum(1 for row in self.documents if self._source_verified(row,self._validity_for_document(row)))
         history=ExpertHistoryCorpus20(self.root).summary()
+        ready=[x for x in contracts if x["automatic_contract_ready"]]
+        triggered=sum(
+            str((row.get("evidence_contract") or {}).get("activation") or "").upper()=="TRIGGERED_ONLY"
+            for row in ready
+        )
         return {
             "document_catalog_total":len(self.documents),
             "verified_document_statuses":verified_status,
             "validity_registry_total":len(self.validity),
             "atomic_requirements_total":len(self.requirements),
             "verified_clauses":sum(1 for x in contracts if x["trust_state"]=="VERIFIED_CLAUSE"),
-            "automatic_contract_ready":sum(1 for x in contracts if x["automatic_contract_ready"]),
+            "automatic_contract_ready":len(ready),
+            "triggered_only_contracts":triggered,
+            "default_active_contracts":len(ready)-triggered,
             "clause_verification_backlog":sum(1 for x in contracts if x["trust_state"]!="VERIFIED_CLAUSE"),
             "history_linked_normative_records":history_records,
             "history_expert_occurrences":history_occurrences,

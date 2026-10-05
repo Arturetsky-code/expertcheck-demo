@@ -3766,3 +3766,134 @@ Use that live frontier to decide whether the next improvement should target:
 - or another NTD family.
 
 Checklist PD/RD work remains paused.
+
+
+## Semantic proof frontier — live Test for drawing reading
+
+Development date: 2026-10-05.
+
+### Preserved live benchmark
+
+Project:
+- `Тест для чтения чертежей`
+- analysis timestamp: 2026-10-02T10:55
+- compact diagnostic version: 1.1
+
+Live normative frontier after opening the saved project:
+- registered contracts: 66;
+- active contracts: 66;
+- VERIFIED_OK: 10;
+- PROJECT_FINDING: 0;
+- REVIEW_QUESTION: 51;
+- SYSTEM_LIMITATION: 5;
+- held by proof control: 43;
+- semantic pending: 47;
+- semantic completed: 0;
+- set completeness pending: 3;
+- visual pending: 5;
+- evidence coverage: 89.4%.
+
+The triggered GOST R 21.101-2026 change-number contract is active in this project,
+so active=registered=66 for this saved snapshot.
+
+### Exact semantic frontier
+
+All 47 semantic-pending requirement IDs are now persisted in compact diagnostic
+without project text or evidence fragments.
+
+Retrieval quality:
+- STRICT_RETRIEVAL: 38;
+- STRONG_NEAR_MISS: 6;
+- WEAK_RETRIEVAL: 3;
+- 29 requirements have 4+ evidence candidates;
+- 24 requirements combine STRICT_RETRIEVAL with at least 4 addressable candidates.
+
+Semantic proof contracts:
+- Gate 2.0 / explicit semantic contract configured: 3;
+- no explicit semantic proof contract yet: 44.
+
+Configured semantic contracts in the current frontier include:
+- FZ384-15-2-RESP-INPUT;
+- FZ384-15-5.1-SAFETY-JUSTIFICATION;
+- GOST21101-2026-7.3.1-CHANGE-NUMBER.
+
+This means the dominant bottleneck is no longer retrieval coverage. It is semantic
+proof throughput and proof-contract depth.
+
+### Resumable semantic proof architecture
+
+Confirmed that resumability already belongs to the Alpha 10.1 reliability overlay
+(`core20/alpha10_reliability.py`), installed from `core20/__init__.py`.
+
+The lower `normative_semantic_proof.py` remains the base Judge/Critic engine.
+Do not duplicate resumability there.
+
+The Alpha 10.1 overlay now additionally supports:
+- explicit optional checkpoint injection for deterministic tests/non-Streamlit callers;
+- cumulative wave counters;
+- completed/reviewed aliases exposed to compact diagnostics;
+- live pending queue after accumulated decisions;
+- frontier recomputation after stored proof is applied.
+
+### Semantic wave prioritization
+
+Semantic packets now carry non-sensitive retrieval quality metadata:
+- retrieval kind;
+- retrieval reason code;
+- retrieval candidate count.
+
+Bounded semantic waves are ranked before calling the base Judge/Critic engine:
+1. STRICT_RETRIEVAL;
+2. STRONG_NEAR_MISS;
+3. WEAK_RETRIEVAL;
+4. within the same admission tier, explicit Semantic Gate 2.0 first;
+5. then larger addressable evidence candidate count.
+
+The root queue fingerprint and verdict policy are unchanged. Ranking changes only
+which pending requirements are attempted first.
+
+For the current 47-item live frontier, the first 24-item wave contains:
+- 24 STRICT_RETRIEVAL requirements;
+- 0 STRONG_NEAR_MISS;
+- 0 WEAK_RETRIEVAL.
+
+Wave 1 starts with:
+- FZ384-15-5.1-SAFETY-JUSTIFICATION;
+- SP8-9.5-WATER-SYSTEM-RESERVOIRS;
+- SP8-9.2-WATER-SYSTEM-FIRE-VOLUME;
+- SP8-11.5-FIRE-WATER-LEVEL;
+- SP6-2025-5.3-SPZ-PANEL;
+- SP6-2025-5.2-SPZ-RELIABILITY;
+then other strict 4-candidate requirements.
+
+### Validation
+
+Functional priority commit:
+`18a17856cffbb27dd82dbccae505718a43f07ebc`
+
+Final regression-test commit before this documentation checkpoint:
+`ad1b478dd7d0637152ecd47b510163295144c5d9`
+
+Validation:
+- Core20 quality gates: success;
+- Core25 Quality Leap gates: success;
+- Streamlit startup smoke on functional commit: success;
+- Test78 deterministic A/B on functional commit: success;
+- Test78 classification: NO_CHANGE;
+- baseline/current: 56 requirements, 25 VERIFIED_OK, 2 PROJECT_FINDING, 29 REVIEW_QUESTION;
+- changed IDs: none.
+
+### Next live action
+
+Refresh/open `Тест для чтения чертежей` on the deployed priority build and run
+one bounded semantic proof wave (up to 24 packets) using independent Judge and Critic.
+
+After autosave:
+1. read compact diagnostic from Supabase;
+2. compare 10/47/51 baseline with post-wave state;
+3. classify completed semantic decisions into VERIFIED_OK versus reviewed-no-promotion;
+4. inspect remaining pending IDs;
+5. add Semantic Gate 2.0 contracts only where live results show they are needed.
+
+Do not add more NTD clauses before this live semantic wave is analyzed.
+Checklist PD/RD work remains paused.

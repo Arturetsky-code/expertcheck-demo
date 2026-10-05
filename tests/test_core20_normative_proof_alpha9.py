@@ -811,3 +811,77 @@ def test_alpha9_explicit_presence_does_not_promote_weak_retrieval():
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
     assert result["verified_ok"]==0
+
+
+
+def test_alpha9_complete_set_can_promote_deterministically_when_contract_allows():
+    source=[{
+        "requirement_id":"SET-DETERMINISTIC",
+        "source":"ПП №87",
+        "paragraph":"п. 12",
+        "sections":["ПЗУ"],
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"SET_COMPLETENESS",
+        "requirement":"Должны быть приведены характеристики и технические показатели.",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "evidence_document":"ПЗУ.pdf",
+        "evidence_page":5,
+        "evidence_fragment":"Характеристики транспортных коммуникаций.",
+        "retrieval_candidate_count":2,
+        "evidence_candidates":[{
+            "evidence_id":"R-1",
+            "document":"ПЗУ.pdf",
+            "page":5,
+            "section":"ПЗУ",
+            "fragment":"Характеристики транспортных коммуникаций.",
+        },{
+            "evidence_id":"R-2",
+            "document":"ПЗУ.pdf",
+            "page":6,
+            "section":"ПЗУ",
+            "fragment":"Технический показатель ширины проезда — 6,0 м.",
+        }],
+        "set_completeness":{
+            "configured":True,
+            "mode":"ALL_REQUIRED",
+            "promotion_policy":"DETERMINISTIC_AFTER_COMPLETE",
+            "atomization_complete":True,
+            "complete":True,
+            "matched_count":2,
+            "total_count":2,
+            "missing_ids":[],
+            "missing_labels":[],
+            "evidence":[
+                {
+                    "evidence_id":"SET-CHAR",
+                    "document":"ПЗУ.pdf",
+                    "page":5,
+                    "section":"ПЗУ",
+                    "fragment":"Характеристики транспортных коммуникаций.",
+                    "matched_terms":["характеристики"],
+                    "set_element_id":"transport_characteristics",
+                    "set_element_label":"Характеристики транспортных коммуникаций",
+                },
+                {
+                    "evidence_id":"SET-TEP",
+                    "document":"ПЗУ.pdf",
+                    "page":6,
+                    "section":"ПЗУ",
+                    "fragment":"Технический показатель ширины проезда — 6,0 м.",
+                    "matched_terms":["технические показатели"],
+                    "set_element_id":"transport_technical_indicators",
+                    "set_element_label":"Технические показатели транспортных коммуникаций",
+                },
+            ],
+        },
+    }]
+
+    result=NormativeProofEngine20().run(source)
+    row=result["rows"][0]
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["reason_code"]=="NORMATIVE_SET_COMPLETENESS_PROOF_CONFIRMED"
+    assert result["semantic_queue_total"]==0
+    assert result["set_completeness_queue_total"]==0

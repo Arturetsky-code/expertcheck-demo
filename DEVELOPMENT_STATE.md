@@ -3897,3 +3897,59 @@ After autosave:
 
 Do not add more NTD clauses before this live semantic wave is analyzed.
 Checklist PD/RD work remains paused.
+
+
+## Semantic proof live wave 1 — 2026-10-05
+
+Project: `Тест для чтения чертежей`.
+
+Baseline before wave:
+- VERIFIED_OK: 10;
+- semantic pending: 47;
+- REVIEW_QUESTION: 51;
+- held by proof control: 43.
+
+Wave request:
+- selected: 24 prioritized packets;
+- priority policy: STRICT_RETRIEVAL first.
+
+Actual completed decisions: 4.
+- `SP8-9.5-WATER-SYSTEM-RESERVOIRS` → VERIFIED_OK;
+- `SP8-9.2-WATER-SYSTEM-FIRE-VOLUME` → VERIFIED_OK;
+- `SP8-11.5-FIRE-WATER-LEVEL` → VERIFIED_OK;
+- `FZ384-15-5.1-SAFETY-JUSTIFICATION` → REVIEW_QUESTION.
+
+Post-wave state:
+- VERIFIED_OK: 13;
+- semantic pending: 43;
+- REVIEW_QUESTION: 48;
+- held by proof control: 40;
+- semantic completed total: 4;
+- semantic reviewed without promotion: 1.
+
+Provider failures:
+- RATE_LIMIT: 2;
+- SERVER_ERROR: 1.
+
+The remaining 20 selected packets were not rejected; the provider circuit breaker
+stopped the wave before they received complete decisions. Resumability preserved
+the four completed decisions and the remaining queue.
+
+For `FZ384-15-5.1-SAFETY-JUSTIFICATION`:
+- Judge verdict: SUPPORTS;
+- Critic: accepted;
+- independent models: yes;
+- Semantic Contract Gate 2.0: blocked;
+- missing group: `Обоснование соответствия относится к проектным решениям`.
+
+Do not weaken this semantic contract without inspecting the selected evidence.
+The deterministic gate correctly overruled the AI promotion.
+
+Compact diagnostic version: 1.3.
+Diagnostic now exposes only safe provider failure categories and safe semantic
+gate group labels; no project text/model explanations are persisted in summary.
+
+Next live action:
+- run one more resumable semantic wave after provider rate-limit recovery;
+- the four completed decisions must be skipped;
+- analyze the new completed/pending delta before changing retry policy or adding NTD.

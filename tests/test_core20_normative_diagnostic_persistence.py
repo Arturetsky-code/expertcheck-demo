@@ -35,7 +35,16 @@ def _manifest():
                     "by_section": {"ПЗУ": 9, "АР": 5},
                     "by_evidence_candidates": {"0": 6, "4+": 8},
                     "by_retrieval_admission": {"STRICT_RETRIEVAL": 18, "STRONG_NEAR_MISS": 8},
-                    "rows": [{"requirement_id": "SECRET", "fragment": "project text"}],
+                    "rows": [{
+                        "requirement_id": "PP87-TEST-01",
+                        "source": "ПП №87",
+                        "paragraph": "п. 12",
+                        "sections": "ПЗУ",
+                        "topic": "Состав ПЗУ",
+                        "retrieval_admission": "STRICT_RETRIEVAL",
+                        "retrieval_candidate_count": 4,
+                        "fragment": "project text",
+                    }],
                 },
                 "set_completeness": {
                     "total": 3,
@@ -75,12 +84,21 @@ def test_compact_normative_diagnostic_keeps_counts_not_project_text():
     assert diagnostic["blocker_counts"]["SEMANTIC_PENDING"] == 26
     assert diagnostic["semantic_pending"]["by_source"]["ПП №87"] == 12
     assert diagnostic["retained_fail_closed"]["by_reason"]["NORMATIVE_APPLICABILITY_NOT_PROVEN"] == 4
+    assert diagnostic["semantic_pending"]["rows"] == [{
+        "requirement_id": "PP87-TEST-01",
+        "source": "ПП №87",
+        "paragraph": "п. 12",
+        "sections": "ПЗУ",
+        "topic": "Состав ПЗУ",
+        "retrieval_admission": "STRICT_RETRIEVAL",
+        "retrieval_candidate_count": 4,
+    }]
 
     serialized = json.dumps(diagnostic, ensure_ascii=False)
     assert "project text" not in serialized
     assert "project-sensitive text" not in serialized
     assert "fragment" not in serialized
-    assert "rows" not in serialized
+    assert "candidate_pages" not in serialized
 
 
 def test_workspace_snapshot_includes_compact_diagnostic():

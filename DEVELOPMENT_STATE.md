@@ -4897,3 +4897,52 @@ eight requirements are now deterministic in the current expansion line.
 
 Conceptual historical remainder: 27 items.
 This remains a historical count, not a live runtime queue.
+
+
+## Hybrid deterministic set fast path with semantic fallback — 2026-10-06
+
+### Goal
+
+Allow complex normative clauses to use a strict deterministic sufficient-condition
+proof without sacrificing semantic coverage for other valid formulations.
+
+### New promotion policy
+
+SET_COMPLETENESS now supports:
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Behavior:
+- complete strict set -> deterministic VERIFIED_OK;
+- incomplete strict set with addressable retrieval evidence -> REVIEW_QUESTION with
+  `SEMANTIC_PROOF_REQUIRED`, therefore the requirement stays in the semantic queue;
+- no negative conclusion is inferred from an incomplete deterministic fast path.
+
+This is intentionally different from:
+- `DETERMINISTIC_AFTER_COMPLETE`: incomplete set remains a set-proof review;
+- `SEMANTIC_AFTER_COMPLETE`: even a complete set still requires semantic proof.
+
+Core commit:
+- `97d38b7ae4ae171b1954f5f0f4e8300f83a4d6af`.
+
+Regression commit:
+- `170a8672b3ea8625b13f9fd75fe6202039864ea8`.
+
+Regression coverage:
+- complete hybrid set -> deterministic proof, semantic queue total = 0;
+- incomplete hybrid set -> semantic fallback, semantic queue total = 1;
+- fallback never creates PROJECT_FINDING.
+
+### Validation
+
+Temporary draft PR #14 was used only for validation and closed without merge.
+
+Final functional head:
+`170a8672b3ea8625b13f9fd75fe6202039864ea8`.
+
+GitHub Actions:
+- Core20 quality gates run 971: SUCCESS;
+- Core20 regression: 234 passed;
+- results-integrity: SUCCESS.
+
+This checkpoint changes proof routing only; no normative requirement was converted by
+this step itself.

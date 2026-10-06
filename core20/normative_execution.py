@@ -986,13 +986,12 @@ def _typed_numeric_observations(
     output=[]
     seen=set()
     for alias in aliases:
-        diag=_keyword_span_diagnostic(alias,text)
-        if not diag.get("matched"):
-            continue
+        # Typed numeric proof is stricter than retrieval: a property label must
+        # occur as one local normalized phrase. Separated token hits elsewhere
+        # on the page cannot establish that a number belongs to this property.
         anchor=text.find(alias)
         if anchor<0:
-            positions=[int(value) for value in (diag.get("positions") or []) if isinstance(value,int)]
-            anchor=min(positions) if positions else 0
+            continue
         lo=max(0,anchor-radius)
         hi=min(len(text),anchor+len(alias)+radius)
         window=text[lo:hi]

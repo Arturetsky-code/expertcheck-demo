@@ -2612,3 +2612,65 @@ def test_alpha8_pp87_zoning_without_scheme_justification_stays_semantic():
     assert row["set_completeness"]["complete"] is False
     assert "territorial_zone_scheme_justification" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_landscape_description_fast_path_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":24,
+        "text":(
+            "Решения по благоустройству территории предусматривают устройство "
+            "твердого покрытия на пешеходных участках и восстановление нарушенных участков."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-G-LANDSCAPE")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-12-G-LANDSCAPE"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_landscape_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":24,
+        "text":"В ПЗУ должны быть описаны решения по благоустройству территории.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-G-LANDSCAPE")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-12-G-LANDSCAPE"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_landscape_heading_only_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":24,
+        "text":"Благоустройство территории. Основные решения приведены на листе 5.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-G-LANDSCAPE")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

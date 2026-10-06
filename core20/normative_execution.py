@@ -1016,14 +1016,22 @@ def _typed_numeric_observations(
                 "alias":alias,
                 "distance":distance,
                 "_absolute":absolute,
+                "_relative":absolute-anchor,
             })
         if alias_matches:
-            best=min(alias_matches,key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
+            prefer_after=bool(spec.get("prefer_after_alias",True))
+            best=min(
+                alias_matches,
+                key=lambda row:(
+                    0 if (not prefer_after or int(row.get("_relative") or 0)>=0) else 1,
+                    int(row.get("distance") or 0),
+                    float(row.get("value") or 0),
+                ),
+            )
             key=(round(float(best.get("value") or 0),6),int(best.get("_absolute") or 0))
             if key not in seen:
                 seen.add(key)
-                best.pop("_absolute",None)
-                output.append(best)
+                best.pop("_absolute",None)\n                best.pop("_relative",None)\n                output.append(best)
     output.sort(key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
     return output
 

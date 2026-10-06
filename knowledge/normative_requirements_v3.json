@@ -2274,7 +2274,39 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "sanitary_compliance_solution",
+            "label": "Объёмно-планировочные решения обеспечивают санитарно-эпидемиологические требования",
+            "aliases": [
+              "объемно-планировочные решения",
+              "объёмно-планировочные решения",
+              "санитарно-эпидемиологических требований"
+            ],
+            "assertion_regexes": [
+              "(?:объемно|объёмно)[- ]планировочн\\w+\\s+решени\\w*[^.\\n;]{0,140}(?:обеспечива\\w*|гарантиру\\w*)[^.\\n;]{0,140}санитарно[- ]эпидемиологическ\\w+\\s+требован\\w*"
+            ]
+          },
+          {
+            "id": "sanitary_solution_justification",
+            "label": "Обоснование объёмно-планировочных решений",
+            "aliases": [
+              "объемно-планировочные решения",
+              "объёмно-планировочные решения",
+              "обоснованы"
+            ],
+            "assertion_regexes": [
+              "(?:объемно|объёмно)[- ]планировочн\\w+\\s+решени\\w*[^.\\n;]{0,120}обоснован\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

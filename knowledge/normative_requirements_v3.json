@@ -3223,7 +3223,7 @@
     "sections": [
       "ПЗУ"
     ],
-    "check_kind": "SEMANTIC",
+    "check_kind": "TYPED_VALUE",
     "automation": "AUTO",
     "keywords": [
       "расстояние от края проезжей части",
@@ -3246,7 +3246,59 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "TYPED_VALUE",
+      "typed_contract": {
+        "kind": "OWNER_BOUND_PIECEWISE_RANGE",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "numeric_tolerance": 1e-09,
+        "selector": {
+          "id": "object_height_m",
+          "label": "Высота здания или сооружения",
+          "aliases": [
+            "высота здания",
+            "высота сооружения",
+            "высота объекта"
+          ],
+          "window_chars": 150,
+          "reject_comparator_context": true
+        },
+        "measure": {
+          "id": "fire_road_wall_distance_m",
+          "label": "Расстояние от пожарного проезда до стены",
+          "aliases": [
+            "расстояние от края пожарного проезда до стены",
+            "расстояние от края пожарного проезда до стен",
+            "расстояние от пожарного проезда до стены",
+            "расстояние от проезда до стены",
+            "расстояние от спланированной поверхности до стены",
+            "расстояние от спланированной поверхности до стен"
+          ],
+          "window_chars": 200,
+          "reject_comparator_context": true
+        },
+        "bands": [
+          {
+            "id": "height_le_12",
+            "max_selector_inclusive": 12.0,
+            "max_value": 25.0
+          },
+          {
+            "id": "height_12_28",
+            "min_selector_exclusive": 12.0,
+            "max_selector_inclusive": 28.0,
+            "min_value": 5.0,
+            "max_value": 8.0
+          },
+          {
+            "id": "height_gt_28",
+            "min_selector_exclusive": 28.0,
+            "min_value": 8.0,
+            "max_value": 10.0
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

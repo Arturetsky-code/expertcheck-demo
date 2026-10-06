@@ -1436,3 +1436,35 @@ def test_alpha8_sp12_category_inputs_reuse_owner_scoped_deterministic_set():
     assert result["owner_scope_state"]=="CONFIRMED"
     assert result["owner_object_id"]=="OBJ-CAT"
     assert result["matched_count"]==4
+
+
+def test_alpha8_pp87_zouit_disclosure_is_addressable_presence_even_when_absent():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":6,
+        "text":"Зоны с особыми условиями использования территорий (ЗОУИТ) "
+               "в границах земельного участка отсутствуют.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-A1-ZOUIT")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="ADDRESSABLE_PRESENCE_PROOF"
+    assert row["evidence_document"]=="Раздел ПД №2_ПЗУ.pdf"
+    assert row["evidence_page"]==6
+
+
+def test_alpha8_pp87_zouit_presence_does_not_infer_disclosure_from_land_plot_words_only():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":6,
+        "text":"Границы земельного участка показаны на схеме планировочной организации.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-A1-ZOUIT")
+    assert row["kind"]!="VERIFIED_OK"

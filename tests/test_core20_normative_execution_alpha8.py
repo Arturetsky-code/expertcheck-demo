@@ -2541,3 +2541,73 @@ def test_alpha8_pp87_transport_external_only_stays_semantic():
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_zoning_fast_path_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":21,
+        "text":(
+            "Зонирование территории обосновано функциональными связями производственных зон. "
+            "Принципиальная схема размещения территориальных зон обоснована технологическими потоками."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-H-ZONING")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-12-H-ZONING"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_zoning_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":21,
+        "text":(
+            "Для объекта производственного назначения в ПЗУ должно быть обосновано "
+            "зонирование территории и принципиальная схема размещения территориальных зон."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-H-ZONING")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-12-H-ZONING"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_zoning_without_scheme_justification_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":21,
+        "text":(
+            "Зонирование территории обосновано функциональными связями. "
+            "Принципиальная схема размещения территориальных зон приведена на чертеже."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-H-ZONING")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert "territorial_zone_scheme_justification" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0

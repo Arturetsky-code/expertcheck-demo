@@ -2674,3 +2674,84 @@ def test_alpha8_pp87_landscape_heading_only_does_not_promote():
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_planning_fast_path_promotes_description_and_justification():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":25,
+            "text":(
+                "Решения по планировочной организации земельного участка предусматривают "
+                "размещение проектируемых объектов с учетом технологических связей."
+            ),
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":26,
+            "text":(
+                "Решения по планировочной организации земельного участка обоснованы "
+                "взаимным расположением зданий и существующей транспортной схемой."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-C-PLANNING")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-12-C-PLANNING"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_planning_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":25,
+        "text":(
+            "В ПЗУ должны быть обоснованы и описаны решения по планировочной "
+            "организации земельного участка."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-C-PLANNING")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-12-C-PLANNING"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_planning_description_without_justification_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":25,
+        "text":(
+            "Решения по планировочной организации земельного участка предусматривают "
+            "размещение проектируемых объектов вдоль внутриплощадочной дороги."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-C-PLANNING")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert "planning_solution_justification" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0

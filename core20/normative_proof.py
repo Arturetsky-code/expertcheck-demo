@@ -571,6 +571,9 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         return result
 
     if proof_type == "TYPED_VALUE":
+        if retrieval_reason=="NORMATIVE_APPLICABILITY_NOT_PROVEN":
+            result["proof_state"]="RETAINED_FAIL_CLOSED"
+            return result
         typed=dict(result.get("typed_value") or {})
         promotion=str(typed.get("promotion_policy") or "HOLD").upper()
         if (

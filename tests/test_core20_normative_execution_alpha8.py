@@ -3441,3 +3441,85 @@ def test_alpha8_pp87_tep_incomplete_numeric_block_does_not_promote():
     assert row["set_completeness"]["complete"] is False
     assert "development_coefficient_indicator" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_energy_efficiency_design_fast_path_promotes_description_and_justification():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":60,
+            "text":(
+                "Архитектурные решения, направленные на повышение энергетической "
+                "эффективности объекта, предусматривают компактную форму здания и "
+                "сокращение площади наружных ограждений."
+            ),
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":61,
+            "text":(
+                "Архитектурные решения, направленные на повышение энергетической "
+                "эффективности объекта, обоснованы снижением теплопотерь через наружные ограждения."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B3-EFF-DESIGN")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-B3-EFF-DESIGN"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_energy_efficiency_design_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":60,
+        "text":(
+            "АР должно содержать описание и обоснование архитектурных решений, "
+            "направленных на повышение энергетической эффективности объекта."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B3-EFF-DESIGN")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-B3-EFF-DESIGN"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_energy_efficiency_design_without_justification_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":60,
+        "text":(
+            "Архитектурные решения, направленные на повышение энергетической "
+            "эффективности объекта, предусматривают компактную форму здания."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B3-EFF-DESIGN")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert "energy_efficiency_arch_solution_justification" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0

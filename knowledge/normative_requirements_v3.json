@@ -1367,7 +1367,60 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "justified_external_internal_transport_scheme",
+            "label": "Обоснованная схема транспортных коммуникаций для внешних и внутренних грузоперевозок",
+            "evidence_groups": [
+              {
+                "id": "scheme",
+                "label": "Схема транспортных коммуникаций",
+                "aliases": [
+                  "схема транспортных коммуникаций",
+                  "схемы транспортных коммуникаций",
+                  "транспортная схема"
+                ]
+              },
+              {
+                "id": "external",
+                "label": "Внешние грузоперевозки",
+                "aliases": [
+                  "внешних и внутренних грузоперевозок",
+                  "внешние грузоперевозки",
+                  "внешних грузоперевозок"
+                ]
+              },
+              {
+                "id": "internal",
+                "label": "Внутренние грузоперевозки",
+                "aliases": [
+                  "внешних и внутренних грузоперевозок",
+                  "внутренние грузоперевозки",
+                  "внутренних грузоперевозок"
+                ]
+              },
+              {
+                "id": "justification",
+                "label": "Обоснование схемы",
+                "aliases": [
+                  "обоснована",
+                  "обоснованы"
+                ]
+              }
+            ],
+            "group_window_chars": 520,
+            "assertion_regexes": [
+              "схем\\w*\\s+транспортн\\w+\\s+коммуникаци\\w*[^.\\n;]{0,120}обоснован\\w*[^.\\n;]{0,160}внешн\\w+[^.\\n;]{0,100}внутренн\\w+[^.\\n;]{0,100}грузоперевоз\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

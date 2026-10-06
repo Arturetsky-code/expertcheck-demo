@@ -4319,3 +4319,104 @@ Next recommended targets:
 4. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until special-case applicability
    and the gamma=1.2 override are explicitly modeled;
 5. do not run another semantic AI wave before recomputation.
+
+
+## Deterministic typed range expansion — 2026-10-06
+
+This pass extends the first owner-bound numeric archetype without widening the
+automatic negative-conclusion policy.
+
+### Reusable piecewise range contract
+
+`_typed_value_evaluation` now supports:
+- `OWNER_BOUND_PIECEWISE_MINIMUM`;
+- `OWNER_BOUND_PIECEWISE_RANGE`.
+
+For a range contract:
+- lower and/or upper bounds may be declared per selector band;
+- all observed values for the same confirmed owner are evaluated through their
+  minimum and maximum, so one convenient passing value cannot hide another
+  out-of-range value;
+- positive automatic promotion remains PASS-only;
+- BELOW_MINIMUM / ABOVE_MAXIMUM / OUTSIDE_RANGE remain REVIEW_QUESTION and never
+  become PROJECT_FINDING automatically.
+
+Core commits:
+- `1790dfcbd628dbe5b4cd62a673cd6474eeb8901c` — piecewise range support;
+- `ca218d3b1a3616ed21fbe650e621d2455fd04a29` — explicit outside-range review;
+- `c55bd8c463d193396765a7973957034ef2dfb1ca` — typed property labels require
+  a local exact normalized alias, preventing separated token hits in copied NTD
+  text from binding numbers to the wrong property.
+
+### SP 4 p. 8.2.6
+
+`SP4-8.2.6-ROAD-WALL-DISTANCE` was converted from SEMANTIC to TYPED_VALUE.
+
+Owner-bound selector:
+- object/building/structure height.
+
+Measured property:
+- distance from the fire-road edge / fire road / planned surface to the wall.
+
+Piecewise contract:
+- height <= 12 m -> distance <= 25 m;
+- height > 12 m and <= 28 m -> distance 5–8 m;
+- height > 28 m -> distance 8–10 m.
+
+Registry commit:
+- `feb87e273c35030d439c8a67f917692991a1d676`.
+
+Regression commit:
+- `7d21d5f09a17247302e6954e42dc7d073e04d54f`.
+
+Coverage includes:
+- positive middle-height band;
+- upper-bound-only low-height band;
+- out-of-range value remains specialist review;
+- multiple observed distances must all satisfy the applicable range;
+- copied normative range text cannot promote.
+
+The copied-NTD regression initially exposed that generic retrieval-style
+`_keyword_span_diagnostic` was too permissive for numeric property ownership.
+Typed numeric extraction was therefore tightened to exact local aliases before
+the final green run.
+
+### Final validation
+
+Final functional head for this pass:
+`c55bd8c463d193396765a7973957034ef2dfb1ca`.
+
+GitHub Actions:
+- Core20 quality gates run 926: SUCCESS;
+- Core20 regression: 209 passed;
+- results-integrity: SUCCESS;
+- Core25 Quality Leap gates run 630: SUCCESS;
+- alpha1-release-gate: SUCCESS;
+- Test78 deterministic A/B run 196: SUCCESS;
+- Test78 classification: NO_CHANGE;
+- Test78 baseline/current: 56 requirements,
+  25 VERIFIED_OK / 2 PROJECT_FINDING / 29 REVIEW_QUESTION;
+- changed requirements: 0;
+- Streamlit startup smoke run 34: SUCCESS;
+- Source Snapshot Artifact run 456: SUCCESS.
+
+### Frontier after this pass
+
+Relative to the historical 35-item semantic frontier identified from the
+2026-10-02 saved project, three requirements are now deterministic in current code:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`;
+- `SP4-8.2.6-ROAD-WALL-DISTANCE`.
+
+That makes the historical frontier conceptually 32 items, but it is still not a
+live runtime queue count. Recompute the saved project against the current registry
+before any semantic AI wave.
+
+Recommended next proof work:
+1. `FNP505-1215-CONVEYOR-CROSSING-SPACING` — likely typed piecewise maximum,
+   but only after its categorical applicability/owner scope is represented;
+2. `SP18-5.37-ENTRANCE-GATE-WIDTH` — needs a relative-formula contract
+   (vehicle width + 1.5 m plus absolute minimum);
+3. `GOST27751-10.1-CLASS-LEVEL-GAMMA` — keep held until the special-case
+   gamma=1.2 override is modeled explicitly;
+4. no semantic AI run before recomputation.

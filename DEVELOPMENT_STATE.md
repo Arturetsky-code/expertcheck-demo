@@ -5690,3 +5690,73 @@ now classified as:
 - pure semantic / unmodeled cross-document: 16.
 
 This is a registry-state classification, not a fresh project runtime queue.
+
+
+## Hybrid deterministic fast path — SP4 two-sided fire access — 2026-10-06
+
+### Goal
+
+Accelerate `SP4-8.2.1-FIRE-ACCESS-SIDES` without attempting to encode all width
+and courtyard applicability branches.
+
+### Safe sufficient condition
+
+The requirement now uses owner-scoped SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path is intentionally narrower than the full clause. It
+requires an explicit project assertion that:
+- fire apparatus / fire equipment access is provided;
+- the access runs along the length of the building;
+- it is provided from two sides;
+- the evidence belongs to one confirmed Project Understanding owner.
+
+This is a sufficient condition independent of the one-sided <=18 m branch and is
+also compatible with the two-sided requirement for closed / semi-closed courtyards.
+
+One-sided access is never auto-promoted by this fast path because it requires
+additional proof of building width and courtyard type.
+
+### Copied-norm protection
+
+The first validation run exposed a false positive:
+"должен быть обеспечен подъезд ... с двух сторон" matched the initial lexical
+pattern even though it was only normative obligation wording.
+
+The contract was tightened so the project assertion must be attached to the actual
+solution, for example:
+"Подъезд пожарной техники по длине здания обеспечен с двух сторон."
+
+Registry commits:
+- `bd0de53197ca53ef675ba15df28d5c7d2fb80243`;
+- `af433e265d396c6f3c270a267f469a2c259ecff7`.
+
+Regression commit:
+- `1cf75e8030b80b8aca2becc7d1c9573460b057fb`.
+
+Coverage:
+- explicit two-sided full-length fire access -> deterministic VERIFIED_OK;
+- one-sided access -> semantic fallback;
+- copied SP4 obligation -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #27 was used only for validation and closed without merge.
+
+Final functional head:
+`af433e265d396c6f3c270a267f469a2c259ecff7`.
+
+GitHub Actions:
+- Core20 quality gates run 1030: SUCCESS;
+- Core20 regression: 273 passed;
+- results-integrity: SUCCESS.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 13;
+- pure semantic / unmodeled cross-document: 15.
+
+This remains a registry-state classification, not a fresh project runtime queue.

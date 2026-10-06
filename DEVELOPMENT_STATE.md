@@ -5587,3 +5587,52 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Historical semantic frontier reclassification against current registry — 2026-10-06
+
+### Why this replaces the old conceptual remainder counter
+
+The saved 2026-10-02 project run contains 43 requirement IDs in its historical
+semantic-pending rows. That queue is stale relative to the current registry: several
+IDs that were semantic at run time now have deterministic or hybrid proof contracts.
+
+Therefore the earlier hand-maintained "35 -> 27" conceptual remainder is no longer
+the best control metric.
+
+### Current registry classification of the 43 historical IDs
+
+- deterministic contracts: **15**;
+- hybrid deterministic-fast-path / semantic-fallback contracts: **11**;
+- still pure semantic / cross-document-unmodeled contracts: **17**.
+
+This classification is based on the current registry contract shape, not on a fresh
+runtime execution of the project documents.
+
+Deterministic examples include:
+- typed proofs for FNP505-1215 and SP4 8.2.3 / 8.2.6;
+- owner-scoped set proofs for FZ123-27-3, FZ384-4-1, FZ384-15-2, SP12-4.2,
+  SP52-7.6.1 and SP6-5.3;
+- deterministic presence / completeness contracts such as ZOUIT, responsibility
+  level, transport parameters, insolation/KEO and closed storm sewer.
+
+Hybrid examples include:
+- PP87 planning, engineering preparation, landscaping, zoning, transport,
+  facade/interior, room finishing, natural lighting and sanitary planning;
+- FNP505 surface-complex emergency lighting;
+- SP12 sequential category calculation.
+
+Pure-semantic / held examples include:
+- FZ384-4-11 cross-document identification-value consistency;
+- GOST27751 10.1 / 10.2;
+- SP18 5.37 entrance-gate formula with automobile/rail applicability branches;
+- SP6 5.2 special-group reliability branch;
+- remaining fire-safety, energy-efficiency and descriptive PP87 clauses.
+
+### Control rule
+
+Do not use the old conceptual remainder count as a live queue.
+For development prioritization use the current-registry split **15 deterministic /
+11 hybrid / 17 semantic**.
+A true runtime queue must still be recomputed from the project documents before a
+new semantic AI wave.

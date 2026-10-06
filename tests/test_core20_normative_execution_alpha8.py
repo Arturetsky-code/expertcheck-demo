@@ -2901,3 +2901,80 @@ def test_alpha8_pp87_sanitary_compliance_without_justification_stays_semantic():
     assert row["set_completeness"]["complete"] is False
     assert "sanitary_solution_justification" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_facade_interior_composition_fast_path_promotes():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":45,
+            "text":(
+                "Композиционные приемы при оформлении фасадов и интерьеров приняты "
+                "с учетом единого ритма проемов и отделочных материалов."
+            ),
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":46,
+            "text":(
+                "Композиционные приемы при оформлении фасадов и интерьеров обоснованы "
+                "функциональным назначением помещений и архитектурным обликом здания."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-C-FACADE")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-C-FACADE"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_facade_interior_composition_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":45,
+        "text":(
+            "В АР должны быть описаны и обоснованы композиционные приемы "
+            "при оформлении фасадов и интерьеров."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-C-FACADE")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-C-FACADE"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_facade_only_composition_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":45,
+        "text":"Композиционные приемы оформления фасадов приняты с учетом ритма проемов.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-C-FACADE")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

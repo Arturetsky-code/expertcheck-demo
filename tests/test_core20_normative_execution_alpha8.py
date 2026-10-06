@@ -2256,3 +2256,65 @@ def test_alpha8_pp87_insolation_copied_requirement_with_clause_number_does_not_p
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D1-INSOLATION")
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_sp18_closed_storm_sewer_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":14,
+        "text":"Система дождевой канализации принята закрытого типа.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.52-CLOSED-STORM-SEWER")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==1
+    assert row["set_completeness"]["total_count"]==1
+
+
+def test_alpha8_sp18_generic_storm_sewer_without_closed_type_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":14,
+        "text":"На площадке предусматривается дождевая канализация для отвода поверхностного стока.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.52-CLOSED-STORM-SEWER")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_sp18_unrelated_closed_system_cannot_prove_storm_sewer():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №2_ПЗУ.pdf","Тип документа":"ПЗУ"}]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":14,
+        "text":"Закрытая система хозяйственно-бытовой канализации. Дождевая канализация принята открытой.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.52-CLOSED-STORM-SEWER")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_sp18_livnevaya_closed_type_is_equivalent_positive_evidence():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №5_подраздел ПД №3_ИОС3.pdf","Тип документа":"ИОС"}]
+    pages=[{
+        "document":"Раздел ПД №5_подраздел ПД №3_ИОС3.pdf",
+        "document_type":"ИОС",
+        "page":22,
+        "text":"Ливневая канализация запроектирована закрытого типа.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.52-CLOSED-STORM-SEWER")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"

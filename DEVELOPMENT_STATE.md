@@ -5353,3 +5353,57 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 facade and interior composition — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-C-FACADE` without narrowing the verified clause:
+AR must describe and justify composition techniques for both facades and interiors.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent deterministic elements are required:
+1. an explicit project description/adoption of composition techniques covering both
+   facades and interiors;
+2. an explicit justification covering the same two domains.
+
+The fast path deliberately requires both facade and interior scope. A facade-only
+statement cannot close the requirement. A copied PP87 obligation also cannot satisfy
+the project-assertion contract.
+
+Registry commit:
+- `bbf3cc16b7f94187bcfa67b65602d7a1f5098e14`.
+
+Regression commit:
+- `8e3ce8cc63e733c1dcd116fcf50348848111c18f`.
+
+Coverage:
+- project description + justification for facades and interiors -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- facade-only composition statement -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #22 was used only for validation and closed without merge.
+
+Final functional head:
+`8e3ce8cc63e733c1dcd116fcf50348848111c18f`.
+
+GitHub Actions:
+- Core20 quality gates run 1005: SUCCESS;
+- Core20 regression: 258 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

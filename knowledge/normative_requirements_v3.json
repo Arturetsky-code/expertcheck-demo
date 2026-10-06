@@ -2017,7 +2017,42 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "insolation_result",
+            "label": "Результат расчёта продолжительности инсоляции",
+            "aliases": [
+              "продолжительность инсоляции",
+              "продолжительности инсоляции"
+            ],
+            "assertion_regexes": [
+              "продолжительност\\w*\\s+инсоляци\\w*[^\\n]{0,80}(?:[:=—-]\\s*)?\\d+(?:[.,]\\d+)?",
+              "\\d+(?:[.,]\\d+)?[^\\n]{0,50}продолжительност\\w*\\s+инсоляци\\w*"
+            ]
+          },
+          {
+            "id": "daylight_factor_result",
+            "label": "Результат расчёта коэффициента естественной освещённости",
+            "aliases": [
+              "коэффициент естественной освещенности",
+              "коэффициента естественной освещенности",
+              "коэффициент естественной освещённости",
+              "коэффициента естественной освещённости",
+              "КЕО"
+            ],
+            "assertion_regexes": [
+              "(?:коэффициент\\w*\\s+естественн\\w+\\s+освещенност\\w*|кео)[^\\n]{0,80}(?:[:=—-]\\s*)?\\d+(?:[.,]\\d+)?",
+              "\\d+(?:[.,]\\d+)?[^\\n]{0,50}(?:коэффициент\\w*\\s+естественн\\w+\\s+освещенност\\w*|кео)"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

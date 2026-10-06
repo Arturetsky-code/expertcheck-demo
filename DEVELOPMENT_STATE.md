@@ -5825,3 +5825,56 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 14.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+
+
+## Hybrid deterministic fast path — PP87 architectural energy-efficiency solutions — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-B3-EFF-DESIGN` while preserving the verified atomic clause:
+AR must contain both a description and justification of architectural solutions
+aimed at improving the energy efficiency of the object.
+
+### Contract
+
+The requirement uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required:
+1. an explicit project description/adoption of architectural solutions directed at
+   improving energy efficiency;
+2. an explicit justification of those solutions.
+
+The deterministic fast path does not treat a copied PP87 obligation as project
+evidence and does not infer justification from a description alone.
+
+Functional head before this documentation checkpoint:
+- `739323d3af2a8304765f53c3fe71e8482266d96b`.
+
+Coverage:
+- explicit energy-efficiency architectural solution + separate justification ->
+  deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- description without justification -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #29 was used for validation and closed without merge.
+
+GitHub Actions:
+- Core20 quality gates run 1044: SUCCESS;
+- Core20 regression: 279 passed;
+- results-integrity: SUCCESS.
+
+PR #30 was created after a chat interruption against the same head and closed
+without merge as a duplicate validation PR.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 15;
+- pure semantic / unmodeled cross-document: 13.
+
+This remains a registry-state classification, not a fresh project runtime queue.

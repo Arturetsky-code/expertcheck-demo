@@ -5066,3 +5066,67 @@ This requirement is hybrid:
 - other addressable evidence remains available to semantic proof.
 
 Therefore the historical semantic frontier count is unchanged by this step alone.
+
+
+## Hybrid deterministic fast path — PP87 zoning — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-H-ZONING` for production projects without replacing semantic
+review for incomplete or differently worded evidence.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Deterministic fast path requires two independently asserted elements:
+1. zoning of the territory is explicitly justified;
+2. the principal scheme for placement of territorial zones is explicitly justified.
+
+Both assertions must be project statements. A copied PP87 formulation such as
+"должно быть обосновано зонирование..." does not satisfy the fast path.
+
+Applicability remains profile-based for production projects.
+
+The retrieval topic was narrowed from "Зонирование производственной территории" to
+"Зонирование территории" so the project profile proves production applicability
+while the evidence-quality gate focuses on the engineering subject itself.
+
+Registry commit:
+- `5abfb567a6ab9b64615ce97e3a80cdc70fa9d740`.
+
+Regression commits:
+- `1486de7971e0145068cd7afcdcf9ba79eda771ff`;
+- `431dcc4f4276704188c3429673a6fb24a77fe953`.
+
+The second regression commit updates an older test that intentionally expected the
+same zoning requirement to remain semantic. It still remains semantic when the fast
+path is incomplete, but now the proof type is SET_COMPLETENESS and the fallback state
+is `SEMANTIC_PROOF_REQUIRED`.
+
+Coverage:
+- both zoning justification and zone-scheme justification -> deterministic VERIFIED_OK;
+- copied normative wording -> semantic fallback;
+- zoning justified but scheme merely shown -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #17 was used only for validation and closed without merge.
+
+Final functional head:
+`431dcc4f4276704188c3429673a6fb24a77fe953`.
+
+GitHub Actions:
+- Core20 quality gates run 985: SUCCESS;
+- Core20 regression: 243 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+Therefore the historical semantic frontier count is unchanged by this hybrid step.

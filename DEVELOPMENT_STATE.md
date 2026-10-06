@@ -5130,3 +5130,63 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 Therefore the historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 landscaping description — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-G-LANDSCAPE` without expanding the verified atomic clause
+beyond the registry wording "описаны решения по благоустройству территории".
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Deterministic fast path requires an explicit project statement in which
+landscaping / site-improvement solutions are actually described or adopted, for
+example through verbs such as:
+- предусматривают / предусмотрено;
+- приняты;
+- выполняются;
+- включают.
+
+The fast path intentionally does NOT require specific landscaping subcomponents
+such as greening, external lighting, or small architectural forms because those
+items are not present in the current verified atomic registry clause.
+
+A copied normative sentence ("должны быть описаны решения...") or a heading-only
+mention cannot produce VERIFIED_OK and remains available to semantic proof.
+
+Registry commit:
+- `7b1f8f8969a326371a27bc382960e379a06d365c`.
+
+Regression commit:
+- `9bc89e449470991b91cef18f20233a30055bcb8d`.
+
+Coverage:
+- explicit project landscaping solution -> deterministic VERIFIED_OK;
+- copied PP87 obligation -> semantic fallback;
+- heading/reference without an actual solution description -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #18 was used only for validation and closed without merge.
+
+Final functional head:
+`9bc89e449470991b91cef18f20233a30055bcb8d`.
+
+GitHub Actions:
+- Core20 quality gates run 989: SUCCESS;
+- Core20 regression: 246 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying project wording bypasses AI;
+- other addressable evidence remains semantic.
+
+Therefore the historical semantic frontier count is unchanged by this hybrid step.

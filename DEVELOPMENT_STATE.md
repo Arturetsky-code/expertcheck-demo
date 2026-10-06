@@ -5878,3 +5878,61 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 13.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+## Hybrid deterministic fast path — PP87 energy-efficiency compliance justification — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-B1-EFF` while preserving the verified conditional clause:
+for objects subject to energy-efficiency requirements, AR must contain a justification
+that the adopted architectural solutions comply with those requirements.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path is intentionally narrow. It requires an explicit project
+justification in which compliance of the architectural solutions with energy-efficiency
+requirements is tied to a concrete adopted measure or engineering effect.
+
+Generic statements such as "Приведено обоснование соответствия..." do not prove the
+content of the justification and remain semantic. Copied PP87 obligation wording also
+does not satisfy the fast path.
+
+Registry commit:
+- `ee2cdd62ea8cdd14ab0b512ca539364fbe5761f5`.
+
+Regression commits:
+- `a77d1237849c6b40f37ee219acdbd03f3663c29e`;
+- `c7729047a113f2f186d34cb87902f65466ea421a`.
+
+Coverage:
+- explicit compliance justification + concrete measure/effect -> deterministic VERIFIED_OK;
+- generic statement that a justification is present -> semantic fallback;
+- copied PP87 wording -> semantic fallback;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #31 was used only for validation and closed without merge.
+
+The first validation run 1049 exposed one stale regression expectation:
+the old semantic-only reason code changed, correctly, to the hybrid fast-path fallback
+reason code. The contract itself behaved as intended.
+
+Final functional head before this documentation checkpoint:
+`c7729047a113f2f186d34cb87902f65466ea421a`.
+
+GitHub Actions run 1051:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: 281 passed;
+- results-integrity: SUCCESS (17 passed).
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 16;
+- pure semantic / unmodeled cross-document: 12.
+
+This remains a registry-state classification, not a fresh project runtime queue.

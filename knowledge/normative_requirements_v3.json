@@ -2603,43 +2603,45 @@
       "minimum_sources": 1,
       "requires_profile_owner": true,
       "requires_page_reference": true,
-      "execution_mode": "SEMANTIC_PROOF",
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
       "applicability": "SECTION_PRESENT",
-      "semantic_proof_contract": {
-        "version": "2.0",
-        "minimum_selected_evidence": 1,
-        "source_scope": {
-          "label": "Источник доказательства — исходные данные или задание на проектирование",
-          "fields": [
-            "document",
-            "section",
-            "text"
-          ],
-          "mode": "ANY_SELECTED_EVIDENCE",
-          "any_of": [
-            "исходные данн",
-            "задание на проектир"
-          ]
-        },
-        "required_groups": [
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
           {
-            "id": "RESPONSIBILITY_IN_INPUT",
-            "label": "Уровень ответственности указан именно в исходных данных/задании",
-            "scope": "SAME_EVIDENCE",
-            "fields": [
-              "document",
-              "section",
-              "text"
+            "id": "responsibility_in_input",
+            "label": "Уровень ответственности в исходных данных или задании на проектирование",
+            "source_aliases": [
+              "задание на проектирование",
+              "задание",
+              "исходные данные"
             ],
-            "all_of_groups": [
-              [
-                "уровень ответствен"
-              ],
-              [
-                "исходные данн",
-                "задание на проектир"
-              ]
+            "evidence_groups": [
+              {
+                "id": "level_label",
+                "label": "Признак уровня ответственности",
+                "aliases": [
+                  "уровень ответственности"
+                ]
+              },
+              {
+                "id": "level_value",
+                "label": "Значение уровня ответственности",
+                "aliases": [
+                  "повышенный",
+                  "нормальный",
+                  "пониженный"
+                ]
+              }
+            ],
+            "group_window_chars": 180,
+            "assertion_regexes": [
+              "уровен\\w+\\s+ответственност\\w*[^\\n]{0,50}[:=—-]\\s*(?:повышенн\\w*|нормальн\\w*|пониженн\\w*)"
             ]
           }
         ]

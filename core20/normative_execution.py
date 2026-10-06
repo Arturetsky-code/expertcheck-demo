@@ -598,6 +598,10 @@ def _set_element_match(
         str(value) for value in (element.get("applicability_aliases") or [])
         if str(value).strip()
     ]
+    source_aliases=[
+        str(value) for value in (element.get("source_aliases") or [])
+        if str(value).strip()
+    ]
     element_id=str(element.get("id") or "element")
     label=str(element.get("label") or element_id)
 
@@ -646,6 +650,21 @@ def _set_element_match(
         raw=str(page.get("text") or page.get("content") or "")
         if not raw.strip():
             continue
+
+        if source_aliases:
+            source_text=" ".join([
+                str(page.get("document") or ""),
+                str(page.get("document_type") or ""),
+                str(page.get("section") or ""),
+            ])
+            source_ok=False
+            for source_alias in source_aliases:
+                matched,is_numeric,_=_keyword_match(source_alias,source_text)
+                if matched and not is_numeric:
+                    source_ok=True
+                    break
+            if not source_ok:
+                continue
 
         alias_hits=[]
         required_hits=[]

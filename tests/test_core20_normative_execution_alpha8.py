@@ -1599,3 +1599,140 @@ def test_alpha8_fire_road_width_typed_threshold_binds_nearest_post_label_values_
     assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
     assert row["typed_value"]["selector_value"]==12.0
     assert row["typed_value"]["measured_value"]==3.8
+
+
+def test_alpha8_fire_road_wall_distance_range_promotes_middle_height_band():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",20),
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",21),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":20,
+            "text":"Высота здания составляет 20,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":21,
+            "text":"Расстояние от края пожарного проезда до стены здания принято 6,5 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["owner_object_id"]=="OBJ-WALL"
+    assert row["typed_value"]["required_minimum"]==5.0
+    assert row["typed_value"]["required_maximum"]==8.0
+    assert row["typed_value"]["measured_minimum"]==6.5
+    assert row["typed_value"]["measured_maximum"]==6.5
+
+
+def test_alpha8_fire_road_wall_distance_supports_upper_bound_only_low_height_band():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",20),
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",21),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":20,
+            "text":"Высота сооружения составляет 10,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":21,
+            "text":"Расстояние от пожарного проезда до стены принято 24,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["typed_value"]["required_minimum"] is None
+    assert row["typed_value"]["required_maximum"]==25.0
+
+
+def test_alpha8_fire_road_wall_distance_outside_range_stays_review():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",20),
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",21),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":20,
+            "text":"Высота здания составляет 20,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":21,
+            "text":"Расстояние от края пожарного проезда до стены здания принято 9,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_TYPED_VALUE_OUTSIDE_RANGE_REVIEW"
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fire_road_wall_distance_all_observed_values_must_fit_range():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",20),
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",21),
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",22),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":20,
+            "text":"Высота здания составляет 20,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":21,
+            "text":"Расстояние от края пожарного проезда до стены здания принято 6,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":22,
+            "text":"Расстояние от края пожарного проезда до стены здания принято 9,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["typed_value"]["measured_minimum"]==6.0
+    assert row["typed_value"]["measured_maximum"]==9.0
+    assert row["reason_code"]=="NORMATIVE_TYPED_VALUE_OUTSIDE_RANGE_REVIEW"
+
+
+def test_alpha8_fire_road_wall_distance_copied_normative_range_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-WALL","Раздел ПД №2_ПЗУ.pdf",20),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":20,
+        "text":"При высоте свыше 12 до 28 м расстояние от края пожарного проезда "
+               "до стен здания должно составлять 5–8 м.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
+    assert row["kind"]!="VERIFIED_OK"

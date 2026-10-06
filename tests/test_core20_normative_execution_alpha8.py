@@ -2064,3 +2064,94 @@ def test_alpha8_negated_set_evidence_requires_explicit_disclosure_opt_in():
     )
     assert ordinary["matched"] is False
     assert disclosure["matched"] is True
+
+
+def _responsibility_assignment_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Задание на проектирование.pdf"
+    document["Тип документа"]="Задание на проектирование"
+    return document
+
+
+def test_alpha8_fz384_responsibility_in_assignment_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_responsibility_assignment_document(
+        ("OBJ-RESP","Задание на проектирование.pdf",5),
+    )]
+    pages=[{
+        "document":"Задание на проектирование.pdf",
+        "document_type":"Задание на проектирование",
+        "page":5,
+        "text":"Уровень ответственности объекта: нормальный.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-RESP"
+    assert row["set_completeness"]["matched_count"]==1
+
+
+def test_alpha8_fz384_responsibility_same_words_in_pd_do_not_satisfy_input_source():
+    engine=NormativeExecutionEngine20(_foundation())
+    document=_owner_model_document(
+        ("OBJ-RESP","Раздел ПД №1_ПЗ.pdf",5),
+    )
+    document["Файл"]="Раздел ПД №1_ПЗ.pdf"
+    document["Тип документа"]="ПЗ"
+    documents=[document]
+    pages=[{
+        "document":"Раздел ПД №1_ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":5,
+        "text":"Уровень ответственности объекта: нормальный.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_fz384_responsibility_assignment_requires_actual_level_value():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_responsibility_assignment_document(
+        ("OBJ-RESP","Задание на проектирование.pdf",5),
+    )]
+    pages=[{
+        "document":"Задание на проектирование.pdf",
+        "document_type":"Задание на проектирование",
+        "page":5,
+        "text":"Уровень ответственности объекта определяется в соответствии с 384-ФЗ.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_source_scoped_set_uses_document_metadata_not_text_reference():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+    contract=contracts["FZ384-15-2-RESP-INPUT"]
+    pages=[
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":8,
+            "text":"В задании на проектирование указан уровень ответственности: нормальный.",
+        },
+        {
+            "document":"Задание на проектирование.pdf",
+            "document_type":"Задание на проектирование",
+            "page":9,
+            "text":"Уровень ответственности: нормальный.",
+        },
+    ]
+    documents=[_owner_model_document(
+        ("OBJ-RESP","Раздел ПД №1_ПЗ.pdf",8),
+        ("OBJ-RESP","Задание на проектирование.pdf",9),
+    )]
+    result=_set_completeness_evaluation(contract,pages,documents)
+    assert result["complete"] is True
+    assert result["evidence"][0]["document"]=="Задание на проектирование.pdf"

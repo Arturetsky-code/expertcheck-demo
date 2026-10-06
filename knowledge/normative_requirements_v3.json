@@ -1175,7 +1175,39 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "planning_solution_description",
+            "label": "Описание решений по планировочной организации земельного участка",
+            "aliases": [
+              "планировочной организации земельного участка",
+              "планировочная организация земельного участка"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+планировочн\\w+\\s+организаци\\w+\\s+земельн\\w+\\s+участк\\w*[^.\\n;]{0,120}(?:предусматрива\\w*|принят\\w*|включа\\w*|заключа\\w*|формиру\\w*)",
+              "(?:предусматрива\\w*|принят\\w*|включа\\w*|заключа\\w*)[^.\\n;]{0,100}планировочн\\w+\\s+организаци\\w+\\s+земельн\\w+\\s+участк\\w*"
+            ]
+          },
+          {
+            "id": "planning_solution_justification",
+            "label": "Обоснование решений по планировочной организации земельного участка",
+            "aliases": [
+              "планировочной организации земельного участка",
+              "планировочная организация земельного участка"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+планировочн\\w+\\s+организаци\\w+\\s+земельн\\w+\\s+участк\\w*[^.\\n;]{0,120}обоснован\\w*",
+              "обосновани\\w*[^.\\n;]{0,100}решени\\w*\\s+по\\s+планировочн\\w+\\s+организаци\\w+\\s+земельн\\w+\\s+участк\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

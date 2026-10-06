@@ -2252,7 +2252,9 @@ class NormativeExecutionEngine20:
         base["applicability_reason_code"]=applicability_reason
         base["applicability_trace"]=list(applicability.get("trace") or [])
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
-        base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)\n        base["typed_value"]=_typed_value_evaluation(contract,candidates,documents)\n        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
+        base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
+        base["typed_value"]=_typed_value_evaluation(contract,candidates,documents)
+        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

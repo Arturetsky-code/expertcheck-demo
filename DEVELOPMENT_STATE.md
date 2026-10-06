@@ -5244,3 +5244,58 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 natural lighting — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-E-LIGHT` without expanding the verified atomic clause:
+the AR must describe architectural solutions providing natural lighting for rooms
+with permanent occupancy.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path requires one explicit project assertion linking:
+- rooms / premises with permanent occupancy;
+- a project action/solution such as "обеспечиваются", "предусматривается" or "принято";
+- natural lighting.
+
+A copied PP87 obligation does not satisfy the assertion contract. A generic statement
+that natural lighting exists, without tying it to rooms with permanent occupancy,
+also cannot produce VERIFIED_OK.
+
+Registry commit:
+- `db9442c0ed6747de4abcd440be45285d9036a694`.
+
+Regression commit:
+- `0d9e79f73f9c07cf784ff9db885081ce84daf098`.
+
+Coverage:
+- explicit natural-light solution for permanent-occupancy rooms -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- natural lighting without the permanent-occupancy relation -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #20 was used only for validation and closed without merge.
+
+Final functional head:
+`0d9e79f73f9c07cf784ff9db885081ce84daf098`.
+
+GitHub Actions:
+- Core20 quality gates run 997: SUCCESS;
+- Core20 regression: 252 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

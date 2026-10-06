@@ -5190,3 +5190,57 @@ This requirement is hybrid:
 - other addressable evidence remains semantic.
 
 Therefore the historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 planning organization — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-C-PLANNING` while preserving the verified clause exactly:
+the PZU must contain both a description and a justification of planning-organization
+solutions for the land plot.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required for the deterministic fast path:
+1. an actual project description / adopted planning-organization solution;
+2. an explicit justification of that solution.
+
+A copied regulatory obligation ("должны быть обоснованы и описаны...") does not
+satisfy either project-assertion contract. A described solution without an explicit
+justification also does not produce VERIFIED_OK and remains available to semantic proof.
+
+Registry commit:
+- `79630cda6fbd9deea874efe2aa7ccaf42bb20e3a`.
+
+Regression commit:
+- `f5556113b0ae4a8855159dc382bd8a445be61138`.
+
+Coverage:
+- description + justification, including on different PZU pages -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- description without justification -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #19 was used only for validation and closed without merge.
+
+Final functional head:
+`f5556113b0ae4a8855159dc382bd8a445be61138`.
+
+GitHub Actions:
+- Core20 quality gates run 993: SUCCESS;
+- Core20 regression: 249 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

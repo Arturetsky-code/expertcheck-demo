@@ -1736,3 +1736,173 @@ def test_alpha8_fire_road_wall_distance_copied_normative_range_does_not_promote(
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.6-ROAD-WALL-DISTANCE")
     assert row["kind"]!="VERIFIED_OK"
+
+
+def _typed_conveyor_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Раздел ПД №6_ТХ.pdf"
+    document["Тип документа"]="ТХ"
+    return document
+
+
+def test_alpha8_conveyor_crossing_spacing_indoor_promotes_50m_limit():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",31),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":30,
+            "text":"Конвейер расположен в здании дробильного корпуса.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":31,
+            "text":"Интервал между переходными мостиками принят 45 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["selector_category"]=="INDOOR_OR_UNDERGROUND"
+    assert row["typed_value"]["required_maximum"]==50.0
+    assert row["typed_value"]["measured_maximum"]==45.0
+
+
+def test_alpha8_conveyor_crossing_spacing_outdoor_promotes_100m_limit():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",31),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":30,
+            "text":"Наружный конвейер размещен на открытой площадке.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":31,
+            "text":"Расстояние между переходными мостиками принято 80 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["selector_category"]=="OUTDOOR"
+    assert row["typed_value"]["required_maximum"]==100.0
+    assert row["typed_value"]["measured_maximum"]==80.0
+
+
+def test_alpha8_conveyor_crossing_spacing_above_limit_stays_review():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",31),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":30,
+            "text":"Конвейер расположен внутри здания.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":31,
+            "text":"Шаг переходных мостиков принят 60 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["reason_code"]=="NORMATIVE_TYPED_VALUE_OUTSIDE_RANGE_REVIEW"
+    assert row["typed_value"]["status"]=="ABOVE_MAXIMUM"
+    assert result["project_findings"]==0
+
+
+def test_alpha8_conveyor_crossing_spacing_needs_explicit_location_category():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",31),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":30,
+            "text":"Предусмотрен ленточный конвейер.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":31,
+            "text":"Интервал между переходными мостиками принят 40 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+    assert row["typed_value"]["owner_object_id"]==""
+
+
+def test_alpha8_conveyor_crossing_spacing_category_conflict_stays_unproven():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",31),
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",32),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":30,
+            "text":"Конвейер расположен в здании.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":31,
+            "text":"Наружный конвейер также размещен на открытой площадке.",
+        },
+        {
+            "document":"Раздел ПД №6_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":32,
+            "text":"Интервал между переходными мостиками принят 45 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+
+
+def test_alpha8_conveyor_crossing_spacing_copied_fnp_limits_do_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_conveyor_document(
+        ("OBJ-CONV","Раздел ПД №6_ТХ.pdf",30),
+    )]
+    pages=[{
+        "document":"Раздел ПД №6_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":30,
+        "text":"Переходные мостики через конвейер должны размещаться с интервалом "
+               "не более 50 м в зданиях и подземных камерах и не более 100 м в остальных случаях.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
+    assert row["kind"]!="VERIFIED_OK"

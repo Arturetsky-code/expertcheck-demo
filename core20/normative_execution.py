@@ -1031,7 +1031,9 @@ def _typed_numeric_observations(
             key=(round(float(best.get("value") or 0),6),int(best.get("_absolute") or 0))
             if key not in seen:
                 seen.add(key)
-                best.pop("_absolute",None)\n                best.pop("_relative",None)\n                output.append(best)
+                best.pop("_absolute",None)
+                best.pop("_relative",None)
+                output.append(best)
     output.sort(key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
     return output
 

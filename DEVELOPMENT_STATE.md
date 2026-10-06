@@ -5299,3 +5299,57 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 sanitary planning — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-H-SANITARY` while preserving the verified atomic clause:
+AR must describe and justify volume-planning solutions that ensure compliance with
+sanitary-epidemiological requirements.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required:
+1. an explicit project assertion that the volume-planning solutions ensure
+   sanitary-epidemiological requirements;
+2. an explicit justification of those volume-planning solutions.
+
+The fast path does not infer justification from the compliance statement itself.
+A copied regulatory obligation also does not satisfy the project-assertion contract.
+
+Registry commit:
+- `2eb61d2150fefdb7f9b4e51658ebaff50a4a72c2`.
+
+Regression commit:
+- `84f2e50159172a87d713e77a673ad01071773e78`.
+
+Coverage:
+- compliance assertion + separate justification -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- compliance assertion without justification -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #21 was used only for validation and closed without merge.
+
+Final functional head:
+`84f2e50159172a87d713e77a673ad01071773e78`.
+
+GitHub Actions:
+- Core20 quality gates run 1001: SUCCESS;
+- Core20 regression: 255 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

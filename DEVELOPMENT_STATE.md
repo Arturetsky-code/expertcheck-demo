@@ -5007,3 +5007,62 @@ This requirement is now hybrid rather than fully deterministic:
 
 Therefore this change reduces AI work opportunistically but does not decrement the
 historical semantic frontier count by itself.
+
+
+## Hybrid deterministic fast path — PP87 transport communications — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-I-TRANSPORT` for production projects when the PZU contains an
+explicit project assertion that the transport-communications scheme is justified for
+both external and internal freight traffic.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Deterministic fast path requires one local assertion containing:
+- the transport-communications scheme;
+- external freight traffic;
+- internal freight traffic;
+- an explicit project-level justification statement.
+
+The assertion regex deliberately requires a project statement with the scheme before
+the justification phrase. A copied normative sentence of the form
+"схемы ... должны быть обоснованы" does not satisfy the fast path.
+
+Applicability routing remains unchanged and still depends on the production-project
+profile.
+
+Registry commit:
+- `9af8fd0a0e27e6d3c9fc2e6135dad032109d4d6b`.
+
+Regression commit:
+- `0cb14a6cfb3c7cfd88b62d5bdfbcca55d9c9ca9a`.
+
+Coverage:
+- explicit justified scheme for external + internal freight -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- external-only scheme -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #16 was used only for validation and closed without merge.
+
+Final functional head:
+`0cb14a6cfb3c7cfd88b62d5bdfbcca55d9c9ca9a`.
+
+GitHub Actions:
+- Core20 quality gates run 979: SUCCESS;
+- Core20 regression: 240 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- other addressable evidence remains available to semantic proof.
+
+Therefore the historical semantic frontier count is unchanged by this step alone.

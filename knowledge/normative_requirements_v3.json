@@ -2115,7 +2115,26 @@
         "энергетической эффективности"
       ],
       "applicability_min_hits": 1,
-      "proof_type": "SEMANTIC_REQUIREMENT"
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "energy_efficiency_measures_list",
+            "label": "Перечень мероприятий по соблюдению требований энергетической эффективности",
+            "aliases": [
+              "перечень мероприятий",
+              "энергетической эффективности"
+            ],
+            "assertion_regexes": [
+              "переч(?:ень|не)\\s+мероприяти\\w*[^.\\n]{0,140}энергетическ\\w+\\s+эффективност\\w*[^.\\n]{0,80}(?:включа\\w*|содерж\\w*|предусматрива\\w*)\\s*:?\\s*[^.\\n;]{5,120}(?:;|,\\s*(?:а\\s+также\\s+)?)\\s*[^.\\n;]{5,120}",
+              "(?:предусмотрен\\w*|принят\\w*)\\s+переч(?:ень|не)\\s+мероприяти\\w*[^.\\n]{0,140}энергетическ\\w+\\s+эффективност\\w*\\s*:\\s*[^.\\n;]{5,120};\\s*[^.\\n;]{5,120}"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

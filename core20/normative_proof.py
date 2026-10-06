@@ -580,7 +580,7 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
             bool(typed.get("configured"))
             and bool(typed.get("complete"))
             and str(typed.get("status") or "").upper()=="PASS"
-            and promotion=="DETERMINISTIC_AFTER_COMPLETE"
+            and promotion in {"DETERMINISTIC_AFTER_COMPLETE","DETERMINISTIC_WITH_SEMANTIC_FALLBACK"}
         ):
             evidence=[
                 dict(value) for value in (typed.get("evidence") or [])
@@ -606,10 +606,23 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
             )
             return result
 
+        status=str(typed.get("status") or "UNCONFIGURED").upper()
+        if promotion=="DETERMINISTIC_WITH_SEMANTIC_FALLBACK":
+            result["kind"]="REVIEW_QUESTION"
+            result["state"]="Вопрос специалисту"
+            result["proof_state"]="SEMANTIC_PROOF_REQUIRED"
+            result["reason_code"]="NORMATIVE_TYPED_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
+            result["reason"]=(
+                "Строгий owner-bound числовой fast path не доказал достаточное условие для "
+                "автоматического подтверждения. Адресные evidence-кандидаты сохраняются и "
+                "передаются в semantic proof; отсутствие fast-path доказательства не считается "
+                "несоответствием."
+            )
+            return result
+
         result["kind"]="REVIEW_QUESTION"
         result["state"]="Вопрос специалисту"
         result["proof_state"]="STRUCTURED_PROOF_REQUIRED"
-        status=str(typed.get("status") or "UNCONFIGURED").upper()
         if status=="BELOW_MINIMUM":
             result["reason_code"]="NORMATIVE_TYPED_VALUE_BELOW_MINIMUM_REVIEW"
             result["reason"]=(

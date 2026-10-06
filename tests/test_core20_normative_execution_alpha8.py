@@ -1579,3 +1579,23 @@ def test_alpha8_fire_road_width_typed_threshold_cannot_merge_two_owners():
     assert row["kind"]!="VERIFIED_OK"
     assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
     assert row["typed_value"]["owner_object_id"]==""
+
+
+def test_alpha8_fire_road_width_typed_threshold_binds_nearest_post_label_values_on_same_page():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",10),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":10,
+        "text":"Высота здания составляет 12,0 м. "
+               "Ширина пожарного проезда принята 3,8 м.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.3-FIRE-ROAD-WIDTH")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["selector_value"]==12.0
+    assert row["typed_value"]["measured_value"]==3.8

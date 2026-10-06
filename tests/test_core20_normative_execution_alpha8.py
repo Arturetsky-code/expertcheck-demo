@@ -1567,7 +1567,19 @@ def test_alpha8_sp12_taxonomy_outdoor_category_fast_path_promotes_same_owner():
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
 
-    assert row["kind"]=="VERIFIED_OK", row
+    diagnostic={
+        "kind":row.get("kind"),
+        "reason_code":row.get("reason_code"),
+        "proof_state":row.get("proof_state"),
+        "retrieval_kind":row.get("retrieval_kind"),
+        "retrieval_reason_code":row.get("retrieval_reason_code"),
+        "retrieval_keyword_score":row.get("retrieval_keyword_score"),
+        "matched_keywords":row.get("matched_keywords"),
+        "set_complete":(row.get("set_completeness") or {}).get("complete"),
+        "set_owner_state":(row.get("set_completeness") or {}).get("owner_scope_state"),
+        "set_elements":(row.get("set_completeness") or {}).get("elements"),
+    }
+    assert row["kind"]=="VERIFIED_OK", diagnostic
     assert row["set_completeness"]["complete"] is True
     assert row["set_completeness"]["owner_object_id"]=="OUTDOOR-CAT"
     assert result["project_findings"]==0

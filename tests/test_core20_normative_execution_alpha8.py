@@ -2755,3 +2755,68 @@ def test_alpha8_pp87_planning_description_without_justification_stays_semantic()
     assert row["set_completeness"]["complete"] is False
     assert "planning_solution_justification" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_natural_light_fast_path_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":34,
+        "text":(
+            "Помещения с постоянным пребыванием людей обеспечиваются естественным "
+            "освещением через оконные проемы."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-E-LIGHT")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-E-LIGHT"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_natural_light_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":34,
+        "text":(
+            "В АР должны быть описаны архитектурные решения по обеспечению естественного "
+            "освещения помещений с постоянным пребыванием людей."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-E-LIGHT")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-E-LIGHT"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_natural_light_without_permanent_occupancy_relation_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":34,
+        "text":"В помещениях предусмотрено естественное освещение через оконные проемы.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-E-LIGHT")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

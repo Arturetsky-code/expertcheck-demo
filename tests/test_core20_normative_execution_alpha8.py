@@ -129,7 +129,8 @@ def test_alpha8_conditional_applicability_and_morphology_rank_real_conveyor_evid
     assert row["evidence_page"]==51
     assert "переходные мостики" in row["matched_keywords"]
     assert "100 м" in row["matched_keywords"]
-    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+    assert row["typed_value"]["status"] in {"OWNER_NOT_PROVEN","VALUE_NOT_PROVEN"}
     assert all(candidate["page"]!=40 for candidate in row["evidence_candidates"])
 
 

@@ -4617,3 +4617,118 @@ Next candidates:
    (vehicle width + 1.5 m and absolute minimum 3.5 m);
 3. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until its special-case
    gamma=1.2 override is modeled.
+
+
+## Deterministic normative proof expansion — responsibility level in input data — 2026-10-06
+
+### Goal
+
+Remove `FZ384-15-2-RESP-INPUT` from semantic AI review only if the project proves
+an actual responsibility level in a real design assignment / input-data source.
+
+### Source-scoped set evidence
+
+SET_COMPLETENESS now supports optional `source_aliases`.
+
+Important contract:
+- source aliases are matched only against document metadata
+  (`document`, `document_type`, `section`);
+- a PD page that merely says "в задании на проектирование..." cannot satisfy a
+  source-scoped input-data requirement;
+- the source constraint is independent from the textual assertion inside the page.
+
+Core commit:
+- `f3071ff4d65501f54793d73e80213b75a2177299`.
+
+### FZ384-15-2-RESP-INPUT
+
+Converted from semantic proof to one-element owner-scoped SET_COMPLETENESS.
+
+Required proof:
+1. source metadata identifies a design assignment / input-data document;
+2. the same confirmed Project Understanding owner is attached to that page;
+3. the page explicitly states "уровень ответственности";
+4. one statutory value is present: повышенный / нормальный / пониженный.
+
+Promotion:
+- `DETERMINISTIC_AFTER_COMPLETE`;
+- no semantic Judge/Critic is needed after complete proof;
+- absence or weak evidence remains fail-closed review, never PROJECT_FINDING.
+
+Registry commits:
+- `bb6fb114b0527f820be97a4679319f947a675c87`;
+- `557ec9c746de41bd56a0efd92c953d3763dbcc2a`;
+- `f4fa3115e0fb3905dde6977e4b83abfe10b723ae`.
+
+Regression commit:
+- `5a13f11d507521b1dcbbcf19ede936d58ebaf060`.
+
+Coverage:
+- explicit level in actual assignment -> deterministic VERIFIED_OK;
+- identical text in PD -> does not satisfy the source requirement;
+- assignment without an actual level value -> no promotion;
+- textual reference to an assignment does not override document metadata.
+
+### Evidence Quality issue exposed by validation
+
+The first runs showed `NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND` even for
+"Уровень ответственности объекта: нормальный." in a confirmed assignment.
+
+Cause:
+- Evidence Quality 10.1.2 uses the first two discriminative stems of `topic`;
+- the old topic "Исходные данные и уровень ответственности" made "исходные"
+  a mandatory body-text topic anchor;
+- this duplicated the newly explicit source-scope contract and rejected legitimate
+  assignment pages whose body did not repeat the document type.
+
+Fix:
+- topic reordered to "Уровень ответственности в исходных данных";
+- content alignment now checks the engineering concept first;
+- source identity remains strictly enforced by `source_aliases`;
+- no global quality threshold was weakened.
+
+Diagnostic-only commits used to isolate the pipeline:
+- `f1aad380f031e6a53b87aa21907561a3d5d1ced6`;
+- `381d5006155ece89bdd1ae683e7c91cf5d903510`;
+- `cf1c4328e8dd7bfb56d006114e0096937349dcb5`.
+
+### Validation
+
+Temporary draft PR #11 was used only for validation and closed without merge.
+
+Final functional head:
+`f4fa3115e0fb3905dde6977e4b83abfe10b723ae`.
+
+GitHub Actions:
+- Core20 quality gates run 956: SUCCESS;
+- Core20 regression: 224 passed;
+- results-integrity: SUCCESS.
+
+### Frontier
+
+Relative to the historical 35-item semantic frontier from the saved 2026-10-02 run,
+six requirements are now deterministic in current code:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`;
+- `SP4-8.2.6-ROAD-WALL-DISTANCE`;
+- `FNP505-1215-CONVEYOR-CROSSING-SPACING`;
+- `FZ384-4-1-ID-FEATURES`;
+- `FZ384-15-2-RESP-INPUT`.
+
+Conceptual historical remainder: 29 items.
+This is still not a live runtime queue count.
+
+### Held requirement
+
+`FZ384-4-11-ID-IN-ASSIGNMENT-PD` remains intentionally held.
+Presence of identification fields in both assignment and PD is insufficient:
+a safe deterministic proof must compare the actual values of the same features
+across both sources and fail closed on disagreement.
+
+Next candidates:
+1. `SP18-5.37-ENTRANCE-GATE-WIDTH` — relative formula proof
+   (vehicle width + 1.5 m plus absolute minimum 3.5 m);
+2. `FZ384-4-11-ID-IN-ASSIGNMENT-PD` only after a reusable cross-document
+   value-consistency contract exists;
+3. `GOST27751-10.1-CLASS-LEVEL-GAMMA` remains held until its gamma=1.2
+   special-case applicability is modeled.

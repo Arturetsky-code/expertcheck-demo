@@ -3047,7 +3047,82 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "CROSS_DOCUMENT",
+      "cross_document_contract": {
+        "kind": "OWNER_BOUND_FIELD_CONSISTENCY",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "source_groups": [
+          {
+            "id": "ASSIGNMENT",
+            "label": "Задание на проектирование",
+            "metadata_aliases": [
+              "задание на проектирование"
+            ]
+          },
+          {
+            "id": "PD",
+            "label": "Текстовая часть проектной документации",
+            "section_keys": [
+              "ПЗ"
+            ],
+            "exclude_metadata_aliases": [
+              "задание на проектирование"
+            ]
+          }
+        ],
+        "fields": [
+          {
+            "id": "purpose",
+            "label": "Назначение",
+            "value_regexes": [
+              "назначени[ея](?:\\s+(?:здания|сооружения|объекта))?\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,160})"
+            ]
+          },
+          {
+            "id": "functional_technology",
+            "label": "Функционально-технологические особенности",
+            "value_regexes": [
+              "функционально[- ]технологическ\\w+\\s+особенност\\w*\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,200})"
+            ]
+          },
+          {
+            "id": "dangerous_impacts",
+            "label": "Опасные природные процессы и техногенные воздействия",
+            "value_regexes": [
+              "опасн\\w+\\s+природн\\w+(?:\\s+процесс\\w*)?(?:\\s+и)?\\s+техногенн\\w+\\s+воздейств\\w*\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,200})"
+            ]
+          },
+          {
+            "id": "opo",
+            "label": "Принадлежность к ОПО",
+            "value_regexes": [
+              "принадлежност\\w*\\s+к\\s+(?:опо|опасн\\w+\\s+производственн\\w+\\s+объект\\w*)\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,120})"
+            ]
+          },
+          {
+            "id": "fire_explosion_hazard",
+            "label": "Пожарная и взрывопожарная опасность",
+            "value_regexes": [
+              "(?:пожарн\\w+\\s+и\\s+взрывопожарн\\w+|взрывопожарн\\w+\\s+и\\s+пожарн\\w+)\\s+опасност\\w*\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,120})"
+            ]
+          },
+          {
+            "id": "permanent_occupancy",
+            "label": "Постоянное пребывание людей",
+            "value_regexes": [
+              "постоянн\\w+\\s+пребыван\\w+\\s+люд\\w*\\s*[:=—-]\\s*(?P<value>[^\\n;]{1,120})"
+            ]
+          },
+          {
+            "id": "responsibility_level",
+            "label": "Уровень ответственности",
+            "value_regexes": [
+              "уровен\\w+\\s+ответственност\\w*\\s*[:=—-]\\s*(?P<value>повышенн\\w*|нормальн\\w*|пониженн\\w*)"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

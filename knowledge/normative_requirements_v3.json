@@ -3141,7 +3141,7 @@
     "sections": [
       "ПЗУ"
     ],
-    "check_kind": "SEMANTIC",
+    "check_kind": "TYPED_VALUE",
     "automation": "AUTO",
     "keywords": [
       "ширина проездов",
@@ -3164,7 +3164,54 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "TYPED_VALUE",
+      "typed_contract": {
+        "kind": "OWNER_BOUND_PIECEWISE_MINIMUM",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "numeric_tolerance": 1e-09,
+        "selector": {
+          "id": "object_height_m",
+          "label": "Высота здания или сооружения",
+          "aliases": [
+            "высота здания",
+            "высота сооружения",
+            "высота объекта"
+          ],
+          "window_chars": 150,
+          "reject_comparator_context": true
+        },
+        "measure": {
+          "id": "fire_road_width_m",
+          "label": "Ширина пожарного проезда",
+          "aliases": [
+            "ширина пожарного проезда",
+            "ширина проезда для пожарных автомобилей",
+            "проезд для пожарных автомобилей"
+          ],
+          "window_chars": 180,
+          "reject_comparator_context": true
+        },
+        "bands": [
+          {
+            "id": "height_le_13",
+            "max_selector_inclusive": 13.0,
+            "min_value": 3.5
+          },
+          {
+            "id": "height_13_46",
+            "min_selector_exclusive": 13.0,
+            "max_selector_inclusive": 46.0,
+            "min_value": 4.2
+          },
+          {
+            "id": "height_gt_46",
+            "min_selector_exclusive": 46.0,
+            "min_value": 6.0
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

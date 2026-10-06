@@ -2182,3 +2182,77 @@ def test_alpha8_source_scoped_set_uses_document_metadata_not_text_reference():
     result=_set_completeness_evaluation(contract,pages,documents)
     assert result["complete"] is True
     assert result["evidence"][0]["document"]=="Задание на проектирование.pdf"
+
+
+def test_alpha8_pp87_insolation_and_daylight_results_promote_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":30,
+            "text":"Продолжительность инсоляции помещения составляет 2,5 ч.",
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":31,
+            "text":"КЕО помещения принято 1,5 %.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D1-INSOLATION")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["total_count"]==2
+
+
+def test_alpha8_pp87_insolation_heading_without_numeric_results_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":30,
+        "text":"Инсоляция и КЕО. Приведены результаты расчётов продолжительности "
+               "инсоляции и коэффициента естественной освещённости.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D1-INSOLATION")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_pp87_insolation_requires_both_calculation_results():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":30,
+        "text":"Продолжительность инсоляции помещения составляет 2,5 ч.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D1-INSOLATION")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert "daylight_factor_result" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_insolation_copied_requirement_with_clause_number_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":30,
+        "text":"Согласно п. 13 д(1) должны быть приведены результаты расчётов "
+               "продолжительности инсоляции и коэффициента естественной освещённости.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D1-INSOLATION")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False

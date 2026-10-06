@@ -5407,3 +5407,58 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 room finishing — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-D-FINISH` while preserving the verified atomic clause:
+AR must describe and justify finishing solutions for rooms of primary, auxiliary,
+service and technical purpose.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required:
+1. an explicit project description/adoption of finishing solutions covering all four
+   room-purpose groups;
+2. an explicit justification covering the same scope.
+
+The fast path deliberately requires all four groups. A partial statement for only
+primary and auxiliary rooms cannot close the requirement. A copied PP87 obligation
+also cannot satisfy the project-assertion contract.
+
+Registry commit:
+- `d7f16425aee09b14318469d3f25932a89881d76c`.
+
+Regression commit:
+- `251fb578b6833082fc02a325b8847ea99627466a`.
+
+Coverage:
+- all four groups + project solution + separate justification -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- partial room-purpose scope -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #23 was used only for validation and closed without merge.
+
+Final functional head:
+`251fb578b6833082fc02a325b8847ea99627466a`.
+
+GitHub Actions:
+- Core20 quality gates run 1009: SUCCESS;
+- Core20 regression: 261 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

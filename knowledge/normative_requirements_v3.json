@@ -1123,7 +1123,7 @@
     "sections": [
       "ПЗУ"
     ],
-    "check_kind": "SEMANTIC",
+    "check_kind": "PRESENCE",
     "automation": "AUTO",
     "keywords": [
       "зоны с особыми условиями",

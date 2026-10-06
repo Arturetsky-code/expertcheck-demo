@@ -3540,7 +3540,7 @@
       "АР",
       "КР"
     ],
-    "check_kind": "SEMANTIC",
+    "check_kind": "TYPED_VALUE",
     "automation": "AUTO",
     "keywords": [
       "переходные мостики",
@@ -3565,7 +3565,67 @@
       "applicability_keywords": [
         "конвейер"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "proof_type": "TYPED_VALUE",
+      "typed_contract": {
+        "kind": "OWNER_BOUND_CATEGORICAL_RANGE",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "numeric_tolerance": 1e-09,
+        "selector": {
+          "id": "conveyor_location_kind",
+          "label": "Размещение участка конвейера",
+          "categories": [
+            {
+              "id": "INDOOR_OR_UNDERGROUND",
+              "label": "В здании или подземной камере",
+              "aliases": [
+                "в здании",
+                "внутри здания",
+                "в подземной камере",
+                "в подземных камерах",
+                "подземная камера"
+              ]
+            },
+            {
+              "id": "OUTDOOR",
+              "label": "Открытое или наружное размещение",
+              "aliases": [
+                "на открытой площадке",
+                "на открытом воздухе",
+                "наружный конвейер",
+                "открытый конвейер",
+                "вне здания"
+              ]
+            }
+          ]
+        },
+        "measure": {
+          "id": "crossing_spacing_m",
+          "label": "Интервал между переходными мостиками",
+          "aliases": [
+            "интервал между переходными мостиками",
+            "расстояние между переходными мостиками",
+            "шаг переходных мостиков",
+            "переходные мостики установлены с интервалом",
+            "переходные мостики размещены с интервалом"
+          ],
+          "window_chars": 190,
+          "reject_comparator_context": true
+        },
+        "bands": [
+          {
+            "id": "indoor_or_underground",
+            "selector_id": "INDOOR_OR_UNDERGROUND",
+            "max_value": 50.0
+          },
+          {
+            "id": "outdoor",
+            "selector_id": "OUTDOOR",
+            "max_value": 100.0
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

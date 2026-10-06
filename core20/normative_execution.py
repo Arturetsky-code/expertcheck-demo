@@ -1316,6 +1316,213 @@ def _typed_categorical_value_evaluation(
         "evidence":list(resolved.get("evidence") or []),
     }
 
+def _typed_relative_minimum_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+    typed:dict[str,Any],
+)->dict[str,Any]:
+    """Evaluate owner-bound target >= max(reference + offset, absolute floor).
+
+    The contract may require an explicit categorical guard. This is useful when a
+    normative clause contains multiple applicability branches and one deterministic
+    fast path is safe only after the other branch is explicitly excluded.
+    """
+    promotion_policy=str(typed.get("promotion_policy") or "HOLD").upper()
+    guard=dict(typed.get("guard") or {})
+    required_guard_id=str(typed.get("required_guard_id") or "").strip()
+    reference=dict(typed.get("reference") or {})
+    measure=dict(typed.get("measure") or {})
+    offset=float(typed.get("offset") or 0.0)
+    absolute_minimum=(
+        float(typed["absolute_minimum"])
+        if typed.get("absolute_minimum") is not None else None
+    )
+    tolerance=float(typed.get("numeric_tolerance") or 1e-9)
+
+    owner_index=_confirmed_owner_page_index(documents)
+    by_owner:dict[str,dict[str,list[dict[str,Any]]]]={}
+    ambiguous_addresses=0
+    for page in pages:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        owners=owner_index.get((document,str(page_no)),set()) if document and page_no not in (None,"") else set()
+        if len(owners)!=1:
+            if len(owners)>1:
+                ambiguous_addresses+=1
+            continue
+        owner=next(iter(owners))
+        bucket=by_owner.setdefault(owner,{"guard":[],"reference":[],"measure":[]})
+        if guard:
+            bucket["guard"].extend(_typed_categorical_observations(page,guard))
+        bucket["reference"].extend(_typed_numeric_observations(page,reference))
+        bucket["measure"].extend(_typed_numeric_observations(page,measure))
+
+    def _unique_numeric(rows:list[dict[str,Any]])->list[float]:
+        values=[]
+        for row in rows:
+            value=round(float(row.get("value") or 0),6)
+            if value not in values:
+                values.append(value)
+        return values
+
+    owner_results=[]
+    for owner in sorted(by_owner):
+        guard_rows=by_owner[owner]["guard"]
+        reference_rows=by_owner[owner]["reference"]
+        measure_rows=by_owner[owner]["measure"]
+
+        guard_ids=[]
+        for row in guard_rows:
+            category_id=str(row.get("category_id") or "")
+            if category_id and category_id not in guard_ids:
+                guard_ids.append(category_id)
+
+        if required_guard_id:
+            if required_guard_id not in guard_ids:
+                owner_results.append({
+                    "object_id":owner,
+                    "status":"GUARD_NOT_PROVEN",
+                    "guard_categories":guard_ids,
+                    "evidence":[],
+                })
+                continue
+            if any(value!=required_guard_id for value in guard_ids):
+                owner_results.append({
+                    "object_id":owner,
+                    "status":"GUARD_CONFLICT",
+                    "guard_categories":guard_ids,
+                    "evidence":[],
+                })
+                continue
+
+        reference_values=_unique_numeric(reference_rows)
+        measure_values=_unique_numeric(measure_rows)
+        if len(reference_values)!=1 or not measure_values:
+            owner_results.append({
+                "object_id":owner,
+                "status":"VALUE_CONFLICT" if len(reference_values)>1 else "VALUE_NOT_PROVEN",
+                "guard_categories":guard_ids,
+                "reference_values":reference_values,
+                "measure_values":measure_values,
+                "evidence":[],
+            })
+            continue
+
+        reference_value=reference_values[0]
+        measured_minimum=min(measure_values)
+        required_minimum=reference_value+offset
+        if absolute_minimum is not None:
+            required_minimum=max(required_minimum,absolute_minimum)
+        status=(
+            "PASS"
+            if measured_minimum+tolerance>=required_minimum
+            else "BELOW_MINIMUM"
+        )
+
+        guard_evidence=next(
+            (
+                row for row in guard_rows
+                if not required_guard_id
+                or str(row.get("category_id") or "")==required_guard_id
+            ),
+            guard_rows[0] if guard_rows else {},
+        )
+        reference_evidence=next(
+            (
+                row for row in reference_rows
+                if round(float(row.get("value") or 0),6)==round(reference_value,6)
+            ),
+            reference_rows[0] if reference_rows else {},
+        )
+        measure_evidence=next(
+            (
+                row for row in measure_rows
+                if round(float(row.get("value") or 0),6)==round(measured_minimum,6)
+            ),
+            measure_rows[0] if measure_rows else {},
+        )
+
+        evidence=[]
+        for role,item in (
+            ("guard",guard_evidence),
+            ("reference",reference_evidence),
+            ("measure",measure_evidence),
+        ):
+            if not item:
+                continue
+            entry={
+                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-{role}-{len(evidence)+1}",
+                "document":str(item.get("document") or ""),
+                "page":item.get("page"),
+                "section":str(item.get("section") or ""),
+                "fragment":str(item.get("fragment") or ""),
+                "typed_role":role,
+                "object_id":owner,
+            }
+            if role=="guard":
+                entry["typed_category"]=str(item.get("category_id") or "")
+            else:
+                entry["typed_value"]=float(item.get("value") or 0)
+            evidence.append(entry)
+
+        owner_results.append({
+            "object_id":owner,
+            "status":status,
+            "guard_categories":guard_ids,
+            "reference_value":reference_value,
+            "measured_value":measured_minimum,
+            "measured_minimum":measured_minimum,
+            "required_minimum":required_minimum,
+            "offset":offset,
+            "absolute_minimum":absolute_minimum,
+            "evidence":evidence,
+        })
+
+    evaluable=[
+        row for row in owner_results
+        if row.get("status") in {"PASS","BELOW_MINIMUM"}
+    ]
+    if len(evaluable)!=1:
+        state="MULTIPLE_OWNERS" if len(evaluable)>1 else (
+            "AMBIGUOUS_OWNER" if ambiguous_addresses else "OWNER_NOT_PROVEN"
+        )
+        return {
+            "configured":True,
+            "kind":"OWNER_BOUND_RELATIVE_MINIMUM",
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":state,
+            "owner_scope_state":state,
+            "owner_object_id":"",
+            "ambiguous_address_count":ambiguous_addresses,
+            "owner_results":owner_results,
+            "evidence":[],
+        }
+
+    resolved=evaluable[0]
+    passed=resolved.get("status")=="PASS"
+    return {
+        "configured":True,
+        "kind":"OWNER_BOUND_RELATIVE_MINIMUM",
+        "promotion_policy":promotion_policy,
+        "complete":bool(passed),
+        "status":str(resolved.get("status") or ""),
+        "owner_scope_state":"CONFIRMED",
+        "owner_object_id":str(resolved.get("object_id") or ""),
+        "guard_categories":list(resolved.get("guard_categories") or []),
+        "reference_value":resolved.get("reference_value"),
+        "measured_value":resolved.get("measured_value"),
+        "measured_minimum":resolved.get("measured_minimum"),
+        "required_minimum":resolved.get("required_minimum"),
+        "offset":resolved.get("offset"),
+        "absolute_minimum":resolved.get("absolute_minimum"),
+        "ambiguous_address_count":ambiguous_addresses,
+        "owner_results":owner_results,
+        "evidence":list(resolved.get("evidence") or []),
+    }
+
+
 def _typed_value_evaluation(
     contract:dict[str,Any],
     pages:list[dict[str,Any]],
@@ -1339,6 +1546,13 @@ def _typed_value_evaluation(
     ).upper()
     if kind=="OWNER_BOUND_CATEGORICAL_RANGE":
         return _typed_categorical_value_evaluation(
+            contract,
+            pages,
+            documents,
+            typed,
+        )
+    if kind=="OWNER_BOUND_RELATIVE_MINIMUM":
+        return _typed_relative_minimum_evaluation(
             contract,
             pages,
             documents,

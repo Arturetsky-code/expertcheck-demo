@@ -1907,3 +1907,160 @@ def test_alpha8_conveyor_crossing_spacing_copied_fnp_limits_do_not_promote():
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1215-CONVEYOR-CROSSING-SPACING")
     assert row["kind"]!="VERIFIED_OK"
+
+
+def _id_features_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Раздел ПД №1_ПЗ.pdf"
+    document["Тип документа"]="ПЗ"
+    return document
+
+
+def _complete_id_features_text():
+    return (
+        "Идентификационные признаки здания или сооружения. "
+        "Назначение объекта: производственное. "
+        "Функционально-технологические особенности: дробление и транспортирование руды. "
+        "Опасные природные процессы и техногенные воздействия: отсутствуют. "
+        "Объект не относится к опасным производственным объектам. "
+        "Пожарная и взрывопожарная опасность: категория В1. "
+        "Постоянное пребывание людей: не предусмотрено. "
+        "Уровень ответственности: нормальный."
+    )
+
+
+def test_alpha8_fz384_id_features_complete_same_owner_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_id_features_document(
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )]
+    pages=[{
+        "document":"Раздел ПД №1_ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":10,
+        "text":_complete_id_features_text(),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-4-1-ID-FEATURES")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-ID"
+    assert row["set_completeness"]["matched_count"]==7
+    assert row["set_completeness"]["total_count"]==7
+
+
+def test_alpha8_fz384_id_features_copied_statutory_list_is_not_project_evidence():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_id_features_document(
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )]
+    pages=[{
+        "document":"Раздел ПД №1_ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":10,
+        "text":(
+            "В соответствии со статьей 4 к идентификационным признакам относятся: "
+            "назначение, функционально-технологические особенности, опасные природные "
+            "и техногенные воздействия, принадлежность к ОПО, пожарная и взрывопожарная "
+            "опасность, постоянное пребывание людей и уровень ответственности."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-4-1-ID-FEATURES")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+
+
+def test_alpha8_fz384_id_features_missing_one_feature_stays_review():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_id_features_document(
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )]
+    text=_complete_id_features_text().replace(
+        "Функционально-технологические особенности: дробление и транспортирование руды. ",
+        "",
+    )
+    pages=[{
+        "document":"Раздел ПД №1_ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":10,
+        "text":text,
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-4-1-ID-FEATURES")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert "functional_technology" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz384_id_features_cannot_merge_two_objects():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+    contract=contracts["FZ384-4-1-ID-FEATURES"]
+    pages=[
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":10,
+            "text":(
+                "Назначение объекта: производственное. "
+                "Функционально-технологические особенности: дробление руды. "
+                "Опасные природные процессы и техногенные воздействия: отсутствуют. "
+                "Объект не относится к опасным производственным объектам."
+            ),
+        },
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":11,
+            "text":(
+                "Пожарная и взрывопожарная опасность: категория В1. "
+                "Постоянное пребывание людей: не предусмотрено. "
+                "Уровень ответственности: нормальный."
+            ),
+        },
+    ]
+    documents=[_id_features_document(
+        ("OBJ-A","Раздел ПД №1_ПЗ.pdf",10),
+        ("OBJ-B","Раздел ПД №1_ПЗ.pdf",11),
+    )]
+    set_result=_set_completeness_evaluation(contract,pages,documents)
+    assert set_result["complete"] is False
+    assert set_result["owner_scope_state"]=="OWNER_NOT_PROVEN"
+    assert set_result["owner_object_id"]==""
+
+
+def test_alpha8_negated_set_evidence_requires_explicit_disclosure_opt_in():
+    page={
+        "document":"ПЗ.pdf",
+        "document_type":"ПЗ",
+        "page":1,
+        "text":"Объект не относится к опасным производственным объектам.",
+    }
+    ordinary=_set_element_match(
+        {
+            "id":"opo",
+            "label":"ОПО",
+            "aliases":["опасным производственным объектам"],
+        },
+        [page],
+        "TEST-ORDINARY",
+    )
+    disclosure=_set_element_match(
+        {
+            "id":"opo",
+            "label":"ОПО",
+            "aliases":["опасным производственным объектам"],
+            "allow_negated_evidence":True,
+            "assertion_regexes":[
+                r"(?:не\s+)?(?:относится|является)[^\n]{0,90}опасн\w+\s+производственн\w+\s+объект\w*"
+            ],
+        },
+        [page],
+        "TEST-DISCLOSURE",
+    )
+    assert ordinary["matched"] is False
+    assert disclosure["matched"] is True

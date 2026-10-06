@@ -570,6 +570,65 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         )
         return result
 
+    if proof_type == "TYPED_VALUE":
+        typed=dict(result.get("typed_value") or {})
+        promotion=str(typed.get("promotion_policy") or "HOLD").upper()
+        if (
+            bool(typed.get("configured"))
+            and bool(typed.get("complete"))
+            and str(typed.get("status") or "").upper()=="PASS"
+            and promotion=="DETERMINISTIC_AFTER_COMPLETE"
+        ):
+            evidence=[
+                dict(value) for value in (typed.get("evidence") or [])
+                if isinstance(value,dict)
+            ]
+            if evidence:
+                result["evidence_candidates"]=evidence
+                result["retrieval_candidate_count"]=len(evidence)
+                primary=evidence[0]
+                result["evidence_id"]=primary.get("evidence_id") or ""
+                result["evidence_document"]=primary.get("document") or ""
+                result["evidence_page"]=primary.get("page")
+                result["evidence_fragment"]=primary.get("fragment") or ""
+                result["matched_keywords"]=[]
+            result["kind"]="VERIFIED_OK"
+            result["state"]="Подтверждено"
+            result["proof_state"]="DETERMINISTIC_TYPED_VALUE_PROOF"
+            result["reason_code"]="NORMATIVE_TYPED_VALUE_PROOF_CONFIRMED"
+            result["reason"]=(
+                "Структурированный числовой контракт подтверждён для одного адресно связанного "
+                "объекта Project Understanding: фактическое значение сопоставлено с применимым "
+                "диапазоном и удовлетворяет минимальному нормативному порогу без AI."
+            )
+            return result
+
+        result["kind"]="REVIEW_QUESTION"
+        result["state"]="Вопрос специалисту"
+        result["proof_state"]="STRUCTURED_PROOF_REQUIRED"
+        status=str(typed.get("status") or "UNCONFIGURED").upper()
+        if status=="BELOW_MINIMUM":
+            result["reason_code"]="NORMATIVE_TYPED_VALUE_BELOW_MINIMUM_REVIEW"
+            result["reason"]=(
+                "Адресные числовые значения извлечены и связаны с одним объектом, но измеренное "
+                "значение ниже вычисленного минимального порога. До отдельного negative-deviation "
+                "контракта автоматическое замечание не формируется; требуется проверка специалиста."
+            )
+        elif bool(typed.get("configured")):
+            result["reason_code"]="NORMATIVE_TYPED_VALUE_NOT_PROVEN"
+            result["reason"]=(
+                "Typed-contract настроен, но однозначная owner-bound связка исходного параметра, "
+                "проверяемого значения и применимого диапазона не доказана. Текстовый retrieval "
+                "не используется как подтверждение."
+            )
+        else:
+            result["reason_code"]="NORMATIVE_STRUCTURED_PROOF_REQUIRED"
+            result["reason"]=(
+                "Для требования нужен структурированный числовой контракт. "
+                "Текстовое совпадение не используется как подтверждение."
+            )
+        return result
+
     recoverable_retrieval = (
         retrieval_reason in {
             "NORMATIVE_EVIDENCE_WEAK",
@@ -730,7 +789,7 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
             )
         return result
 
-    if proof_type in {"TYPED_VALUE", "CROSS_SECTION"}:
+    if proof_type == "CROSS_SECTION":
         result["kind"] = "REVIEW_QUESTION"
         result["state"] = "Вопрос специалисту"
         result["proof_state"] = "STRUCTURED_PROOF_REQUIRED"

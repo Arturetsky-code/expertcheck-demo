@@ -1037,6 +1037,246 @@ def _typed_numeric_observations(
     return output
 
 
+
+def _typed_categorical_observations(
+    page:dict[str,Any],
+    selector:dict[str,Any],
+)->list[dict[str,Any]]:
+    """Return explicit categorical selector assertions from one addressable page."""
+    text=_norm(page.get("text") or "")
+    if not text:
+        return []
+    output=[]
+    for category in selector.get("categories") or []:
+        if not isinstance(category,dict):
+            continue
+        category_id=str(category.get("id") or "").strip()
+        if not category_id:
+            continue
+        aliases=[
+            _norm(value) for value in (category.get("aliases") or [])
+            if _norm(value)
+        ]
+        for alias in aliases:
+            anchor=text.find(alias)
+            if anchor<0:
+                continue
+            output.append({
+                "category_id":category_id,
+                "category_label":str(category.get("label") or category_id),
+                "document":str(page.get("document") or ""),
+                "page":page.get("page"),
+                "section":str(page.get("document_type") or page.get("section") or ""),
+                "fragment":_fragment(text,[alias],radius=180),
+                "alias":alias,
+                "distance":0,
+            })
+            break
+    return output
+
+
+def _typed_categorical_value_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+    typed:dict[str,Any],
+)->dict[str,Any]:
+    promotion_policy=str(typed.get("promotion_policy") or "HOLD").upper()
+    selector=dict(typed.get("selector") or {})
+    measure=dict(typed.get("measure") or {})
+    bands=[
+        dict(value) for value in (typed.get("bands") or [])
+        if isinstance(value,dict)
+    ]
+    owner_index=_confirmed_owner_page_index(documents)
+    by_owner:dict[str,dict[str,list[dict[str,Any]]]]={}
+    ambiguous_addresses=0
+
+    for page in pages:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        owners=owner_index.get((document,str(page_no)),set()) if document and page_no not in (None,"") else set()
+        if len(owners)!=1:
+            if len(owners)>1:
+                ambiguous_addresses+=1
+            continue
+        owner=next(iter(owners))
+        bucket=by_owner.setdefault(owner,{"selector":[],"measure":[]})
+        bucket["selector"].extend(_typed_categorical_observations(page,selector))
+        bucket["measure"].extend(_typed_numeric_observations(page,measure))
+
+    def _unique_numeric(rows:list[dict[str,Any]])->list[float]:
+        values=[]
+        for row in rows:
+            value=round(float(row.get("value") or 0),6)
+            if value not in values:
+                values.append(value)
+        return values
+
+    owner_results=[]
+    for owner in sorted(by_owner):
+        selector_rows=by_owner[owner]["selector"]
+        measure_rows=by_owner[owner]["measure"]
+        selector_ids=[]
+        for row in selector_rows:
+            category_id=str(row.get("category_id") or "")
+            if category_id and category_id not in selector_ids:
+                selector_ids.append(category_id)
+        measure_values=_unique_numeric(measure_rows)
+
+        if len(selector_ids)!=1 or not measure_values:
+            owner_results.append({
+                "object_id":owner,
+                "status":"SELECTOR_CONFLICT" if len(selector_ids)>1 else "VALUE_NOT_PROVEN",
+                "selector_categories":selector_ids,
+                "measure_values":measure_values,
+                "evidence":[],
+            })
+            continue
+
+        selector_id=selector_ids[0]
+        selected_band=next(
+            (
+                band for band in bands
+                if str(band.get("selector_id") or "")==selector_id
+            ),
+            None,
+        )
+        if not selected_band:
+            owner_results.append({
+                "object_id":owner,
+                "status":"THRESHOLD_BAND_NOT_PROVEN",
+                "selector_category":selector_id,
+                "measure_values":measure_values,
+                "evidence":[],
+            })
+            continue
+
+        required_minimum=(
+            float(selected_band["min_value"])
+            if selected_band.get("min_value") is not None else None
+        )
+        required_maximum=(
+            float(selected_band["max_value"])
+            if selected_band.get("max_value") is not None else None
+        )
+        measured_minimum=min(measure_values)
+        measured_maximum=max(measure_values)
+        tolerance=float(typed.get("numeric_tolerance") or 1e-9)
+
+        below=(
+            required_minimum is not None
+            and measured_minimum+tolerance<required_minimum
+        )
+        above=(
+            required_maximum is not None
+            and measured_maximum-tolerance>required_maximum
+        )
+        if required_minimum is None and required_maximum is None:
+            status="THRESHOLD_BAND_NOT_PROVEN"
+        elif below and above:
+            status="OUTSIDE_RANGE"
+        elif below:
+            status="BELOW_MINIMUM"
+        elif above:
+            status="ABOVE_MAXIMUM"
+        else:
+            status="PASS"
+
+        selector_evidence=next(
+            (row for row in selector_rows if str(row.get("category_id") or "")==selector_id),
+            selector_rows[0] if selector_rows else {},
+        )
+        extreme_values={round(measured_minimum,6),round(measured_maximum,6)}
+        measure_evidence=[]
+        for row in measure_rows:
+            value=round(float(row.get("value") or 0),6)
+            if value in extreme_values:
+                measure_evidence.append(row)
+                extreme_values.discard(value)
+            if not extreme_values:
+                break
+
+        evidence=[]
+        if selector_evidence:
+            evidence.append({
+                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-selector-0",
+                "document":str(selector_evidence.get("document") or ""),
+                "page":selector_evidence.get("page"),
+                "section":str(selector_evidence.get("section") or ""),
+                "fragment":str(selector_evidence.get("fragment") or ""),
+                "typed_role":"selector",
+                "typed_category":selector_id,
+                "object_id":owner,
+            })
+        for index,item in enumerate(measure_evidence,1):
+            evidence.append({
+                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-measure-{index}",
+                "document":str(item.get("document") or ""),
+                "page":item.get("page"),
+                "section":str(item.get("section") or ""),
+                "fragment":str(item.get("fragment") or ""),
+                "typed_role":"measure",
+                "typed_value":float(item.get("value") or 0),
+                "object_id":owner,
+            })
+
+        owner_results.append({
+            "object_id":owner,
+            "status":status,
+            "selector_category":selector_id,
+            "measured_value":measured_maximum if required_maximum is not None else measured_minimum,
+            "measured_minimum":measured_minimum,
+            "measured_maximum":measured_maximum,
+            "required_minimum":required_minimum,
+            "required_maximum":required_maximum,
+            "band_id":str(selected_band.get("id") or selector_id),
+            "evidence":evidence,
+        })
+
+    evaluable=[
+        row for row in owner_results
+        if row.get("status") in {"PASS","BELOW_MINIMUM","ABOVE_MAXIMUM","OUTSIDE_RANGE"}
+    ]
+    if len(evaluable)!=1:
+        state="MULTIPLE_OWNERS" if len(evaluable)>1 else (
+            "AMBIGUOUS_OWNER" if ambiguous_addresses else "OWNER_NOT_PROVEN"
+        )
+        return {
+            "configured":True,
+            "kind":"OWNER_BOUND_CATEGORICAL_RANGE",
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":state,
+            "owner_scope_state":state,
+            "owner_object_id":"",
+            "ambiguous_address_count":ambiguous_addresses,
+            "owner_results":owner_results,
+            "evidence":[],
+        }
+
+    resolved=evaluable[0]
+    passed=resolved.get("status")=="PASS"
+    return {
+        "configured":True,
+        "kind":"OWNER_BOUND_CATEGORICAL_RANGE",
+        "promotion_policy":promotion_policy,
+        "complete":bool(passed),
+        "status":str(resolved.get("status") or ""),
+        "owner_scope_state":"CONFIRMED",
+        "owner_object_id":str(resolved.get("object_id") or ""),
+        "selector_category":str(resolved.get("selector_category") or ""),
+        "measured_value":resolved.get("measured_value"),
+        "measured_minimum":resolved.get("measured_minimum"),
+        "measured_maximum":resolved.get("measured_maximum"),
+        "required_minimum":resolved.get("required_minimum"),
+        "required_maximum":resolved.get("required_maximum"),
+        "band_id":str(resolved.get("band_id") or ""),
+        "ambiguous_address_count":ambiguous_addresses,
+        "owner_results":owner_results,
+        "evidence":list(resolved.get("evidence") or []),
+    }
+
 def _typed_value_evaluation(
     contract:dict[str,Any],
     pages:list[dict[str,Any]],
@@ -1058,6 +1298,13 @@ def _typed_value_evaluation(
     promotion_policy=str(
         typed.get("promotion_policy") or "HOLD"
     ).upper()
+    if kind=="OWNER_BOUND_CATEGORICAL_RANGE":
+        return _typed_categorical_value_evaluation(
+            contract,
+            pages,
+            documents,
+            typed,
+        )
     if kind not in {"OWNER_BOUND_PIECEWISE_MINIMUM","OWNER_BOUND_PIECEWISE_RANGE"}:
         return {
             "configured":True,

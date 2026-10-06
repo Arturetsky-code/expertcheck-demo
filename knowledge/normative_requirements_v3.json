@@ -1955,7 +1955,39 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "space_composition_justification",
+            "label": "Обоснование принятых объёмно-пространственных решений",
+            "aliases": [
+              "объемно-пространственные решения",
+              "объёмно-пространственные решения"
+            ],
+            "assertion_regexes": [
+              "(?:объемно|объёмно)[- ]пространственн\\w+\\s+решени\\w*[^.\\n;]{0,140}обоснован\\w*",
+              "обосновани\\w*[^.\\n;]{0,120}(?:объемно|объёмно)[- ]пространственн\\w+\\s+решени\\w*"
+            ]
+          },
+          {
+            "id": "architectural_artistic_justification",
+            "label": "Обоснование принятых архитектурно-художественных решений",
+            "aliases": [
+              "архитектурно-художественные решения",
+              "архитектурно художественные решения"
+            ],
+            "assertion_regexes": [
+              "архитектурно[- ]художественн\\w+\\s+решени\\w*[^.\\n;]{0,140}обоснован\\w*",
+              "обосновани\\w*[^.\\n;]{0,120}архитектурно[- ]художественн\\w+\\s+решени\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

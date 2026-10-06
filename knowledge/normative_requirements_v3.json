@@ -4662,7 +4662,49 @@
         "ворота",
         "заезд автотранспорта"
       ],
-      "applicability_min_hits": 2
+      "applicability_min_hits": 2,
+      "proof_type": "TYPED_VALUE",
+      "typed_contract": {
+        "kind": "OWNER_BOUND_RELATIVE_MINIMUM",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "required_guard_id": "AUTO_ONLY",
+        "guard": {
+          "categories": [
+            {
+              "id": "AUTO_ONLY",
+              "label": "Железнодорожный въезд явно отсутствует",
+              "aliases": [
+                "железнодорожный въезд не предусмотрен",
+                "железнодорожные въезды не предусмотрены",
+                "железнодорожный въезд отсутствует",
+                "железнодорожные въезды отсутствуют"
+              ]
+            }
+          ]
+        },
+        "reference": {
+          "aliases": [
+            "ширина наиболее габаритного применяемого автомобиля",
+            "ширина наиболее габаритного автомобиля",
+            "ширина максимального автомобиля",
+            "ширина габаритного автомобиля"
+          ],
+          "window_chars": 160,
+          "reject_comparator_context": true
+        },
+        "measure": {
+          "aliases": [
+            "ширина ворот автомобильного въезда",
+            "ширина ворот",
+            "ворота автомобильного въезда шириной"
+          ],
+          "window_chars": 160,
+          "reject_comparator_context": true
+        },
+        "offset": 1.5,
+        "absolute_minimum": 3.5,
+        "numeric_tolerance": 0.000001
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

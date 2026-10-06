@@ -4193,3 +4193,129 @@ Next development pass:
 4. leave threshold comparisons and conditional exceptions semantic until a typed
    comparison/applicability contract exists;
 5. only after this reduction, use Judge/Critic on the residual semantic frontier.
+
+
+## Deterministic normative proof expansion — typed numeric archetype — 2026-10-06
+
+### Starting point
+
+The previous checkpoint `01c07d63f3f54f36a87e42a5ac2ead2de08f35a3`
+left 35 requirements from the 2026-10-02 saved semantic snapshot for
+recomputation against the current registry. That 35-item list is a historical
+frontier, not a live queue; do not feed it to AI without recomputation.
+
+### PP87 p. 12 a(1) — ZOUIT disclosure
+
+`PP87-12-A1-ZOUIT` was converted from SEMANTIC to PRESENCE.
+
+Reason:
+- the verified atomic requirement is disclosure of whether ZOUIT exist within
+  the land-plot boundaries;
+- an addressable positive statement that ZOUIT exist or an addressable statement
+  that they are absent both satisfy the disclosure obligation;
+- generic land-plot wording without ZOUIT does not close the requirement.
+
+Result:
+- proof path: `ADDRESSABLE_PRESENCE_PROOF`;
+- no Judge/Critic is required.
+
+Registry commit:
+- `cceb9803f538113850c002c4cb4c546a8e2f5e8a`.
+
+Regression commit:
+- `6ad3ce2f920f58c349c73dd08e8b7deaf75c9843`.
+
+### Reusable owner-bound typed numeric proof
+
+A new deterministic typed archetype was added:
+`OWNER_BOUND_PIECEWISE_MINIMUM`.
+
+The evaluator:
+1. extracts asserted engineering numeric values only near configured property aliases;
+2. rejects normative comparator wording such as "не менее", "не более", "до",
+   "свыше" so copied NTD clauses cannot become project evidence;
+3. prefers the numeric value after the property label, preventing a neighboring
+   property value on the same page from being attached to the wrong property;
+4. binds selector and measured values through the confirmed Project Understanding
+   owner index;
+5. requires one evaluable confirmed object and refuses cross-object merging;
+6. maps the selector into a declarative threshold band;
+7. may promote only a positive PASS result;
+8. holds below-threshold observations as REVIEW_QUESTION until a dedicated
+   negative-deviation contract exists.
+
+Core commits:
+- `0691b5429a1d06bb4a344757fcae7919d81c72d2` — typed evaluator;
+- `ed12be10e8b1361d364598df0f42a5e822668f64` — deterministic typed promotion;
+- `51cc0fca64521030bcaab661341c744e63a152c2` — applicability remains fail-closed;
+- `66c66436f2242911d0890fdddcb49996dd3ae61c` / `d0b0467b7d6d8c1077b00d91f7c9d74052c8ea10`
+  — local property/value binding;
+- `251b1516e100a7f88971865c2a27f80b02608718` — normalized numeric regex after
+  PR validation exposed API escaping defects.
+
+### First typed contract — SP 4 p. 8.2.3
+
+`SP4-8.2.3-FIRE-ROAD-WIDTH` now uses TYPED_VALUE with the owner-bound
+piecewise-minimum contract:
+
+- object height <= 13 m -> fire-road width >= 3.5 m;
+- object height > 13 m and <= 46 m -> width >= 4.2 m;
+- object height > 46 m -> width >= 6.0 m.
+
+The contract never turns absence or a below-threshold extraction directly into a
+PROJECT_FINDING. Positive automatic promotion requires a unique confirmed owner,
+an unambiguous object-height value, an addressable fire-road-width value and a
+passing threshold comparison.
+
+Registry commit:
+- `50c5569dd695188cd50cb1e4a024a7e89614d8b4`.
+
+Regression commits:
+- `14473866c670bad8993d17f0ca845c302dd3eaf9`;
+- `65b22eb87ff5010cdbf5cc2db7d2e38a517070d4`.
+
+Coverage:
+- same-owner positive PASS -> deterministic VERIFIED_OK;
+- copied normative threshold text -> no promotion;
+- below-minimum value -> REVIEW_QUESTION, never automatic finding;
+- split owner evidence -> no promotion;
+- same-page height and road width bind to their own post-label values.
+
+### Validation
+
+A temporary draft PR #8 was opened only to trigger pull-request validation against
+a base branch pinned to checkpoint `01c07d63...`; it must not be merged.
+
+Final validated functional head:
+`251b1516e100a7f88971865c2a27f80b02608718`.
+
+GitHub Actions:
+- workflow: Core20 quality gates, run 919;
+- conclusion: SUCCESS;
+- core20-tests: 204 passed;
+- results-integrity: SUCCESS.
+
+The validation process caught two escaped-newline syntax defects from API writes and
+then the doubled-regex escaping defect. All were repaired before the successful run.
+
+### Updated frontier
+
+The historical 35-item semantic frontier now contains at least two requirements
+that are deterministic in current code:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`.
+
+Therefore the historical frontier is conceptually reduced from 35 to 33, but this
+is NOT a live queue count. Recompute against the current registry before selecting
+the next targets or running semantic AI.
+
+Next recommended targets:
+1. extend the typed archetype to piecewise ranges/maxima before touching complex
+   formulas;
+2. evaluate `SP4-8.2.6-ROAD-WALL-DISTANCE` and
+   `FNP505-1215-CONVEYOR-CROSSING-SPACING`;
+3. keep `SP18-5.37-ENTRANCE-GATE-WIDTH` held until a relative-formula contract
+   (vehicle width + 1.5 m plus absolute minimum) exists;
+4. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until special-case applicability
+   and the gamma=1.2 override are explicitly modeled;
+5. do not run another semantic AI wave before recomputation.

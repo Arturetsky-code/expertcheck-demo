@@ -4828,3 +4828,72 @@ presence in both sources.
 
 Do not run another semantic AI wave before recomputing the saved project against
 the current registry.
+
+
+## Deterministic normative proof expansion — closed storm sewer — 2026-10-06
+
+### Goal
+
+Remove `SP18-5.52-CLOSED-STORM-SEWER` from semantic review only when project
+evidence explicitly proves that the storm-water sewer itself is closed / of closed
+type.
+
+### Contract
+
+`SP18-5.52-CLOSED-STORM-SEWER` now uses deterministic SET_COMPLETENESS with one
+strict element:
+- storm-water / rainwater sewer;
+- locally tied to `закрытая` / `закрытого типа`.
+
+Accepted lexical families:
+- дождевая канализация;
+- ливневая канализация.
+
+The closed-type assertion is sentence-local. A nearby unrelated phrase such as
+"закрытая система хозяйственно-бытовой канализации" cannot be combined with
+"дождевая канализация открытая" to create a false proof.
+
+Promotion:
+- `DETERMINISTIC_AFTER_COMPLETE`;
+- generic mention of storm-water drainage without closed type does not promote;
+- absence remains REVIEW_QUESTION, never PROJECT_FINDING.
+
+Registry commits:
+- `4db403614ff846f357c714ecd01ffcea213ed8eb`;
+- `b78d36cb107ba6ee22c6ae6a62a854bea399014d`.
+
+Regression commit:
+- `c40dfdd2658f98b0dead3206aeeb1984cd4763cc`.
+
+Coverage:
+- "Система дождевой канализации принята закрытого типа" -> deterministic VERIFIED_OK;
+- equivalent "ливневая канализация ... закрытого типа" -> deterministic VERIFIED_OK;
+- generic storm sewer without closed-type assertion -> no promotion;
+- unrelated closed sanitary sewer + open storm sewer -> no promotion.
+
+### Retrieval / proof separation
+
+The retrieval topic is intentionally broad (`Канализация`) with a one-hit retrieval
+threshold. Retrieval may route relevant sewer pages, but only the strict local
+SET_COMPLETENESS assertion can create VERIFIED_OK. This avoids coupling the quality
+gate to one vocabulary variant while keeping the proof fail-closed.
+
+### Validation
+
+Temporary draft PR #13 was used only for validation and closed without merge.
+
+Final functional head:
+`c40dfdd2658f98b0dead3206aeeb1984cd4763cc`.
+
+GitHub Actions:
+- Core20 quality gates run 967: SUCCESS;
+- Core20 regression: 232 passed;
+- results-integrity: SUCCESS.
+
+### Frontier
+
+Relative to the historical 35-item semantic frontier from the saved 2026-10-02 run,
+eight requirements are now deterministic in the current expansion line.
+
+Conceptual historical remainder: 27 items.
+This remains a historical count, not a live runtime queue.

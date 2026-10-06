@@ -5760,3 +5760,68 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 15.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+
+
+## Hybrid deterministic fast path — PP87 land-plot TEP — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-D-TEP` without inventing a normative exhaustive list of
+technical-economic indicators that is not present in the verified atomic clause.
+
+### Safe sufficient condition
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path requires:
+1. an explicit block / heading for technical-economic indicators of the land plot;
+2. a named numeric land-plot area indicator;
+3. a named numeric development coefficient / development-density coefficient.
+
+This is intentionally a sufficient, not exhaustive, proof. Other valid TEP
+combinations remain available to semantic proof.
+
+The routing topic was normalized from the abbreviation-only
+"ТЭП земельного участка" to the full project wording
+"Технико-экономические показатели земельного участка", and the exact keyword
+"площадь земельного участка" was added. This prevents Evidence Quality from
+rejecting legitimate project pages that do not repeat the abbreviation "ТЭП".
+
+Registry commits:
+- `04dd2cafd77c5ab969f54f48dc8e8a9ca342d97a`;
+- `3ff4239afc286f04f34cc42ab8b3a416a1087a78`.
+
+Regression commits:
+- `5abd09cdf64698617ff4e25bb33934cae701cc0b`;
+- `6ec73a57146020ee8ba7b9ae1d83f2b536785fb6`;
+- `65b970c2ea2aa57b38dbf49d1a1860f32edfd660`.
+
+Coverage:
+- explicit TEP block + numeric site area + numeric development coefficient ->
+  deterministic VERIFIED_OK;
+- copied PP87 obligation -> semantic fallback;
+- incomplete numeric block -> no automatic verification;
+- legacy near-miss diagnostics remain valid;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #28 was used only for validation and closed without merge.
+
+Final functional head:
+`65b970c2ea2aa57b38dbf49d1a1860f32edfd660`.
+
+GitHub Actions:
+- Core20 quality gates run 1040: SUCCESS;
+- Core20 regression: 276 passed;
+- results-integrity: SUCCESS.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 14;
+- pure semantic / unmodeled cross-document: 14.
+
+This remains a registry-state classification, not a fresh project runtime queue.

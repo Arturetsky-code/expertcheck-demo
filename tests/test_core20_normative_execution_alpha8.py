@@ -2086,8 +2086,19 @@ def test_alpha8_fz384_responsibility_in_assignment_promotes_without_ai():
     }]
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
-    assert int(row.get("retrieval_keyword_score") or 0) >= 2, row
-    assert row["set_completeness"]["complete"] is True, row
+    diagnostic={
+        "kind":row.get("kind"),
+        "reason_code":row.get("reason_code"),
+        "proof_state":row.get("proof_state"),
+        "retrieval_kind":row.get("retrieval_kind"),
+        "retrieval_reason_code":row.get("retrieval_reason_code"),
+        "retrieval_keyword_score":row.get("retrieval_keyword_score"),
+        "set_complete":(row.get("set_completeness") or {}).get("complete"),
+        "set_owner":(row.get("set_completeness") or {}).get("owner_scope_state"),
+        "missing_ids":(row.get("set_completeness") or {}).get("missing_ids"),
+    }
+    assert int(row.get("retrieval_keyword_score") or 0) >= 2, diagnostic
+    assert row["set_completeness"]["complete"] is True, diagnostic
     assert row["kind"]=="VERIFIED_OK", row
     assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
     assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"

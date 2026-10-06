@@ -79,7 +79,9 @@ def test_alpha8_energy_efficiency_clause_passes_applicability_but_requires_seman
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["applicability_reason_code"]=="PROJECT_CORPUS_CONDITION_PROVEN"
     assert row["applicability_trace"]
-    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert row["proof_type"]=="SET_COMPLETENESS"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
 
 
 def test_alpha8_pp87_energy_efficiency_compliance_fast_path_promotes_explicit_justification():

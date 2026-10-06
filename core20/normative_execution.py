@@ -957,6 +957,248 @@ def _owner_scoped_set_resolution(
     }
 
 
+
+def _typed_numeric_observations(
+    page:dict[str,Any],
+    spec:dict[str,Any],
+)->list[dict[str,Any]]:
+    """Extract asserted engineering values near a typed property alias.
+
+    Normative threshold wording (e.g. "не менее 3,5 м", "до 13 м") is rejected
+    so copied clauses cannot masquerade as project values.
+    """
+    text=_norm(page.get("text") or "")
+    if not text:
+        return []
+    aliases=[
+        _norm(value) for value in (spec.get("aliases") or [])
+        if _norm(value)
+    ]
+    if not aliases:
+        return []
+    radius=max(60,int(spec.get("window_chars") or 180))
+    reject_comparators=bool(spec.get("reject_comparator_context",True))
+    comparator_re=re.compile(r"(?:не\\s+менее|не\\s+более|свыше|более|менее|до|от)\\s*$")
+    number_re=re.compile(
+        r"(?<![\\d.,])(\\d+(?:[.,]\\d+)?)\\s*"
+        r"(?:м(?:\\.|\\b)|метр(?:а|ов)?\\b)"
+    )
+    output=[]
+    seen=set()
+    for alias in aliases:
+        diag=_keyword_span_diagnostic(alias,text)
+        if not diag.get("matched"):
+            continue
+        anchor=text.find(alias)
+        if anchor<0:
+            positions=[int(value) for value in (diag.get("positions") or []) if isinstance(value,int)]
+            anchor=min(positions) if positions else 0
+        lo=max(0,anchor-radius)
+        hi=min(len(text),anchor+len(alias)+radius)
+        window=text[lo:hi]
+        for match in number_re.finditer(window):
+            before=window[max(0,match.start()-45):match.start()]
+            if reject_comparators and comparator_re.search(before):
+                continue
+            try:
+                value=float(match.group(1).replace(",","."))
+            except ValueError:
+                continue
+            absolute=lo+match.start()
+            distance=abs(absolute-anchor)
+            key=(round(value,6),absolute)
+            if key in seen:
+                continue
+            seen.add(key)
+            output.append({
+                "value":value,
+                "document":str(page.get("document") or ""),
+                "page":page.get("page"),
+                "section":str(page.get("document_type") or page.get("section") or ""),
+                "fragment":_fragment(text,[alias,str(match.group(1))],radius=180),
+                "alias":alias,
+                "distance":distance,
+            })
+    output.sort(key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
+    return output
+
+
+def _typed_value_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+)->dict[str,Any]:
+    ec=dict(contract.get("evidence_contract") or {})
+    typed=dict(ec.get("typed_contract") or {})
+    if not typed:
+        return {
+            "configured":False,
+            "kind":"UNCONFIGURED",
+            "promotion_policy":"HOLD",
+            "complete":False,
+            "status":"UNCONFIGURED",
+            "evidence":[],
+        }
+
+    kind=str(typed.get("kind") or "").upper()
+    promotion_policy=str(
+        typed.get("promotion_policy") or "HOLD"
+    ).upper()
+    if kind!="OWNER_BOUND_PIECEWISE_MINIMUM":
+        return {
+            "configured":True,
+            "kind":kind or "UNKNOWN",
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":"UNSUPPORTED_TYPED_CONTRACT",
+            "evidence":[],
+        }
+
+    selector=dict(typed.get("selector") or {})
+    measure=dict(typed.get("measure") or {})
+    bands=[
+        dict(value) for value in (typed.get("bands") or [])
+        if isinstance(value,dict)
+    ]
+    owner_index=_confirmed_owner_page_index(documents)
+    by_owner:dict[str,dict[str,list[dict[str,Any]]]]={}
+    ambiguous_addresses=0
+    for page in pages:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        owners=owner_index.get((document,str(page_no)),set()) if document and page_no not in (None,"") else set()
+        if len(owners)!=1:
+            if len(owners)>1:
+                ambiguous_addresses+=1
+            continue
+        owner=next(iter(owners))
+        bucket=by_owner.setdefault(owner,{"selector":[],"measure":[]})
+        bucket["selector"].extend(_typed_numeric_observations(page,selector))
+        bucket["measure"].extend(_typed_numeric_observations(page,measure))
+
+    def _unique_values(rows:list[dict[str,Any]])->list[float]:
+        values=[]
+        for row in rows:
+            value=round(float(row.get("value") or 0),6)
+            if value not in values:
+                values.append(value)
+        return values
+
+    owner_results=[]
+    for owner in sorted(by_owner):
+        selector_rows=by_owner[owner]["selector"]
+        measure_rows=by_owner[owner]["measure"]
+        selector_values=_unique_values(selector_rows)
+        measure_values=_unique_values(measure_rows)
+        if len(selector_values)!=1 or not measure_values:
+            owner_results.append({
+                "object_id":owner,
+                "status":"VALUE_CONFLICT" if len(selector_values)>1 else "VALUE_NOT_PROVEN",
+                "selector_values":selector_values,
+                "measure_values":measure_values,
+                "evidence":[],
+            })
+            continue
+
+        selector_value=selector_values[0]
+        measured_value=min(measure_values)
+        selected_band=None
+        for band in bands:
+            lower_ok=True
+            upper_ok=True
+            if band.get("min_selector_exclusive") is not None:
+                lower_ok=selector_value>float(band["min_selector_exclusive"])
+            if band.get("min_selector_inclusive") is not None:
+                lower_ok=lower_ok and selector_value>=float(band["min_selector_inclusive"])
+            if band.get("max_selector_exclusive") is not None:
+                upper_ok=selector_value<float(band["max_selector_exclusive"])
+            if band.get("max_selector_inclusive") is not None:
+                upper_ok=upper_ok and selector_value<=float(band["max_selector_inclusive"])
+            if lower_ok and upper_ok:
+                selected_band=band
+                break
+        if not selected_band or selected_band.get("min_value") is None:
+            owner_results.append({
+                "object_id":owner,
+                "status":"THRESHOLD_BAND_NOT_PROVEN",
+                "selector_value":selector_value,
+                "measured_value":measured_value,
+                "evidence":[],
+            })
+            continue
+
+        required_minimum=float(selected_band["min_value"])
+        tolerance=float(typed.get("numeric_tolerance") or 1e-9)
+        status="PASS" if measured_value+tolerance>=required_minimum else "BELOW_MINIMUM"
+        selector_evidence=selector_rows[0] if selector_rows else {}
+        measure_evidence=next(
+            (row for row in measure_rows if round(float(row.get("value") or 0),6)==round(measured_value,6)),
+            measure_rows[0] if measure_rows else {},
+        )
+        evidence=[]
+        for role,item in (("selector",selector_evidence),("measure",measure_evidence)):
+            if not item:
+                continue
+            evidence.append({
+                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-{role}",
+                "document":str(item.get("document") or ""),
+                "page":item.get("page"),
+                "section":str(item.get("section") or ""),
+                "fragment":str(item.get("fragment") or ""),
+                "typed_role":role,
+                "typed_value":float(item.get("value") or 0),
+                "object_id":owner,
+            })
+        owner_results.append({
+            "object_id":owner,
+            "status":status,
+            "selector_value":selector_value,
+            "measured_value":measured_value,
+            "required_minimum":required_minimum,
+            "band_id":str(selected_band.get("id") or ""),
+            "evidence":evidence,
+        })
+
+    evaluable=[
+        row for row in owner_results
+        if row.get("status") in {"PASS","BELOW_MINIMUM"}
+    ]
+    if len(evaluable)!=1:
+        state="MULTIPLE_OWNERS" if len(evaluable)>1 else (
+            "AMBIGUOUS_OWNER" if ambiguous_addresses else "OWNER_NOT_PROVEN"
+        )
+        return {
+            "configured":True,
+            "kind":kind,
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":state,
+            "owner_scope_state":state,
+            "owner_object_id":"",
+            "ambiguous_address_count":ambiguous_addresses,
+            "owner_results":owner_results,
+            "evidence":[],
+        }
+
+    resolved=evaluable[0]
+    passed=resolved.get("status")=="PASS"
+    return {
+        "configured":True,
+        "kind":kind,
+        "promotion_policy":promotion_policy,
+        "complete":bool(passed),
+        "status":str(resolved.get("status") or ""),
+        "owner_scope_state":"CONFIRMED",
+        "owner_object_id":str(resolved.get("object_id") or ""),
+        "selector_value":resolved.get("selector_value"),
+        "measured_value":resolved.get("measured_value"),
+        "required_minimum":resolved.get("required_minimum"),
+        "band_id":str(resolved.get("band_id") or ""),
+        "ambiguous_address_count":ambiguous_addresses,
+        "owner_results":owner_results,
+        "evidence":list(resolved.get("evidence") or []),
+    }
+
 def _set_completeness_evaluation(
     contract:dict[str,Any],
     pages:list[dict[str,Any]],
@@ -1995,8 +2237,7 @@ class NormativeExecutionEngine20:
         base["applicability_reason_code"]=applicability_reason
         base["applicability_trace"]=list(applicability.get("trace") or [])
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
-        base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
-        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
+        base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)\n        base["typed_value"]=_typed_value_evaluation(contract,candidates,documents)\n        base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],
                 "reason":"Пункт НТД верифицирован, но его условная применимость к текущему проекту не доказана. Автоматический вывод удержан.",

@@ -3296,3 +3296,80 @@ def test_alpha8_pp87_arch_justification_single_domain_does_not_promote():
     assert row["set_completeness"]["complete"] is False
     assert "architectural_artistic_justification" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+
+
+def _sp4_access_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Раздел ПД №2_ПЗУ.pdf"
+    document["Тип документа"]="ПЗУ"
+    return document
+
+
+def test_alpha8_sp4_two_sided_full_length_fire_access_fast_path_promotes():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp4_access_document(
+        ("OBJ-FIRE-ACCESS","Раздел ПД №2_ПЗУ.pdf",70),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":70,
+        "text":"Подъезд пожарной техники по длине здания обеспечен с двух сторон.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.1-FIRE-ACCESS-SIDES")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-FIRE-ACCESS"
+    assert not any(
+        packet["requirement_id"]=="SP4-8.2.1-FIRE-ACCESS-SIDES"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_sp4_one_sided_access_keeps_semantic_fallback():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp4_access_document(
+        ("OBJ-FIRE-ACCESS","Раздел ПД №2_ПЗУ.pdf",70),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":70,
+        "text":"При ширине здания 12 м подъезд пожарной техники по длине здания обеспечен с одной стороны.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.1-FIRE-ACCESS-SIDES")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="SP4-8.2.1-FIRE-ACCESS-SIDES"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_sp4_copied_access_requirement_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp4_access_document(
+        ("OBJ-FIRE-ACCESS","Раздел ПД №2_ПЗУ.pdf",70),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":70,
+        "text":(
+            "Для производственных и складских зданий должен быть обеспечен подъезд "
+            "пожарной техники по длине здания с двух сторон при ширине более 18 м."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.1-FIRE-ACCESS-SIDES")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

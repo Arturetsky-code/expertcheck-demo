@@ -4420,3 +4420,98 @@ Recommended next proof work:
 3. `GOST27751-10.1-CLASS-LEVEL-GAMMA` — keep held until the special-case
    gamma=1.2 override is modeled explicitly;
 4. no semantic AI run before recomputation.
+
+
+## Deterministic normative proof expansion — categorical typed conveyor spacing — 2026-10-06
+
+### Goal
+
+Continue reducing the historical semantic frontier without sending formalizable
+engineering thresholds to AI.
+
+### New typed archetype
+
+Added `OWNER_BOUND_CATEGORICAL_RANGE`.
+
+The contract:
+- requires an explicit categorical selector; missing category never falls back to
+  a more permissive band;
+- binds selector and measured values to one confirmed Project Understanding owner;
+- evaluates all observed numeric values for that owner against the selected range;
+- promotes only positive PASS;
+- selector conflicts, missing category, out-of-range values and ambiguous ownership
+  remain REVIEW_QUESTION / structured-proof pending;
+- never creates PROJECT_FINDING from an extracted out-of-range value without a
+  dedicated negative-deviation contract.
+
+Core commit:
+- `5425c6cfcae22268b217ac5a1930d30d3ce34606`.
+
+### FNP 505 p. 1215
+
+`FNP505-1215-CONVEYOR-CROSSING-SPACING` was converted from SEMANTIC to TYPED_VALUE.
+
+Selector categories:
+- `INDOOR_OR_UNDERGROUND` — explicit building / underground-chamber placement;
+- `OUTDOOR` — explicit open/outdoor placement.
+
+Thresholds:
+- indoor or underground -> crossing spacing <= 50 m;
+- explicit outdoor placement -> crossing spacing <= 100 m.
+
+Important fail-closed rule:
+absence of indoor wording does NOT imply outdoor placement. The 100 m band requires
+positive outdoor evidence.
+
+Registry commit:
+- `6dffb8e94ee184c3253e0186b896c35de87ea5dd`.
+
+Regression commits:
+- `9f461dddb34e6bb8b7946c5d60427f7b2d823279`;
+- `03e66b38bfefdc8ea61aa223a7079847c2ef7422` — aligned the pre-existing conveyor
+  retrieval regression with the new structured proof state.
+
+Coverage:
+- indoor 45 m -> deterministic VERIFIED_OK under 50 m band;
+- explicit outdoor 80 m -> deterministic VERIFIED_OK under 100 m band;
+- indoor 60 m -> REVIEW_QUESTION, never automatic finding;
+- no explicit location category -> no promotion;
+- conflicting indoor/outdoor category evidence -> no promotion;
+- copied FNP threshold wording -> no promotion.
+
+### Validation
+
+Temporary draft PR #9 was used only to trigger validation and was closed without merge.
+
+Final functional head:
+`03e66b38bfefdc8ea61aa223a7079847c2ef7422`.
+
+GitHub Actions:
+- Core20 quality gates run 933: SUCCESS;
+- Core20 regression: 215 passed;
+- results-integrity: SUCCESS.
+
+The first validation run had 214 passed / 1 failed because an older regression still
+expected the previous SEMANTIC_PROOF_REQUIRED state for this exact FNP requirement.
+The expectation was updated to STRUCTURED_PROOF_REQUIRED; no unrelated regression
+failed.
+
+### Frontier
+
+Relative to the historical 35-item semantic frontier from the saved 2026-10-02 run,
+four requirements are now deterministic in current code:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`;
+- `SP4-8.2.6-ROAD-WALL-DISTANCE`;
+- `FNP505-1215-CONVEYOR-CROSSING-SPACING`.
+
+Conceptual historical remainder: 31 items.
+This is still not a live runtime queue count. Recompute before any semantic AI wave.
+
+Next candidates:
+1. `FZ384-4-1-ID-FEATURES` — owner-scoped set completeness is promising because
+   the statutory identification features are an explicit finite list;
+2. `SP18-5.37-ENTRANCE-GATE-WIDTH` — requires a relative-formula contract
+   (vehicle width + 1.5 m plus absolute minimum);
+3. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until the gamma=1.2 special-case
+   override is explicitly modeled.

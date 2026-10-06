@@ -136,6 +136,79 @@ def test_alpha8_pp87_energy_efficiency_compliance_copied_requirement_stays_seman
     assert result["project_findings"]==0
 
 
+def test_alpha8_pp87_energy_efficiency_measures_list_fast_path_promotes_explicit_list():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":10,
+        "text":(
+            "Перечень мероприятий по соблюдению требований энергетической эффективности "
+            "включает: применение теплоизоляции наружных стен; установку энергоэффективных окон."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B2-EFF-MEASURES")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["matched_count"]==1
+    assert not any(
+        packet["requirement_id"]=="PP87-13-B2-EFF-MEASURES"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_energy_efficiency_measures_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":10,
+        "text":(
+            "Для применимых объектов в АР должен быть приведён перечень мероприятий "
+            "по соблюдению требований энергетической эффективности."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B2-EFF-MEASURES")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-B2-EFF-MEASURES"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_energy_efficiency_measures_heading_without_items_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":10,
+        "text":(
+            "Перечень мероприятий по соблюдению требований энергетической эффективности "
+            "предусмотрен в настоящем разделе."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B2-EFF-MEASURES")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert "energy_efficiency_measures_list" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0
+
+
 def test_alpha8_production_conditional_clause_passes_applicability_but_alpha9_requires_semantic_proof():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[{

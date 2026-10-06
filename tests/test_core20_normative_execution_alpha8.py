@@ -1468,3 +1468,114 @@ def test_alpha8_pp87_zouit_presence_does_not_infer_disclosure_from_land_plot_wor
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-A1-ZOUIT")
     assert row["kind"]!="VERIFIED_OK"
+
+
+def _typed_owner_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Раздел ПД №2_ПЗУ.pdf"
+    document["Тип документа"]="ПЗУ"
+    return document
+
+
+def test_alpha8_fire_road_width_typed_threshold_promotes_same_owner_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",10),
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",11),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":10,
+            "text":"Высота здания составляет 12,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":11,
+            "text":"Ширина пожарного проезда принята 3,8 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.3-FIRE-ROAD-WIDTH")
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["owner_object_id"]=="OBJ-FIRE"
+    assert row["typed_value"]["selector_value"]==12.0
+    assert row["typed_value"]["measured_value"]==3.8
+    assert row["typed_value"]["required_minimum"]==3.5
+
+
+def test_alpha8_fire_road_width_typed_threshold_rejects_copied_normative_limits():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",10),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":10,
+        "text":"Минимальная ширина пожарного проезда должна быть не менее 3,5 м "
+               "при высоте до 13 м включительно.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.3-FIRE-ROAD-WIDTH")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+
+
+def test_alpha8_fire_road_width_below_minimum_stays_review_not_project_finding():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",10),
+        ("OBJ-FIRE","Раздел ПД №2_ПЗУ.pdf",11),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":10,
+            "text":"Высота здания составляет 20,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":11,
+            "text":"Ширина пожарного проезда принята 4,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.3-FIRE-ROAD-WIDTH")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_TYPED_VALUE_BELOW_MINIMUM_REVIEW"
+    assert row["typed_value"]["required_minimum"]==4.2
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fire_road_width_typed_threshold_cannot_merge_two_owners():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-A","Раздел ПД №2_ПЗУ.pdf",10),
+        ("OBJ-B","Раздел ПД №2_ПЗУ.pdf",11),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":10,
+            "text":"Высота здания составляет 12,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":11,
+            "text":"Ширина пожарного проезда принята 4,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP4-8.2.3-FIRE-ROAD-WIDTH")
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["proof_state"]=="STRUCTURED_PROOF_REQUIRED"
+    assert row["typed_value"]["owner_object_id"]==""

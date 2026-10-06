@@ -5989,3 +5989,79 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 11.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+## Hybrid typed fast path — SP18 automobile entrance gate width — 2026-10-06
+
+### Goal
+
+Accelerate `SP18-5.37-ENTRANCE-GATE-WIDTH` without hiding the railway-entrance
+branch contained in the same verified atomic clause.
+
+### Reusable typed archetype
+
+Added `OWNER_BOUND_RELATIVE_MINIMUM`.
+
+The contract evaluates, for one confirmed Project Understanding owner:
+
+`target >= max(reference + offset, absolute minimum)`.
+
+It can additionally require an explicit categorical guard before the formula is
+eligible for deterministic promotion. Typed proof now also supports
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`: if the strict numeric fast path is not
+proved, the requirement returns to semantic proof rather than becoming an automatic
+finding or a dead-end structured review.
+
+Core commits:
+- `68766d02d1ba5ad7bc29885acee32d41ec7ea6d5` — relative-minimum evaluator;
+- `dd4fdb304b6ad451ba2123e68ed47618c063f7a3` — typed semantic fallback.
+
+### SP18 p. 5.37 safe fast path
+
+The original clause contains two branches:
+- automobile entrance: gate width >= max(width of the largest applicable vehicle + 1.5 m, 3.5 m);
+- railway entrance: gate width >= 4.5 m.
+
+The deterministic fast path intentionally covers only the automobile branch and only
+when project evidence explicitly states that railway entrances are absent.
+
+Required proof for one confirmed owner:
+1. explicit no-rail guard;
+2. numeric width of the largest applicable vehicle;
+3. numeric automobile entrance gate width;
+4. arithmetic comparison against the relative +1.5 m rule and the 3.5 m floor.
+
+If the railway branch may apply, the guard is absent, values conflict, ownership is
+ambiguous, or the calculated minimum is not met, the row remains semantic review.
+No PROJECT_FINDING is inferred by this fast path.
+
+Registry commit:
+- `559b852d105dbabffa755f7b575a6c0b7c40cb9f`.
+
+Regression commit:
+- `1cfe4cbbf5e2ed11cef25ebebdde243bb9e77178`.
+
+Coverage:
+- auto-only owner + valid relative minimum -> deterministic VERIFIED_OK;
+- gate below calculated minimum -> semantic fallback;
+- missing explicit no-rail guard -> semantic fallback;
+- copied normative formula -> no deterministic promotion.
+
+### Validation
+
+Temporary draft PR #33 was used only for validation and closed without merge.
+
+GitHub Actions run 1061:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: 288 passed;
+- results-integrity: SUCCESS (17 passed).
+
+Final functional head before this documentation checkpoint:
+`1cfe4cbbf5e2ed11cef25ebebdde243bb9e77178`.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 18;
+- pure semantic / unmodeled cross-document: 10.
+
+This remains a registry-state classification, not a fresh project runtime queue.

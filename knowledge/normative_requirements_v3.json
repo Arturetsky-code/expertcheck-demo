@@ -3597,7 +3597,30 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "valid_category_assignment",
+            "label": "Явное присвоение допустимой категории помещению, зданию или наружной установке",
+            "aliases": [
+              "категория помещения",
+              "категория здания",
+              "категория наружной установки"
+            ],
+            "assertion_regexes": [
+              "категори\\w*\\s+помещени\\w*[^\\n;]{0,120}(?:[:=—-]\\s*|(?:определен\\w*|установлен\\w*|принят\\w*)\\s+(?:как\\s+)?)(?:а|б|в[1-4]|г|д)(?=\\s|[.,;]|$)",
+              "категори\\w*\\s+здани\\w*[^\\n;]{0,120}(?:[:=—-]\\s*|(?:определен\\w*|установлен\\w*|принят\\w*)\\s+(?:как\\s+)?)(?:а|б|в|г|д)(?=\\s|[.,;]|$)",
+              "категори\\w*\\s+наружн\\w+\\s+установк\\w*[^\\n;]{0,120}(?:[:=—-]\\s*|(?:определен\\w*|установлен\\w*|принят\\w*)\\s+(?:как\\s+)?)(?:ан|бн|вн|гн|дн)(?=\\s|[.,;]|$)"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

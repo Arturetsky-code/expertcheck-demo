@@ -2086,7 +2086,9 @@ def test_alpha8_fz384_responsibility_in_assignment_promotes_without_ai():
     }]
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
-    assert row["kind"]=="VERIFIED_OK"
+    assert int(row.get("retrieval_keyword_score") or 0) >= 2, row
+    assert row["set_completeness"]["complete"] is True, row
+    assert row["kind"]=="VERIFIED_OK", row
     assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
     assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
     assert row["set_completeness"]["owner_object_id"]=="OBJ-RESP"

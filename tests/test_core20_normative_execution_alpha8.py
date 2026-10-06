@@ -1527,6 +1527,130 @@ def test_alpha8_fz123_category_basis_does_not_merge_different_objects():
 
 
 
+def test_alpha8_sp12_taxonomy_room_category_fast_path_promotes_same_owner():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",58),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":58,
+        "text":"Категория помещения по взрывопожарной и пожарной опасности: В1.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
+    assert row["set_completeness"]["owner_object_id"]=="ROOM-CAT"
+    assert not any(
+        packet["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_sp12_taxonomy_outdoor_category_fast_path_promotes_same_owner():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("OUTDOOR-CAT","Раздел ПД №5_ТХ.pdf",59),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":59,
+        "text":"Категория наружной установки установлена как ВН.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_object_id"]=="OUTDOOR-CAT"
+    assert result["project_findings"]==0
+
+
+def test_alpha8_sp12_taxonomy_copied_category_list_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",58),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":58,
+        "text":(
+            "Категории помещений: А, Б, В1, В2, В3, В4, Г, Д; "
+            "категории зданий: А, Б, В, Г, Д; "
+            "категории наружных установок: АН, БН, ВН, ГН, ДН."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_sp12_taxonomy_invalid_category_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",58),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":58,
+        "text":"Категория помещения по взрывопожарной и пожарной опасности: Е.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0
+
+
+def test_alpha8_sp12_taxonomy_cannot_promote_multiple_complete_owners():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-A","Раздел ПД №5_ТХ.pdf",58),
+        ("ROOM-B","Раздел ПД №5_ТХ.pdf",59),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №5_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":58,
+            "text":"Категория помещения: В1.",
+        },
+        {
+            "document":"Раздел ПД №5_ТХ.pdf",
+            "document_type":"ТХ",
+            "page":59,
+            "text":"Категория помещения: Г.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-4.1-CATEGORY-TAXONOMY")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert row["set_completeness"]["owner_scope_state"]=="AMBIGUOUS_OWNER"
+    assert result["project_findings"]==0
+
+
 def test_alpha8_sp12_category_inputs_reuse_owner_scoped_deterministic_set():
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}

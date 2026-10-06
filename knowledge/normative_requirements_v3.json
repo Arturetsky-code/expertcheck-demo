@@ -1272,7 +1272,44 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "engineering_prep_protection_description",
+            "label": "Описание решений по инженерной подготовке и инженерной защите территории",
+            "aliases": [
+              "инженерная подготовка",
+              "инженерной подготовке",
+              "инженерная защита",
+              "инженерной защите",
+              "поверхностных вод",
+              "грунтовых вод"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+инженерн\\w+\\s+подготовк\\w*[^.\\n;]{0,160}инженерн\\w+\\s+защит\\w*[^.\\n;]{0,180}(?:опасн\\w+\\s+процесс\\w*|поверхностн\\w+\\s+и\\s+грунтов\\w+\\s+вод\\w*)[^.\\n;]{0,140}(?:принят\\w*|предусматрива\\w*|включа\\w*|выполня\\w*)"
+            ]
+          },
+          {
+            "id": "engineering_prep_protection_justification",
+            "label": "Обоснование решений по инженерной подготовке и инженерной защите территории",
+            "aliases": [
+              "инженерная подготовка",
+              "инженерной подготовке",
+              "инженерная защита",
+              "инженерной защите",
+              "обоснованы"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+инженерн\\w+\\s+подготовк\\w*[^.\\n;]{0,160}инженерн\\w+\\s+защит\\w*[^.\\n;]{0,180}(?:опасн\\w+\\s+процесс\\w*|поверхностн\\w+\\s+и\\s+грунтов\\w+\\s+вод\\w*)[^.\\n;]{0,140}обоснован\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

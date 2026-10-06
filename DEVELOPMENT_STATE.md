@@ -5936,3 +5936,56 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 12.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+## Hybrid deterministic fast path — PP87 energy-efficiency measures list — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-B2-EFF-MEASURES` while preserving the verified conditional clause:
+for applicable objects, AR must contain a list of measures for compliance with
+energy-efficiency requirements.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path is deliberately sufficient rather than exhaustive. It
+requires an explicit project list of energy-efficiency measures with actual listed
+content, not merely a statement that such a list exists.
+
+Accepted fast-path shape includes an explicit list phrase tied to energy efficiency
+and at least two concrete list entries. A copied PP87 obligation or a heading / generic
+statement without actual items remains semantic.
+
+Registry commit:
+- `0ac247ee01158824115de03f10e7bb19a58173b1`.
+
+Regression commit:
+- `16b7fdb441b0a18ad8fbcf0ca6c09efa3914d152`.
+
+Coverage:
+- explicit measures list with actual items -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- heading / statement without listed items -> semantic fallback;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #32 was used only for validation and closed without merge.
+
+GitHub Actions run 1055:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: 284 passed;
+- results-integrity: SUCCESS (17 passed).
+
+Final functional head before this documentation checkpoint:
+`16b7fdb441b0a18ad8fbcf0ca6c09efa3914d152`.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 17;
+- pure semantic / unmodeled cross-document: 11.
+
+This remains a registry-state classification, not a fresh project runtime queue.

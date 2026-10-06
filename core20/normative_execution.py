@@ -1059,7 +1059,7 @@ def _typed_value_evaluation(
     promotion_policy=str(
         typed.get("promotion_policy") or "HOLD"
     ).upper()
-    if kind!="OWNER_BOUND_PIECEWISE_MINIMUM":
+    if kind not in {"OWNER_BOUND_PIECEWISE_MINIMUM","OWNER_BOUND_PIECEWISE_RANGE"}:
         return {
             "configured":True,
             "kind":kind or "UNKNOWN",
@@ -1132,7 +1132,7 @@ def _typed_value_evaluation(
             if lower_ok and upper_ok:
                 selected_band=band
                 break
-        if not selected_band or selected_band.get("min_value") is None:
+        if not selected_band:
             owner_results.append({
                 "object_id":owner,
                 "status":"THRESHOLD_BAND_NOT_PROVEN",
@@ -1142,20 +1142,74 @@ def _typed_value_evaluation(
             })
             continue
 
-        required_minimum=float(selected_band["min_value"])
         tolerance=float(typed.get("numeric_tolerance") or 1e-9)
-        status="PASS" if measured_value+tolerance>=required_minimum else "BELOW_MINIMUM"
-        selector_evidence=selector_rows[0] if selector_rows else {}
-        measure_evidence=next(
-            (row for row in measure_rows if round(float(row.get("value") or 0),6)==round(measured_value,6)),
-            measure_rows[0] if measure_rows else {},
+        required_minimum=(
+            float(selected_band["min_value"])
+            if selected_band.get("min_value") is not None else None
         )
+        required_maximum=(
+            float(selected_band["max_value"])
+            if selected_band.get("max_value") is not None else None
+        )
+        measured_minimum=min(measure_values)
+        measured_maximum=max(measure_values)
+
+        if kind=="OWNER_BOUND_PIECEWISE_MINIMUM":
+            if required_minimum is None:
+                status="THRESHOLD_BAND_NOT_PROVEN"
+            else:
+                status=(
+                    "PASS"
+                    if measured_minimum+tolerance>=required_minimum
+                    else "BELOW_MINIMUM"
+                )
+            measured_value=measured_minimum
+        else:
+            if required_minimum is None and required_maximum is None:
+                status="THRESHOLD_BAND_NOT_PROVEN"
+            else:
+                below=(
+                    required_minimum is not None
+                    and measured_minimum+tolerance<required_minimum
+                )
+                above=(
+                    required_maximum is not None
+                    and measured_maximum-tolerance>required_maximum
+                )
+                if below and above:
+                    status="OUTSIDE_RANGE"
+                elif below:
+                    status="BELOW_MINIMUM"
+                elif above:
+                    status="ABOVE_MAXIMUM"
+                else:
+                    status="PASS"
+            measured_value=(
+                measured_minimum
+                if required_maximum is None
+                else measured_maximum
+                if required_minimum is None
+                else measured_minimum
+            )
+
+        selector_evidence=selector_rows[0] if selector_rows else {}
+        extreme_values={round(measured_minimum,6),round(measured_maximum,6)}
+        measure_evidence=[]
+        for row in measure_rows:
+            value=round(float(row.get("value") or 0),6)
+            if value in extreme_values:
+                measure_evidence.append(row)
+                extreme_values.discard(value)
+            if not extreme_values:
+                break
         evidence=[]
-        for role,item in (("selector",selector_evidence),("measure",measure_evidence)):
+        evidence_items=[("selector",selector_evidence)]
+        evidence_items.extend(("measure",item) for item in measure_evidence)
+        for index,(role,item) in enumerate(evidence_items):
             if not item:
                 continue
             evidence.append({
-                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-{role}",
+                "evidence_id":f"NORM-TYPED-{contract.get('requirement_id')}-{owner}-{role}-{index}",
                 "document":str(item.get("document") or ""),
                 "page":item.get("page"),
                 "section":str(item.get("section") or ""),
@@ -1169,14 +1223,17 @@ def _typed_value_evaluation(
             "status":status,
             "selector_value":selector_value,
             "measured_value":measured_value,
+            "measured_minimum":measured_minimum,
+            "measured_maximum":measured_maximum,
             "required_minimum":required_minimum,
+            "required_maximum":required_maximum,
             "band_id":str(selected_band.get("id") or ""),
             "evidence":evidence,
         })
 
     evaluable=[
         row for row in owner_results
-        if row.get("status") in {"PASS","BELOW_MINIMUM"}
+        if row.get("status") in {"PASS","BELOW_MINIMUM","ABOVE_MAXIMUM","OUTSIDE_RANGE"}
     ]
     if len(evaluable)!=1:
         state="MULTIPLE_OWNERS" if len(evaluable)>1 else (
@@ -1207,7 +1264,10 @@ def _typed_value_evaluation(
         "owner_object_id":str(resolved.get("object_id") or ""),
         "selector_value":resolved.get("selector_value"),
         "measured_value":resolved.get("measured_value"),
+        "measured_minimum":resolved.get("measured_minimum"),
+        "measured_maximum":resolved.get("measured_maximum"),
         "required_minimum":resolved.get("required_minimum"),
+        "required_maximum":resolved.get("required_maximum"),
         "band_id":str(resolved.get("band_id") or ""),
         "ambiguous_address_count":ambiguous_addresses,
         "owner_results":owner_results,

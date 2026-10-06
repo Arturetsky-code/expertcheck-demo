@@ -686,7 +686,10 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
     if proof_type == "SET_COMPLETENESS":
         set_eval=dict(result.get("set_completeness") or {})
         promotion=str(set_eval.get("promotion_policy") or "HOLD").upper()
-        if bool(set_eval.get("complete")) and promotion=="DETERMINISTIC_AFTER_COMPLETE":
+        if bool(set_eval.get("complete")) and promotion in {
+            "DETERMINISTIC_AFTER_COMPLETE",
+            "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        }:
             set_evidence=[]
             seen_elements=set()
             for item in set_eval.get("evidence") or []:
@@ -767,6 +770,19 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
                 "Все атомизированные элементы обязательного набора имеют адресные evidence-кандидаты. "
                 "Полнота evidence-набора подтверждена детерминированно; содержательное соответствие "
                 "всего нормативного требования требует независимой смысловой проверки."
+            )
+            return result
+
+        if promotion=="DETERMINISTIC_WITH_SEMANTIC_FALLBACK":
+            result["kind"]="REVIEW_QUESTION"
+            result["state"]="Вопрос специалисту"
+            result["proof_state"]="SEMANTIC_PROOF_REQUIRED"
+            result["reason_code"]="NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
+            result["reason"]=(
+                "Строгий детерминированный set-contract не доказал достаточное условие для "
+                "автоматического подтверждения. Адресные evidence-кандидаты сохраняются и "
+                "передаются в semantic proof как fallback; отсутствие fast-path доказательства "
+                "не трактуется как несоответствие."
             )
             return result
 

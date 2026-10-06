@@ -2468,3 +2468,76 @@ def test_alpha8_fnp505_surface_scope_without_independent_power_keeps_semantic_fa
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def _production_pzu_document():
+    return {
+        "Файл":"Раздел ПД №2_ПЗУ.pdf",
+        "Тип документа":"ПЗУ",
+        "pp87_project_profile":{"profile":"Объект производственного назначения"},
+    }
+
+
+def test_alpha8_pp87_transport_scheme_fast_path_promotes_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":19,
+        "text":(
+            "Схема транспортных коммуникаций обоснована для внешних и внутренних "
+            "грузоперевозок."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-I-TRANSPORT")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-12-I-TRANSPORT"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_transport_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":19,
+        "text":(
+            "Схемы транспортных коммуникаций для внешних и внутренних грузоперевозок "
+            "должны быть обоснованы."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-I-TRANSPORT")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-12-I-TRANSPORT"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_transport_external_only_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_production_pzu_document()]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":19,
+        "text":"Схема транспортных коммуникаций обоснована для внешних грузоперевозок.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-I-TRANSPORT")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

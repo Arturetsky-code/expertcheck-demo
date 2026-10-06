@@ -2084,6 +2084,20 @@ def test_alpha8_fz384_responsibility_in_assignment_promotes_without_ai():
         "page":5,
         "text":"Уровень ответственности объекта: нормальный.",
     }]
+    contracts={row["requirement_id"]:row for row in _foundation().contracts()}
+    contract=contracts["FZ384-15-2-RESP-INPUT"]
+    ranked=_rank_candidates(contract,pages)
+    assert ranked and ranked[0][0] >= 2, {
+        "keywords":contract.get("keywords"),
+        "ranked":ranked,
+    }
+    raw_row=engine._execute(contract,pages,documents)
+    assert raw_row["kind"]=="VERIFIED_OK", {
+        "raw_kind":raw_row.get("kind"),
+        "raw_reason":raw_row.get("reason_code"),
+        "raw_score":raw_row.get("retrieval_keyword_score"),
+        "raw_set":raw_row.get("set_completeness"),
+    }
     result=engine.run(documents,pages)
     row=next(x for x in result["rows"] if x["requirement_id"]=="FZ384-15-2-RESP-INPUT")
     diagnostic={

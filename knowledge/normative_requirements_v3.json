@@ -2057,7 +2057,44 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "facade_interior_composition_description",
+            "label": "Описание композиционных приёмов фасадов и интерьеров",
+            "aliases": [
+              "композиционные приемы",
+              "композиционные приёмы",
+              "фасад",
+              "интерьер"
+            ],
+            "assertion_regexes": [
+              "композиционн\\w+\\s+прием\\w*[^.\\n;]{0,120}фасад\\w*[^.\\n;]{0,100}интерьер\\w*[^.\\n;]{0,120}(?:принят\\w*|предусматрива\\w*|заключа\\w*|формиру\\w*)",
+              "композиционн\\w+\\s+приём\\w*[^.\\n;]{0,120}фасад\\w*[^.\\n;]{0,100}интерьер\\w*[^.\\n;]{0,120}(?:принят\\w*|предусматрива\\w*|заключа\\w*|формиру\\w*)"
+            ]
+          },
+          {
+            "id": "facade_interior_composition_justification",
+            "label": "Обоснование композиционных приёмов фасадов и интерьеров",
+            "aliases": [
+              "композиционные приемы",
+              "композиционные приёмы",
+              "фасад",
+              "интерьер",
+              "обоснованы"
+            ],
+            "assertion_regexes": [
+              "композиционн\\w+\\s+прием\\w*[^.\\n;]{0,120}фасад\\w*[^.\\n;]{0,100}интерьер\\w*[^.\\n;]{0,120}обоснован\\w*",
+              "композиционн\\w+\\s+приём\\w*[^.\\n;]{0,120}фасад\\w*[^.\\n;]{0,100}интерьер\\w*[^.\\n;]{0,120}обоснован\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

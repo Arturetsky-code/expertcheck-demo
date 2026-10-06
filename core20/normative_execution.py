@@ -584,6 +584,11 @@ def _set_element_match(
     aliases=[str(value) for value in (element.get("aliases") or []) if str(value).strip()]
     all_terms=[str(value) for value in (element.get("all_terms") or []) if str(value).strip()]
     numeric_required=bool(element.get("numeric_required"))
+    allow_negated_evidence=bool(element.get("allow_negated_evidence"))
+    assertion_regexes=[
+        str(value) for value in (element.get("assertion_regexes") or [])
+        if str(value).strip()
+    ]
     evidence_groups=[
         dict(value) for value in (element.get("evidence_groups") or [])
         if isinstance(value,dict) and (value.get("aliases") or [])
@@ -657,7 +662,8 @@ def _set_element_match(
                 option_hits=[]
                 for option in options:
                     matched,is_numeric,position=_keyword_match(option,raw)
-                    if matched and not is_numeric and not _applicability_negated(option,raw):
+                    negated=_applicability_negated(option,raw)
+                    if matched and not is_numeric and (allow_negated_evidence or not negated):
                         option_hits.append((position,option))
                 if not option_hits:
                     failed=True
@@ -677,14 +683,16 @@ def _set_element_match(
         else:
             for alias in aliases:
                 matched,is_numeric,_=_keyword_match(alias,raw)
-                if matched and not is_numeric and not _applicability_negated(alias,raw):
+                negated=_applicability_negated(alias,raw)
+                if matched and not is_numeric and (allow_negated_evidence or not negated):
                     alias_hits.append(alias)
             if aliases and not alias_hits:
                 continue
 
             for term in all_terms:
                 matched,is_numeric,_=_keyword_match(term,raw)
-                if not matched or is_numeric or _applicability_negated(term,raw):
+                negated=_applicability_negated(term,raw)
+                if not matched or is_numeric or (negated and not allow_negated_evidence):
                     failed=True
                     break
                 required_hits.append(term)
@@ -694,6 +702,18 @@ def _set_element_match(
         matched_terms=list(dict.fromkeys([*alias_hits,*required_hits]))
         if not matched_terms and not aliases and not all_terms:
             continue
+
+        if assertion_regexes:
+            assertion_matched=False
+            for pattern in assertion_regexes:
+                try:
+                    if re.search(pattern,raw,re.I):
+                        assertion_matched=True
+                        break
+                except re.error:
+                    continue
+            if not assertion_matched:
+                continue
 
         fragment=_fragment(raw,matched_terms or aliases or all_terms,radius=260)
         if numeric_required and not re.search(r"\b\d+(?:[.,]\d+)?\b",fragment):

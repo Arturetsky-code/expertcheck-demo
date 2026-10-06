@@ -996,6 +996,7 @@ def _typed_numeric_observations(
         lo=max(0,anchor-radius)
         hi=min(len(text),anchor+len(alias)+radius)
         window=text[lo:hi]
+        alias_matches=[]
         for match in number_re.finditer(window):
             before=window[max(0,match.start()-45):match.start()]
             if reject_comparators and comparator_re.search(before):
@@ -1006,11 +1007,7 @@ def _typed_numeric_observations(
                 continue
             absolute=lo+match.start()
             distance=abs(absolute-anchor)
-            key=(round(value,6),absolute)
-            if key in seen:
-                continue
-            seen.add(key)
-            output.append({
+            alias_matches.append({
                 "value":value,
                 "document":str(page.get("document") or ""),
                 "page":page.get("page"),
@@ -1018,7 +1015,15 @@ def _typed_numeric_observations(
                 "fragment":_fragment(text,[alias,str(match.group(1))],radius=180),
                 "alias":alias,
                 "distance":distance,
+                "_absolute":absolute,
             })
+        if alias_matches:
+            best=min(alias_matches,key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
+            key=(round(float(best.get("value") or 0),6),int(best.get("_absolute") or 0))
+            if key not in seen:
+                seen.add(key)
+                best.pop("_absolute",None)
+                output.append(best)
     output.sort(key=lambda row:(int(row.get("distance") or 0),float(row.get("value") or 0)))
     return output
 

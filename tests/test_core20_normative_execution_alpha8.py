@@ -3218,3 +3218,81 @@ def test_alpha8_sp12_sequential_category_incomplete_order_does_not_promote():
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_arch_justification_fast_path_promotes_both_domains():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":55,
+            "text":(
+                "Объёмно-пространственные решения обоснованы функциональным зонированием "
+                "и взаимосвязью основных помещений."
+            ),
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":56,
+            "text":(
+                "Архитектурно-художественные решения обоснованы характером окружающей "
+                "застройки и принятым композиционным построением фасадов."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B-ARCH")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-B-ARCH"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_arch_justification_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":55,
+        "text":(
+            "В АР должно быть приведено обоснование принятых объёмно-пространственных "
+            "и архитектурно-художественных решений."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B-ARCH")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-B-ARCH"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_arch_justification_single_domain_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":55,
+        "text":"Объёмно-пространственные решения обоснованы функциональным зонированием.",
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B-ARCH")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert "architectural_artistic_justification" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0

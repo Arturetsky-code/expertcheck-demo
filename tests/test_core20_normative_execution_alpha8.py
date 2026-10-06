@@ -13,6 +13,7 @@ from core20.normative_execution import (
     _rank_candidates,
 )
 from core20.normative_foundation import NormativeKnowledgeFoundation20
+from core20.normative_proof import NormativeProofEngine20
 
 
 ROOT=Path(__file__).resolve().parents[1]/"knowledge"
@@ -2318,3 +2319,82 @@ def test_alpha8_sp18_livnevaya_closed_type_is_equivalent_positive_evidence():
     row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.52-CLOSED-STORM-SEWER")
     assert row["kind"]=="VERIFIED_OK"
     assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+
+
+def _hybrid_set_proof_row(*, complete):
+    evidence=[{
+        "evidence_id":"NORM-SET-HYBRID-X-01",
+        "document":"ИОС.pdf",
+        "page":7,
+        "section":"ИОС",
+        "fragment":"Полное достаточное доказательство.",
+        "matched_terms":["достаточное доказательство"],
+        "set_element_id":"sufficient_condition",
+        "set_element_label":"Достаточное условие",
+    }] if complete else []
+    return {
+        "requirement_id":"HYBRID-SET-X",
+        "document_id":"TEST",
+        "source":"Test source",
+        "paragraph":"1",
+        "topic":"Гибридный set proof",
+        "requirement":"Требование с детерминированным достаточным условием и semantic fallback.",
+        "sections":["ИОС"],
+        "check_kind":"SEMANTIC",
+        "proof_type_hint":"SET_COMPLETENESS",
+        "kind":"VERIFIED_OK",
+        "state":"Подтверждено",
+        "reason_code":"NORMATIVE_RETRIEVAL_CANDIDATE_CONFIRMED",
+        "evidence_id":"NORM-E-HYBRID-X-01",
+        "evidence_document":"ИОС.pdf",
+        "evidence_page":7,
+        "evidence_fragment":"Адресный кандидат для смысловой проверки.",
+        "matched_keywords":["кандидат"],
+        "retrieval_candidate_count":1,
+        "evidence_candidates":[{
+            "evidence_id":"NORM-E-HYBRID-X-01",
+            "document":"ИОС.pdf",
+            "page":7,
+            "section":"ИОС",
+            "fragment":"Адресный кандидат для смысловой проверки.",
+            "matched_keywords":["кандидат"],
+            "retrieval_keyword_score":2,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        "set_completeness":{
+            "configured":True,
+            "mode":"ALL_REQUIRED",
+            "promotion_policy":"DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+            "atomization_complete":True,
+            "complete":complete,
+            "matched_count":1 if complete else 0,
+            "required_count":1,
+            "total_count":1,
+            "missing_ids":[] if complete else ["sufficient_condition"],
+            "missing_labels":[] if complete else ["Достаточное условие"],
+            "applicability_pending_count":0,
+            "evidence":evidence,
+        },
+    }
+
+
+def test_alpha8_hybrid_set_complete_uses_deterministic_fast_path():
+    result=NormativeProofEngine20().run([_hybrid_set_proof_row(complete=True)])
+    row=result["rows"][0]
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["reason_code"]=="NORMATIVE_SET_COMPLETENESS_PROOF_CONFIRMED"
+    assert result["semantic_queue_total"]==0
+
+
+def test_alpha8_hybrid_set_incomplete_routes_to_semantic_fallback():
+    result=NormativeProofEngine20().run([_hybrid_set_proof_row(complete=False)])
+    row=result["rows"][0]
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
+    assert result["semantic_queue_total"]==1
+    assert result["semantic_queue"][0]["requirement_id"]=="HYBRID-SET-X"
+    assert result["project_findings"]==0

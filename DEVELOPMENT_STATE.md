@@ -6065,3 +6065,97 @@ Against the 43 IDs from the saved historical semantic queue:
 - pure semantic / unmodeled cross-document: 10.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+## Hybrid cross-document fast path — FZ384 identification-value consistency — 2026-10-06
+
+### Goal
+
+Accelerate `FZ384-4-11-ID-IN-ASSIGNMENT-PD` without confusing source diversity
+with proof. The clause requires identification features to be set in the design
+assignment and reflected in textual project documentation.
+
+### Reusable cross-document archetype
+
+Added owner-bound `CROSS_DOCUMENT` proof with
+`OWNER_BOUND_FIELD_CONSISTENCY`.
+
+The deterministic fast path requires:
+1. exactly one confirmed Project Understanding owner for the compared evidence;
+2. explicit configured source groups;
+3. every required field extracted from each source group by a value-capture regex;
+4. one unambiguous normalized value per field and source;
+5. equality of the values across the source groups.
+
+Missing values, multiple values, source ambiguity, owner ambiguity and value
+mismatches never create PROJECT_FINDING. With
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK` they return to semantic proof.
+
+Core commits:
+- `d2393e8c26b1acfae468b7412621e02901fea811` — owner-bound cross-document
+  value-consistency evaluator;
+- `85c107d503d0b0035d38ad20565a7988ac97eef1` — CROSS_DOCUMENT proof gate.
+
+### FZ384-4-11 safe fast path
+
+The fast path is intentionally strict and currently compares:
+- design assignment metadata source `ASSIGNMENT`;
+- explanatory-note text section `ПЗ` as project-documentation source `PD`.
+
+Seven identification fields are required in both sources:
+1. purpose;
+2. functional/technological characteristics;
+3. dangerous natural processes and technogenic impacts;
+4. OPO membership;
+5. fire / explosion-fire hazard;
+6. permanent occupancy;
+7. responsibility level.
+
+Each field must be an explicit labelled project value. The full normalized seven-field
+set must match between ASSIGNMENT and PD for the same confirmed owner.
+
+This is a sufficient fast path, not an exhaustive semantic equivalence engine.
+Differently worded but semantically equivalent values remain semantic.
+
+Registry commit:
+- `e90152f51a7d7d6954c044d1b3d5d137fe161651`.
+
+Regression commit:
+- `1e171741d4f0ab887056de1c96c068726663202f`.
+
+Coverage:
+- complete matching 7-field set in assignment and PD -> deterministic VERIFIED_OK;
+- one changed value -> semantic fallback with VALUE_MISMATCH;
+- incomplete field set -> semantic fallback with VALUE_NOT_PROVEN;
+- assignment and PD evidence bound to different owners -> semantic fallback;
+- no PROJECT_FINDING is inferred by this fast path.
+
+### Validation
+
+Temporary draft PR #34 was used only for validation and closed without merge.
+
+GitHub Actions run 1067:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: 292 passed;
+- results-integrity: SUCCESS (17 passed).
+
+Final functional head before this documentation checkpoint:
+`1e171741d4f0ab887056de1c96c068726663202f`.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: 15;
+- hybrid: 19;
+- pure semantic / unmodeled: 9.
+
+The remaining pure-semantic IDs are:
+- `FZ123-78-1-FIRE-CHARACTERISTICS`;
+- `GOST27751-10.1-CLASS-LEVEL-GAMMA`;
+- `GOST27751-10.2-ASSIGNMENT`;
+- `SP4-6.1.2-PRODUCTION-FIRE-DISTANCE`;
+- `SP10-1.4-VPV-EXEMPTION`;
+- `SP10-T7.2-PRODUCTION-FLOW`;
+- `SP12-4.1-CATEGORY-TAXONOMY`;
+- `GOST21101-2026-7.3.1-CHANGE-NUMBER`;
+- `SP6-2025-5.2-SPZ-RELIABILITY`.
+
+This remains a registry-state classification, not a fresh project runtime queue.

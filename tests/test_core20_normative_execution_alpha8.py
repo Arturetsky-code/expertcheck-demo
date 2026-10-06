@@ -1609,6 +1609,165 @@ def _typed_owner_document(*rows):
     return document
 
 
+def test_alpha8_gate_width_relative_minimum_fast_path_promotes_auto_only_owner():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",27),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",28),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",29),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":27,
+            "text":(
+                "В местах заезда автотранспорта предусмотрены ворота. "
+                "Железнодорожный въезд не предусмотрен."
+            ),
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":28,
+            "text":"Ширина наиболее габаритного применяемого автомобиля составляет 3,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":29,
+            "text":"Ширина ворот автомобильного въезда принята 4,5 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_TYPED_VALUE_PROOF"
+    assert row["typed_value"]["kind"]=="OWNER_BOUND_RELATIVE_MINIMUM"
+    assert row["typed_value"]["owner_object_id"]=="OBJ-SITE"
+    assert row["typed_value"]["reference_value"]==3.0
+    assert row["typed_value"]["measured_value"]==4.5
+    assert row["typed_value"]["required_minimum"]==4.5
+    assert row["typed_value"]["guard_categories"]==["AUTO_ONLY"]
+    assert not any(
+        packet["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_gate_width_relative_minimum_below_formula_falls_back_to_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",27),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",28),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",29),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":27,
+            "text":(
+                "В местах заезда автотранспорта предусмотрены ворота. "
+                "Железнодорожные въезды отсутствуют."
+            ),
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":28,
+            "text":"Ширина наиболее габаритного автомобиля составляет 3,2 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":29,
+            "text":"Ширина ворот автомобильного въезда принята 4,6 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_TYPED_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
+    assert row["typed_value"]["status"]=="BELOW_MINIMUM"
+    assert row["typed_value"]["required_minimum"]==4.7
+    assert any(
+        packet["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_gate_width_relative_minimum_requires_explicit_no_rail_guard():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",27),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",28),
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",29),
+    )]
+    pages=[
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":27,
+            "text":"В местах заезда автотранспорта предусмотрены ворота.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":28,
+            "text":"Ширина наиболее габаритного автомобиля составляет 3,0 м.",
+        },
+        {
+            "document":"Раздел ПД №2_ПЗУ.pdf",
+            "document_type":"ПЗУ",
+            "page":29,
+            "text":"Ширина ворот автомобильного въезда принята 5,0 м.",
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["typed_value"]["complete"] is False
+    assert row["typed_value"]["owner_results"][0]["status"]=="GUARD_NOT_PROVEN"
+    assert any(
+        packet["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_gate_width_copied_normative_formula_never_promotes():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_typed_owner_document(
+        ("OBJ-SITE","Раздел ПД №2_ПЗУ.pdf",27),
+    )]
+    pages=[{
+        "document":"Раздел ПД №2_ПЗУ.pdf",
+        "document_type":"ПЗУ",
+        "page":27,
+        "text":(
+            "В местах заезда автотранспорта предусмотрены ворота. "
+            "Ширина ворот автомобильного въезда должна быть не менее ширины наиболее "
+            "габаритного автомобиля плюс 1,5 м и не менее 3,5 м; "
+            "для железнодорожного въезда — не менее 4,5 м."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP18-5.37-ENTRANCE-GATE-WIDTH")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["typed_value"]["complete"] is False
+    assert result["project_findings"]==0
+
+
 def test_alpha8_fire_road_width_typed_threshold_promotes_same_owner_without_ai():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[_typed_owner_document(

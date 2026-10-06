@@ -617,6 +617,14 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
                 "значение ниже вычисленного минимального порога. До отдельного negative-deviation "
                 "контракта автоматическое замечание не формируется; требуется проверка специалиста."
             )
+        elif status in {"ABOVE_MAXIMUM","OUTSIDE_RANGE"}:
+            result["reason_code"]="NORMATIVE_TYPED_VALUE_OUTSIDE_RANGE_REVIEW"
+            result["reason"]=(
+                "Адресные числовые значения извлечены и связаны с одним объектом, но одно или "
+                "несколько значений выходят за вычисленный допустимый диапазон. До отдельного "
+                "negative-deviation контракта автоматическое замечание не формируется; "
+                "требуется проверка специалиста."
+            )
         elif bool(typed.get("configured")):
             result["reason_code"]="NORMATIVE_TYPED_VALUE_NOT_PROVEN"
             result["reason"]=(

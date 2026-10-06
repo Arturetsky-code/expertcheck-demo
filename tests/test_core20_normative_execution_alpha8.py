@@ -2820,3 +2820,84 @@ def test_alpha8_pp87_natural_light_without_permanent_occupancy_relation_stays_se
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_sanitary_fast_path_promotes_compliance_and_justification():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":40,
+            "text":(
+                "Объёмно-планировочные решения обеспечивают соблюдение "
+                "санитарно-эпидемиологических требований."
+            ),
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":41,
+            "text":(
+                "Объёмно-планировочные решения обоснованы функциональным зонированием "
+                "и разделением потоков."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-H-SANITARY")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-H-SANITARY"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_sanitary_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":40,
+        "text":(
+            "В АР должны быть описаны и обоснованы объёмно-планировочные решения, "
+            "обеспечивающие соблюдение санитарно-эпидемиологических требований."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-H-SANITARY")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-H-SANITARY"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_sanitary_compliance_without_justification_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":40,
+        "text":(
+            "Объёмно-планировочные решения обеспечивают соблюдение "
+            "санитарно-эпидемиологических требований."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-H-SANITARY")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert "sanitary_solution_justification" in row["set_completeness"]["missing_ids"]
+    assert result["project_findings"]==0

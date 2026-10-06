@@ -82,6 +82,58 @@ def test_alpha8_energy_efficiency_clause_passes_applicability_but_requires_seman
     assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
 
 
+def test_alpha8_pp87_energy_efficiency_compliance_fast_path_promotes_explicit_justification():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":9,
+        "text":(
+            "Соответствие архитектурных решений требованиям энергетической эффективности "
+            "обосновано применением утеплённой оболочки здания и сокращением площади "
+            "наружных ограждений."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["matched_count"]==1
+    assert not any(
+        packet["requirement_id"]=="PP87-13-B1-EFF"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_energy_efficiency_compliance_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":9,
+        "text":(
+            "Для объектов, на которые распространяются требования энергетической эффективности, "
+            "АР должно содержать обоснование соответствия архитектурных решений этим требованиям."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-B1-EFF")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-B1-EFF"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
 def test_alpha8_production_conditional_clause_passes_applicability_but_alpha9_requires_semantic_proof():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[{

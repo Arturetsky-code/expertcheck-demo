@@ -13,6 +13,7 @@ PROOF_TYPES = (
     "SEMANTIC_REQUIREMENT",
     "GRAPHIC_CONTENT",
     "TYPED_VALUE",
+    "CROSS_DOCUMENT",
     "CROSS_SECTION",
 )
 
@@ -567,6 +568,55 @@ def _apply_gate(row: dict[str, Any]) -> dict[str, Any]:
         result["reason"] = (
             "Требование относится к графической части. Текстовый retrieval не является доказательством "
             "содержания чертежа; требование направлено в отдельный визуальный proof-контракт."
+        )
+        return result
+
+    if proof_type == "CROSS_DOCUMENT":
+        if retrieval_reason=="NORMATIVE_APPLICABILITY_NOT_PROVEN":
+            result["proof_state"]="RETAINED_FAIL_CLOSED"
+            return result
+
+        cross=dict(result.get("cross_document_value") or {})
+        promotion=str(cross.get("promotion_policy") or "HOLD").upper()
+        evidence=[
+            dict(value) for value in (cross.get("evidence") or [])
+            if isinstance(value,dict)
+        ]
+        if evidence:
+            result["evidence_candidates"]=evidence
+            result["retrieval_candidate_count"]=len(evidence)
+            primary=evidence[0]
+            result["evidence_id"]=primary.get("evidence_id") or ""
+            result["evidence_document"]=primary.get("document") or ""
+            result["evidence_page"]=primary.get("page")
+            result["evidence_fragment"]=primary.get("fragment") or ""
+            result["matched_keywords"]=list(primary.get("matched_keywords") or [])
+
+        if (
+            bool(cross.get("configured"))
+            and bool(cross.get("complete"))
+            and str(cross.get("status") or "").upper()=="PASS"
+            and promotion in {"DETERMINISTIC_AFTER_COMPLETE","DETERMINISTIC_WITH_SEMANTIC_FALLBACK"}
+        ):
+            result["kind"]="VERIFIED_OK"
+            result["state"]="Подтверждено"
+            result["proof_state"]="DETERMINISTIC_CROSS_DOCUMENT_PROOF"
+            result["reason_code"]="NORMATIVE_CROSS_DOCUMENT_VALUES_CONFIRMED"
+            result["reason"]=(
+                "Для одного подтверждённого объекта адресно сопоставлены одинаковые поля "
+                "в требуемых источниках. Полный набор значений извлечён из явных проектных "
+                "утверждений и совпадает после строгой нормализации без AI."
+            )
+            return result
+
+        result["kind"]="REVIEW_QUESTION"
+        result["state"]="Вопрос специалисту"
+        result["proof_state"]="SEMANTIC_PROOF_REQUIRED"
+        result["reason_code"]="NORMATIVE_CROSS_DOCUMENT_FAST_PATH_NOT_PROVEN"
+        result["reason"]=(
+            "Строгий междокументный fast path не доказал полный согласованный набор значений "
+            "для одного подтверждённого объекта. Неполнота, неоднозначность или расхождение "
+            "передаются в semantic proof и сами по себе не трактуются как несоответствие."
         )
         return result
 

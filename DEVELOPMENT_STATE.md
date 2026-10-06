@@ -5524,3 +5524,66 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — SP12 sequential category calculation — 2026-10-06
+
+### Goal
+
+Accelerate `SP12-5.2-SEQUENTIAL-CATEGORY` without replacing semantic review for
+shorter or differently documented category calculations.
+
+### Contract
+
+The requirement now uses owner-scoped SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+The deterministic fast path requires one explicit project assertion that:
+- the category of a room was actually determined/calculated;
+- the determination was performed sequentially;
+- the order is explicitly recorded as A -> Б -> В1-В4 -> Г -> Д;
+- the evidence belongs to one confirmed Project Understanding owner.
+
+A copied normative instruction ("должно выполняться...") does not satisfy the
+project-assertion contract. An incomplete order also cannot produce VERIFIED_OK.
+
+Registry commit:
+- `f3c5dba416bbf7a27827e48c2f47b4364c62c2ae`.
+
+Regression commit:
+- `2e886a50ab612d32e859446e4618cba2650c2a66`.
+
+Coverage:
+- full explicit sequence for one confirmed room/object -> deterministic VERIFIED_OK;
+- copied SP12 requirement -> semantic fallback;
+- incomplete sequence -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #25 was used only for validation and closed without merge.
+
+Final functional head:
+`2e886a50ab612d32e859446e4618cba2650c2a66`.
+
+GitHub Actions:
+- Core20 quality gates run 1019: SUCCESS;
+- Core20 regression: 267 passed;
+- results-integrity: SUCCESS.
+
+### Held related contracts
+
+`GOST27751-10.2-ASSIGNMENT` remains held because it depends on the minimum values
+and special cases of p. 10.1; source presence alone is insufficient.
+
+`SP6-2025-5.2-SPZ-RELIABILITY` remains held because the clause contains the
+special-group branch for specific objects. A safe fast path must not silently treat
+ordinary I category as sufficient where that branch applies.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

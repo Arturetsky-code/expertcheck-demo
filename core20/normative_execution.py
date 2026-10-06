@@ -662,7 +662,7 @@ def _set_element_match(
                 option_hits=[]
                 for option in options:
                     matched,is_numeric,position=_keyword_match(option,raw)
-                    negated=_applicability_negated(option,raw)
+                    negated=False if assertion_regexes else _applicability_negated(option,raw)
                     if matched and not is_numeric and (allow_negated_evidence or not negated):
                         option_hits.append((position,option))
                 if not option_hits:
@@ -683,7 +683,7 @@ def _set_element_match(
         else:
             for alias in aliases:
                 matched,is_numeric,_=_keyword_match(alias,raw)
-                negated=_applicability_negated(alias,raw)
+                negated=False if assertion_regexes else _applicability_negated(alias,raw)
                 if matched and not is_numeric and (allow_negated_evidence or not negated):
                     alias_hits.append(alias)
             if aliases and not alias_hits:
@@ -691,7 +691,7 @@ def _set_element_match(
 
             for term in all_terms:
                 matched,is_numeric,_=_keyword_match(term,raw)
-                negated=_applicability_negated(term,raw)
+                negated=False if assertion_regexes else _applicability_negated(term,raw)
                 if not matched or is_numeric or (negated and not allow_negated_evidence):
                     failed=True
                     break

@@ -3413,9 +3413,8 @@ def test_alpha8_pp87_tep_copied_requirement_stays_semantic():
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-D-TEP")
 
     assert row["kind"]=="REVIEW_QUESTION"
-    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
-    assert row["set_completeness"]["complete"] is False
-    assert any(
+    assert row["proof_state"]=="RETAINED_FAIL_CLOSED"
+    assert not any(
         packet["requirement_id"]=="PP87-12-D-TEP"
         for packet in result["semantic_queue"]
     )

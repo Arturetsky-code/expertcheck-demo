@@ -1302,7 +1302,28 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "landscape_solution_description",
+            "label": "Проектное описание решений по благоустройству территории",
+            "aliases": [
+              "решения по благоустройству территории",
+              "благоустройство территории",
+              "благоустройству территории"
+            ],
+            "assertion_regexes": [
+              "(?:решени\\w*\\s+по\\s+)?благоустройств\\w*\\s+территори\\w*[^.\\n;]{0,60}(?:предусматрива\\w*|принят\\w*|включа\\w*|выполня\\w*|предусмотрен\\w*)[^.\\n;]{1,220}",
+              "(?:предусматрива\\w*|принят\\w*|выполня\\w*|предусмотрен\\w*)[^.\\n;]{0,100}благоустройств\\w*\\s+территори\\w*[^.\\n;]{1,180}"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

@@ -262,6 +262,8 @@ def test_alpha8_unresolved_retrieval_row_keeps_near_miss_diagnostics():
     assert row["reason_code"] in {
         "NORMATIVE_EVIDENCE_WEAK",
         "NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND",
+        "NORMATIVE_SEMANTIC_PROOF_REQUIRED",
+        "NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN",
     }
     assert row["retrieval_near_misses"]
     assert row["retrieval_near_misses"][0]["page"]==7
@@ -3413,8 +3415,8 @@ def test_alpha8_pp87_tep_copied_requirement_stays_semantic():
     row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-12-D-TEP")
 
     assert row["kind"]=="REVIEW_QUESTION"
-    assert row["proof_state"]=="RETAINED_FAIL_CLOSED"
-    assert not any(
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert any(
         packet["requirement_id"]=="PP87-12-D-TEP"
         for packet in result["semantic_queue"]
     )

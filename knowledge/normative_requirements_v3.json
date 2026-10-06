@@ -3519,7 +3519,30 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "sequential_category_calculation",
+            "label": "Последовательный расчёт категории помещения А-Б-В1–В4-Г-Д",
+            "aliases": [
+              "определение категории помещения",
+              "последовательной проверки",
+              "категория А",
+              "категория Б",
+              "категория Д"
+            ],
+            "assertion_regexes": [
+              "определени\\w*\\s+категори\\w+\\s+помещени\\w*[^.\\n;]{0,100}(?:выполнен\\w*|произведен\\w*|осуществлен\\w*)[^.\\n;]{0,100}последовательн\\w*[^.\\n;]{0,80}(?:категори\\w*\\s*)?а[^.\\n;]{0,60}(?:категори\\w*\\s*)?б[^.\\n;]{0,80}в1[^.\\n;]{0,60}в4[^.\\n;]{0,80}(?:категори\\w*\\s*)?г[^.\\n;]{0,80}(?:категори\\w*\\s*)?д"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

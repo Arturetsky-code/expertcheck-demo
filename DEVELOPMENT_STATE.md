@@ -4732,3 +4732,99 @@ Next candidates:
    value-consistency contract exists;
 3. `GOST27751-10.1-CLASS-LEVEL-GAMMA` remains held until its gamma=1.2
    special-case applicability is modeled.
+
+
+## Deterministic normative proof expansion — PP87 insolation and daylight results — 2026-10-06
+
+### Goal
+
+Remove `PP87-13-D1-INSOLATION` from semantic AI review only when both calculation
+results required by the verified atomic clause are addressably present.
+
+### Contract
+
+`PP87-13-D1-INSOLATION` now uses deterministic SET_COMPLETENESS with two required
+elements:
+1. numeric result for duration of insolation;
+2. numeric result for daylight factor / КЕО.
+
+Each element requires a local assertion tying the engineering label to a numeric
+value. A heading or copied PP87 clause without actual results does not satisfy the
+set.
+
+Promotion:
+- `DETERMINISTIC_AFTER_COMPLETE`;
+- both elements are required;
+- no PROJECT_FINDING is inferred from absence;
+- incomplete evidence remains specialist review.
+
+Registry commits:
+- `0286d6c76ca8a1a8bc2f67090ff2526e8b9fb61a`;
+- `af5a56d04fd4c6f29ce76427960fd9149ab0b22f`.
+
+Regression commit:
+- `62d2adab37924c639fbd2f924a86620eeac583db`.
+
+Coverage:
+- numeric insolation + numeric KEO, including on separate AR pages -> deterministic
+  VERIFIED_OK;
+- heading / descriptive statement without numeric results -> no promotion;
+- only one of the two results -> REVIEW_QUESTION;
+- copied requirement containing clause numbering -> no promotion.
+
+### Retrieval / proof separation exposed by validation
+
+The first validation run had 226 passed / 2 failed because Evidence Quality 10.1.2
+treated the combined topic "Инсоляция и КЕО" as if both topic anchors had to occur
+on each individual page. That conflicts with a multi-page completeness proof.
+
+The fix is contract-local:
+- retrieval topic is now `Инсоляция`;
+- retrieval threshold is one concept hit;
+- final proof remains strict and still requires both numeric set elements.
+
+Therefore retrieval is allowed to route one valid evidence page into the proof
+engine, while SET_COMPLETENESS — not retrieval — decides whether the complete
+two-result obligation is satisfied. No global quality threshold was weakened.
+
+### Validation
+
+Temporary draft PR #12 was used only for validation and closed without merge.
+
+Final functional head:
+`af5a56d04fd4c6f29ce76427960fd9149ab0b22f`.
+
+GitHub Actions:
+- Core20 quality gates run 962: SUCCESS;
+- Core20 regression: 228 passed;
+- results-integrity: SUCCESS.
+
+### Frontier and held contracts
+
+Relative to the historical 35-item semantic frontier from the saved 2026-10-02 run,
+seven requirements are now deterministic in the current codebase:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`;
+- `SP4-8.2.6-ROAD-WALL-DISTANCE`;
+- `FNP505-1215-CONVEYOR-CROSSING-SPACING`;
+- `FZ384-4-1-ID-FEATURES`;
+- `FZ384-15-2-RESP-INPUT`;
+- `PP87-13-D1-INSOLATION`.
+
+Conceptual historical remainder: 28 items.
+This remains a historical frontier, not a live queue count.
+
+`SP18-5.37-ENTRANCE-GATE-WIDTH` is intentionally held because the current atomic
+record combines two applicability branches:
+- automobile entrance: max vehicle width + 1.5 m, but not less than 3.5 m;
+- railway entrance: not less than 4.5 m.
+Promoting the whole record from only the automobile formula could hide an applicable
+railway entrance. Split atomization or a proven entrance-type applicability inventory
+is required before deterministic promotion.
+
+`FZ384-4-11-ID-IN-ASSIGNMENT-PD` also remains held until a cross-document
+value-consistency proof compares actual identification-feature values, not mere
+presence in both sources.
+
+Do not run another semantic AI wave before recomputing the saved project against
+the current registry.

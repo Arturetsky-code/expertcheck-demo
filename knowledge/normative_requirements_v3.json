@@ -3644,7 +3644,30 @@
       "requires_page_reference": true,
       "execution_mode": "SEMANTIC_PROOF",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "two_sided_full_length_fire_access",
+            "label": "Подъезд пожарной техники по длине здания с двух сторон",
+            "aliases": [
+              "подъезд пожарной техники",
+              "подъезд пожарных автомобилей",
+              "по длине здания",
+              "с двух сторон"
+            ],
+            "assertion_regexes": [
+              "подъезд\\w*[^.\\n;]{0,60}(?:пожарн\\w+\\s+(?:техник\\w*|автомобил\\w*))[^.\\n;]{0,120}по\\s+длин\\w+\\s+здани\\w*[^.\\n;]{0,100}с\\s+двух\\s+сторон",
+              "с\\s+двух\\s+сторон[^.\\n;]{0,100}(?:обеспечен\\w*\\s+)?подъезд\\w*[^.\\n;]{0,80}(?:пожарн\\w+\\s+(?:техник\\w*|автомобил\\w*))[^.\\n;]{0,120}по\\s+длин\\w+\\s+здани\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

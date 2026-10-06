@@ -2363,6 +2363,192 @@ def _responsibility_assignment_document(*rows):
     return document
 
 
+def _fz384_id_cross_documents(*owner_rows):
+    owner_document=_owner_model_document(*owner_rows)
+    owner_document["Файл"]="Задание на проектирование.pdf"
+    owner_document["Тип документа"]="Задание на проектирование"
+    return [
+        owner_document,
+        {
+            "Файл":"Раздел ПД №1_ПЗ.pdf",
+            "Тип документа":"ПЗ",
+        },
+    ]
+
+
+def _fz384_identification_text(source_label, *, responsibility="нормальный", include_occupancy=True):
+    parts=[
+        f"{source_label}. Идентификационные признаки.",
+        "Назначение объекта: склад аммиачной селитры;",
+        "Функционально-технологические особенности: хранение аммиачной селитры;",
+        "Опасные природные процессы и техногенные воздействия: отсутствуют;",
+        "Принадлежность к ОПО: относится;",
+        "Пожарная и взрывопожарная опасность: категория А;",
+    ]
+    if include_occupancy:
+        parts.append("Постоянное пребывание людей: не предусмотрено;")
+    parts.append(f"Уровень ответственности: {responsibility}.")
+    return "\n".join(parts)
+
+
+def test_alpha8_fz384_identification_values_match_assignment_and_pd_without_ai():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=_fz384_id_cross_documents(
+        ("OBJ-ID","Задание на проектирование.pdf",5),
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )
+    pages=[
+        {
+            "document":"Задание на проектирование.pdf",
+            "document_type":"Задание на проектирование",
+            "page":5,
+            "text":_fz384_identification_text("Задание на проектирование"),
+        },
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":10,
+            "text":_fz384_identification_text("Проектная документация"),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+    )
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_type"]=="CROSS_DOCUMENT"
+    assert row["proof_state"]=="DETERMINISTIC_CROSS_DOCUMENT_PROOF"
+    assert row["cross_document_value"]["status"]=="PASS"
+    assert row["cross_document_value"]["complete"] is True
+    assert row["cross_document_value"]["owner_object_id"]=="OBJ-ID"
+    assert len(row["cross_document_value"]["field_ids"])==7
+    assert len(row["cross_document_value"]["evidence"])==14
+    assert not any(
+        packet["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz384_identification_value_mismatch_falls_back_to_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=_fz384_id_cross_documents(
+        ("OBJ-ID","Задание на проектирование.pdf",5),
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )
+    pages=[
+        {
+            "document":"Задание на проектирование.pdf",
+            "document_type":"Задание на проектирование",
+            "page":5,
+            "text":_fz384_identification_text(
+                "Задание на проектирование",
+                responsibility="нормальный",
+            ),
+        },
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":10,
+            "text":_fz384_identification_text(
+                "Проектная документация",
+                responsibility="повышенный",
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_CROSS_DOCUMENT_FAST_PATH_NOT_PROVEN"
+    assert row["cross_document_value"]["status"]=="VALUE_MISMATCH"
+    assert row["cross_document_value"]["mismatches"][0]["field_id"]=="responsibility_level"
+    assert any(
+        packet["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz384_identification_incomplete_pd_falls_back_to_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=_fz384_id_cross_documents(
+        ("OBJ-ID","Задание на проектирование.pdf",5),
+        ("OBJ-ID","Раздел ПД №1_ПЗ.pdf",10),
+    )
+    pages=[
+        {
+            "document":"Задание на проектирование.pdf",
+            "document_type":"Задание на проектирование",
+            "page":5,
+            "text":_fz384_identification_text("Задание на проектирование"),
+        },
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":10,
+            "text":_fz384_identification_text(
+                "Проектная документация",
+                include_occupancy=False,
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["cross_document_value"]["status"]=="VALUE_NOT_PROVEN"
+    missing={
+        (item["group_id"],item["field_id"])
+        for item in row["cross_document_value"]["missing"]
+    }
+    assert ("PD","permanent_occupancy") in missing
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz384_identification_cannot_merge_assignment_and_pd_across_owners():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=_fz384_id_cross_documents(
+        ("OBJ-A","Задание на проектирование.pdf",5),
+        ("OBJ-B","Раздел ПД №1_ПЗ.pdf",10),
+    )
+    pages=[
+        {
+            "document":"Задание на проектирование.pdf",
+            "document_type":"Задание на проектирование",
+            "page":5,
+            "text":_fz384_identification_text("Задание на проектирование"),
+        },
+        {
+            "document":"Раздел ПД №1_ПЗ.pdf",
+            "document_type":"ПЗ",
+            "page":10,
+            "text":_fz384_identification_text("Проектная документация"),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ384-4-11-ID-IN-ASSIGNMENT-PD"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["cross_document_value"]["complete"] is False
+    assert row["cross_document_value"]["status"]=="MULTIPLE_OWNERS"
+    assert result["project_findings"]==0
+
+
 def test_alpha8_fz384_responsibility_in_assignment_promotes_without_ai():
     engine=NormativeExecutionEngine20(_foundation())
     documents=[_responsibility_assignment_document(

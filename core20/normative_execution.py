@@ -997,6 +997,322 @@ def _owner_scoped_set_resolution(
 
 
 
+def _cross_document_source_match(
+    page:dict[str,Any],
+    group:dict[str,Any],
+)->bool:
+    """Match a cross-document source group using metadata only."""
+    document=str(page.get("document") or "")
+    document_type=str(page.get("document_type") or page.get("section") or "")
+    metadata=_norm(f"{document} {document_type}")
+    aliases=[
+        _norm(value) for value in (group.get("metadata_aliases") or [])
+        if _norm(value)
+    ]
+    if aliases and not any(alias in metadata for alias in aliases):
+        return False
+
+    section_keys={
+        _section_key(value) for value in (group.get("section_keys") or [])
+        if _section_key(value)
+    }
+    if section_keys and _section_key(document_type or document) not in section_keys:
+        return False
+
+    excluded=[
+        _norm(value) for value in (group.get("exclude_metadata_aliases") or [])
+        if _norm(value)
+    ]
+    if excluded and any(alias in metadata for alias in excluded):
+        return False
+    return bool(aliases or section_keys)
+
+
+def _cross_document_value_observations(
+    page:dict[str,Any],
+    field:dict[str,Any],
+)->list[dict[str,Any]]:
+    """Extract explicit labelled values for one cross-document field.
+
+    This is deliberately stricter than retrieval. Only configured value-capture
+    regexes count; a copied normative list or nearby keywords do not establish a
+    project value.
+    """
+    raw=str(page.get("text") or page.get("content") or "")
+    if not raw.strip():
+        return []
+    patterns=[
+        str(value) for value in (field.get("value_regexes") or [])
+        if str(value).strip()
+    ]
+    output=[]
+    seen=set()
+    for pattern in patterns:
+        try:
+            matches=list(re.finditer(pattern,raw,re.I))
+        except re.error:
+            matches=[]
+        for match in matches:
+            if "value" in match.groupdict():
+                value_raw=str(match.group("value") or "")
+            elif match.groups():
+                value_raw=str(match.group(1) or "")
+            else:
+                continue
+            value=_norm(value_raw).strip(" .,:;—-")
+            if not value:
+                continue
+            key=value
+            if key in seen:
+                continue
+            seen.add(key)
+            output.append({
+                "field_id":str(field.get("id") or ""),
+                "field_label":str(field.get("label") or field.get("id") or ""),
+                "value":value,
+                "value_raw":value_raw.strip(),
+                "document":str(page.get("document") or ""),
+                "page":page.get("page"),
+                "section":str(page.get("document_type") or page.get("section") or ""),
+                "fragment":_fragment(
+                    raw,
+                    [str(field.get("label") or field.get("id") or ""),value_raw],
+                    radius=220,
+                ),
+            })
+    return output
+
+
+def _cross_document_value_consistency_evaluation(
+    contract:dict[str,Any],
+    pages:list[dict[str,Any]],
+    documents:list[dict[str,Any]]|None,
+)->dict[str,Any]:
+    ec=dict(contract.get("evidence_contract") or {})
+    cfg=dict(ec.get("cross_document_contract") or {})
+    if not cfg:
+        return {
+            "configured":False,
+            "kind":"UNCONFIGURED",
+            "promotion_policy":"HOLD",
+            "complete":False,
+            "status":"UNCONFIGURED",
+            "evidence":[],
+        }
+
+    kind=str(cfg.get("kind") or "").upper()
+    promotion_policy=str(cfg.get("promotion_policy") or "HOLD").upper()
+    if kind!="OWNER_BOUND_FIELD_CONSISTENCY":
+        return {
+            "configured":True,
+            "kind":kind or "UNKNOWN",
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":"UNSUPPORTED_CROSS_DOCUMENT_CONTRACT",
+            "evidence":[],
+        }
+
+    groups=[
+        dict(value) for value in (cfg.get("source_groups") or [])
+        if isinstance(value,dict) and str(value.get("id") or "").strip()
+    ]
+    fields=[
+        dict(value) for value in (cfg.get("fields") or [])
+        if isinstance(value,dict) and str(value.get("id") or "").strip()
+    ]
+    if len(groups)<2 or not fields:
+        return {
+            "configured":True,
+            "kind":kind,
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":"CONTRACT_INCOMPLETE",
+            "evidence":[],
+        }
+
+    owner_index=_confirmed_owner_page_index(documents)
+    by_owner:dict[str,dict[str,dict[str,list[dict[str,Any]]]]]={}
+    ambiguous_addresses=0
+
+    for page in pages:
+        document=str(page.get("document") or "").strip()
+        page_no=page.get("page")
+        owners=owner_index.get((document,str(page_no)),set()) if document and page_no not in (None,"") else set()
+        if len(owners)!=1:
+            if len(owners)>1:
+                ambiguous_addresses+=1
+            continue
+        matched_groups=[
+            group for group in groups
+            if _cross_document_source_match(page,group)
+        ]
+        if len(matched_groups)!=1:
+            continue
+        owner=next(iter(owners))
+        group=matched_groups[0]
+        group_id=str(group.get("id") or "")
+        owner_bucket=by_owner.setdefault(owner,{})
+        group_bucket=owner_bucket.setdefault(group_id,{})
+        for field in fields:
+            field_id=str(field.get("id") or "")
+            observations=_cross_document_value_observations(page,field)
+            if observations:
+                group_bucket.setdefault(field_id,[]).extend(observations)
+
+    group_ids=[str(group.get("id") or "") for group in groups]
+    field_ids=[str(field.get("id") or "") for field in fields]
+    field_labels={
+        str(field.get("id") or ""):str(field.get("label") or field.get("id") or "")
+        for field in fields
+    }
+    owner_results=[]
+
+    for owner in sorted(by_owner):
+        owner_bucket=by_owner[owner]
+        values_by_group:dict[str,dict[str,str]]={}
+        evidence_by_group:dict[str,dict[str,dict[str,Any]]]={}
+        missing=[]
+        conflicts=[]
+        for group_id in group_ids:
+            values_by_group[group_id]={}
+            evidence_by_group[group_id]={}
+            group_bucket=owner_bucket.get(group_id,{})
+            for field_id in field_ids:
+                rows=list(group_bucket.get(field_id) or [])
+                unique=[]
+                for row in rows:
+                    value=str(row.get("value") or "")
+                    if value and value not in unique:
+                        unique.append(value)
+                if not unique:
+                    missing.append({
+                        "group_id":group_id,
+                        "field_id":field_id,
+                        "field_label":field_labels.get(field_id,field_id),
+                    })
+                    continue
+                if len(unique)>1:
+                    conflicts.append({
+                        "group_id":group_id,
+                        "field_id":field_id,
+                        "field_label":field_labels.get(field_id,field_id),
+                        "values":unique,
+                    })
+                    continue
+                values_by_group[group_id][field_id]=unique[0]
+                evidence_by_group[group_id][field_id]=next(
+                    row for row in rows if str(row.get("value") or "")==unique[0]
+                )
+
+        mismatches=[]
+        if not missing and not conflicts:
+            reference_group=group_ids[0]
+            for field_id in field_ids:
+                reference_value=values_by_group[reference_group][field_id]
+                compared={
+                    group_id:values_by_group[group_id][field_id]
+                    for group_id in group_ids
+                }
+                if any(value!=reference_value for value in compared.values()):
+                    mismatches.append({
+                        "field_id":field_id,
+                        "field_label":field_labels.get(field_id,field_id),
+                        "values_by_group":compared,
+                    })
+
+        evidence=[]
+        # Interleave groups per field so semantic fallback retains source diversity
+        # even when the downstream packet is limited to its strongest few items.
+        for field_id in field_ids:
+            for group_id in group_ids:
+                item=evidence_by_group.get(group_id,{}).get(field_id)
+                if not item:
+                    continue
+                evidence.append({
+                    "evidence_id":(
+                        f"NORM-XDOC-{contract.get('requirement_id')}-{owner}-"
+                        f"{field_id}-{group_id}-{len(evidence)+1}"
+                    ),
+                    "document":str(item.get("document") or ""),
+                    "page":item.get("page"),
+                    "section":str(item.get("section") or ""),
+                    "fragment":str(item.get("fragment") or ""),
+                    "matched_keywords":[field_labels.get(field_id,field_id)],
+                    "cross_document_role":group_id,
+                    "cross_document_field_id":field_id,
+                    "cross_document_value":str(item.get("value") or ""),
+                    "object_id":owner,
+                })
+
+        if conflicts:
+            status="VALUE_CONFLICT"
+        elif missing:
+            status="VALUE_NOT_PROVEN"
+        elif mismatches:
+            status="VALUE_MISMATCH"
+        else:
+            status="PASS"
+
+        owner_results.append({
+            "object_id":owner,
+            "status":status,
+            "missing":missing,
+            "conflicts":conflicts,
+            "mismatches":mismatches,
+            "values_by_group":values_by_group,
+            "evidence":evidence,
+        })
+
+    if not owner_results:
+        return {
+            "configured":True,
+            "kind":kind,
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":"OWNER_NOT_PROVEN",
+            "owner_scope_state":"OWNER_NOT_PROVEN",
+            "owner_object_id":"",
+            "ambiguous_address_count":ambiguous_addresses,
+            "owner_results":[],
+            "evidence":[],
+        }
+
+    if len(owner_results)!=1:
+        return {
+            "configured":True,
+            "kind":kind,
+            "promotion_policy":promotion_policy,
+            "complete":False,
+            "status":"MULTIPLE_OWNERS",
+            "owner_scope_state":"MULTIPLE_OWNERS",
+            "owner_object_id":"",
+            "ambiguous_address_count":ambiguous_addresses,
+            "owner_results":owner_results,
+            "evidence":[],
+        }
+
+    resolved=owner_results[0]
+    passed=resolved.get("status")=="PASS"
+    return {
+        "configured":True,
+        "kind":kind,
+        "promotion_policy":promotion_policy,
+        "complete":bool(passed),
+        "status":str(resolved.get("status") or ""),
+        "owner_scope_state":"CONFIRMED",
+        "owner_object_id":str(resolved.get("object_id") or ""),
+        "source_group_ids":group_ids,
+        "field_ids":field_ids,
+        "missing":list(resolved.get("missing") or []),
+        "conflicts":list(resolved.get("conflicts") or []),
+        "mismatches":list(resolved.get("mismatches") or []),
+        "values_by_group":dict(resolved.get("values_by_group") or {}),
+        "ambiguous_address_count":ambiguous_addresses,
+        "owner_results":owner_results,
+        "evidence":list(resolved.get("evidence") or []),
+    }
+
+
 def _typed_numeric_observations(
     page:dict[str,Any],
     spec:dict[str,Any],
@@ -2813,6 +3129,7 @@ class NormativeExecutionEngine20:
         base["applicability_negative_trace"]=list(applicability.get("negative_trace") or [])
         base["set_completeness"]=_set_completeness_evaluation(contract,candidates,documents)
         base["typed_value"]=_typed_value_evaluation(contract,candidates,documents)
+        base["cross_document_value"]=_cross_document_value_consistency_evaluation(contract,candidates,documents)
         base["visual_preflight"]=_visual_preflight_evaluation(contract,candidates,documents)
         if not applicable:
             return {**base,"kind":"REVIEW_QUESTION","state":KIND_LABELS["REVIEW_QUESTION"],

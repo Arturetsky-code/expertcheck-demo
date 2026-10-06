@@ -3135,3 +3135,86 @@ def test_alpha8_pp87_engineering_prep_without_protection_scope_does_not_promote(
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def _sp12_category_document(*rows):
+    document=_owner_model_document(*rows)
+    document["Файл"]="Раздел ПД №5_ТХ.pdf"
+    document["Тип документа"]="ТХ"
+    return document
+
+
+def test_alpha8_sp12_sequential_category_fast_path_promotes_same_owner():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",60),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":60,
+        "text":(
+            "Определение категории помещения выполнено последовательной проверкой: "
+            "категория А, категория Б, В1, В2, В3, В4, категория Г, категория Д."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-5.2-SEQUENTIAL-CATEGORY")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_scope_state"]=="CONFIRMED"
+    assert row["set_completeness"]["owner_object_id"]=="ROOM-CAT"
+    assert not any(
+        packet["requirement_id"]=="SP12-5.2-SEQUENTIAL-CATEGORY"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_sp12_sequential_category_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",60),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":60,
+        "text":(
+            "Определение категории помещения должно выполняться последовательной проверкой "
+            "от наиболее опасной категории А к наименее опасной категории Д."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-5.2-SEQUENTIAL-CATEGORY")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="SP12-5.2-SEQUENTIAL-CATEGORY"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_sp12_sequential_category_incomplete_order_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[_sp12_category_document(
+        ("ROOM-CAT","Раздел ПД №5_ТХ.pdf",60),
+    )]
+    pages=[{
+        "document":"Раздел ПД №5_ТХ.pdf",
+        "document_type":"ТХ",
+        "page":60,
+        "text":(
+            "Определение категории помещения выполнено последовательной проверкой: "
+            "категория А, категория Б, В1, В2, категория Д."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="SP12-5.2-SEQUENTIAL-CATEGORY")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

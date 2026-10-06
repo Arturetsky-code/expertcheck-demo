@@ -4946,3 +4946,64 @@ GitHub Actions:
 
 This checkpoint changes proof routing only; no normative requirement was converted by
 this step itself.
+
+
+## Hybrid deterministic fast path — FNP505 surface emergency lighting — 2026-10-06
+
+### Goal
+
+Accelerate `FNP505-1461-SURFACE-EMERGENCY-LIGHTING` without replacing semantic
+coverage with a narrower deterministic interpretation.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Deterministic fast path is deliberately conservative. It requires one addressable
+universal assertion tying together:
+- all / each objects of the surface complex;
+- emergency lighting;
+- an independent power source.
+
+A statement limited only to "each workplace" is not enough for the fast path,
+because the clause separately covers listed technological and auxiliary buildings.
+Such evidence is preserved for semantic proof instead of being rejected or
+incorrectly promoted.
+
+Likewise, an assertion that mentions emergency lighting but does not establish an
+independent power source cannot produce VERIFIED_OK.
+
+Registry commit:
+- `1ab7727956d1b2525a4c67032967066d35de97c5`.
+
+Regression commit:
+- `251a3a7b4444422e8992201c26dc4bcae44bbe9e`.
+
+Coverage:
+- universal surface-complex coverage + emergency lighting + independent source ->
+  deterministic VERIFIED_OK;
+- workplace-only formulation -> semantic fallback;
+- universal scope without independent source -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #15 was used only for validation and closed without merge.
+
+Final functional head:
+`251a3a7b4444422e8992201c26dc4bcae44bbe9e`.
+
+GitHub Actions:
+- Core20 quality gates run 975: SUCCESS;
+- Core20 regression: 237 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is now hybrid rather than fully deterministic:
+- qualifying evidence bypasses AI;
+- non-qualifying but addressable evidence still remains in the semantic queue.
+
+Therefore this change reduces AI work opportunistically but does not decrement the
+historical semantic frontier count by itself.

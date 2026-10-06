@@ -2127,7 +2127,44 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "finish_solution_description",
+            "label": "Описание решений по отделке всех требуемых групп помещений",
+            "aliases": [
+              "отделка помещений",
+              "основного назначения",
+              "вспомогательного назначения",
+              "обслуживающего назначения",
+              "технического назначения"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+отделк\\w+\\s+помещени\\w*[^.\\n;]{0,220}основн\\w+[^.\\n;]{0,120}вспомогательн\\w+[^.\\n;]{0,120}обслуживающ\\w+[^.\\n;]{0,120}техническ\\w+[^.\\n;]{0,140}(?:принят\\w*|предусматрива\\w*|выполня\\w*|включа\\w*)"
+            ]
+          },
+          {
+            "id": "finish_solution_justification",
+            "label": "Обоснование решений по отделке всех требуемых групп помещений",
+            "aliases": [
+              "отделка помещений",
+              "основного назначения",
+              "вспомогательного назначения",
+              "обслуживающего назначения",
+              "технического назначения",
+              "обоснованы"
+            ],
+            "assertion_regexes": [
+              "решени\\w*\\s+по\\s+отделк\\w+\\s+помещени\\w*[^.\\n;]{0,220}основн\\w+[^.\\n;]{0,120}вспомогательн\\w+[^.\\n;]{0,120}обслуживающ\\w+[^.\\n;]{0,120}техническ\\w+[^.\\n;]{0,140}обоснован\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

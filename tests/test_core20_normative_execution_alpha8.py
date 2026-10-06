@@ -2398,3 +2398,73 @@ def test_alpha8_hybrid_set_incomplete_routes_to_semantic_fallback():
     assert result["semantic_queue_total"]==1
     assert result["semantic_queue"][0]["requirement_id"]=="HYBRID-SET-X"
     assert result["project_findings"]==0
+
+
+def test_alpha8_fnp505_surface_emergency_universal_scope_uses_deterministic_fast_path():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №5_ИОС.pdf","Тип документа":"ИОС"}]
+    pages=[{
+        "document":"Раздел ПД №5_ИОС.pdf",
+        "document_type":"ИОС",
+        "page":18,
+        "text":(
+            "На всех объектах поверхностного комплекса предусмотрено аварийное освещение "
+            "от независимого источника питания."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_fnp505_workplace_only_statement_keeps_semantic_fallback():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №5_ИОС.pdf","Тип документа":"ИОС"}]
+    pages=[{
+        "document":"Раздел ПД №5_ИОС.pdf",
+        "document_type":"ИОС",
+        "page":18,
+        "text":(
+            "Каждое рабочее место поверхностного комплекса имеет аварийное освещение "
+            "от независимого источника питания."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fnp505_surface_scope_without_independent_power_keeps_semantic_fallback():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №5_ИОС.pdf","Тип документа":"ИОС"}]
+    pages=[{
+        "document":"Раздел ПД №5_ИОС.pdf",
+        "document_type":"ИОС",
+        "page":18,
+        "text":(
+            "На всех объектах поверхностного комплекса предусмотрено аварийное освещение. "
+            "Питание систем освещения приведено ниже."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="FNP505-1461-SURFACE-EMERGENCY-LIGHTING")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

@@ -1309,7 +1309,7 @@
   {
     "id": "PP87-12-H-ZONING",
     "source": "Постановление Правительства РФ от 16.02.2008 № 87",
-    "topic": "Зонирование производственной территории",
+    "topic": "Зонирование территории",
     "requirement": "Для объекта производственного назначения в ПЗУ должно быть обосновано зонирование территории и принципиальная схема размещения территориальных зон.",
     "sections": [
       "ПЗУ"
@@ -1334,7 +1334,37 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "CONDITIONAL"
+      "applicability": "CONDITIONAL",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "zoning_justification",
+            "label": "Обоснование зонирования территории",
+            "aliases": [
+              "зонирование территории",
+              "зонирования территории"
+            ],
+            "assertion_regexes": [
+              "зонирован\\w+\\s+территори\\w*[^.\\n;]{0,120}обоснован\\w*"
+            ]
+          },
+          {
+            "id": "territorial_zone_scheme_justification",
+            "label": "Обоснование принципиальной схемы размещения территориальных зон",
+            "aliases": [
+              "принципиальная схема размещения территориальных зон",
+              "схема размещения территориальных зон"
+            ],
+            "assertion_regexes": [
+              "(?:принципиальн\\w+\\s+)?схем\\w+\\s+размещени\\w+\\s+территориальн\\w+\\s+зон\\w*[^.\\n;]{0,120}обоснован\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

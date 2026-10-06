@@ -5462,3 +5462,65 @@ This requirement is hybrid:
 - incomplete/differently phrased evidence remains semantic.
 
 The historical semantic frontier count is unchanged by this hybrid step.
+
+
+## Hybrid deterministic fast path — PP87 engineering preparation and protection — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-12-E-ENGINEERING-PREP` while preserving the verified atomic clause:
+PZU must describe and justify solutions for engineering preparation and engineering
+protection of the territory from hazardous processes and water impacts.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required:
+1. an explicit project description/adoption of engineering-preparation and
+   engineering-protection solutions, tied to hazardous processes / surface and
+   groundwater impacts;
+2. an explicit justification of the same solution scope.
+
+A statement only about engineering preparation, without engineering protection, does
+not satisfy the fast path. A copied PP87 obligation also remains semantic.
+
+Registry commit:
+- `877d51e5e7b5ecfa8d441c9e24aa5d710f678829`.
+
+Regression commits:
+- `1a64b7a381449c9c06ced6d2587e6026ca6fe0b8`;
+- `2b42e68fdee5638ab59ebd147f0e956558ff0ee5`.
+
+The second regression commit updates an older proof test that intentionally checks
+that keyword evidence alone is not normative proof. The scenario still remains
+semantic; its proof type is now SET_COMPLETENESS with semantic fallback.
+
+Coverage:
+- engineering preparation + protection + hazardous/water scope + separate
+  justification -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- preparation without protection scope -> no automatic verification;
+- keyword-only legacy case -> remains semantic;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #24 was used only for validation and closed without merge.
+
+Final functional head:
+`2b42e68fdee5638ab59ebd147f0e956558ff0ee5`.
+
+GitHub Actions:
+- Core20 quality gates run 1015: SUCCESS;
+- Core20 regression: 264 passed;
+- results-integrity: SUCCESS.
+
+### Frontier semantics
+
+This requirement is hybrid:
+- qualifying evidence bypasses AI;
+- incomplete/differently phrased evidence remains semantic.
+
+The historical semantic frontier count is unchanged by this hybrid step.

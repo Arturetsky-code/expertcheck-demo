@@ -2059,7 +2059,26 @@
         "энергетической эффективности"
       ],
       "applicability_min_hits": 1,
-      "proof_type": "SEMANTIC_REQUIREMENT"
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "energy_efficiency_arch_compliance_justification",
+            "label": "Обоснование соответствия архитектурных решений требованиям энергетической эффективности",
+            "aliases": [
+              "соответствие архитектурных решений",
+              "требованиям энергетической эффективности",
+              "обосновано"
+            ],
+            "assertion_regexes": [
+              "соответстви\\w*\\s+архитектурн\\w+\\s+решени\\w*[^.\\n;]{0,120}требовани\\w*\\s+энергетическ\\w+\\s+эффективност\\w*[^.\\n;]{0,120}обоснован\\w*[^.\\n;]{0,180}(?:применени\\w*|использовани\\w*|снижени\\w*|сокращени\\w*|обеспечени\\w*|выбор\\w*|принят\\w*)"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

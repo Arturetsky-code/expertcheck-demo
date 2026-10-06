@@ -1992,7 +1992,7 @@
   {
     "id": "PP87-13-D1-INSOLATION",
     "source": "Постановление Правительства РФ от 16.02.2008 № 87",
-    "topic": "Инсоляция и КЕО",
+    "topic": "Инсоляция",
     "requirement": "В АР должны быть приведены результаты расчётов продолжительности инсоляции и коэффициента естественной освещённости.",
     "sections": [
       "АР"
@@ -2016,7 +2016,7 @@
       "requires_profile_owner": false,
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
-      "min_keyword_hits": 2,
+      "min_keyword_hits": 1,
       "applicability": "SECTION_PRESENT",
       "proof_type": "SET_COMPLETENESS",
       "set_contract": {

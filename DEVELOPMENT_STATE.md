@@ -5636,3 +5636,57 @@ For development prioritization use the current-registry split **15 deterministic
 11 hybrid / 17 semantic**.
 A true runtime queue must still be recomputed from the project documents before a
 new semantic AI wave.
+
+
+## Hybrid deterministic fast path — PP87 architectural justification — 2026-10-06
+
+### Goal
+
+Accelerate `PP87-13-B-ARCH` while preserving the verified atomic clause:
+AR must justify both adopted volume-spatial and architectural-artistic solutions.
+
+### Contract
+
+The requirement now uses SET_COMPLETENESS with
+`DETERMINISTIC_WITH_SEMANTIC_FALLBACK`.
+
+Two independent elements are required:
+1. explicit justification of adopted volume-spatial solutions;
+2. explicit justification of adopted architectural-artistic solutions.
+
+The fast path does not infer one domain from the other. A copied PP87 obligation
+also does not satisfy the project-assertion contract.
+
+Registry commit:
+- `ac206b1817e223a03055ed3938b72848c23f8c68`.
+
+Regression commit:
+- `f14a8f6eda44d6886c2af3b30bbf5e00b8b9528c`.
+
+Coverage:
+- both justifications -> deterministic VERIFIED_OK;
+- copied PP87 wording -> semantic fallback;
+- one domain only -> no automatic verification;
+- no PROJECT_FINDING is inferred from a failed fast path.
+
+### Validation
+
+Temporary draft PR #26 was used only for validation and closed without merge.
+
+Final functional head:
+`f14a8f6eda44d6886c2af3b30bbf5e00b8b9528c`.
+
+GitHub Actions:
+- Core20 quality gates run 1024: SUCCESS;
+- Core20 regression: 270 passed;
+- results-integrity: SUCCESS.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue, the current registry is
+now classified as:
+- deterministic: 15;
+- hybrid: 12;
+- pure semantic / unmodeled cross-document: 16.
+
+This is a registry-state classification, not a fresh project runtime queue.

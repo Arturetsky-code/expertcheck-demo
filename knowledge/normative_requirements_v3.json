@@ -3818,14 +3818,59 @@
       "minimum_sources": 1,
       "requires_profile_owner": false,
       "requires_page_reference": true,
-      "execution_mode": "SEMANTIC_PROOF",
+      "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
       "applicability": "CONDITIONAL",
       "applicability_keywords": [
         "поверхностного комплекса"
       ],
       "applicability_min_hits": 1,
-      "proof_type": "SEMANTIC_REQUIREMENT"
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "universal_surface_emergency_lighting",
+            "label": "Все объекты поверхностного комплекса обеспечены аварийным освещением от независимого источника питания",
+            "evidence_groups": [
+              {
+                "id": "surface_scope",
+                "label": "Универсальный охват поверхностного комплекса",
+                "aliases": [
+                  "все объекты поверхностного комплекса",
+                  "на всех объектах поверхностного комплекса",
+                  "каждый объект поверхностного комплекса",
+                  "на каждом объекте поверхностного комплекса"
+                ]
+              },
+              {
+                "id": "emergency_lighting",
+                "label": "Аварийное освещение",
+                "aliases": [
+                  "аварийное освещение"
+                ]
+              },
+              {
+                "id": "independent_power",
+                "label": "Независимый источник питания",
+                "aliases": [
+                  "независимый источник питания",
+                  "независимого источника питания",
+                  "независимый источник электропитания",
+                  "независимого источника электропитания"
+                ]
+              }
+            ],
+            "group_window_chars": 520,
+            "assertion_regexes": [
+              "(?:все|кажд\\w+)[^.\\n;]{0,80}объект\\w*\\s+поверхностн\\w+\\s+комплекс\\w*[^.\\n;]{0,220}аварийн\\w+\\s+освещен\\w*[^.\\n;]{0,180}независим\\w+\\s+источник\\w+\\s+(?:электро)?питан\\w*",
+              "(?:на\\s+)?всех\\s+объект\\w*\\s+поверхностн\\w+\\s+комплекс\\w*[^.\\n;]{0,220}аварийн\\w+\\s+освещен\\w*[^.\\n;]{0,180}независим\\w+\\s+источник\\w+\\s+(?:электро)?питан\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

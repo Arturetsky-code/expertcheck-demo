@@ -978,10 +978,10 @@ def _typed_numeric_observations(
         return []
     radius=max(60,int(spec.get("window_chars") or 180))
     reject_comparators=bool(spec.get("reject_comparator_context",True))
-    comparator_re=re.compile(r"(?:не\\s+менее|не\\s+более|свыше|более|менее|до|\\bот)\\s*$")
+    comparator_re=re.compile(r"(?:не\s+менее|не\s+более|свыше|более|менее|до|\bот)\s*$")
     number_re=re.compile(
-        r"(?<![\\d.,])(\\d+(?:[.,]\\d+)?)\\s*"
-        r"(?:м(?:\\.|\\b)|метр(?:а|ов)?\\b)"
+        r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*"
+        r"(?:м(?:\.|\b)|метр(?:а|ов)?\b)"
     )
     output=[]
     seen=set()

@@ -4139,7 +4139,7 @@
   {
     "id": "SP18-5.52-CLOSED-STORM-SEWER",
     "source": "СП 18.13330.2019",
-    "topic": "Дождевая канализация производственной площадки",
+    "topic": "Канализация",
     "requirement": "На территории производственного объекта должна быть предусмотрена закрытая система дождевой канализации.",
     "sections": [
       "ПЗУ",
@@ -4165,8 +4165,30 @@
       "requires_profile_owner": false,
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
-      "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "min_keyword_hits": 1,
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "closed_storm_sewer",
+            "label": "Закрытая система дождевой канализации",
+            "aliases": [
+              "дождевая канализация",
+              "дождевой канализации",
+              "ливневая канализация",
+              "ливневой канализации"
+            ],
+            "assertion_regexes": [
+              "(?:дождев\\w+|ливнев\\w+)\\s+канализаци\\w*[^\\n]{0,80}(?:закрыт\\w+|закрытого\\s+типа)",
+              "(?:закрыт\\w+|закрытого\\s+типа)[^\\n]{0,80}(?:дождев\\w+|ливнев\\w+)\\s+канализаци\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

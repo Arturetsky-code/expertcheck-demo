@@ -2121,7 +2121,28 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "natural_light_permanent_occupancy_solution",
+            "label": "Архитектурное решение по естественному освещению помещений с постоянным пребыванием людей",
+            "aliases": [
+              "естественное освещение",
+              "постоянным пребыванием людей",
+              "постоянного пребывания людей"
+            ],
+            "assertion_regexes": [
+              "помещени\\w*[^.\\n;]{0,80}постоянн\\w+\\s+пребыван\\w+\\s+люд\\w*[^.\\n;]{0,120}(?:обеспечива\\w*|предусматрива\\w*|име\\w*)[^.\\n;]{0,120}естественн\\w+\\s+освещени\\w*",
+              "естественн\\w+\\s+освещени\\w*[^.\\n;]{0,120}(?:предусмотр\\w*|обеспечива\\w*|принят\\w*)[^.\\n;]{0,120}помещени\\w*[^.\\n;]{0,80}постоянн\\w+\\s+пребыван\\w+\\s+люд\\w*"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

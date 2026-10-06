@@ -2978,3 +2978,83 @@ def test_alpha8_pp87_facade_only_composition_does_not_promote():
     assert row["kind"]!="VERIFIED_OK"
     assert row["set_completeness"]["complete"] is False
     assert result["project_findings"]==0
+
+
+def test_alpha8_pp87_room_finishing_fast_path_promotes_all_required_groups():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":50,
+            "text":(
+                "Решения по отделке помещений основного, вспомогательного, обслуживающего "
+                "и технического назначения приняты с учетом условий эксплуатации."
+            ),
+        },
+        {
+            "document":"Раздел ПД №3_АР.pdf",
+            "document_type":"АР",
+            "page":51,
+            "text":(
+                "Решения по отделке помещений основного, вспомогательного, обслуживающего "
+                "и технического назначения обоснованы санитарными и эксплуатационными требованиями."
+            ),
+        },
+    ]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D-FINISH")
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["matched_count"]==2
+    assert row["set_completeness"]["complete"] is True
+    assert not any(
+        packet["requirement_id"]=="PP87-13-D-FINISH"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_room_finishing_copied_requirement_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":50,
+        "text":(
+            "В АР должны быть описаны и обоснованы решения по отделке помещений "
+            "основного, вспомогательного, обслуживающего и технического назначения."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D-FINISH")
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="PP87-13-D-FINISH"
+        for packet in result["semantic_queue"]
+    )
+
+
+def test_alpha8_pp87_room_finishing_partial_scope_does_not_promote():
+    engine=NormativeExecutionEngine20(_foundation())
+    documents=[{"Файл":"Раздел ПД №3_АР.pdf","Тип документа":"АР"}]
+    pages=[{
+        "document":"Раздел ПД №3_АР.pdf",
+        "document_type":"АР",
+        "page":50,
+        "text":(
+            "Решения по отделке помещений основного и вспомогательного назначения "
+            "приняты с учетом условий эксплуатации."
+        ),
+    }]
+    result=engine.run(documents,pages)
+    row=next(x for x in result["rows"] if x["requirement_id"]=="PP87-13-D-FINISH")
+
+    assert row["kind"]!="VERIFIED_OK"
+    assert row["set_completeness"]["complete"] is False
+    assert result["project_findings"]==0

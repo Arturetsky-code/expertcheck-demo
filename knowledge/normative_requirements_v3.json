@@ -1239,7 +1239,41 @@
       "requires_page_reference": true,
       "execution_mode": "POSITIVE_PRESENCE_ONLY",
       "min_keyword_hits": 2,
-      "applicability": "SECTION_PRESENT"
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "elements": [
+          {
+            "id": "tep_block",
+            "label": "Блок технико-экономических показателей земельного участка",
+            "aliases": [
+              "технико-экономические показатели земельного участка",
+              "технико экономические показатели земельного участка"
+            ]
+          },
+          {
+            "id": "site_area_indicator",
+            "label": "Числовой показатель площади земельного участка",
+            "aliases": [
+              "площадь земельного участка",
+              "площадь участка"
+            ],
+            "numeric_required": true
+          },
+          {
+            "id": "development_coefficient_indicator",
+            "label": "Числовой коэффициент застройки или плотности застройки",
+            "aliases": [
+              "коэффициент застройки",
+              "коэффициент плотности застройки"
+            ],
+            "numeric_required": true
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

@@ -101,8 +101,9 @@ def test_alpha8_production_conditional_clause_passes_applicability_but_alpha9_re
     assert row["applicability_reason_code"]=="PROJECT_PROFILE_PRODUCTION"
     assert row["retrieval_kind"]=="VERIFIED_OK"
     assert row["kind"]=="REVIEW_QUESTION"
-    assert row["proof_type"]=="SEMANTIC_REQUIREMENT"
-    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert row["proof_type"]=="SET_COMPLETENESS"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
     assert row["evidence_page"]==11
 
 

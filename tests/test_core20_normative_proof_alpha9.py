@@ -49,9 +49,9 @@ def test_alpha9_semantic_keyword_hit_is_not_normative_proof():
     row = next(x for x in result["rows"] if x["requirement_id"] == "PP87-12-E-ENGINEERING-PREP")
     assert row["retrieval_kind"] == "VERIFIED_OK"
     assert row["kind"] == "REVIEW_QUESTION"
-    assert row["proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert row["proof_type"] == "SET_COMPLETENESS"
     assert row["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
-    assert row["reason_code"] == "NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"] == "NORMATIVE_SET_DETERMINISTIC_FAST_PATH_NOT_PROVEN"
     assert any(x["requirement_id"] == row["requirement_id"] for x in result["semantic_queue"])
     assert result["demoted_keyword_only"] >= 1
     assert result["demoted_keyword_only_initial"] == result["demoted_keyword_only"]

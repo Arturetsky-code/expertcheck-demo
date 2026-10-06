@@ -4515,3 +4515,105 @@ Next candidates:
    (vehicle width + 1.5 m plus absolute minimum);
 3. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until the gamma=1.2 special-case
    override is explicitly modeled.
+
+
+## Deterministic normative proof expansion — 384-FZ identification features — 2026-10-06
+
+### Goal
+
+Replace semantic AI review of the finite statutory identification-feature list with
+a fail-closed owner-scoped deterministic completeness proof.
+
+### Set-engine refinement
+
+SET_COMPLETENESS now supports two optional disclosure controls:
+- `allow_negated_evidence` — only for requirements where an explicit negative
+  value is still a valid disclosed value (for example, "не относится к ОПО");
+- `assertion_regexes` — lexical presence alone is insufficient; an element must
+  also be expressed as a local project assertion.
+
+For elements with assertion_regexes, the broad generic applicability-negation window
+no longer overrides the local assertion. This prevents an unrelated phrase such as
+"не относится к ОПО" from falsely negating neighboring identification fields on the
+same page.
+
+Core commits:
+- `74d50e37cb5a2e9e90440a6d970fffdc3f7adbac`;
+- `85134acb6a7107abd501362c5db713943b02901e`.
+
+### FZ384-4-1-ID-FEATURES
+
+Converted from semantic proof to owner-scoped SET_COMPLETENESS with
+`DETERMINISTIC_AFTER_COMPLETE`.
+
+Seven required identification features:
+1. purpose;
+2. functional/technological characteristics;
+3. dangerous natural processes / technogenic impacts;
+4. belonging to hazardous production facilities (OPO);
+5. fire and explosion/fire hazard;
+6. permanent occupancy of people;
+7. responsibility level.
+
+Owner scope:
+- `SAME_CONFIRMED_OBJECT`;
+- evidence from different Project Understanding objects is never merged.
+
+Disclosure rules:
+- copied statutory enumeration does not prove the project values;
+- negative OPO disclosure is accepted when explicitly asserted;
+- negative permanent-occupancy disclosure is accepted when explicitly asserted;
+- responsibility level requires an actual value: повышенный / нормальный / пониженный.
+
+Registry commits:
+- `07fe0c90eaf69a4a1aac9e08d47528b2bd474457`;
+- `c96f65bda3a9594c0285c4f57665a4d7b8beaed6`.
+
+Regression commit:
+- `646fc62b24ddc9d1ad08149963e0f283b645e86c`.
+
+Coverage:
+- complete seven-feature set for one confirmed object -> deterministic VERIFIED_OK;
+- copied 384-FZ list -> no promotion;
+- one missing feature -> REVIEW_QUESTION;
+- split evidence across two objects -> no promotion;
+- generic negated set evidence remains rejected unless the element explicitly opts in.
+
+### Validation
+
+Temporary draft PR #10 was used only for validation and closed without merge.
+
+Final functional head:
+`c96f65bda3a9594c0285c4f57665a4d7b8beaed6`.
+
+GitHub Actions:
+- Core20 quality gates run 942: SUCCESS;
+- Core20 regression: 220 passed;
+- results-integrity: SUCCESS.
+
+The first validation run had 219 passed / 1 failed. It exposed a pre-existing broad
+negation window that could let an OPO negative assertion suppress adjacent
+identification fields. The set-engine fix made asserted fields local; the second run
+was fully green.
+
+### Frontier
+
+Relative to the historical 35-item semantic frontier from the saved 2026-10-02 run,
+five requirements are now deterministic in current code:
+- `PP87-12-A1-ZOUIT`;
+- `SP4-8.2.3-FIRE-ROAD-WIDTH`;
+- `SP4-8.2.6-ROAD-WALL-DISTANCE`;
+- `FNP505-1215-CONVEYOR-CROSSING-SPACING`;
+- `FZ384-4-1-ID-FEATURES`.
+
+Conceptual historical remainder: 30 items.
+This remains a historical count, not a live runtime queue. Do not run semantic AI
+before recomputing the saved project against the current registry.
+
+Next candidates:
+1. `FZ384-4-11-ID-IN-ASSIGNMENT-PD` — cross-document comparison of the same
+   identification-feature set between assignment/input data and PD;
+2. `SP18-5.37-ENTRANCE-GATE-WIDTH` — relative formula proof
+   (vehicle width + 1.5 m and absolute minimum 3.5 m);
+3. keep `GOST27751-10.1-CLASS-LEVEL-GAMMA` held until its special-case
+   gamma=1.2 override is modeled.

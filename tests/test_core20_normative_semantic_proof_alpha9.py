@@ -3,6 +3,7 @@ import json
 from types import SimpleNamespace
 
 from core20.normative_proof import NormativeProofEngine20
+from core20.normative_foundation import default_foundation
 from core20.normative_semantic_proof import (
     apply_normative_semantic_proof,
     run_normative_semantic_proof,
@@ -656,3 +657,78 @@ def test_qualified_provider_reuses_benchmark_without_live_preflight_calls():
     assert semantic["preflight"]["critic"]["state"] == "QUALIFICATION_REUSED"
     assert semantic["preflight"]["judge"]["contract_probe_requested"] == 0
     assert semantic["preflight"]["critic"]["contract_probe_requested"] == 0
+
+
+
+def _article31_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article31_taxonomy_requires_explicit_c0_c3_value():
+    contract=_article31_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY",
+        "Класс конструктивной пожарной опасности должен относиться к С0, С1, С2 или С3.",
+        [{
+            "evidence_id":"E-PB-31-WITHOUT-VALUE",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":18,
+            "section":"ПБ",
+            "text":"Для здания проектом установлен класс конструктивной пожарной опасности.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "С0–С3" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article31_taxonomy_allows_explicit_c0_c3_value_for_semantic_judgement():
+    contract=_article31_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY",
+        "Класс конструктивной пожарной опасности должен относиться к С0, С1, С2 или С3.",
+        [{
+            "evidence_id":"E-PB-31-C0",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":18,
+            "section":"ПБ",
+            "text":"Класс конструктивной пожарной опасности здания: С0.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

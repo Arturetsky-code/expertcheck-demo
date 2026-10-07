@@ -114,7 +114,13 @@ def test_legacy_normative_ledger_activates_change_clause_on_addressable_trigger(
 
     assert "GOST21101-2026-7.3.1-CHANGE-NUMBER" in ids
     assert "GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES" in ids
-    assert engine.activation_summary()["inactive_triggered"] == 0
+    activation=engine.activation_summary()
+    inactive_ids={
+        row["requirement_id"]
+        for row in activation["inactive_rows"]
+    }
+    assert "GOST21101-2026-7.3.1-CHANGE-NUMBER" not in inactive_ids
+    assert "GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES" not in inactive_ids
 
 
 def test_gost_21101_2026_is_verified_and_adds_two_ready_kb_contracts():

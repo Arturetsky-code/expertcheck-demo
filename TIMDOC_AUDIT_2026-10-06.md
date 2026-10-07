@@ -181,9 +181,41 @@ Validation:
 - Core20 regression: 297 passed;
 - results-integrity: 17 passed.
 
-Still pending as explicit product work:
-- `TDA-06` composition resolution with transitional provisions;
-- `TDA-07` cross-module contradiction arbitration.
+Current product-work status:
+- `TDA-06` composition resolution with transitional provisions remains pending;
+- `TDA-07 Phase A` observational contradiction arbitration is implemented and green;
+- `TDA-07 Phase B` fail-closed suppression / demotion of mutually incompatible final
+  verdicts remains pending and must be introduced as a separate guarded change.
+
+## TDA-07 Phase A — observational conflict arbitration — 2026-10-07
+
+ExpertCheck now inspects automatic canonical comparison decisions after verification.
+
+When the same confirmed `object_id + parameter_code` receives both:
+- canonical `AGREEMENT`; and
+- canonical `CONFLICT`;
+
+the verification result now exports:
+- `decision_arbitration_state = CONFLICT_REVIEW_REQUIRED`;
+- an addressable `decision_conflicts` record;
+- both verification IDs;
+- both canonical proof states / values;
+- all participating evidence locations;
+- per-decision `arbitration_conflict` metadata.
+
+The arbitration is intentionally `OBSERVATIONAL` in Phase A:
+- existing verdict kinds are not changed;
+- automatic verdict eligibility is not changed;
+- decisions for the same parameter on different owners are not merged.
+
+This gives the UI/report layer a single explicit conflict state without prematurely
+introducing verdict suppression.
+
+Validation:
+- temporary draft PR #37, closed without merge;
+- GitHub Actions run 1087;
+- Core20 regression: 299 passed;
+- results-integrity: 17 passed.
 
 ## Product interpretation
 

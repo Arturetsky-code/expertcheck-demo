@@ -79,6 +79,112 @@ def test_emergency_lighting_presence_alone_is_not_deterministic_proof():
 
 
 
+def test_spz_reliability_special_group_promotes_only_for_confirmed_owner():
+    contract = _contract("SP6-2025-5.2-SPZ-RELIABILITY")
+    page = _page(
+        "Электроприёмники СПЗ относятся к особой группе I категории "
+        "по надёжности электроснабжения.",
+        document="ИОС1.pdf",
+        page=28,
+        section="ИОС1",
+    )
+    documents = [{
+        "project_understanding": {
+            "objects": [{
+                "object_id": "OBJ-1",
+                "properties": {
+                    "spz_reliability": [{"document": "ИОС1.pdf", "page": 28}],
+                },
+            }]
+        }
+    }]
+
+    set_eval = _set_completeness_evaluation(contract, [page], documents)
+    result = _gate(contract, set_eval, page)
+
+    assert set_eval["complete"] is True
+    assert set_eval["owner_scope_state"] == "CONFIRMED"
+    assert set_eval["owner_object_id"] == "OBJ-1"
+    assert result["kind"] == "VERIFIED_OK"
+    assert result["proof_state"] == "DETERMINISTIC_SET_COMPLETENESS_PROOF"
+
+
+def test_spz_reliability_ordinary_first_category_stays_semantic():
+    contract = _contract("SP6-2025-5.2-SPZ-RELIABILITY")
+    page = _page(
+        "Электроприёмники СПЗ относятся к I категории "
+        "по надёжности электроснабжения.",
+        document="ИОС1.pdf",
+        page=28,
+        section="ИОС1",
+    )
+    documents = [{
+        "project_understanding": {
+            "objects": [{
+                "object_id": "OBJ-1",
+                "properties": {
+                    "spz_reliability": [{"document": "ИОС1.pdf", "page": 28}],
+                },
+            }]
+        }
+    }]
+
+    set_eval = _set_completeness_evaluation(contract, [page], documents)
+    result = _gate(contract, set_eval, page)
+
+    assert set_eval["complete"] is False
+    assert result["kind"] == "REVIEW_QUESTION"
+    assert result["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+
+
+def test_spz_reliability_copied_normative_special_group_wording_stays_semantic():
+    contract = _contract("SP6-2025-5.2-SPZ-RELIABILITY")
+    page = _page(
+        "Электроприёмники СПЗ должны относиться к I категории по надёжности "
+        "электроснабжения, а для специальных объектов категория должна приниматься "
+        "по особой группе I категории электроприёмников.",
+        document="ИОС1.pdf",
+        page=28,
+        section="ИОС1",
+    )
+    documents = [{
+        "project_understanding": {
+            "objects": [{
+                "object_id": "OBJ-1",
+                "properties": {
+                    "spz_reliability": [{"document": "ИОС1.pdf", "page": 28}],
+                },
+            }]
+        }
+    }]
+
+    set_eval = _set_completeness_evaluation(contract, [page], documents)
+    result = _gate(contract, set_eval, page)
+
+    assert set_eval["complete"] is False
+    assert result["kind"] == "REVIEW_QUESTION"
+    assert result["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+
+
+def test_spz_reliability_special_group_without_confirmed_owner_stays_semantic():
+    contract = _contract("SP6-2025-5.2-SPZ-RELIABILITY")
+    page = _page(
+        "Электроприёмники систем противопожарной защиты отнесены к особой группе "
+        "I категории по надёжности электроснабжения.",
+        document="ИОС1.pdf",
+        page=28,
+        section="ИОС1",
+    )
+
+    set_eval = _set_completeness_evaluation(contract, [page], [])
+    result = _gate(contract, set_eval, page)
+
+    assert set_eval["complete"] is False
+    assert set_eval["owner_scope_state"] == "OWNER_NOT_PROVEN"
+    assert result["kind"] == "REVIEW_QUESTION"
+    assert result["proof_state"] == "SEMANTIC_PROOF_REQUIRED"
+
+
 def test_spz_panel_promotes_without_ai_only_for_same_confirmed_object():
     contract = _contract("SP6-2025-5.3-SPZ-PANEL")
     category_page = _page(

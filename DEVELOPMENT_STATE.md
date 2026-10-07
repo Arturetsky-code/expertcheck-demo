@@ -6688,3 +6688,46 @@ Registry after this stage:
 - triggered-only contracts: **7**.
 
 This stage intentionally contains only one new NTD atom and no generic engine changes.
+## Triggered semantic atom — 123-FZ article 61 AUPT selection basis — 2026-10-07
+
+Added one verified NTD atom:
+- `FZ123-61-3-AUPT-SELECTION-BASIS`.
+
+Verified basis:
+- 123-FZ article 61 part 3;
+- the type of automatic / autonomous fire-extinguishing installation, extinguishing
+  agent and method of delivery are selected with regard to the combustible material,
+  space-planning solutions and environmental parameters.
+
+Architecture:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- trigger: explicit AUPT / automatic fire-extinguishing installation or extinguishing
+  agent evidence;
+- no deterministic fast path;
+- dormant when the project does not expose an AUPT-related characteristic;
+- when activated, routes to semantic review and cannot create PROJECT_FINDING merely
+  because proof is absent.
+
+The 123-FZ document card now records verification of articles
+27, 28, 30, 31, 32, 57, 58, 61, 78 and 92.
+
+Commits:
+- `7f3e6bfd0736d4af79b0a742bc4a0e9993ddc657` — record article 61 verification;
+- `5c98875cc35e1cd49a3df4ad895f1d0920618d6c` — add article 61 triggered semantic atom;
+- `b1fc19373c5637b67fd9cc5c373051ad169e8c58` — dormant/activation regression coverage.
+
+Validation:
+- temporary draft PR #44;
+- closed without merge;
+- GitHub Actions run 1136;
+- Core20 regression: **320 passed**;
+- results-integrity: **17 passed**.
+
+Registry after this stage:
+- total atomic requirements: **103**;
+- verified clauses: **74**;
+- triggered-only contracts: **8**.
+
+This stage intentionally contains only one new NTD atom and no generic engine changes.

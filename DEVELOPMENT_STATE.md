@@ -6943,3 +6943,94 @@ Core25 Quality Leap gates, run **794**:
 - workflow conclusion: **SUCCESS**.
 
 This checkpoint is intentionally bounded to one three-contract hardening slice.
+
+
+## Hardened semantic proof — 123-FZ article 31 — 2026-10-07
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The existing semantic contract now includes a machine-enforced Gate 2.0 group:
+`CONSTRUCTIVE_FIRE_HAZARD_CLASS_DECLARATION`.
+
+Before Judge/Critic support may be promoted, one selected addressable evidence fragment
+must contain both:
+- an explicit declaration of the constructive fire-hazard class;
+- one statutory taxonomy value: `С0`, `С1`, `С2` or `С3`.
+
+This guard does not decide whether the project classification is engineering-correct.
+It only prevents an AI promotion when the selected evidence does not explicitly state
+the regulated characteristic and a value from the article-31 taxonomy.
+
+The rejected deterministic-taxonomy boundary remains unchanged:
+lexical presence of `С0–С3` alone never produces `VERIFIED_OK`.
+Final promotion still requires the independent semantic Judge/Critic path.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **56 -> 57**;
+- Hardened Verified Coverage: **74.7% -> 76.0%**;
+- Hardened Total Coverage: **53.8% -> 54.8%**;
+- generic semantic executable contracts: **17 -> 16**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+Articles 30 and 32 remain generic semantic at this checkpoint. They were intentionally
+not bulk-hardened because article 30 needs a safe treatment of Roman-numeral evidence
+and article 32 additionally requires purpose/class consistency.
+
+### Regression proof
+
+Two article-31-specific Gate 2.0 tests were added:
+1. Judge and Critic both return SUPPORTS, but evidence contains no `С0–С3` value:
+   Gate 2.0 blocks promotion and keeps `REVIEW_QUESTION`.
+2. The same semantic path with addressable evidence
+   `Класс конструктивной пожарной опасности здания: С0.` passes the machine gate
+   and remains eligible for semantic `VERIFIED_OK`.
+
+### Commits
+
+- `e73a23802125840b445ac4e8cd98654a71ad072f` — harden the article-31
+  semantic proof contract;
+- `965f314f0edaaea1c72806efcd0c3ac62b833620` — lock updated hardened
+  coverage metrics;
+- `979adb225818af72e2f29b366b6ed51fa46fb12b` — add article-31 Gate 2.0
+  positive/negative regression tests.
+
+### Validation
+
+Temporary draft PR #48 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1157**:
+- Core20 regression: **326 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **799**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one taxonomy contract.

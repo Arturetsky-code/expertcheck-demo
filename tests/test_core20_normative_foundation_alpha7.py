@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 53
-    assert summary["hardened_verified_coverage_pct"] == 70.7
-    assert summary["hardened_total_coverage_pct"] == 51.0
+    assert summary["hardened_executable_contracts"] == 56
+    assert summary["hardened_verified_coverage_pct"] == 74.7
+    assert summary["hardened_total_coverage_pct"] == 53.8
 
-    assert summary["generic_semantic_executable_contracts"] == 20
+    assert summary["generic_semantic_executable_contracts"] == 17
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -246,6 +246,20 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert hardened["executable_contract_ready"] is True
     assert hardened["hardened_proof_ready"] is True
     assert hardened["execution_tier"] == "HARDENED"
+
+    for requirement_id in (
+        "SP8-9.2-WATER-SYSTEM-FIRE-VOLUME",
+        "SP8-9.5-WATER-SYSTEM-RESERVOIRS",
+        "SP8-11.5-FIRE-WATER-LEVEL",
+    ):
+        row=contracts[requirement_id]
+        semantic=row["evidence_contract"]["semantic_proof_contract"]
+        assert row["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+        assert row["executable_contract_ready"] is True
+        assert row["hardened_proof_ready"] is True
+        assert row["execution_tier"] == "HARDENED"
+        assert semantic["version"] == "2.0"
+        assert semantic["required_groups"]
 
     blocked=contracts["PP87-CLAUSE-15-IOS"]
     assert blocked["resolved_proof_type"] == "SET_COMPLETENESS"

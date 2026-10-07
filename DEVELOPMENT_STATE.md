@@ -6159,3 +6159,46 @@ The remaining pure-semantic IDs are:
 - `SP6-2025-5.2-SPZ-RELIABILITY`.
 
 This remains a registry-state classification, not a fresh project runtime queue.
+## TimDoc audit carry-forward — 2026-10-07
+
+The TimDoc audit performed on 2026-10-06 is now stored in the repository as:
+
+- `TIMDOC_AUDIT_2026-10-06.md`
+
+The audit is treated as a source of design constraints and acceptance cases, not as
+evidence that ExpertCheck is superior to TimDoc.
+
+Carry-forward requirements:
+- validate page/sheet type before applying a requirement;
+- keep "not found" distinct from "proved absent";
+- detect contradictions between findings / proof results;
+- keep verified normative sources separate from AI interpretation;
+- preserve the trace result -> evidence -> original page/sheet -> normative clause;
+- maintain one versioned composition registry with transitional provisions;
+- target a review UI where result, evidence, source page and normative clause are
+  visible together or tightly linked.
+
+The audit document defines acceptance cases `TDA-01` through `TDA-07`.
+They should be converted into executable regression / acceptance coverage as the
+corresponding mechanisms are implemented.
+
+### Rejected SP12-4.1 experiment from 2026-10-06
+
+A trial hybrid fast path for `SP12-4.1-CATEGORY-TAXONOMY` was intentionally rejected.
+
+Observed validation history:
+- first validation exposed a false positive on a copied plural taxonomy list and a
+  missed positive outdoor-installation case;
+- the copied-list false positive was removed by tightening singular assignment
+  matching;
+- the outdoor-installation case still failed before proof because retrieval returned
+  `NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND`.
+
+Decision:
+- do not modify general retrieval merely to force this one contract through;
+- keep `SP12-4.1-CATEGORY-TAXONOMY` pure semantic for now;
+- preserve checkpoint `05556d4a6ceae2331e58b9551c654e84c4da0944` as the last
+  green functional state before the audit documentation commits.
+
+Temporary PR #35 was closed without merge and the working branch was force-with-lease
+returned to the checkpoint before the audit documentation was added.

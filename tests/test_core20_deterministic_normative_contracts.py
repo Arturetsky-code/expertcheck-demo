@@ -93,6 +93,83 @@ def _fz123_fire_owner_document(*rows):
     return {"project_understanding":{"objects":list(objects.values())}}
 
 
+def test_fz123_article30_valid_fire_resistance_degree_promotes():
+    contract=_contract("FZ123-30-1-FIRE-RESISTANCE-TAXONOMY")
+    page=_page(
+        "Степень огнестойкости здания: II.",
+        document="ПБ.pdf",
+        page=20,
+        section="ПБ",
+    )
+    documents=[_fz123_fire_owner_document(("OBJ-FIRE","ПБ.pdf",20))]
+
+    set_eval=_set_completeness_evaluation(contract,[page],documents)
+    result=_gate(contract,set_eval,page)
+
+    assert set_eval["complete"] is True
+    assert set_eval["matched_count"]==1
+    assert set_eval["owner_scope_state"]=="CONFIRMED"
+    assert set_eval["owner_object_id"]=="OBJ-FIRE"
+    assert result["kind"]=="VERIFIED_OK"
+    assert result["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+
+
+def test_fz123_article30_invalid_fire_resistance_degree_stays_semantic():
+    contract=_contract("FZ123-30-1-FIRE-RESISTANCE-TAXONOMY")
+    page=_page(
+        "Степень огнестойкости здания: VI.",
+        document="ПБ.pdf",
+        page=20,
+        section="ПБ",
+    )
+    documents=[_fz123_fire_owner_document(("OBJ-FIRE","ПБ.pdf",20))]
+
+    set_eval=_set_completeness_evaluation(contract,[page],documents)
+    result=_gate(contract,set_eval,page)
+
+    assert set_eval["complete"] is False
+    assert result["kind"]=="REVIEW_QUESTION"
+    assert result["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+
+
+def test_fz123_article30_copied_taxonomy_list_is_not_project_assignment():
+    contract=_contract("FZ123-30-1-FIRE-RESISTANCE-TAXONOMY")
+    page=_page(
+        "Здания, сооружения и пожарные отсеки подразделяются на I, II, III, IV и V "
+        "степени огнестойкости.",
+        document="ПБ.pdf",
+        page=20,
+        section="ПБ",
+    )
+    documents=[_fz123_fire_owner_document(("OBJ-FIRE","ПБ.pdf",20))]
+
+    set_eval=_set_completeness_evaluation(contract,[page],documents)
+    result=_gate(contract,set_eval,page)
+
+    assert set_eval["complete"] is False
+    assert set_eval["matched_count"]==0
+    assert result["kind"]=="REVIEW_QUESTION"
+    assert result["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+
+
+def test_fz123_article30_value_without_confirmed_owner_stays_semantic():
+    contract=_contract("FZ123-30-1-FIRE-RESISTANCE-TAXONOMY")
+    page=_page(
+        "Степень огнестойкости здания: III.",
+        document="ПБ.pdf",
+        page=20,
+        section="ПБ",
+    )
+
+    set_eval=_set_completeness_evaluation(contract,[page],[])
+    result=_gate(contract,set_eval,page)
+
+    assert set_eval["complete"] is False
+    assert set_eval["owner_scope_state"]=="OWNER_NOT_PROVEN"
+    assert result["kind"]=="REVIEW_QUESTION"
+    assert result["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+
+
 def test_fz123_article28_fire_classification_promotes_complete_owner_set():
     contract=_contract("FZ123-28-2-FIRE-CLASSIFICATION-IN-PD")
     page=_page(

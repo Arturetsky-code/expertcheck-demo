@@ -4132,3 +4132,64 @@ def test_alpha8_fz123_article28_incomplete_fire_classification_stays_semantic():
         for packet in result["semantic_queue"]
     )
     assert result["project_findings"]==0
+def test_alpha8_fz123_article30_valid_fire_resistance_degree_promotes():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-FIRE","Раздел ПД №9_ПБ.pdf",20),
+    )
+    owner["Файл"]="Раздел ПД №9_ПБ.pdf"
+    owner["Тип документа"]="ПБ"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":20,
+        "text":"Степень огнестойкости здания: II.",
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"
+    )
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-FIRE"
+    assert not any(
+        packet["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz123_article30_invalid_fire_resistance_degree_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-FIRE","Раздел ПД №9_ПБ.pdf",20),
+    )
+    owner["Файл"]="Раздел ПД №9_ПБ.pdf"
+    owner["Тип документа"]="ПБ"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":20,
+        "text":"Степень огнестойкости здания: VI.",
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

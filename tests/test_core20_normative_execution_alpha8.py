@@ -3995,3 +3995,70 @@ def test_alpha8_pp87_energy_efficiency_design_without_justification_does_not_pro
     assert row["set_completeness"]["complete"] is False
     assert "energy_efficiency_arch_solution_justification" in row["set_completeness"]["missing_ids"]
     assert result["project_findings"]==0
+def test_alpha8_sp6_special_group_fast_path_promotes_explicit_project_assignment():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-SPZ","Раздел ПД №5_ИОС1.pdf",28),
+    )
+    owner["Файл"]="Раздел ПД №5_ИОС1.pdf"
+    owner["Тип документа"]="ИОС1"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №5_ИОС1.pdf",
+        "document_type":"ИОС1",
+        "page":28,
+        "text":(
+            "Электроприёмники СПЗ относятся к особой группе I категории "
+            "по надёжности электроснабжения."
+        ),
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="SP6-2025-5.2-SPZ-RELIABILITY"
+    )
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-SPZ"
+    assert not any(
+        packet["requirement_id"]=="SP6-2025-5.2-SPZ-RELIABILITY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_sp6_ordinary_first_category_remains_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-SPZ","Раздел ПД №5_ИОС1.pdf",28),
+    )
+    owner["Файл"]="Раздел ПД №5_ИОС1.pdf"
+    owner["Тип документа"]="ИОС1"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №5_ИОС1.pdf",
+        "document_type":"ИОС1",
+        "page":28,
+        "text":(
+            "Электроприёмники систем противопожарной защиты относятся к I категории "
+            "по надёжности электроснабжения."
+        ),
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="SP6-2025-5.2-SPZ-RELIABILITY"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert any(
+        packet["requirement_id"]=="SP6-2025-5.2-SPZ-RELIABILITY"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

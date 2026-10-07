@@ -6404,3 +6404,82 @@ Remaining pure-semantic IDs:
 - `GOST21101-2026-7.3.1-CHANGE-NUMBER`.
 
 This is a registry-state classification, not a fresh runtime project queue.
+## New atomic NTD requirement — 123-FZ article 28 fire classification — 2026-10-07
+
+### Goal
+
+Return the main development stream to NTD enrichment rather than continuing to force
+the remaining historical semantic records into fast paths.
+
+Instead of trying to over-automate the broad framework requirement
+`FZ123-78-1-FIRE-CHARACTERISTICS`, add a narrower verified atomic requirement from
+123-FZ article 28 part 2.
+
+### Verified normative basis
+
+The current consolidated 123-FZ edition dated 2026-08-04 requires project
+documentation for capital construction / reconstruction to state:
+1. degree of fire resistance;
+2. functional fire-hazard class;
+3. structural fire-hazard class.
+
+The 123-FZ document registry entry was updated to record verification of article 28.
+
+Document-registry commit:
+- `3de00b88fc49d602b4aaa5952d515586bceab504`.
+
+### New atomic requirement
+
+Added:
+- `FZ123-28-2-FIRE-CLASSIFICATION-IN-PD`.
+
+Contract:
+- sections: `ПЗ`, `АР`, `КР`, `ПБ`;
+- `proof_type = SET_COMPLETENESS`;
+- `promotion_policy = DETERMINISTIC_WITH_SEMANTIC_FALLBACK`;
+- `owner_scope = SAME_CONFIRMED_OBJECT`;
+- complete fast path requires explicit project values for all three characteristics:
+  degree of fire resistance, functional fire-hazard class, structural fire-hazard
+  class.
+
+A copied legal obligation does not satisfy the contract. An incomplete set, an
+unrecognized value form, or evidence split across different owners stays semantic.
+No PROJECT_FINDING is inferred by a failed fast path.
+
+Requirement commit:
+- `fb4d793daae58469c5a1fd35e43339b21fa80eef`.
+
+Regression commits:
+- `684fa5d58e95ffcd9212c1f511bf27afdb81bc8e` — direct owner-scoped contract
+  coverage;
+- `4e7feb06a4464752f60aadaac3a89af8e6bc6128` — full
+  NormativeExecutionEngine20 integration coverage.
+
+### Validation
+
+Temporary draft PR #39 was used only for validation and closed without merge.
+
+GitHub Actions run 1103:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: **311 passed**;
+- results-integrity: SUCCESS (**17 passed**).
+
+Registry after the new atom:
+- total requirement records: **97**;
+- verified clause records: **68**.
+
+The historical 43-ID semantic-frontier classification is intentionally unchanged:
+- deterministic: 15;
+- hybrid: 20;
+- pure semantic / unmodeled: 8.
+
+Reason: the new article-28 requirement did not exist in that historical queue; this
+stage expands NTD coverage instead of merely reclassifying one of the old 43 IDs.
+
+### Boundary
+
+`FZ123-78-1-FIRE-CHARACTERISTICS` remains semantic.
+
+Article 78 is a framework requirement referring to the fire-technical characteristics
+required throughout 123-FZ. The new article-28 atom covers only the explicit
+fire-classification triplet and must not be treated as exhaustive proof of article 78.

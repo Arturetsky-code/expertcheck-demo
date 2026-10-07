@@ -212,3 +212,53 @@ def test_fz123_article57_activates_for_explicit_construction_fire_performance_an
         for packet in result["semantic_queue"]
     )
     assert result["project_findings"]==0
+def test_fz123_article61_is_dormant_without_aupt_trigger():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":26,
+        "text":"Предусмотрены первичные средства пожаротушения и пожарная сигнализация.",
+    }]
+
+    result=engine.run(_pb_document(),pages)
+
+    active_ids={row["requirement_id"] for row in result["rows"]}
+    inactive_ids={
+        row["requirement_id"]
+        for row in result["inactive_triggered_contract_rows"]
+    }
+
+    assert "FZ123-61-3-AUPT-SELECTION-BASIS" not in active_ids
+    assert "FZ123-61-3-AUPT-SELECTION-BASIS" in inactive_ids
+
+
+def test_fz123_article61_activates_for_aupt_and_stays_semantic():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":26,
+        "text":(
+            "Для помещения предусмотрена автоматическая установка пожаротушения (АУПТ). "
+            "Огнетушащее вещество — вода. Способ подачи — спринклерный. "
+            "Учтены характеристики пожарной нагрузки и объемно-планировочные решения."
+        ),
+    }]
+
+    result=engine.run(_pb_document(),pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-61-3-AUPT-SELECTION-BASIS"
+    )
+
+    assert row["activation_state"]=="ACTIVE"
+    assert row["activation_reason_code"]=="PROJECT_TRIGGER_PROVEN"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert any(
+        packet["requirement_id"]=="FZ123-61-3-AUPT-SELECTION-BASIS"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

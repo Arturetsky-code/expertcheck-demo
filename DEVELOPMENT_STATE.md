@@ -6515,3 +6515,96 @@ Decision:
 
 This rejected experiment does not change registry counts or the historical semantic
 frontier.
+## Triggered semantic NTD enrichment — 123-FZ articles 30–32 — 2026-10-07
+
+### Goal
+
+Continue NTD enrichment without forcing single-field taxonomy requirements through a
+deterministic retrieval→proof path that previously failed for article 30.
+
+Articles 30–32 of 123-FZ were rechecked against the current consolidated edition dated
+2026-08-04.
+
+Verified clauses:
+- article 30 part 1 — fire-resistance taxonomy I, II, III, IV, V;
+- article 31 part 1 — structural fire-hazard taxonomy C0, C1, C2, C3;
+- article 32 part 1 — functional fire-hazard classification F1–F5 with statutory
+  subclasses and purpose-based classification.
+
+### Architecture
+
+Added three verified semantic-only atoms:
+- `FZ123-30-1-FIRE-RESISTANCE-TAXONOMY`;
+- `FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY`;
+- `FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY`.
+
+All three use:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- addressable page evidence;
+- owner-aware semantic review;
+- no deterministic fast path.
+
+Activation triggers:
+- article 30 — explicit `степень огнестойкости`;
+- article 31 — explicit `класс конструктивной пожарной опасности`;
+- article 32 — explicit `класс функциональной пожарной опасности`.
+
+Therefore dormant requirements do not inflate the active project queue. When a
+project explicitly declares one of these characteristics, the corresponding verified
+normative atom activates and is routed to semantic review.
+
+### Boundary
+
+The earlier rejected deterministic article-30 experiment remains rejected.
+
+This stage does **not** claim that a lexical value such as `II`, `C0` or `F5.1`
+is automatically compliant. The semantic contract must evaluate the normative
+classification context, and no failed/missing semantic proof becomes PROJECT_FINDING
+by itself.
+
+### Commits
+
+- `1cbd2fba087fba8d52814c3d8fc3c780e87d521b` — record verification of
+  123-FZ articles 30–32 in the document registry;
+- `b0fbaef0bbffec7d21a95523f734049239be1540` — add three triggered semantic
+  classification atoms;
+- `74cb22da45dbae808ded03af844a3c8cdcfb1a73` — activation and semantic-queue
+  regression coverage;
+- `ea7c36a5e2582b4af56519e64791fe8ab6b6fa5d` — remove a stale global
+  `inactive_triggered == 0` test assumption and scope the assertion to the target
+  GOST 21.101 clauses.
+
+### Validation
+
+Temporary draft PR #41 was used only for validation and closed without merge.
+
+First run 1119:
+- new 123-FZ tests passed;
+- one pre-existing triggered-activation test failed because it assumed that activating
+  two GOST 21.101 clauses meant **all** triggered contracts in the KB were active;
+- result: 313 passed / 1 failed.
+
+The assertion was corrected to verify only that the two target GOST clauses are not
+in the inactive set. Product logic and the new NTD contracts were not changed.
+
+Final run 1121:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: **314 passed**;
+- results-integrity: SUCCESS (**17 passed**).
+
+### Registry state
+
+After this stage:
+- total atomic requirement records: **100**;
+- verified clause records: **71**;
+- triggered-only contracts: **5**.
+
+The historical 43-ID frontier remains:
+- deterministic: 15;
+- hybrid: 20;
+- pure semantic / unmodeled: 8.
+
+The frontier is unchanged because articles 30–32 are new NTD atoms, not
+reclassifications of the historical 43 semantic IDs.

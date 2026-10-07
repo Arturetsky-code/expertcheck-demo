@@ -6240,3 +6240,71 @@ The normative frontier remains unchanged by this documentation/test-only stage:
 - deterministic: 15;
 - hybrid: 19;
 - pure semantic / unmodeled: 9.
+## TDA-07 Phase A conflict-arbitration checkpoint — 2026-10-07
+
+### Goal
+
+Implement the first safe layer of TimDoc-derived contradiction handling without
+changing accepted verdict semantics.
+
+### Implemented
+
+`VerificationEngine20` now performs an observational arbitration pass after all
+canonical verification decisions are independently recomputed.
+
+For automatic comparison decisions, it groups only by:
+- confirmed `object_id`;
+- exact `parameter_code`.
+
+If one group contains both canonical `AGREEMENT` and canonical `CONFLICT`, the
+result exports:
+- `decision_arbitration_mode = OBSERVATIONAL`;
+- `decision_arbitration_state = CONFLICT_REVIEW_REQUIRED`;
+- `decision_conflict_count`;
+- addressable `decision_conflicts` with participating decision IDs, canonical
+  values/states and evidence locations.
+
+Each participating decision is marked with:
+- `metadata.arbitration_conflict = true`;
+- `metadata.arbitration_conflict_id`.
+
+Phase A deliberately does **not**:
+- change `VERIFIED_OK` / `PROJECT_FINDING`;
+- disable `automatic_verdict_eligible`;
+- merge results across different owners.
+
+This keeps the change diagnostic and reversible. Fail-closed verdict suppression is
+reserved for TDA-07 Phase B.
+
+Core commit:
+- `d05a0285685e0c701c46a73e25a54e434f679b2b` — observational decision conflict
+  diagnostics.
+
+Regression commit:
+- `d8464db76e2ecd3726e611a3d49bb27d479457e3` — TDA-07 conflict and owner-scope
+  acceptance coverage.
+
+Audit status commit:
+- `d1e21922eba5abb726da832b9fd4602739094f2f`.
+
+### Validation
+
+Temporary draft PR #37 was used only for validation and closed without merge.
+
+GitHub Actions run 1087:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: 299 passed;
+- results-integrity: SUCCESS (17 passed).
+
+### Frontier
+
+The normative 43-ID frontier is unchanged by this cross-cutting verification stage:
+- deterministic: 15;
+- hybrid: 19;
+- pure semantic / unmodeled: 9.
+
+TimDoc audit status:
+- TDA-01…05: executable and green;
+- TDA-06: pending;
+- TDA-07 Phase A: implemented and green;
+- TDA-07 Phase B verdict suppression: pending.

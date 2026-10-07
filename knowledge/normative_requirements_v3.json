@@ -3573,6 +3573,63 @@
     "conclusion_policy": "VERIFIED_ONLY"
   },
   {
+    "id": "FZ123-30-1-FIRE-RESISTANCE-TAXONOMY",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Классификация по степени огнестойкости",
+    "requirement": "Здания, сооружения и пожарные отсеки по степени огнестойкости подразделяются на I, II, III, IV и V степени огнестойкости.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "степень огнестойкости",
+      "I степень",
+      "II степень",
+      "III степень",
+      "IV степень",
+      "V степень"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 30, ч. 1",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Классификация зданий, сооружений и пожарных отсеков по степеням огнестойкости I–V сверена по действующей редакции статьи 30 части 1.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/",
+    "verified_on": "2026-10-07",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 1,
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "valid_fire_resistance_degree",
+            "label": "Явно назначенная степень огнестойкости I–V",
+            "aliases": [
+              "степень огнестойкости"
+            ],
+            "assertion_regexes": [
+              "степен\\w+\\s+огнестойк\\w*(?:\\s+(?:здани\\w*|сооружени\\w*|пожарн\\w+\\s+отсек\\w*))?[^\\n;]{0,40}[:=—-]\\s*(?:iv|iii|ii|i|v|1|2|3|4|5)(?=\\s|[.,;]|$)"
+            ]
+          }
+        ]
+      }
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
     "id": "FZ123-78-1-FIRE-CHARACTERISTICS",
     "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
     "topic": "Пожарно-технические характеристики в проектной документации",

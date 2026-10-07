@@ -6483,3 +6483,35 @@ stage expands NTD coverage instead of merely reclassifying one of the old 43 IDs
 Article 78 is a framework requirement referring to the fire-technical characteristics
 required throughout 123-FZ. The new article-28 atom covers only the explicit
 fire-classification triplet and must not be treated as exhaustive proof of article 78.
+## Rejected executable atom — 123-FZ article 30 taxonomy — 2026-10-07
+
+A trial executable atom for 123-FZ article 30 part 1 was intentionally rejected and
+removed from the working branch.
+
+Normative idea tested:
+- explicit project value `степень огнестойкости: I–V`;
+- owner-scoped `SET_COMPLETENESS`;
+- copied taxonomy list and invalid value `VI` must not promote.
+
+What validation showed:
+- direct set-contract tests passed;
+- full `NormativeExecutionEngine20` integration consistently returned
+  `NORMATIVE_POSITIVE_EVIDENCE_NOT_FOUND`;
+- tightening requirement-specific retrieval anchors did not resolve the gap.
+
+Validation PR:
+- temporary draft PR #40;
+- closed without merge;
+- final experimental head `ac25b5de5480138f40bab0703507178d216a515a`.
+
+Decision:
+- do **not** change generic retrieval merely to force this atom through;
+- do **not** keep the article-30 requirement or document-registry edit on the working
+  branch;
+- return the branch to green checkpoint
+  `854304590f9f79514de3cac2055f1f49d164915e`;
+- retain the lesson as a retrieval→proof integration backlog item before retrying
+  similar single-field taxonomy atoms.
+
+This rejected experiment does not change registry counts or the historical semantic
+frontier.

@@ -4881,7 +4881,7 @@
       "set_contract": {
         "mode": "ALL_REQUIRED",
         "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
-        "atomization_complete": false,
+        "atomization_complete": true,
         "owner_scope": "SAME_CONFIRMED_OBJECT",
         "elements": [
           {

@@ -108,3 +108,53 @@ def test_fz123_functional_class_atom_does_not_activate_from_unrelated_fire_text(
 
     active_ids={row["requirement_id"] for row in result["rows"]}
     assert "FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY" not in active_ids
+def test_fz123_article58_is_dormant_without_fire_resistance_limit_trigger():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":22,
+        "text":"Степень огнестойкости здания: II.",
+    }]
+
+    result=engine.run(_pb_document(),pages)
+
+    active_ids={row["requirement_id"] for row in result["rows"]}
+    inactive_ids={
+        row["requirement_id"]
+        for row in result["inactive_triggered_contract_rows"]
+    }
+
+    assert "FZ123-58-2-FIRE-RESISTANCE-LIMITS" not in active_ids
+    assert "FZ123-58-2-FIRE-RESISTANCE-LIMITS" in inactive_ids
+
+
+def test_fz123_article58_activates_for_explicit_fire_resistance_limits_and_stays_semantic():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":22,
+        "text":(
+            "Степень огнестойкости здания: II. "
+            "Предел огнестойкости несущих конструкций: R 90. "
+            "Предел огнестойкости междуэтажных перекрытий: REI 45."
+        ),
+    }]
+
+    result=engine.run(_pb_document(),pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-58-2-FIRE-RESISTANCE-LIMITS"
+    )
+
+    assert row["activation_state"]=="ACTIVE"
+    assert row["activation_reason_code"]=="PROJECT_TRIGGER_PROVEN"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert any(
+        packet["requirement_id"]=="FZ123-58-2-FIRE-RESISTANCE-LIMITS"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

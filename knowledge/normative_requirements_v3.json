@@ -3715,6 +3715,61 @@
     "conclusion_policy": "VERIFIED_ONLY"
   },
   {
+    "id": "FZ123-58-2-FIRE-RESISTANCE-LIMITS",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Пределы огнестойкости строительных конструкций",
+    "requirement": "Требуемые пределы огнестойкости строительных конструкций выбираются в зависимости от степени огнестойкости зданий и сооружений по таблице 21 приложения к 123-ФЗ.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "предел огнестойкости",
+      "степень огнестойкости",
+      "R 90",
+      "REI 45"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 58, ч. 2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Связь требуемых пределов огнестойкости строительных конструкций со степенью огнестойкости здания/сооружения и таблицей 21 сверена по действующей редакции статьи 58 части 2.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/c971e1c516c63ad7e78e8d9fddf68505704b70a5/",
+    "verified_on": "2026-10-07",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 1,
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SEMANTIC_REQUIREMENT",
+      "semantic_proof_contract": {
+        "decision_question": "Соответствуют ли указанные в проекте пределы огнестойкости строительных конструкций принятой степени огнестойкости здания/сооружения по таблице 21 123-ФЗ?",
+        "required_facts": [
+          "Идентифицирован объект проверки",
+          "Зафиксирована принятая степень огнестойкости объекта",
+          "Зафиксированы проектные пределы огнестойкости проверяемых строительных конструкций",
+          "Пределы не ниже значений, требуемых таблицей 21 для принятой степени огнестойкости"
+        ]
+      },
+      "activation": "TRIGGERED_ONLY",
+      "activation_keywords": [
+        "предел огнестойкости",
+        "пределы огнестойкости"
+      ],
+      "activation_regexes": [
+        "\\b(?:R|RE|REI|EI|E)\\s*\\d{2,3}\\b"
+      ],
+      "activation_min_hits": 1
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
     "id": "FZ123-78-1-FIRE-CHARACTERISTICS",
     "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
     "topic": "Пожарно-технические характеристики в проектной документации",

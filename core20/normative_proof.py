@@ -74,6 +74,11 @@ def _proof_type(row: dict[str, Any]) -> str:
     return "SEMANTIC_REQUIREMENT"
 
 
+def resolved_proof_type(row: dict[str, Any]) -> str:
+    """Public read-only view of the proof route used by the normative proof engine."""
+    return _proof_type(row)
+
+
 def _semantic_evidence(row: dict[str, Any]) -> list[dict[str, Any]]:
     """Return up to four addressable retrieval candidates for semantic proof."""
     rid = str(row.get("requirement_id") or "")

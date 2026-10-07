@@ -6608,3 +6608,40 @@ The historical 43-ID frontier remains:
 
 The frontier is unchanged because articles 30–32 are new NTD atoms, not
 reclassifications of the historical 43 semantic IDs.
+## Triggered semantic atom — 123-FZ article 58 fire-resistance limits — 2026-10-07
+
+Added one verified NTD atom:
+- `FZ123-58-2-FIRE-RESISTANCE-LIMITS`.
+
+Verified basis:
+- 123-FZ article 58 part 2;
+- required fire-resistance limits of structural elements are selected according to
+  the adopted fire-resistance degree using table 21.
+
+Architecture:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- trigger: explicit fire-resistance-limit evidence such as `предел огнестойкости`
+  or R/RE/REI/EI values;
+- no deterministic fast path;
+- dormant when the project does not expose a fire-resistance-limit characteristic;
+- when activated, routes to semantic review and cannot create PROJECT_FINDING merely
+  because proof is absent.
+
+The 123-FZ document card now records verification of articles
+27, 28, 30, 31, 32, 58, 78 and 92.
+
+Commits:
+- `083779d85083ec87ba1e927716d88371cfd52c5c` — record article 58 verification;
+- `bce38d96c658b5b76a2dbecd6c5341ebdacf379d` — add article 58 triggered semantic atom;
+- `b59e104347dd060bb6e64cfcab90657d7ec62b2d` — dormant/activation regression coverage.
+
+Validation:
+- temporary draft PR #42;
+- closed without merge;
+- GitHub Actions run 1126;
+- Core20 regression: **316 passed**;
+- results-integrity: **17 passed**.
+
+This stage intentionally contains only one new NTD atom and no generic engine changes.

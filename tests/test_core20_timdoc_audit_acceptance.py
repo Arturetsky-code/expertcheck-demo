@@ -1,7 +1,9 @@
 import json
 
+from core20.model import CanonicalProject, Comparison, Evidence, ProjectObject
 from core20.normative_execution import NormativeExecutionEngine20
 from core20.normative_foundation import NormativeKnowledgeFoundation20
+from core20.verification import VerificationEngine20
 
 
 def _foundation():
@@ -236,3 +238,146 @@ def test_tda05_promoted_result_preserves_evidence_and_normative_address():
     assert row["source"]
     assert row["paragraph"]
     assert row["requirement_id"]=="PP87-12-A-LAND"
+def _tda07_evidence(project, evidence_id, *, object_id, parameter_code, section, page, value):
+    project.add_evidence(Evidence(
+        evidence_id=evidence_id,
+        document_name=f"{section}.pdf",
+        section=section,
+        page=page,
+        fragment=f"{parameter_code}: {value} м2.",
+        addressable=True,
+        trusted=True,
+        metadata={
+            "comparison_object_id":object_id,
+            "comparison_parameter_code":parameter_code,
+            "observed_value":value,
+            "observed_unit":"м2",
+        },
+    ))
+
+
+def test_tda07_phase_a_surfaces_conflicting_comparison_decisions():
+    project=CanonicalProject(project_id="PRJ-TDA07",name="TDA-07")
+    project.add_object(ProjectObject(object_id="OBJ-A",name="Здание проборазделки"))
+
+    _tda07_evidence(
+        project,"E-PZ",object_id="OBJ-A",parameter_code="AREA_BUILD",
+        section="ПЗ",page=45,value=89.9,
+    )
+    _tda07_evidence(
+        project,"E-PZU",object_id="OBJ-A",parameter_code="AREA_BUILD",
+        section="ПЗУ",page=12,value=89.9,
+    )
+    _tda07_evidence(
+        project,"E-TH",object_id="OBJ-A",parameter_code="AREA_BUILD",
+        section="ТХ",page=23,value=23.5,
+    )
+
+    project.add_comparison(Comparison(
+        comparison_id="CMP-AGREE",
+        object_id="OBJ-A",
+        parameter_code="AREA_BUILD",
+        parameter_name="Площадь застройки",
+        unit="м2",
+        evidence_ids=["E-PZ","E-PZU"],
+        evidence_level="L5",
+    ))
+    project.add_comparison(Comparison(
+        comparison_id="CMP-CONFLICT",
+        object_id="OBJ-A",
+        parameter_code="AREA_BUILD",
+        parameter_name="Площадь застройки",
+        unit="м2",
+        evidence_ids=["E-PZ","E-TH"],
+        evidence_level="L5",
+    ))
+
+    result=VerificationEngine20(project).run()
+
+    assert result["decision_arbitration_mode"]=="OBSERVATIONAL"
+    assert result["decision_arbitration_state"]=="CONFLICT_REVIEW_REQUIRED"
+    assert result["decision_conflict_count"]==1
+
+    conflict=result["decision_conflicts"][0]
+    assert conflict["state"]=="CONFLICT_REVIEW_REQUIRED"
+    assert conflict["object_id"]=="OBJ-A"
+    assert conflict["parameter_code"]=="AREA_BUILD"
+    assert conflict["conflicting_states"]==["AGREEMENT","CONFLICT"]
+    assert set(conflict["decision_ids"])=={
+        next(
+            row["verification_id"] for row in result["decision_rows"]
+            if row["metadata"].get("canonical_proof_state")=="AGREEMENT"
+        ),
+        next(
+            row["verification_id"] for row in result["decision_rows"]
+            if row["metadata"].get("canonical_proof_state")=="CONFLICT"
+        ),
+    }
+
+    evidence_locations={
+        (item["document"],item["page"])
+        for item in conflict["evidence"]
+    }
+    assert ("ПЗ.pdf",45) in evidence_locations
+    assert ("ПЗУ.pdf",12) in evidence_locations
+    assert ("ТХ.pdf",23) in evidence_locations
+
+    kinds={row["kind"] for row in result["decision_rows"]}
+    assert "VERIFIED_OK" in kinds
+    assert "PROJECT_FINDING" in kinds
+    # Phase A is diagnostic only: verdict suppression is intentionally deferred.
+    assert all(row["automatic_verdict_eligible"] for row in result["decision_rows"])
+    assert all(
+        row["metadata"].get("arbitration_conflict") is True
+        for row in result["decision_rows"]
+    )
+
+
+def test_tda07_phase_a_does_not_merge_conflicts_across_different_owners():
+    project=CanonicalProject(project_id="PRJ-TDA07-SCOPE",name="TDA-07 owner scope")
+    project.add_object(ProjectObject(object_id="OBJ-A",name="Объект А"))
+    project.add_object(ProjectObject(object_id="OBJ-B",name="Объект Б"))
+
+    _tda07_evidence(
+        project,"A-PZ",object_id="OBJ-A",parameter_code="AREA_BUILD",
+        section="ПЗ",page=10,value=50.0,
+    )
+    _tda07_evidence(
+        project,"A-PZU",object_id="OBJ-A",parameter_code="AREA_BUILD",
+        section="ПЗУ",page=11,value=50.0,
+    )
+    _tda07_evidence(
+        project,"B-PZ",object_id="OBJ-B",parameter_code="AREA_BUILD",
+        section="ПЗ",page=20,value=80.0,
+    )
+    _tda07_evidence(
+        project,"B-PZU",object_id="OBJ-B",parameter_code="AREA_BUILD",
+        section="ПЗУ",page=21,value=70.0,
+    )
+
+    project.add_comparison(Comparison(
+        comparison_id="CMP-A",
+        object_id="OBJ-A",
+        parameter_code="AREA_BUILD",
+        unit="м2",
+        evidence_ids=["A-PZ","A-PZU"],
+        evidence_level="L5",
+    ))
+    project.add_comparison(Comparison(
+        comparison_id="CMP-B",
+        object_id="OBJ-B",
+        parameter_code="AREA_BUILD",
+        unit="м2",
+        evidence_ids=["B-PZ","B-PZU"],
+        evidence_level="L5",
+    ))
+
+    result=VerificationEngine20(project).run()
+
+    assert {
+        row["metadata"].get("canonical_proof_state")
+        for row in result["decision_rows"]
+    }=={"AGREEMENT","CONFLICT"}
+    assert result["decision_arbitration_state"]=="CLEAR"
+    assert result["decision_conflict_count"]==0
+    assert result["decision_conflicts"]==[]

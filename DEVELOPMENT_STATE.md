@@ -6308,3 +6308,99 @@ TimDoc audit status:
 - TDA-06: pending;
 - TDA-07 Phase A: implemented and green;
 - TDA-07 Phase B verdict suppression: pending.
+## Hybrid fast path — SP6 p. 5.2 SPZ reliability special group — 2026-10-07
+
+### Goal
+
+Reduce the remaining semantic frontier without bypassing the special-object branch of
+SP 6.13130.2025 p. 5.2.
+
+The current clause was rechecked on 2026-10-07. It requires SPZ electrical consumers
+to be category I generally, but requires the special group of category I for:
+- inpatient medical-organization buildings of functional fire-hazard class F1.1;
+- data centers (ЦОД).
+
+### Safe hybrid boundary
+
+The deterministic fast path is intentionally narrow.
+
+It promotes only when one confirmed Project Understanding owner has an explicit
+project assignment that SPZ electrical consumers:
+- are assigned / accepted / classified;
+- to the **special group of category I** reliability.
+
+The fast path does **not** promote:
+- an ordinary category I statement;
+- copied normative wording using "должны";
+- evidence without a confirmed owner.
+
+This is important because an ordinary category I statement is not sufficient until
+the system has independently excluded the special-object branch.
+
+Contract:
+- `proof_type = SET_COMPLETENESS`;
+- `promotion_policy = DETERMINISTIC_WITH_SEMANTIC_FALLBACK`;
+- `owner_scope = SAME_CONFIRMED_OBJECT`;
+- one sufficient element: explicit SPZ special-group category-I project assignment.
+
+Applicability was also extended only with the explicit project phrase
+`электроприёмники СПЗ`, which is a direct indication that SPZ electrical consumers
+exist. General retrieval/proof logic was not changed.
+
+### Commits
+
+- `1facf67c8cdd3044e775af1f67934f4c9b140605` — initial SP6 special-group
+  hybrid contract;
+- `f8eed3c3879b6e7e5c4542bee8a7bbf38bb4bae5` — direct set-contract regression
+  coverage;
+- `dc1ddce3d066cfff0567c69cc993ae7f84dccd84` — full execution-engine regression
+  coverage;
+- `4c59578b78b750b2c7a68a745502463105114704` — mark the sufficient fast-path
+  atomization complete;
+- `883981c3e62b9f93a53fdce7e5113ca467a8d255` — add the explicit SPZ
+  electrical-consumer applicability anchor.
+
+### Validation history
+
+Temporary draft PR #38 was used only for validation and closed without merge.
+
+The first run correctly exposed an internal contract configuration error:
+- run 1093;
+- 303 passed / 2 failed;
+- the set fast path was blocked by `atomization_complete=false`.
+
+The second run proved the direct set contract but exposed an applicability gap in the
+full engine:
+- run 1095;
+- 304 passed / 1 failed;
+- the phrase `электроприёмники СПЗ` was not yet recognized as conditional
+  applicability evidence.
+
+Neither issue required changes to the generic retrieval or proof engine.
+
+Final run 1097:
+- Core20 quality gates: SUCCESS;
+- Core20 regression: **305 passed**;
+- results-integrity: SUCCESS (**17 passed**).
+
+Final functional head before this documentation checkpoint:
+`883981c3e62b9f93a53fdce7e5113ca467a8d255`.
+
+### Registry frontier update
+
+Against the 43 IDs from the saved historical semantic queue:
+- deterministic: **15**;
+- hybrid: **20**;
+- pure semantic / unmodeled: **8**.
+
+Remaining pure-semantic IDs:
+- `FZ123-78-1-FIRE-CHARACTERISTICS`;
+- `GOST27751-10.1-CLASS-LEVEL-GAMMA`;
+- `GOST27751-10.2-ASSIGNMENT`;
+- `SP4-6.1.2-PRODUCTION-FIRE-DISTANCE`;
+- `SP10-1.4-VPV-EXEMPTION`;
+- `SP10-T7.2-PRODUCTION-FLOW`;
+- `SP12-4.1-CATEGORY-TAXONOMY`;
+- `GOST21101-2026-7.3.1-CHANGE-NUMBER`.
+
+This is a registry-state classification, not a fresh runtime project queue.

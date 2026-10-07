@@ -6645,3 +6645,46 @@ Validation:
 - results-integrity: **17 passed**.
 
 This stage intentionally contains only one new NTD atom and no generic engine changes.
+## Triggered semantic atom — 123-FZ article 57 construction fire performance — 2026-10-07
+
+Added one verified NTD atom:
+- `FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE`.
+
+Verified basis:
+- 123-FZ article 57 part 1;
+- main structural elements must have fire-resistance limits and fire-hazard classes
+  corresponding to the required fire-resistance degree and structural fire-hazard
+  class of the building / structure.
+
+Architecture:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- trigger: explicit fire-resistance-limit or structural-element fire-hazard-class
+  evidence;
+- no deterministic fast path;
+- dormant when those structural fire-performance characteristics are absent;
+- when activated, routes to semantic review and cannot create PROJECT_FINDING merely
+  because proof is absent.
+
+The 123-FZ document card now records verification of articles
+27, 28, 30, 31, 32, 57, 58, 78 and 92.
+
+Commits:
+- `8937128936a939d1b35399a426f9def2175edcfd` — record article 57 verification;
+- `36379c61849da751cad019b792688e210af24db0` — add article 57 triggered semantic atom;
+- `781258f6ee3250db942ebf7c708ccbf4447bfba9` — dormant/activation regression coverage.
+
+Validation:
+- temporary draft PR #43;
+- closed without merge;
+- GitHub Actions run 1131;
+- Core20 regression: **318 passed**;
+- results-integrity: **17 passed**.
+
+Registry after this stage:
+- total atomic requirements: **102**;
+- verified clauses: **73**;
+- triggered-only contracts: **7**.
+
+This stage intentionally contains only one new NTD atom and no generic engine changes.

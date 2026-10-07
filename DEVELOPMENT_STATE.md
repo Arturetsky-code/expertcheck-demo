@@ -6773,3 +6773,95 @@ Registry after this stage:
 - triggered-only contracts: **9**.
 
 This stage intentionally contains only one new NTD atom and no generic engine changes.
+## Executable NTD Coverage baseline — 2026-10-07
+
+Executable NTD Coverage is now a first-class normative-foundation metric.
+
+### Definitions
+
+`Executable NTD Coverage` counts verified requirements that can traverse the current
+runtime path from routed project evidence to a supported proof engine and reach a
+normative verification outcome.
+
+It is intentionally different from:
+- total atomic requirement count;
+- verified-clause count;
+- historical semantic-frontier counts.
+
+A verified clause is executable only when the current proof route is actually
+configured.
+
+Current supported executable routes include:
+- addressable PRESENCE;
+- STRUCTURE;
+- SET_COMPLETENESS with a concluding promotion policy;
+- GRAPHIC_CONTENT with a visual contract;
+- TYPED_VALUE with a typed contract;
+- CROSS_DOCUMENT with a cross-document contract;
+- SEMANTIC_REQUIREMENT with `execution_mode = SEMANTIC_PROOF`.
+
+`Hardened Proof Coverage` is stricter. It counts executable requirements whose
+proof route is deterministic/specialized or whose semantic route has a
+machine-enforced Semantic Proof Gate 2.0 contract. Generic semantic judging is
+executable but is not counted as hardened.
+
+### Baseline at 104 atoms / 75 verified clauses
+
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**;
+- hardened executable contracts: **53**;
+- Hardened Verified Coverage: **70.7%**;
+- Hardened Total Coverage: **51.0%**;
+- generic semantic executable contracts: **20**;
+- executable triggered-only contracts: **9**.
+
+Verified but not executable:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+The metric is exposed by `NormativeKnowledgeFoundation20.summary()`, while each
+contract now carries:
+- `resolved_proof_type`;
+- `executable_contract_ready`;
+- `executable_blocker_reason`;
+- `hardened_proof_ready`;
+- `execution_tier`.
+
+### Important interpretation
+
+97.3% executable does **not** mean 97.3% of the verified base has equally strong
+proof quality.
+
+The current gap is visible in Hardened Verified Coverage (70.7%):
+20 executable requirements still rely on generic semantic proof rather than a
+specialized / machine-enforced proof contract.
+
+This distinction is deliberate and should remain visible in product metrics.
+
+### Commits
+
+- `797ddaf114e87ccd3be048b1a5eefc4049ee82f8` — expose the runtime proof-type resolver;
+- `c5e9ed7033cae79b6500afe58e07828c37a4a8de` — add executable/hardened NTD coverage diagnostics;
+- `8a2137aad001b74b1755b0230012086a8f560b79` — lock coverage baseline tests;
+- `04b91e115b2444927d728729a6cd906d03a466fe` — align foundation diagnostics with runtime proof hints.
+
+### Validation
+
+Temporary draft PR #46 was used only for validation and closed without merge.
+
+First run 1146:
+- results-integrity: SUCCESS;
+- Core20: 323 passed / 1 failed;
+- failure was isolated to the new baseline test because the foundation diagnostic
+  initially passed nested `evidence_contract.proof_type` incorrectly to the runtime
+  proof resolver.
+
+The adapter was corrected to populate the same `proof_type_hint` field used by the
+runtime execution path. No verdict logic or NTD content changed.
+
+Final run 1148:
+- Core20 regression: **324 passed**;
+- results-integrity: **17 passed**.
+
+No NTD atoms were added in this stage.

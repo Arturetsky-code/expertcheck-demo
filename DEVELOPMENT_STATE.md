@@ -6202,3 +6202,41 @@ Decision:
 
 Temporary PR #35 was closed without merge and the working branch was force-with-lease
 returned to the checkpoint before the audit documentation was added.
+## TimDoc audit acceptance checkpoint — 2026-10-07
+
+The TimDoc audit is now persisted in `TIMDOC_AUDIT_2026-10-06.md`.
+
+Executable audit-derived acceptance coverage was added in:
+- `tests/test_core20_timdoc_audit_acceptance.py`.
+
+Covered invariants:
+- `TDA-01`: wrong page type cannot create deterministic proof;
+- `TDA-02`: missing positive evidence is not PROJECT_FINDING;
+- `TDA-03`: owner-bound cross-document mismatch stays review and preserves both
+  source locations;
+- `TDA-04`: semantic/AI output cannot activate an unverified normative clause;
+- `TDA-05`: promoted result preserves result -> evidence -> document/page ->
+  normative source/paragraph traceability.
+
+Still pending by design:
+- `TDA-06`: composition registry with transitional provisions;
+- `TDA-07`: contradiction arbitration across modules/findings.
+
+Commits:
+- `b4d94d4c9ab7e6d5fff2f678ef1bf14b29792bad` — TimDoc audit document;
+- `d7751934d2b7064877ec3e44f150043009f29c6d` — audit carry-forward and rejected
+  SP12 experiment recorded in development state;
+- `d9f6ea04c97cdefa06f9f7a70086141272cfc2e3` — executable TDA-01…05 tests;
+- `be0c8df078ad694fa179d1069c072a95c4ecb247` — audit execution status.
+
+Validation:
+- temporary draft PR #36;
+- closed without merge;
+- GitHub Actions run 1082;
+- Core20 regression: 297 passed;
+- results-integrity: 17 passed.
+
+The normative frontier remains unchanged by this documentation/test-only stage:
+- deterministic: 15;
+- hybrid: 19;
+- pure semantic / unmodeled: 9.

@@ -6731,3 +6731,45 @@ Registry after this stage:
 - triggered-only contracts: **8**.
 
 This stage intentionally contains only one new NTD atom and no generic engine changes.
+## Triggered semantic atom — 123-FZ article 104 AUPT suppression method — 2026-10-07
+
+Added one verified NTD atom:
+- `FZ123-104-1-AUPT-SUPPRESSION-METHOD`.
+
+Verified basis:
+- 123-FZ article 104 part 1;
+- automatic / autonomous fire-extinguishing installations must provide fire
+  suppression by surface or volumetric delivery of extinguishing agent in order to
+  create conditions preventing the occurrence and development of combustion.
+
+Architecture:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- trigger: explicit AUPT / automatic fire-extinguishing-installation evidence;
+- no deterministic fast path;
+- dormant when the project does not expose an AUPT characteristic;
+- when activated, routes to semantic review and cannot create PROJECT_FINDING merely
+  because proof is absent.
+
+The 123-FZ document card now records verification of articles
+27, 28, 30, 31, 32, 57, 58, 61, 78, 92 and 104.
+
+Commits:
+- `9bc6dd8acb4c1f99b1811f2750fcea98c654c546` — record article 104 verification;
+- `38e000a3c912b0c7ae19112b8c0a16d752c18b30` — add article 104 triggered semantic atom;
+- `b5219575bd8f305f1491e384609ed758e1d4cbe2` — dormant/activation regression coverage.
+
+Validation:
+- temporary draft PR #45;
+- closed without merge;
+- GitHub Actions run 1141;
+- Core20 regression: **322 passed**;
+- results-integrity: **17 passed**.
+
+Registry after this stage:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- triggered-only contracts: **9**.
+
+This stage intentionally contains only one new NTD atom and no generic engine changes.

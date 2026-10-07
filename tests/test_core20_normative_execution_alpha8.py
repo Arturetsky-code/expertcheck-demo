@@ -4062,3 +4062,73 @@ def test_alpha8_sp6_ordinary_first_category_remains_semantic():
         for packet in result["semantic_queue"]
     )
     assert result["project_findings"]==0
+def test_alpha8_fz123_article28_complete_fire_classification_promotes():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-FIRE","Раздел ПД №9_ПБ.pdf",18),
+    )
+    owner["Файл"]="Раздел ПД №9_ПБ.pdf"
+    owner["Тип документа"]="ПБ"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":18,
+        "text":(
+            "Степень огнестойкости здания: II. "
+            "Класс функциональной пожарной опасности: Ф5.1. "
+            "Класс конструктивной пожарной опасности: С0."
+        ),
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-28-2-FIRE-CLASSIFICATION-IN-PD"
+    )
+
+    assert row["kind"]=="VERIFIED_OK"
+    assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
+    assert row["set_completeness"]["complete"] is True
+    assert row["set_completeness"]["matched_count"]==3
+    assert row["set_completeness"]["owner_object_id"]=="OBJ-FIRE"
+    assert not any(
+        packet["requirement_id"]=="FZ123-28-2-FIRE-CLASSIFICATION-IN-PD"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0
+
+
+def test_alpha8_fz123_article28_incomplete_fire_classification_stays_semantic():
+    engine=NormativeExecutionEngine20(_foundation())
+    owner=_owner_model_document(
+        ("OBJ-FIRE","Раздел ПД №9_ПБ.pdf",18),
+    )
+    owner["Файл"]="Раздел ПД №9_ПБ.pdf"
+    owner["Тип документа"]="ПБ"
+    documents=[owner]
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":18,
+        "text":(
+            "Степень огнестойкости здания: II. "
+            "Класс функциональной пожарной опасности: Ф5.1."
+        ),
+    }]
+
+    result=engine.run(documents,pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-28-2-FIRE-CLASSIFICATION-IN-PD"
+    )
+
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["set_completeness"]["complete"] is False
+    assert "constructive_fire_hazard_class" in row["set_completeness"]["missing_ids"]
+    assert any(
+        packet["requirement_id"]=="FZ123-28-2-FIRE-CLASSIFICATION-IN-PD"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

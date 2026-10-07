@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .expert_history import ExpertHistoryCorpus20
+from .normative_proof import resolved_proof_type
 
 
 ACTIVE_STATUSES={"Действует","Действует с изменениями"}
@@ -78,6 +79,102 @@ def _sections_from_documents(documents:list[dict[str,Any]]|None)->set[str]:
             if key:
                 out.add(key)
     return out
+
+
+def _execution_diagnostic(contract:dict[str,Any])->dict[str,Any]:
+    """Classify whether a verified normative contract can reach a product verdict.
+
+    Executable means that the current runtime has a complete supported path from
+    routed evidence to its proof engine. Hardened means the path additionally has
+    a specialized/declarative proof contract rather than relying only on generic
+    semantic judging.
+    """
+    proof_type=resolved_proof_type(contract)
+    ec=dict(contract.get("evidence_contract") or {})
+    automatic_ready=bool(contract.get("automatic_contract_ready"))
+
+    def result(executable:bool,reason:str="",hardened:bool=False,tier:str="")->dict[str,Any]:
+        return {
+            "resolved_proof_type":proof_type,
+            "executable_contract_ready":bool(executable),
+            "executable_blocker_reason":str(reason or ""),
+            "hardened_proof_ready":bool(hardened and executable),
+            "execution_tier":tier or (
+                "HARDENED" if hardened and executable else
+                "GENERIC_SEMANTIC" if executable and proof_type=="SEMANTIC_REQUIREMENT" else
+                "EXECUTABLE" if executable else
+                "NOT_EXECUTABLE"
+            ),
+        }
+
+    if not automatic_ready:
+        return result(False,"CLAUSE_NOT_VERIFIED_OR_NOT_READY")
+
+    if proof_type=="PRESENCE":
+        if not bool(ec.get("requires_page_reference")):
+            return result(False,"ADDRESSABLE_PRESENCE_NOT_CONFIGURED")
+        return result(True,hardened=True,tier="HARDENED")
+
+    if proof_type=="STRUCTURE":
+        return result(True,hardened=True,tier="HARDENED")
+
+    if proof_type=="SEMANTIC_REQUIREMENT":
+        if str(ec.get("execution_mode") or "").upper()!="SEMANTIC_PROOF":
+            return result(False,"SEMANTIC_EXECUTION_MODE_MISSING")
+        semantic=dict(ec.get("semantic_proof_contract") or {})
+        # Semantic Proof Gate 2.0 currently enforces required_groups/source_scope.
+        # Other descriptive fields may improve prompts but are not counted as a
+        # hardened machine-enforced gate until the runtime consumes them.
+        hardened=bool(
+            (isinstance(semantic.get("required_groups"),list) and semantic.get("required_groups"))
+            or (isinstance(semantic.get("source_scope"),dict) and semantic.get("source_scope"))
+        )
+        return result(
+            True,
+            hardened=hardened,
+            tier="HARDENED" if hardened else "GENERIC_SEMANTIC",
+        )
+
+    if proof_type=="SET_COMPLETENESS":
+        set_contract=dict(ec.get("set_contract") or {})
+        if not set_contract:
+            return result(False,"SET_CONTRACT_MISSING")
+        promotion=str(set_contract.get("promotion_policy") or "").upper()
+        supported={
+            "DETERMINISTIC_AFTER_COMPLETE",
+            "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+            "SEMANTIC_AFTER_COMPLETE",
+        }
+        if promotion not in supported:
+            return result(
+                False,
+                "SET_CONTRACT_HOLD_ONLY" if promotion=="HOLD" else "SET_CONTRACT_INCOMPLETE",
+            )
+        return result(True,hardened=True,tier="HARDENED")
+
+    if proof_type=="GRAPHIC_CONTENT":
+        visual=dict(ec.get("visual_contract") or {})
+        if not str(visual.get("visual_kind") or "").strip() or not list(visual.get("elements") or []):
+            return result(False,"VISUAL_CONTRACT_INCOMPLETE")
+        return result(True,hardened=True,tier="HARDENED")
+
+    if proof_type=="TYPED_VALUE":
+        typed=dict(ec.get("typed_contract") or {})
+        if not str(typed.get("kind") or "").strip() or not str(typed.get("promotion_policy") or "").strip():
+            return result(False,"TYPED_CONTRACT_INCOMPLETE")
+        return result(True,hardened=True,tier="HARDENED")
+
+    if proof_type=="CROSS_DOCUMENT":
+        cross=dict(ec.get("cross_document_contract") or {})
+        if (
+            not str(cross.get("kind") or "").strip()
+            or not str(cross.get("promotion_policy") or "").strip()
+            or len(list(cross.get("source_groups") or []))<2
+        ):
+            return result(False,"CROSS_DOCUMENT_CONTRACT_INCOMPLETE")
+        return result(True,hardened=True,tier="HARDENED")
+
+    return result(False,"UNSUPPORTED_OR_UNCONFIGURED_PROOF_ROUTE")
 
 
 class NormativeKnowledgeFoundation20:
@@ -163,7 +260,7 @@ class NormativeKnowledgeFoundation20:
         expert_projects=int(validity.get("expert_project_count") or 0)
         priority=str(validity.get("verification_priority") or "")
         sections=list(row.get("sections") or (row.get("evidence_contract") or {}).get("sections") or [])
-        return {
+        contract={
             "requirement_id":str(row.get("id") or row.get("requirement_id") or ""),
             "document_id":document_id,
             "document_title":str(document.get("title") or row.get("source") or ""),
@@ -186,6 +283,8 @@ class NormativeKnowledgeFoundation20:
             "verification_priority":priority,
             "history_policy":HISTORY_POLICY,
         }
+        contract.update(_execution_diagnostic(contract))
+        return contract
 
     def contracts(self)->list[dict[str,Any]]:
         return [self.requirement_contract(row) for row in self.requirements]
@@ -208,6 +307,22 @@ class NormativeKnowledgeFoundation20:
             str((row.get("evidence_contract") or {}).get("activation") or "").upper()=="TRIGGERED_ONLY"
             for row in ready
         )
+        verified=[x for x in contracts if x["trust_state"]=="VERIFIED_CLAUSE"]
+        executable=[x for x in verified if x.get("executable_contract_ready")]
+        hardened=[x for x in executable if x.get("hardened_proof_ready")]
+        executable_by_type={}
+        for row in executable:
+            proof_type=str(row.get("resolved_proof_type") or "UNKNOWN")
+            executable_by_type[proof_type]=executable_by_type.get(proof_type,0)+1
+        blockers=[
+            {
+                "requirement_id":str(row.get("requirement_id") or ""),
+                "proof_type":str(row.get("resolved_proof_type") or ""),
+                "reason_code":str(row.get("executable_blocker_reason") or ""),
+            }
+            for row in verified
+            if not row.get("executable_contract_ready")
+        ]
         return {
             "document_catalog_total":len(self.documents),
             "verified_document_statuses":verified_status,
@@ -217,6 +332,21 @@ class NormativeKnowledgeFoundation20:
             "automatic_contract_ready":len(ready),
             "triggered_only_contracts":triggered,
             "default_active_contracts":len(ready)-triggered,
+            "executable_contracts":len(executable),
+            "executable_verified_coverage_pct":round(100.0*len(executable)/max(1,len(verified)),1),
+            "executable_total_coverage_pct":round(100.0*len(executable)/max(1,len(contracts)),1),
+            "hardened_executable_contracts":len(hardened),
+            "hardened_verified_coverage_pct":round(100.0*len(hardened)/max(1,len(verified)),1),
+            "hardened_total_coverage_pct":round(100.0*len(hardened)/max(1,len(contracts)),1),
+            "generic_semantic_executable_contracts":sum(
+                row.get("execution_tier")=="GENERIC_SEMANTIC" for row in executable
+            ),
+            "executable_triggered_only_contracts":sum(
+                str((row.get("evidence_contract") or {}).get("activation") or "").upper()=="TRIGGERED_ONLY"
+                for row in executable
+            ),
+            "executable_by_proof_type":executable_by_type,
+            "executable_blockers":blockers,
             "clause_verification_backlog":sum(1 for x in contracts if x["trust_state"]!="VERIFIED_CLAUSE"),
             "history_linked_normative_records":history_records,
             "history_expert_occurrences":history_occurrences,

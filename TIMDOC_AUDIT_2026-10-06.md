@@ -159,6 +159,32 @@ Still requiring explicit implementation / stronger coverage:
 - a single versioned composition registry with transitional provisions;
 - integrated UI that shows result, evidence, source page and normative clause together.
 
+## Execution status — 2026-10-07
+
+Executable acceptance coverage is now present in:
+
+- `tests/test_core20_timdoc_audit_acceptance.py`
+
+Implemented and green:
+- `TDA-01` wrong page type cannot create deterministic proof;
+- `TDA-02` missing positive evidence cannot become PROJECT_FINDING;
+- `TDA-03` owner-bound cross-document value mismatch remains review and preserves
+  evidence from both sources;
+- `TDA-04` an unverified normative clause cannot be activated or upgraded by a
+  semantic/AI checkpoint;
+- `TDA-05` a promoted result retains evidence document/page/fragment plus normative
+  source/paragraph identity.
+
+Validation:
+- temporary draft PR #36, closed without merge;
+- GitHub Actions run 1082;
+- Core20 regression: 297 passed;
+- results-integrity: 17 passed.
+
+Still pending as explicit product work:
+- `TDA-06` composition resolution with transitional provisions;
+- `TDA-07` cross-module contradiction arbitration.
+
 ## Product interpretation
 
 The TimDoc audit supplies useful design and test inputs. It does not by itself prove

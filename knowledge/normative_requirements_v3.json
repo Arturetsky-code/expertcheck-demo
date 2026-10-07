@@ -3497,6 +3497,82 @@
     "conclusion_policy": "VERIFIED_ONLY"
   },
   {
+    "id": "FZ123-28-2-FIRE-CLASSIFICATION-IN-PD",
+    "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
+    "topic": "Пожарно-техническая классификация в проектной документации",
+    "requirement": "В проектной документации на объекты капитального строительства и реконструкции должны быть указаны степень огнестойкости здания, сооружения или пожарного отсека, класс его функциональной пожарной опасности и класс конструктивной пожарной опасности.",
+    "sections": [
+      "ПЗ",
+      "АР",
+      "КР",
+      "ПБ"
+    ],
+    "check_kind": "SEMANTIC",
+    "automation": "AUTO",
+    "keywords": [
+      "степень огнестойкости",
+      "класс функциональной пожарной опасности",
+      "класс конструктивной пожарной опасности"
+    ],
+    "document_id": "123-FZ",
+    "paragraph": "ст. 28, ч. 2",
+    "verification_status": "Верифицировано",
+    "clause_verified": true,
+    "verified_clause_text": "Обязанность указывать в проектной документации степень огнестойкости, класс функциональной и класс конструктивной пожарной опасности сверена по действующей редакции статьи 28 части 2.",
+    "official_source": "https://www.consultant.ru/document/cons_doc_LAW_78699/190ab7717b82b115229e6dac67a5d91b1f12bf9f/",
+    "verified_on": "2026-10-07",
+    "evidence_contract": {
+      "minimum_sources": 1,
+      "requires_profile_owner": true,
+      "requires_page_reference": true,
+      "execution_mode": "SEMANTIC_PROOF",
+      "min_keyword_hits": 2,
+      "applicability": "SECTION_PRESENT",
+      "proof_type": "SET_COMPLETENESS",
+      "set_contract": {
+        "mode": "ALL_REQUIRED",
+        "promotion_policy": "DETERMINISTIC_WITH_SEMANTIC_FALLBACK",
+        "atomization_complete": true,
+        "owner_scope": "SAME_CONFIRMED_OBJECT",
+        "elements": [
+          {
+            "id": "fire_resistance_degree",
+            "label": "Степень огнестойкости",
+            "aliases": [
+              "степень огнестойкости"
+            ],
+            "assertion_regexes": [
+              "степен\\w+\\s+огнестойк\\w*(?:\\s+(?:здани\\w*|сооружени\\w*|пожарн\\w+\\s+отсек\\w*))?[^\\n;]{0,60}[:=—-]\\s*(?:iv|iii|ii|i|v|1|2|3|4|5)(?=\\s|[.,;]|$)"
+            ]
+          },
+          {
+            "id": "functional_fire_hazard_class",
+            "label": "Класс функциональной пожарной опасности",
+            "aliases": [
+              "класс функциональной пожарной опасности",
+              "функциональной пожарной опасности"
+            ],
+            "assertion_regexes": [
+              "класс\\w*\\s+функциональн\\w+\\s+пожарн\\w+\\s+опасност\\w*[^\\n;]{0,60}[:=—-]\\s*[фf]\\s*[1-5](?:\\.[1-4])?(?=\\s|[.,;]|$)"
+            ]
+          },
+          {
+            "id": "constructive_fire_hazard_class",
+            "label": "Класс конструктивной пожарной опасности",
+            "aliases": [
+              "класс конструктивной пожарной опасности",
+              "конструктивной пожарной опасности"
+            ],
+            "assertion_regexes": [
+              "класс\\w*\\s+конструктивн\\w+\\s+пожарн\\w+\\s+опасност\\w*[^\\n;]{0,60}[:=—-]\\s*[сc]\\s*[0-3](?=\\s|[.,;]|$)"
+            ]
+          }
+        ]
+      }
+    },
+    "conclusion_policy": "VERIFIED_ONLY"
+  },
+  {
     "id": "FZ123-78-1-FIRE-CHARACTERISTICS",
     "source": "Федеральный закон от 22.07.2008 № 123-ФЗ",
     "topic": "Пожарно-технические характеристики в проектной документации",
@@ -3890,7 +3966,7 @@
         "kind": "OWNER_BOUND_PIECEWISE_MINIMUM",
         "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
         "owner_scope": "SAME_CONFIRMED_OBJECT",
-        "numeric_tolerance": 1e-09,
+        "numeric_tolerance": 1e-9,
         "selector": {
           "id": "object_height_m",
           "label": "Высота здания или сооружения",
@@ -3916,19 +3992,19 @@
         "bands": [
           {
             "id": "height_le_13",
-            "max_selector_inclusive": 13.0,
+            "max_selector_inclusive": 13,
             "min_value": 3.5
           },
           {
             "id": "height_13_46",
-            "min_selector_exclusive": 13.0,
-            "max_selector_inclusive": 46.0,
+            "min_selector_exclusive": 13,
+            "max_selector_inclusive": 46,
             "min_value": 4.2
           },
           {
             "id": "height_gt_46",
-            "min_selector_exclusive": 46.0,
-            "min_value": 6.0
+            "min_selector_exclusive": 46,
+            "min_value": 6
           }
         ]
       }
@@ -3972,7 +4048,7 @@
         "kind": "OWNER_BOUND_PIECEWISE_RANGE",
         "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
         "owner_scope": "SAME_CONFIRMED_OBJECT",
-        "numeric_tolerance": 1e-09,
+        "numeric_tolerance": 1e-9,
         "selector": {
           "id": "object_height_m",
           "label": "Высота здания или сооружения",
@@ -4001,21 +4077,21 @@
         "bands": [
           {
             "id": "height_le_12",
-            "max_selector_inclusive": 12.0,
-            "max_value": 25.0
+            "max_selector_inclusive": 12,
+            "max_value": 25
           },
           {
             "id": "height_12_28",
-            "min_selector_exclusive": 12.0,
-            "max_selector_inclusive": 28.0,
-            "min_value": 5.0,
-            "max_value": 8.0
+            "min_selector_exclusive": 12,
+            "max_selector_inclusive": 28,
+            "min_value": 5,
+            "max_value": 8
           },
           {
             "id": "height_gt_28",
-            "min_selector_exclusive": 28.0,
-            "min_value": 8.0,
-            "max_value": 10.0
+            "min_selector_exclusive": 28,
+            "min_value": 8,
+            "max_value": 10
           }
         ]
       }
@@ -4291,7 +4367,7 @@
         "kind": "OWNER_BOUND_CATEGORICAL_RANGE",
         "promotion_policy": "DETERMINISTIC_AFTER_COMPLETE",
         "owner_scope": "SAME_CONFIRMED_OBJECT",
-        "numeric_tolerance": 1e-09,
+        "numeric_tolerance": 1e-9,
         "selector": {
           "id": "conveyor_location_kind",
           "label": "Размещение участка конвейера",
@@ -4337,12 +4413,12 @@
           {
             "id": "indoor_or_underground",
             "selector_id": "INDOOR_OR_UNDERGROUND",
-            "max_value": 50.0
+            "max_value": 50
           },
           {
             "id": "outdoor",
             "selector_id": "OUTDOOR",
-            "max_value": 100.0
+            "max_value": 100
           }
         ]
       }

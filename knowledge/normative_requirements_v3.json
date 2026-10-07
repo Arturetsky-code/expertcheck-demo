@@ -5516,7 +5516,65 @@
         "насосная станция пожаротушения",
         "система противопожарного водоснабжения"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "semantic_proof_contract": {
+        "version": "2.0",
+        "minimum_selected_evidence": 1,
+        "required_groups": [
+          {
+            "id": "FIRE_WATER_VOLUME",
+            "label": "Определён пожарный объём/запас воды",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "пожарн объем",
+                "пожарн запас",
+                "запас воды на пожаротуш"
+              ]
+            ]
+          },
+          {
+            "id": "DESIGN_FIRE_FLOW",
+            "label": "Указан расчётный расход воды на пожаротушение",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "расчетн расход",
+                "расход воды"
+              ],
+              [
+                "пожаротуш",
+                "пожарн"
+              ]
+            ]
+          },
+          {
+            "id": "FIRE_DURATION",
+            "label": "Указана продолжительность/время тушения пожара",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "продолжительн",
+                "время тушен",
+                "длительност"
+              ],
+              [
+                "тушен",
+                "пожар"
+              ]
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -5562,7 +5620,65 @@
         "насосная станция пожаротушения",
         "система противопожарного водоснабжения"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "semantic_proof_contract": {
+        "version": "2.0",
+        "minimum_selected_evidence": 1,
+        "required_groups": [
+          {
+            "id": "FIRE_RESERVOIR_SET",
+            "label": "Доказательство относится к резервуарам пожарного запаса воды",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "резервуар"
+              ],
+              [
+                "пожарн",
+                "противопожарн"
+              ]
+            ]
+          },
+          {
+            "id": "RESERVOIR_REDUNDANCY",
+            "label": "Подтверждена резервируемость/множественность резервуаров",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "any_of": [
+              "не менее двух",
+              "два резервуар",
+              "двух резервуар",
+              "2 резервуар",
+              "2х",
+              "2 х",
+              "при выключении одного",
+              "одного резервуара"
+            ]
+          },
+          {
+            "id": "INDEPENDENT_RESERVOIR_OPERATION",
+            "label": "Подтверждена возможность независимого включения/опорожнения резервуаров",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "независим"
+              ],
+              [
+                "включ",
+                "опорожн"
+              ]
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },
@@ -5604,7 +5720,42 @@
         "противопожарный резервуар",
         "пожарный запас воды"
       ],
-      "applicability_min_hits": 1
+      "applicability_min_hits": 1,
+      "semantic_proof_contract": {
+        "version": "2.0",
+        "minimum_selected_evidence": 1,
+        "required_groups": [
+          {
+            "id": "WATER_LEVEL_MEASUREMENT",
+            "label": "Предусмотрено измерение/контроль уровня воды",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "all_of_groups": [
+              [
+                "уровн"
+              ],
+              [
+                "измер",
+                "контрол"
+              ]
+            ]
+          },
+          {
+            "id": "AUTOMATION_OR_SIGNAL",
+            "label": "Контроль уровня связан с автоматикой либо передачей сигнала",
+            "scope": "COLLECTIVE",
+            "fields": [
+              "text"
+            ],
+            "any_of": [
+              "автомат",
+              "сигнал"
+            ]
+          }
+        ]
+      }
     },
     "conclusion_policy": "VERIFIED_ONLY"
   },

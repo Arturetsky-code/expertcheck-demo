@@ -203,3 +203,52 @@ def test_alpha7_fourth_normative_wave_engineering_fire_water_is_curated():
     assert foundation.documents_by_id["SP-6.13130.2025"]["status"] == "Действует"
     assert foundation.documents_by_id["SP-8.13130.2020"]["status"] == "Действует"
     assert foundation.documents_by_id["SP-10.13130.2020"]["status"] == "Действует"
+def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    summary=foundation.summary()
+
+    assert summary["atomic_requirements_total"] == 104
+    assert summary["verified_clauses"] == 75
+    assert summary["executable_contracts"] == 73
+    assert summary["executable_verified_coverage_pct"] == 97.3
+    assert summary["executable_total_coverage_pct"] == 70.2
+
+    assert summary["hardened_executable_contracts"] == 53
+    assert summary["hardened_verified_coverage_pct"] == 70.7
+    assert summary["hardened_total_coverage_pct"] == 51.0
+
+    assert summary["generic_semantic_executable_contracts"] == 20
+    assert summary["executable_triggered_only_contracts"] == 9
+    assert sum(summary["executable_by_proof_type"].values()) == 73
+
+    blockers={
+        row["requirement_id"]:row["reason_code"]
+        for row in summary["executable_blockers"]
+    }
+    assert blockers == {
+        "PP87-CLAUSE-15-IOS":"SET_CONTRACT_HOLD_ONLY",
+        "SP52-7.6.3-EVACUATION-LIGHTING":"SET_CONTRACT_HOLD_ONLY",
+    }
+
+
+def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_blocked():
+    foundation=NormativeKnowledgeFoundation20(ROOT)
+    contracts={row["requirement_id"]:row for row in foundation.contracts()}
+
+    generic=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+    assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert generic["executable_contract_ready"] is True
+    assert generic["hardened_proof_ready"] is False
+    assert generic["execution_tier"] == "GENERIC_SEMANTIC"
+
+    hardened=contracts["FZ384-15-5.1-SAFETY-JUSTIFICATION"]
+    assert hardened["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert hardened["executable_contract_ready"] is True
+    assert hardened["hardened_proof_ready"] is True
+    assert hardened["execution_tier"] == "HARDENED"
+
+    blocked=contracts["PP87-CLAUSE-15-IOS"]
+    assert blocked["resolved_proof_type"] == "SET_COMPLETENESS"
+    assert blocked["executable_contract_ready"] is False
+    assert blocked["hardened_proof_ready"] is False
+    assert blocked["executable_blocker_reason"] == "SET_CONTRACT_HOLD_ONLY"

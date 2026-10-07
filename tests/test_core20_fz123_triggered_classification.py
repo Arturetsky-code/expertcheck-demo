@@ -262,3 +262,53 @@ def test_fz123_article61_activates_for_aupt_and_stays_semantic():
         for packet in result["semantic_queue"]
     )
     assert result["project_findings"]==0
+def test_fz123_article104_is_dormant_without_aupt_trigger():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":28,
+        "text":"Предусмотрены пожарная сигнализация и первичные средства пожаротушения.",
+    }]
+
+    result=engine.run(_pb_document(),pages)
+
+    active_ids={row["requirement_id"] for row in result["rows"]}
+    inactive_ids={
+        row["requirement_id"]
+        for row in result["inactive_triggered_contract_rows"]
+    }
+
+    assert "FZ123-104-1-AUPT-SUPPRESSION-METHOD" not in active_ids
+    assert "FZ123-104-1-AUPT-SUPPRESSION-METHOD" in inactive_ids
+
+
+def test_fz123_article104_activates_for_aupt_and_stays_semantic():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":28,
+        "text":(
+            "Для защищаемого помещения предусмотрена автоматическая установка пожаротушения (АУПТ). "
+            "Ликвидация пожара осуществляется поверхностным способом подачи воды "
+            "через спринклерные оросители."
+        ),
+    }]
+
+    result=engine.run(_pb_document(),pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-104-1-AUPT-SUPPRESSION-METHOD"
+    )
+
+    assert row["activation_state"]=="ACTIVE"
+    assert row["activation_reason_code"]=="PROJECT_TRIGGER_PROVEN"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert any(
+        packet["requirement_id"]=="FZ123-104-1-AUPT-SUPPRESSION-METHOD"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

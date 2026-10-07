@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 56
-    assert summary["hardened_verified_coverage_pct"] == 74.7
-    assert summary["hardened_total_coverage_pct"] == 53.8
+    assert summary["hardened_executable_contracts"] == 57
+    assert summary["hardened_verified_coverage_pct"] == 76.0
+    assert summary["hardened_total_coverage_pct"] == 54.8
 
-    assert summary["generic_semantic_executable_contracts"] == 17
+    assert summary["generic_semantic_executable_contracts"] == 16
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -260,6 +260,15 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
         assert row["execution_tier"] == "HARDENED"
         assert semantic["version"] == "2.0"
         assert semantic["required_groups"]
+
+    article31=contracts["FZ123-31-1-CONSTRUCTIVE-FIRE-HAZARD-TAXONOMY"]
+    article31_semantic=article31["evidence_contract"]["semantic_proof_contract"]
+    assert article31["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article31["executable_contract_ready"] is True
+    assert article31["hardened_proof_ready"] is True
+    assert article31["execution_tier"] == "HARDENED"
+    assert article31_semantic["version"] == "2.0"
+    assert article31_semantic["required_groups"][0]["id"] == "CONSTRUCTIVE_FIRE_HAZARD_CLASS_DECLARATION"
 
     blocked=contracts["PP87-CLAUSE-15-IOS"]
     assert blocked["resolved_proof_type"] == "SET_COMPLETENESS"

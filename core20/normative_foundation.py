@@ -89,8 +89,10 @@ def _execution_diagnostic(contract:dict[str,Any])->dict[str,Any]:
     a specialized/declarative proof contract rather than relying only on generic
     semantic judging.
     """
-    proof_type=resolved_proof_type(contract)
     ec=dict(contract.get("evidence_contract") or {})
+    proof_row=dict(contract)
+    proof_row["proof_type_hint"]=str(ec.get("proof_type") or "")
+    proof_type=resolved_proof_type(proof_row)
     automatic_ready=bool(contract.get("automatic_contract_ready"))
 
     def result(executable:bool,reason:str="",hardened:bool=False,tier:str="")->dict[str,Any]:

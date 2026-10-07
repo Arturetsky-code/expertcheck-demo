@@ -6865,3 +6865,81 @@ Final run 1148:
 - results-integrity: **17 passed**.
 
 No NTD atoms were added in this stage.
+
+
+## Hardened semantic proof — SP 8 fire-water slice — 2026-10-07
+
+This bounded stage hardens three already verified/executable SP 8 requirements.
+No new NTD atoms were added and no generic verdict policy was changed.
+
+### Hardened contracts
+
+Semantic Proof Gate 2.0 machine-enforced `required_groups` were added for:
+- `SP8-9.2-WATER-SYSTEM-FIRE-VOLUME`;
+- `SP8-9.5-WATER-SYSTEM-RESERVOIRS`;
+- `SP8-11.5-FIRE-WATER-LEVEL`.
+
+These requirements were selected because all three had already reached semantic
+`VERIFIED_OK` in the bounded live semantic wave on 2026-10-05. The hardening step
+therefore strengthens an observed runtime path instead of bulk-converting semantic
+contracts by topic or keyword.
+
+The new gates require addressable selected evidence to contain machine-checkable
+components of the verified clauses before Judge/Critic support may be promoted.
+If a required group is missing, Semantic Proof Gate 2.0 keeps the result at review;
+missing or incomplete proof does not become a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+The registry remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage improves:
+- hardened executable contracts: **53 -> 56**;
+- Hardened Verified Coverage: **70.7% -> 74.7%**;
+- Hardened Total Coverage: **51.0% -> 53.8%**;
+- generic semantic executable contracts: **20 -> 17**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+### Persistence / fail-closed consequence
+
+A semantic proof contract is part of the requirement/selected-proof fingerprint.
+Therefore adding these Gate 2.0 contracts intentionally invalidates any previously
+persisted semantic decision for the three changed requirements. On the next live
+semantic execution they must be judged again against the stricter contract.
+This is expected fail-closed behaviour and must not be bypassed by reusing an older
+`VERIFIED_OK` decision created under the generic semantic contract.
+
+### Commits
+
+- `8071152d41747fab66aefc98f4837858cfde18b9` — harden the three SP 8
+  fire-water semantic proof contracts;
+- `50a87c8e0e170ea165e7fe165fbf594c9f762669` — lock the hardened coverage
+  metrics and contract-tier regression expectations.
+
+### Validation
+
+Temporary draft PR #47 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1152**:
+- Core20 regression: **324 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **794**:
+- baseline-full-diagnostic: SUCCESS;
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This checkpoint is intentionally bounded to one three-contract hardening slice.

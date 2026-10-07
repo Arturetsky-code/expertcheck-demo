@@ -146,6 +146,7 @@ class VerificationEngine20:
     def run(self) -> dict[str, Any]:
         requests = self.build_requests()
         decisions = [self.verify(request) for request in requests]
+        arbitration = self._decision_conflict_diagnostics(decisions)
         contract_errors = [
             violation
             for decision in decisions
@@ -254,9 +255,106 @@ class VerificationEngine20:
             "parameter_binding_blocked": parameter_binding_blocked,
             "canonical_routed_evidence": canonical_routed_evidence,
             "legacy_disagreements": legacy_disagreements,
+            "decision_arbitration_mode": "OBSERVATIONAL",
+            "decision_arbitration_state": arbitration["state"],
+            "decision_conflict_count": arbitration["count"],
+            "decision_conflicts": arbitration["conflicts"],
             "contract_errors": len(contract_errors),
             "counts": counts,
             "decision_rows": [decision.to_dict() for decision in decisions],
+        }
+
+    def _decision_conflict_diagnostics(
+        self,
+        decisions: list[VerificationDecision],
+    ) -> dict[str, Any]:
+        """Surface mutually incompatible canonical comparison conclusions.
+
+        Phase A is observational: it never changes verdict kinds or automatic
+        eligibility. It only marks and exports conflicts for engineer review.
+        A later arbitration policy may choose to suppress final verdicts, but
+        that must be a separate fail-closed change.
+        """
+        buckets: dict[tuple[str,str], list[VerificationDecision]] = {}
+        for decision in decisions:
+            if not decision.automatic_verdict_eligible:
+                continue
+            metadata=dict(decision.metadata or {})
+            if str(metadata.get("domain") or "").casefold()!="comparison":
+                continue
+            state=str(metadata.get("canonical_proof_state") or "").upper()
+            if state not in {"AGREEMENT","CONFLICT"}:
+                continue
+            object_id=str(metadata.get("object_id") or "").strip()
+            parameter_code=str(metadata.get("parameter_code") or "").strip()
+            if not object_id or not parameter_code:
+                continue
+            buckets.setdefault((object_id,parameter_code),[]).append(decision)
+
+        conflicts=[]
+        for (object_id,parameter_code),group in sorted(buckets.items()):
+            states={
+                str((decision.metadata or {}).get("canonical_proof_state") or "").upper()
+                for decision in group
+            }
+            if not {"AGREEMENT","CONFLICT"}.issubset(states):
+                continue
+
+            decision_ids=sorted(decision.verification_id for decision in group)
+            conflict_id=stable_id(
+                "ARB",
+                object_id,
+                parameter_code,
+                *decision_ids,
+            )
+            evidence_ids=[]
+            decision_rows=[]
+            for decision in group:
+                for evidence_id in decision.evidence_ids:
+                    if evidence_id not in evidence_ids:
+                        evidence_ids.append(evidence_id)
+                decision_rows.append({
+                    "verification_id":decision.verification_id,
+                    "kind":decision.kind,
+                    "canonical_proof_state":str(
+                        (decision.metadata or {}).get("canonical_proof_state") or ""
+                    ),
+                    "canonical_values":list(
+                        (decision.metadata or {}).get("canonical_values") or []
+                    ),
+                    "evidence_ids":list(decision.evidence_ids),
+                })
+                decision.metadata["arbitration_conflict"]=True
+                decision.metadata["arbitration_conflict_id"]=conflict_id
+
+            evidence=[]
+            for evidence_id in evidence_ids:
+                item=self.project.evidence.get(evidence_id)
+                if item is None:
+                    continue
+                evidence.append({
+                    "evidence_id":evidence_id,
+                    "document":item.document_name or item.document_id,
+                    "page":item.page,
+                    "section":item.section,
+                    "fragment":item.fragment,
+                })
+
+            conflicts.append({
+                "conflict_id":conflict_id,
+                "state":"CONFLICT_REVIEW_REQUIRED",
+                "object_id":object_id,
+                "parameter_code":parameter_code,
+                "conflicting_states":["AGREEMENT","CONFLICT"],
+                "decision_ids":decision_ids,
+                "decisions":decision_rows,
+                "evidence":evidence,
+            })
+
+        return {
+            "state":"CONFLICT_REVIEW_REQUIRED" if conflicts else "CLEAR",
+            "count":len(conflicts),
+            "conflicts":conflicts,
         }
 
     def verify(self, request: VerificationRequest) -> VerificationDecision:
@@ -649,6 +747,7 @@ class VerificationEngine20:
             reason = "Движок получил неизвестный тип результата; автоматический вердикт заблокирован."
         metadata = {
             "domain": request.domain,
+            "object_id": request.object_id or "",
             "parameter_code": request.parameter_code,
             "independent_trusted_sources": len(assessment.trusted_ids),
             "independent_sections": list(assessment.independent_sections),

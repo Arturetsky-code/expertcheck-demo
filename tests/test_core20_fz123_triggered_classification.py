@@ -158,3 +158,57 @@ def test_fz123_article58_activates_for_explicit_fire_resistance_limits_and_stays
         for packet in result["semantic_queue"]
     )
     assert result["project_findings"]==0
+def test_fz123_article57_is_dormant_without_construction_fire_performance_trigger():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":24,
+        "text":(
+            "Степень огнестойкости здания: II. "
+            "Класс конструктивной пожарной опасности здания: С0."
+        ),
+    }]
+
+    result=engine.run(_pb_document(),pages)
+
+    active_ids={row["requirement_id"] for row in result["rows"]}
+    inactive_ids={
+        row["requirement_id"]
+        for row in result["inactive_triggered_contract_rows"]
+    }
+
+    assert "FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE" not in active_ids
+    assert "FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE" in inactive_ids
+
+
+def test_fz123_article57_activates_for_explicit_construction_fire_performance_and_stays_semantic():
+    engine=NormativeExecutionEngine20(default_foundation())
+    pages=[{
+        "document":"Раздел ПД №9_ПБ.pdf",
+        "document_type":"ПБ",
+        "page":24,
+        "text":(
+            "Степень огнестойкости здания: II. "
+            "Класс конструктивной пожарной опасности здания: С0. "
+            "Предел огнестойкости несущих конструкций: R 90. "
+            "Класс пожарной опасности строительных конструкций: К0."
+        ),
+    }]
+
+    result=engine.run(_pb_document(),pages)
+    row=next(
+        x for x in result["rows"]
+        if x["requirement_id"]=="FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE"
+    )
+
+    assert row["activation_state"]=="ACTIVE"
+    assert row["activation_reason_code"]=="PROJECT_TRIGGER_PROVEN"
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["reason_code"]=="NORMATIVE_SEMANTIC_PROOF_REQUIRED"
+    assert any(
+        packet["requirement_id"]=="FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE"
+        for packet in result["semantic_queue"]
+    )
+    assert result["project_findings"]==0

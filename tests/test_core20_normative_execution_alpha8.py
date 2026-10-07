@@ -4153,7 +4153,17 @@ def test_alpha8_fz123_article30_valid_fire_resistance_degree_promotes():
         if x["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"
     )
 
-    assert row["kind"]=="VERIFIED_OK"
+    assert row["kind"]=="VERIFIED_OK", {
+        "kind":row.get("kind"),
+        "proof_state":row.get("proof_state"),
+        "reason_code":row.get("reason_code"),
+        "applicability_reason_code":row.get("applicability_reason_code"),
+        "retrieval_candidate_count":row.get("retrieval_candidate_count"),
+        "retrieval_keyword_score":row.get("retrieval_keyword_score"),
+        "matched_keywords":row.get("matched_keywords"),
+        "set_complete":(row.get("set_completeness") or {}).get("complete"),
+        "set_owner_state":(row.get("set_completeness") or {}).get("owner_scope_state"),
+    }
     assert row["proof_state"]=="DETERMINISTIC_SET_COMPLETENESS_PROOF"
     assert row["set_completeness"]["complete"] is True
     assert row["set_completeness"]["owner_object_id"]=="OBJ-FIRE"
@@ -4186,7 +4196,17 @@ def test_alpha8_fz123_article30_invalid_fire_resistance_degree_stays_semantic():
     )
 
     assert row["kind"]=="REVIEW_QUESTION"
-    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED"
+    assert row["proof_state"]=="SEMANTIC_PROOF_REQUIRED", {
+        "kind":row.get("kind"),
+        "proof_state":row.get("proof_state"),
+        "reason_code":row.get("reason_code"),
+        "applicability_reason_code":row.get("applicability_reason_code"),
+        "retrieval_candidate_count":row.get("retrieval_candidate_count"),
+        "retrieval_keyword_score":row.get("retrieval_keyword_score"),
+        "matched_keywords":row.get("matched_keywords"),
+        "set_complete":(row.get("set_completeness") or {}).get("complete"),
+        "set_owner_state":(row.get("set_completeness") or {}).get("owner_scope_state"),
+    }
     assert row["set_completeness"]["complete"] is False
     assert any(
         packet["requirement_id"]=="FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"

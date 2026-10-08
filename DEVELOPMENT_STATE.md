@@ -7453,3 +7453,101 @@ Final Core25 Quality Leap gates, run **824**:
 Validation PR #52 was closed without merge.
 
 This stage is intentionally limited to one AUPT-selection semantic contract.
+
+
+## Hardened semantic proof — 123-FZ article 58 — 2026-10-08
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-58-2-FIRE-RESISTANCE-LIMITS`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The semantic contract now has two machine-enforced collective groups:
+
+- `FIRE_RESISTANCE_DEGREE_BASIS` — selected evidence contains an explicit,
+  bounded fire-resistance degree declaration `I–V`, using the same safe Roman-value
+  regex strategy already validated for article 30;
+- `CONSTRUCTION_FIRE_RESISTANCE_LIMIT` — selected evidence contains explicit
+  fire-resistance-limit wording and a concrete bounded value such as
+  `R 90`, `RE 60`, `REI 45`, `EI 60` or `E 30`.
+
+The groups are collective, so the accepted evidence may be distributed across
+different addressable project fragments or sections. A typical valid shape is:
+- ПБ: `Степень огнестойкости проектируемого здания — II`;
+- КР: `Предел огнестойкости несущих колонн — R 90`.
+
+The machine gate does not decide whether the stated limit is sufficient for the
+declared degree under table 21 of 123-FZ. That table correspondence remains the
+semantic Judge/Critic responsibility.
+
+Missing either the degree basis or an explicit limit value keeps the requirement at
+`REVIEW_QUESTION`; it does not create a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **61 -> 62**;
+- Hardened Verified Coverage: **81.3% -> 82.7%**;
+- Hardened Total Coverage: **58.7% -> 59.6%**;
+- generic semantic executable contracts: **12 -> 11**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+Article 57 remains generic semantic at this checkpoint because it additionally
+requires the construction fire-hazard classes and correspondence of multiple
+construction parameters, not just the degree/limit pair hardened here.
+
+### Regression proof
+
+Two article-58-specific regressions were added:
+
+1. evidence contains an explicit fire-resistance degree and mentions that a
+   fire-resistance limit is defined, but provides no concrete `R/RE/REI/EI/E`
+   value; Gate 2.0 blocks promotion even when Judge/Critic both support it;
+2. two addressable fragments separately provide `II` fire-resistance degree and
+   `R 90` construction limit; Gate 2.0 passes and the requirement remains eligible
+   for semantic `VERIFIED_OK`.
+
+### Commits
+
+- `1e520ed6bf02e156914177183c978046a83d438e` — harden the article-58
+  semantic proof contract;
+- `3619c0936137909daacf5b27007673e1782c10d0` — lock updated hardened
+  coverage metrics;
+- `897781d4f4b00759ca0a21ac2aa6accd39913b4a` — add article-58
+  positive/negative distributed-evidence regressions.
+
+### Validation
+
+Temporary draft PR #53 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1187**:
+- Core20 regression: **338 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **829**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one fire-resistance semantic contract.

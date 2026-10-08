@@ -1703,3 +1703,143 @@ def test_gate2_gost27751_101_accepts_greek_gamma_symbol_as_typed_coefficient():
     assert semantic["verified_ok"] == 1
     assert semantic["contract_gate_blocked"] == 0
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _gost27751_102_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["GOST27751-10.2-ASSIGNMENT"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _gost27751_102_evidence(text, page, document="Задание на проектирование ДСК.pdf", section="Задание на проектирование"):
+    return {
+        "evidence_id": f"E-GOST27751-102-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _gost27751_102_decision(evidence):
+    queue = _gate2_queue(
+        "GOST27751-10.2-ASSIGNMENT",
+        "Класс сооружения, уровень ответственности и коэффициент надежности "
+        "должны быть установлены в согласованном с заказчиком задании.",
+        evidence,
+        _gost27751_102_semantic_contract(),
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return semantic, semantic["decisions"]["GOST27751-10.2-ASSIGNMENT"]
+
+
+def test_gate2_gost27751_102_rejects_pd_retelling_even_with_assignment_phrase():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "В задании на проектирование класс сооружения — КС-2; "
+            "уровень ответственности — нормальный; "
+            "коэффициент надежности по ответственности — 1,0; "
+            "согласовано с заказчиком.", 12,
+            document="Раздел ПД №1_ПЗ.pdf", section="ПЗ",
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_gost27751_102_blocks_missing_client_agreement():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "Для навеса класс сооружения — КС-2; "
+            "уровень ответственности — нормальный; "
+            "коэффициент надежности по ответственности — 1,0.", 10,
+        ),
+        _gost27751_102_evidence(
+            "Заказчик: ООО «Пример». Задание на проектирование.", 2,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "Согласование" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost27751_102_blocks_untyped_coefficient():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "Для навеса класс сооружения — КС-2; "
+            "уровень ответственности — нормальный; "
+            "площадь объекта — 1,0 тыс. м2. "
+            "Коэффициент надежности по ответственности установить проектом.", 10,
+        ),
+        _gost27751_102_evidence(
+            "Согласовано с заказчиком ООО «Пример».", 2,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "Числовое значение" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost27751_102_blocks_missing_explicit_class_value():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "Класс сооружения определить проектом; КС-2 указан в приложении. "
+            "Уровень ответственности — нормальный. "
+            "Коэффициент надежности по ответственности — 1,0.", 10,
+        ),
+        _gost27751_102_evidence(
+            "Заказчик утвердил задание на проектирование.", 2,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "КС-1/КС-2/КС-3" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost27751_102_allows_distributed_assignment_evidence_for_semantic_review():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "Для навеса класс сооружения — КС-2; "
+            "уровень ответственности — нормальный; "
+            "коэффициент надежности по ответственности — 1,0.", 10,
+        ),
+        _gost27751_102_evidence(
+            "Согласовано с заказчиком ООО «Пример».", 2,
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+    assert len(decision["selected_evidence"]) == 2
+
+
+def test_gate2_gost27751_102_allows_technical_assignment_tz_shorthand():
+    semantic, decision = _gost27751_102_decision([
+        _gost27751_102_evidence(
+            "Класс сооружения КС-3; уровень ответственности — повышенный; "
+            "γn = 1,1. Заказчик утвердил задание на проектирование.", 7,
+            document="ТЗ_ДСК.pdf", section="ТЗ",
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

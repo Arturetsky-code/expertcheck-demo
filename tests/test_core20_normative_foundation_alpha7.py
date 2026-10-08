@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 59
-    assert summary["hardened_verified_coverage_pct"] == 78.7
-    assert summary["hardened_total_coverage_pct"] == 56.7
+    assert summary["hardened_executable_contracts"] == 60
+    assert summary["hardened_verified_coverage_pct"] == 80.0
+    assert summary["hardened_total_coverage_pct"] == 57.7
 
-    assert summary["generic_semantic_executable_contracts"] == 14
+    assert summary["generic_semantic_executable_contracts"] == 13
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -235,7 +235,7 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}
 
-    generic=contracts["FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY"]
+    generic=contracts["FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE"]
     assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
     assert generic["executable_contract_ready"] is True
     assert generic["hardened_proof_ready"] is False
@@ -279,6 +279,16 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert article30_semantic["version"] == "2.0"
     assert article30_semantic["required_groups"][0]["id"] == "FIRE_RESISTANCE_CLASS_DECLARATION"
     assert article30_semantic["required_groups"][0]["regex_any_of"]
+
+    article32=contracts["FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY"]
+    article32_semantic=article32["evidence_contract"]["semantic_proof_contract"]
+    assert article32["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article32["executable_contract_ready"] is True
+    assert article32["hardened_proof_ready"] is True
+    assert article32["execution_tier"] == "HARDENED"
+    assert article32_semantic["version"] == "2.0"
+    assert article32_semantic["required_groups"][0]["id"] == "FUNCTIONAL_FIRE_CLASS_WITH_PURPOSE"
+    assert article32_semantic["required_groups"][0]["regex_any_of"]
 
     article104=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
     article104_semantic=article104["evidence_contract"]["semantic_proof_contract"]

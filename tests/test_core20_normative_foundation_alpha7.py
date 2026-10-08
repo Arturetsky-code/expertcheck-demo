@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 57
-    assert summary["hardened_verified_coverage_pct"] == 76.0
-    assert summary["hardened_total_coverage_pct"] == 54.8
+    assert summary["hardened_executable_contracts"] == 58
+    assert summary["hardened_verified_coverage_pct"] == 77.3
+    assert summary["hardened_total_coverage_pct"] == 55.8
 
-    assert summary["generic_semantic_executable_contracts"] == 16
+    assert summary["generic_semantic_executable_contracts"] == 15
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -235,7 +235,7 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}
 
-    generic=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+    generic=contracts["FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"]
     assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
     assert generic["executable_contract_ready"] is True
     assert generic["hardened_proof_ready"] is False
@@ -269,6 +269,15 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert article31["execution_tier"] == "HARDENED"
     assert article31_semantic["version"] == "2.0"
     assert article31_semantic["required_groups"][0]["id"] == "CONSTRUCTIVE_FIRE_HAZARD_CLASS_DECLARATION"
+
+    article104=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+    article104_semantic=article104["evidence_contract"]["semantic_proof_contract"]
+    assert article104["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article104["executable_contract_ready"] is True
+    assert article104["hardened_proof_ready"] is True
+    assert article104["execution_tier"] == "HARDENED"
+    assert article104_semantic["version"] == "2.0"
+    assert article104_semantic["required_groups"][0]["id"] == "AUPT_SUPPRESSION_METHOD_DECLARATION"
 
     blocked=contracts["PP87-CLAUSE-15-IOS"]
     assert blocked["resolved_proof_type"] == "SET_COMPLETENESS"

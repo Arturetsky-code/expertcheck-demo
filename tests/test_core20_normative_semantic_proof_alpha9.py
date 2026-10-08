@@ -2448,3 +2448,159 @@ def test_gate2_sp4_612_allows_exception_phrase_for_independent_expert_review():
     assert proof["contract_gate_blocked"] == 0
     assert d["semantic_contract_ready"] is True
     assert d["state"] == "VERIFIED_OK"
+
+
+
+def _fz123_78_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-78-1-FIRE-CHARACTERISTICS"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _fz123_78_evidence(text, page=1, document="Раздел ПД №9_ПБ.pdf", section="ПБ"):
+    return {
+        "evidence_id": f"E-FZ123-78-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _fz123_78_decision(evidence):
+    queue = _gate2_queue(
+        "FZ123-78-1-FIRE-CHARACTERISTICS",
+        "Адресные пожарно-технические характеристики должны быть "
+        "доказаны для применимых объектов и элементов по статье 78 123-ФЗ.",
+        evidence,
+        _fz123_78_semantic_contract(),
+    )
+    result = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return result, result["decisions"]["FZ123-78-1-FIRE-CHARACTERISTICS"]
+
+
+def _fz123_78_complete_evidence():
+    return [
+        _fz123_78_evidence(
+            "Здание ДСК: степень огнестойкости III, "
+            "класс конструктивной пожарной опасности С1.", page=31,
+        ),
+        _fz123_78_evidence(
+            "Для двери ДПМ-01 принят предел огнестойкости EI 60. "
+            "Применяемый материал облицовки: класс пожарной "
+            "опасности материала КМ1.",
+            page=52, document="Раздел ПД №3_АР.pdf", section="АР",
+        ),
+    ]
+
+
+def test_gate2_fz123_78_blocks_generic_fire_characteristics_heading():
+    proof, d = _fz123_78_decision([
+        _fz123_78_evidence(
+            "Пожарно-технические характеристики зданий и сооружений "
+            "приведены в соответствии со статьей 78 123-ФЗ."
+        ),
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_fz123_78_blocks_typed_values_without_addressable_subject():
+    proof, d = _fz123_78_decision([
+        _fz123_78_evidence(
+            "Степень огнестойкости III. Предел огнестойкости EI 60."
+        ),
+    ])
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "идентифицированный" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_fz123_78_blocks_unspecified_building_characteristics():
+    evidence = _fz123_78_complete_evidence()
+    evidence[0]["text"] = (
+        "Здание ДСК: степень огнестойкости установлена проектом, "
+        "класс конструктивной пожарной опасности уточняется."
+    )
+    proof, d = _fz123_78_decision(evidence)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "характеристика здания" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_fz123_78_blocks_missing_element_and_material_values():
+    evidence = _fz123_78_complete_evidence()
+    evidence[1]["text"] = (
+        "Для двери ДПМ-01 принят предел огнестойкости по проекту. "
+        "Материал облицовки: класс пожарной опасности уточняется."
+    )
+    proof, d = _fz123_78_decision(evidence)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "огнестойкость элемента" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_fz123_78_blocks_room_category_and_unrelated_area():
+    proof, d = _fz123_78_decision([
+        _fz123_78_evidence(
+            "Помещение проборазделки: категория помещения В1, площадь "
+            "120 м2, предел огнестойкости уточняется."
+        ),
+    ])
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_fz123_78_blocks_only_material_classification():
+    proof, d = _fz123_78_decision([
+        _fz123_78_evidence(
+            "Материал облицовки: класс пожарной опасности материала КМ1."
+        ),
+    ])
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_fz123_78_blocks_evidence_from_pos():
+    evidence = _fz123_78_complete_evidence()
+    evidence[0]["document"] = "Раздел ПД №6_ПОС.pdf"
+    evidence[0]["section"] = "ПОС"
+    proof, d = _fz123_78_decision(evidence)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert d["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_fz123_78_allows_distributed_characteristics_for_semantic_judgement():
+    proof, d = _fz123_78_decision(_fz123_78_complete_evidence())
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["semantic_contract_ready"] is True
+    assert d["state"] == "VERIFIED_OK"
+    assert len(d["selected_evidence"]) == 2
+
+
+def test_gate2_fz123_78_allows_functional_class_and_material_flammability():
+    proof, d = _fz123_78_decision([
+        _fz123_78_evidence(
+            "Здание проборазделки: класс функциональной пожарной "
+            "опасности Ф5.1. Материал покрытия: группа горючести Г2."
+        ),
+    ])
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True

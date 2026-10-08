@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any
 
 from core.semantic_evidence_engine import (
@@ -165,6 +166,19 @@ def _terms_match(text:str,values:list[Any]|None)->bool:
     return any(term in text for term in terms) if terms else True
 
 
+def _regex_any_match(text:str,patterns:list[Any]|None)->bool:
+    values=[str(value) for value in (patterns or []) if str(value)]
+    if not values:
+        return True
+    for pattern in values:
+        try:
+            if re.search(pattern,text):
+                return True
+        except re.error:
+            continue
+    return False
+
+
 def _group_matches_text(group:dict[str,Any],text:str)->bool:
     any_of=list(group.get("any_of") or [])
     all_of=list(group.get("all_of") or [])
@@ -172,7 +186,8 @@ def _group_matches_text(group:dict[str,Any],text:str)->bool:
         list(value) for value in (group.get("all_of_groups") or [])
         if isinstance(value,(list,tuple))
     ]
-    configured=bool(any_of or all_of or all_of_groups)
+    regex_any_of=list(group.get("regex_any_of") or [])
+    configured=bool(any_of or all_of or all_of_groups or regex_any_of)
     if not configured:
         return False
     if any_of and not _terms_match(text,any_of):
@@ -184,6 +199,8 @@ def _group_matches_text(group:dict[str,Any],text:str)->bool:
     for alternatives in all_of_groups:
         if not _terms_match(text,alternatives):
             return False
+    if regex_any_of and not _regex_any_match(text,regex_any_of):
+        return False
     return True
 
 
@@ -223,6 +240,7 @@ def _source_scope_result(
         "any_of":list(scope.get("any_of") or []),
         "all_of":list(scope.get("all_of") or []),
         "all_of_groups":list(scope.get("all_of_groups") or []),
+        "regex_any_of":list(scope.get("regex_any_of") or []),
     }
     per_row=[
         _group_matches_text(matcher,_evidence_text(row,fields))

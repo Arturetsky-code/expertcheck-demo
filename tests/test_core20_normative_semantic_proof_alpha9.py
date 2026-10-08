@@ -807,3 +807,84 @@ def test_gate2_article104_allows_explicit_auptr_suppression_method_for_semantic_
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def test_gate2_regex_matcher_accepts_explicit_bounded_pattern():
+    contract={
+        "version":"2.0",
+        "required_groups":[{
+            "id":"REGEX_PROBE",
+            "label":"Regex probe",
+            "scope":"SAME_EVIDENCE",
+            "fields":["text"],
+            "regex_any_of":[r"степень огнестойкости\s*[:—–-]?\s*ii(?![a-zа-я0-9])"],
+        }],
+    }
+    queue=_gate2_queue(
+        "TEST-REGEX-GATE2",
+        "Проверка regex-предиката Gate 2.0.",
+        [{
+            "evidence_id":"E-REGEX-OK",
+            "document":"ПБ.pdf",
+            "page":1,
+            "section":"ПБ",
+            "text":"Степень огнестойкости: II.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["TEST-REGEX-GATE2"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["semantic_contract_ready"] is True
+
+
+def test_gate2_regex_matcher_is_fail_closed_on_invalid_pattern():
+    contract={
+        "version":"2.0",
+        "required_groups":[{
+            "id":"BROKEN_REGEX",
+            "label":"Broken regex must fail closed",
+            "scope":"SAME_EVIDENCE",
+            "fields":["text"],
+            "regex_any_of":["("],
+        }],
+    }
+    queue=_gate2_queue(
+        "TEST-REGEX-GATE2-BROKEN",
+        "Проверка fail-closed поведения regex-предиката Gate 2.0.",
+        [{
+            "evidence_id":"E-REGEX-BROKEN",
+            "document":"ПБ.pdf",
+            "page":1,
+            "section":"ПБ",
+            "text":"Любой текст не должен обходить поврежденный regex-контракт.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["TEST-REGEX-GATE2-BROKEN"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert decision["semantic_contract_missing_groups"] == ["Broken regex must fail closed"]

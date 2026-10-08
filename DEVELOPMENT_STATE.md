@@ -8013,3 +8013,104 @@ Do not conflate increased proof hardening with increased real project
 compliance. Preserve one-contract slices, negative/positive tests,
 GitHub green validation, no-merge temporary PRs, and a checkpoint
 at each audited stage.
+
+
+## Hardened semantic proof — GOST21101-2026-7.3.1 — 2026-10-08
+
+This bounded validated slice hardens exactly one existing generic semantic
+proof contract: `GOST21101-2026-7.3.1-CHANGE-NUMBER`, GOST R 21.101-2026
+clause 7.3.1 (document-level numbering of changes).
+
+Before the change, the contract contained only the descriptive
+`decision_question` and `required_facts`; the mandatory evidence gate was
+not machine-enforced.
+
+### Standards nuance retained
+
+Clause 7.3.1 permits sequential numeric designations (1, 2, 3, ...)
+and additionally permits alphanumeric change/version codes under
+organisation standards. The gate does not reject supported alphanumeric
+codes and does not presume that numbers across separate PD documents
+must be globally aligned. The normative registry's existing atomic
+requirement and verification status are unchanged; this slice does
+not re-verify or modify the normative source set.
+
+References verified in the public standard text:
+- https://protect.gost.ru/gost/details/17bc12e8-6579-4145-b141-56855e772e7f
+- https://normadocs.ru/gost_r_21.101-2026
+
+### Gate 2.0
+
+`source_scope` with `ALL_SELECTED_EVIDENCE` enforces a named PD document
+section (PZ, PZU, AR, KR, IOS, TH, POS, OOS or PB) using the
+`document` metadata. It rejects selected evidence from generic change
+journals or external notes even if the note mentions an amendment.
+
+`GOST21101_731_TYPED_CHANGE_RECORD` uses `scope = SAME_EVIDENCE`.
+The same addressable excerpt must contain BOTH:
+
+1. an explicit revision-registration context, e.g. a table of change
+   registration, a change sheet/list, an amendment permit, or a revision
+   box in the drawing title block;
+2. a typed `Изм. 1` / `Изм. 2` / `Изменение №...` value or a
+   plausible alphanumeric designation (e.g. `Изм. А-2`).
+
+A zero ordinal, unrelated document number, or mere change-number
+mention without an identifiable register is insufficient.
+
+The gate checks evidence eligibility, **not normative correctness**.
+A green Gate 2.0 does not establish that all changed sheets share the
+same amendment number for one permit, nor that the sequence is correct,
+nor whether any alphanumeric organisation standard is genuinely
+applicable. Those facts still require independent Judge/Critic analysis.
+Unconventional source naming or scanned/unextractable revision tables
+may remain `REVIEW_QUESTION`; missing evidence never creates an
+automatic `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+- Atomic requirements: **104** (unchanged).
+- Verified clauses: **75** (unchanged).
+- Executable contracts: **73** (unchanged).
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+- Hardened executable contracts: **67 -> 68**.
+- Hardened Verified Coverage: **89.3% -> 90.7%**.
+- Hardened Total Coverage: **64.4% -> 65.4%**.
+- Generic semantic executable contracts: **6 -> 5**.
+
+Both known verified/non-executable `SET_CONTRACT_HOLD_ONLY` blockers
+remain unchanged: `PP87-CLAUSE-15-IOS` and
+`SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Validation and continuity
+
+Seven focused regression tests were added:
+- reject generic amendment journal as the source document;
+- reject a loose amendment mention without a revision register;
+- reject a registration table lacking typed amendment number;
+- reject change ordinal zero;
+- accept a numeric change in a specific PZ document's register;
+- accept alphanumeric change under a stated organisation standard;
+- accept a title-block revision mark in an AR document.
+
+Source commit:
+`ee19bb73a12d1f01ce25449a856bfeebb5154ba9`.
+
+Validation-only draft PR #59 was **closed without merge**.
+
+- Core20 quality gates #1210: **SUCCESS**, 364 Core20 tests passed
+  and 17 results-integrity tests passed.
+- Core25 Quality Leap gates #852: **SUCCESS**, four stages complete
+  including Core25 160 passed, Core20 regression, baseline full
+  diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #276: **SUCCESS**, `NO_CHANGE`.
+- Source Snapshot Artifact #664: **SUCCESS** on the source commit.
+
+The legacy full diagnostic's baseline-known failures are not claimed
+as clean; the release gate accepts them against its unchanged baseline.
+
+The next slice must start from the document-only checkpoint immediately
+after this journal entry. Preserve one-contract slices, fail-closed
+regressions, no-merges validation PRs and a branch SHA comparison.
+**Five** generic semantic contracts remain.

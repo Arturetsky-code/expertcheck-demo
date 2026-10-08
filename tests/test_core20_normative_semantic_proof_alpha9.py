@@ -1843,3 +1843,128 @@ def test_gate2_gost27751_102_allows_technical_assignment_tz_shorthand():
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _gost21101_731_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["GOST21101-2026-7.3.1-CHANGE-NUMBER"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _gost21101_731_evidence(text, page=1, document="Раздел ПД №1_ПЗ.pdf", section="ПЗ"):
+    return {
+        "evidence_id": f"E-GOST21101-731-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _gost21101_731_decision(evidence):
+    queue = _gate2_queue(
+        "GOST21101-2026-7.3.1-CHANGE-NUMBER",
+        "Обозначение изменения присваивается документу целиком "
+        "по одному разрешению; исключение — коды по СТО.",
+        evidence,
+        _gost21101_731_semantic_contract(),
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return semantic, semantic["decisions"]["GOST21101-2026-7.3.1-CHANGE-NUMBER"]
+
+
+def test_gate2_gost21101_731_rejects_generic_change_summary_not_source_document():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence(
+            "Таблица регистрации изменений. Изм. 2. Изменены листы 4 и 5.",
+            document="Журнал_изменений.pdf", section="Журнал",
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_gost21101_731_rejects_change_mention_without_register_context():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence("Изм. 2. Скорректированы листы 4 и 5."),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "адресной таблице" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost21101_731_rejects_register_without_typed_change_number():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence(
+            "Таблица регистрации изменений. Номер документа 5. Дата 08.10.2026."
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_731_rejects_change_zero_as_ordinal():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence("Таблица регистрации изменений. Изм. 0.")
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_731_accepts_number_within_registration_table_for_judgement():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence(
+            "Таблица регистрации изменений. Изм. 2. "
+            "Изменены листы 4 и 5 по разрешению 17.",
+            document="Раздел ПД №1_ПЗ.pdf", section="ПЗ",
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+
+
+def test_gate2_gost21101_731_accepts_organisational_alphanumeric_change_code():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence(
+            "Таблица изменений. Изм. А-2. "
+            "Буквенно-цифровые коды изменений установлены СТО организации.",
+            document="04_КР.pdf", section="КР",
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+
+
+def test_gate2_gost21101_731_accepts_change_stamped_in_drawing_revision_box():
+    semantic, decision = _gost21101_731_decision([
+        _gost21101_731_evidence(
+            "Изм. Кол. уч. Лист № док. Подп. Дата Изм. 1; 2 (Зам.).",
+            document="02_АР.pdf", section="АР",
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

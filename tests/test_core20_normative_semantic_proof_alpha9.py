@@ -1166,3 +1166,101 @@ def test_gate2_article61_allows_distributed_complete_basis_for_semantic_judgemen
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
     assert len(decision["selected_evidence"]) == 4
+
+
+
+def _article58_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-58-2-FIRE-RESISTANCE-LIMITS"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article58_requires_explicit_fire_resistance_limit_value():
+    contract=_article58_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-58-2-FIRE-RESISTANCE-LIMITS",
+        "Требуемые пределы огнестойкости строительных конструкций выбираются в зависимости от степени огнестойкости объекта.",
+        [
+            {
+                "evidence_id":"E-PB-58-DEGREE",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":23,
+                "section":"ПБ",
+                "text":"Степень огнестойкости проектируемого здания — II.",
+                "retrieval_keyword_score":100,
+                "retrieval_keyword_coverage":1.0,
+            },
+            {
+                "evidence_id":"E-PB-58-NO-LIMIT",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":24,
+                "section":"ПБ",
+                "text":"Предел огнестойкости несущих строительных конструкций определен проектом.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+        ],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-58-2-FIRE-RESISTANCE-LIMITS"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "R/RE/REI/EI/E" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article58_allows_distributed_degree_and_limit_for_semantic_judgement():
+    contract=_article58_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-58-2-FIRE-RESISTANCE-LIMITS",
+        "Требуемые пределы огнестойкости строительных конструкций выбираются в зависимости от степени огнестойкости объекта.",
+        [
+            {
+                "evidence_id":"E-PB-58-DEGREE",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":23,
+                "section":"ПБ",
+                "text":"Степень огнестойкости проектируемого здания — II.",
+                "retrieval_keyword_score":100,
+                "retrieval_keyword_coverage":1.0,
+            },
+            {
+                "evidence_id":"E-KR-58-R90",
+                "document":"Раздел ПД №4_КР.pdf",
+                "page":67,
+                "section":"КР",
+                "text":"Предел огнестойкости несущих колонн — R 90.",
+                "retrieval_keyword_score":100,
+                "retrieval_keyword_coverage":1.0,
+            },
+        ],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-58-2-FIRE-RESISTANCE-LIMITS"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+    assert len(decision["selected_evidence"]) == 2

@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 60
-    assert summary["hardened_verified_coverage_pct"] == 80.0
-    assert summary["hardened_total_coverage_pct"] == 57.7
+    assert summary["hardened_executable_contracts"] == 61
+    assert summary["hardened_verified_coverage_pct"] == 81.3
+    assert summary["hardened_total_coverage_pct"] == 58.7
 
-    assert summary["generic_semantic_executable_contracts"] == 13
+    assert summary["generic_semantic_executable_contracts"] == 12
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -289,6 +289,20 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert article32_semantic["version"] == "2.0"
     assert article32_semantic["required_groups"][0]["id"] == "FUNCTIONAL_FIRE_CLASS_WITH_PURPOSE"
     assert article32_semantic["required_groups"][0]["regex_any_of"]
+
+    article61=contracts["FZ123-61-3-AUPT-SELECTION-BASIS"]
+    article61_semantic=article61["evidence_contract"]["semantic_proof_contract"]
+    assert article61["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article61["executable_contract_ready"] is True
+    assert article61["hardened_proof_ready"] is True
+    assert article61["execution_tier"] == "HARDENED"
+    assert article61_semantic["version"] == "2.0"
+    assert {group["id"] for group in article61_semantic["required_groups"]} == {
+        "AUPT_SELECTION_SOLUTION",
+        "AUPT_COMBUSTIBLE_BASIS",
+        "AUPT_PLANNING_BASIS",
+        "AUPT_ENVIRONMENT_BASIS",
+    }
 
     article104=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
     article104_semantic=article104["evidence_contract"]["semantic_proof_contract"]

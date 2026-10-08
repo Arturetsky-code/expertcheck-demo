@@ -7034,3 +7034,94 @@ Core25 Quality Leap gates, run **799**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one taxonomy contract.
+
+
+## Hardened semantic proof — 123-FZ article 104 — 2026-10-08
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-104-1-AUPT-SUPPRESSION-METHOD`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The existing semantic contract now includes the machine-enforced Gate 2.0 group:
+`AUPT_SUPPRESSION_METHOD_DECLARATION`.
+
+Before Judge/Critic support may be promoted, one selected addressable evidence fragment
+must explicitly link:
+- an automatic fire-extinguishing installation / AUPT;
+- a surface or volumetric suppression method.
+
+The gate does not decide the whole engineering requirement. Object/zone identity,
+the sufficiency of the project solution and the meaning of the suppression design
+remain semantic Judge/Critic responsibilities.
+
+Missing the explicit suppression-method declaration keeps the requirement at review;
+it does not create a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **57 -> 58**;
+- Hardened Verified Coverage: **76.0% -> 77.3%**;
+- Hardened Total Coverage: **54.8% -> 55.8%**;
+- generic semantic executable contracts: **16 -> 15**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+Article 30 remains generic semantic because the current substring-based Gate 2.0
+matcher is not safe enough for single-character Roman numerals I-V without an
+additional token/regex-aware contract primitive.
+
+### Regression proof
+
+Two article-104-specific Gate 2.0 tests were added:
+1. Judge and Critic both return SUPPORTS, but evidence states only that AUPT is
+   provided and does not state surface/volumetric suppression method:
+   Gate 2.0 blocks promotion and keeps `REVIEW_QUESTION`.
+2. Addressable evidence explicitly stating that AUPT extinguishes the fire by a
+   volumetric method passes the machine gate and remains eligible for semantic
+   `VERIFIED_OK`.
+
+### Commits
+
+- `1b089fcf7cf2c5cc9a4d35146ef8098b91ab0647` — harden the article-104
+  semantic proof contract;
+- `fe752ae0b25de8d7406a51b9d25368b61f33fa2e` — lock updated hardened
+  coverage metrics and retain article 30 as the generic-semantic regression example;
+- `ab18cf0607add6d71fa04d5f1e363c0a207c4a62` — add article-104 Gate 2.0
+  positive/negative regression tests.
+
+### Validation
+
+Temporary draft PR #49 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1162**:
+- Core20 regression: **328 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **804**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one AUPT semantic contract.

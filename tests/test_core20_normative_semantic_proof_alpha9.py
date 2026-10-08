@@ -888,3 +888,81 @@ def test_gate2_regex_matcher_is_fail_closed_on_invalid_pattern():
     assert decision["state"] == "REVIEW_QUESTION"
     assert decision["semantic_contract_ready"] is False
     assert decision["semantic_contract_missing_groups"] == ["Broken regex must fail closed"]
+
+
+
+def _article30_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article30_rejects_unrelated_roman_numeral_nearby():
+    contract=_article30_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-30-1-FIRE-RESISTANCE-TAXONOMY",
+        "Степень огнестойкости должна относиться к I, II, III, IV или V.",
+        [{
+            "evidence_id":"E-PB-30-FALSE-ROMAN",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":21,
+            "section":"ПБ",
+            "text":(
+                "Степень огнестойкости здания определена проектом. "
+                "Для другого параметра указан тип II."
+            ),
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "I–V" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article30_accepts_explicit_fire_resistance_degree_with_roman_value():
+    contract=_article30_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-30-1-FIRE-RESISTANCE-TAXONOMY",
+        "Степень огнестойкости должна относиться к I, II, III, IV или V.",
+        [{
+            "evidence_id":"E-PB-30-II",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":21,
+            "section":"ПБ",
+            "text":"Степень огнестойкости проектируемого здания — II.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-30-1-FIRE-RESISTANCE-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

@@ -7916,3 +7916,100 @@ the validated checkpoint recorded below, with a branch/head comparison.
 Only seven generic semantic contracts remain. Proceed one requirement at a
 time; do not merge temporary validation PRs to `main` without explicit
 approval.
+
+
+
+## Hardened semantic proof — GOST27751-10.2 — 2026-10-08
+
+One bounded, validated semantic contract hardening:
+`GOST27751-10.2-ASSIGNMENT`, GOST 27751-2014 clause 10.2
+(including Amendment No. 1, as recorded by the normative registry).
+There are no new NTD atoms, no altered source validity statuses, and no
+deterministic compliance verdict.
+
+### Gate 2.0 enforcement
+
+The semantic contract now has an assignment-only addressable
+`source_scope`, checking the `document` and `section` metadata,
+with `mode = ALL_SELECTED_EVIDENCE`. Recognised assignment source
+labels include "Задание на проектирование", "Техническое задание",
+and "ТЗ". A textual claim within PZ/KR that values were established
+in the Assignment does not satisfy this source guard.
+
+Four required groups use `scope = SAME_EVIDENCE`:
+
+1. `GOST27751_102_CLASS_IN_ASSIGNMENT` — explicit class declaration
+   with `КС-1`, `КС-2`, or `КС-3`.
+2. `GOST27751_102_LEVEL_IN_ASSIGNMENT` — explicit numerical-category
+   responsibility-level declaration (повышенный/нормальный/пониженный).
+3. `GOST27751_102_GAMMA_IN_ASSIGNMENT` — concrete numeric
+   responsibility reliability coefficient (including `γn` notation);
+   unrelated numeric tokens are not accepted.
+4. `GOST27751_102_CLIENT_AGREEMENT` — explicit language about
+   client agreement or approval of the Assignment; a bare
+   "Заказчик" label alone is not proof.
+
+Required groups may come from separate addressable fragments belonging
+to the assignment. A missing mandatory group or invalid source blocks
+automatic promotion and leaves `REVIEW_QUESTION` (not a
+`PROJECT_FINDING`).
+
+The Gate does not establish physical validity/authenticity of
+approval signatures; ownership and same-object binding of values across
+different fragments, reconciliation with project documents, numerical
+minimums and special exclusions remain semantic Judge/Critic
+responsibilities. The deliberately strict source-scoping may yield
+review-only outcomes for unusually named assignment files.
+
+### Coverage
+
+- Atomic requirements: **104** (unchanged).
+- Verified: **75** (unchanged).
+- Executable: **73** (unchanged).
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+- Hardened executable: **66 -> 67**.
+- Hardened Verified Coverage: **88.0% -> 89.3%**.
+- Hardened Total Coverage: **63.5% -> 64.4%**.
+- Generic semantic executable: **7 -> 6**.
+
+The two existing verified / non-executable `SET_CONTRACT_HOLD_ONLY`
+requirements remain unchanged:
+`PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Validation
+
+Six GOST27751-10.2 regressions added:
+- PZ retelling (even with the phrase "задание на проектирование")
+  cannot masquerade as the source Assignment;
+- missing explicit approval/agreement is blocked;
+- missing numeric coefficient is blocked despite an unrelated number;
+- a loose standalone KS token is not an explicit class declaration;
+- distributed typed assignment values plus client agreement are
+  eligible for independent semantic judgement;
+- shortened assignment source label "ТЗ" is accepted.
+
+Source commit:
+`b729bd04b43c203b841e828bf4f3c5e541e900f3`.
+
+Validation-only draft PR #58 was closed **without merge**.
+
+- Core20 quality gates #1207: **SUCCESS** — **357 passed**,
+  results integrity **17/17**.
+- Core25 Quality Leap gates #849: **SUCCESS**, including Core25
+  (**160 passed**), Core20 regression, baseline full diagnostic,
+  alpha1 release gate and compile.
+- Test78 deterministic A/B #275: **SUCCESS**, `NO_CHANGE`.
+
+Known legacy full-diagnostic failures remain baseline-classified.
+The green release gate does **not** imply zero failures across the
+entire legacy repository test suite.
+
+### Continuation protocol
+
+Begin from the checkpoint immediately following this journal entry.
+The next remaining generic semantic count is **6**.
+Do not conflate increased proof hardening with increased real project
+compliance. Preserve one-contract slices, negative/positive tests,
+GitHub green validation, no-merge temporary PRs, and a checkpoint
+at each audited stage.

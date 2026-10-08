@@ -1968,3 +1968,152 @@ def test_gate2_gost21101_731_accepts_change_stamped_in_drawing_revision_box():
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _sp10_14_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["SP10-1.4-VPV-EXEMPTION"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _sp10_14_evidence(text, page=1, document="Раздел ПД №9_ПБ.pdf", section="ПБ"):
+    return {
+        "evidence_id": f"E-SP10-14-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _sp10_14_decision(evidence):
+    queue = _gate2_queue(
+        "SP10-1.4-VPV-EXEMPTION",
+        "Отсутствие ВПВ допускается лишь при доказанной применимости "
+        "исключения пункта 1.4 СП 10.13130.2020.",
+        evidence,
+        _sp10_14_semantic_contract(),
+    )
+    result = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return result, result["decisions"]["SP10-1.4-VPV-EXEMPTION"]
+
+
+def test_gate2_sp10_14_blocks_clause_and_type_without_no_vpv_decision():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "Для трансформаторной подстанции приведена ссылка на пункт 1.4 "
+            "СП 10.13130.2020, вопрос ВПВ подлежит решению проектом."
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "решение об отсутствии" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_14_blocks_generic_vpv_omission_and_normative_citation():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "ВПВ не предусматривается согласно пункту 1.4 СП 10.13130.2020. "
+            "Основания исключения учтены в проектной документации."
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Конкретный параметр" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_14_blocks_unreferenced_exemption_despite_typed_basis():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "ВПВ не требуется для трансформаторной подстанции. "
+            "Основание: исключение согласно действующему СП."
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "пункт 1.4" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_14_rejects_evidence_from_unrelated_pos_section():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "Для трансформаторной подстанции ВПВ не требуется по пункту 1.4 "
+            "СП 10.13130.2020.",
+            document="Раздел ПД №6_ПОС.pdf", section="ПОС",
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert d["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_sp10_14_rejects_category_d_without_fire_resistance():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "ВПВ не предусматривается по пункту 1.4 СП 10.13130.2020. "
+            "Производственное здание категории Д, объём 1200 м3."
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Конкретный параметр" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_14_allows_transformer_substation_case_for_semantic_judgement():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "Для трансформаторной подстанции внутренний противопожарный "
+            "водопровод не предусматривается по п. 1.4 СП 10.13130.2020."
+        )
+    ])
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["semantic_contract_ready"] is True
+    assert d["state"] == "VERIFIED_OK"
+
+
+def test_gate2_sp10_14_allows_distributed_production_building_basis():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "Для складского здания внутренний противопожарный водопровод "
+            "не предусматривается по п. 1.4 СП 10.13130.2020.",
+            page=10,
+        ),
+        _sp10_14_evidence(
+            "Складское здание III степени огнестойкости категории Д. "
+            "Строительный объем 120000 м3.",
+            page=11,
+        ),
+    ])
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["semantic_contract_ready"] is True
+    assert len(d["selected_evidence"]) == 2
+
+
+def test_gate2_sp10_14_allows_typed_below_table_threshold_case():
+    proof, d = _sp10_14_decision([
+        _sp10_14_evidence(
+            "Для здания ВПВ не требуется по пункту 1.4 СП 10.13130.2020. "
+            "Строительный объем здания 1250 м3, менее значения по таблице 7.2."
+        )
+    ])
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["semantic_contract_ready"] is True

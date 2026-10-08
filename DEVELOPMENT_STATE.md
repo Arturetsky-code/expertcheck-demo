@@ -8609,3 +8609,138 @@ Exactly **one** generic semantic requirement remains:
 It is cross-document; require genuinely distinct document
 evidence rather than two excerpts from one source.
 Preserve fail-closed tests and no-merges validation PRs.
+
+
+## Hardened cross-document semantic proof — GOST21101-2026-7.4.1 — 2026-10-08
+
+This bounded, CI-validated slice hardens the **last remaining generic semantic**
+contract `GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES`, clause 7.4.1
+of GOST R 21.101-2026. Clause 7.4.1 says changes in textual and graphic
+PD documents are made independently within each document regardless of
+the documents' assembly into a set; clauses 7.1–7.3 and 7.4.2–7.4.7
+also apply. Source verification status, `SEMANTIC_REQUIREMENT`, and
+the `VERIFIED_ONLY` conclusion policy are unchanged.
+
+External current normative cross-check:
+- Official registry: https://protect.gost.ru/gost/details/17bc12e8-6579-4145-b141-56855e772e7f
+- Clause text: https://normadocs.ru/gost_r_21.101-2026
+
+### Precise engine extension (one requirement motivated it)
+
+The existing Gate 2.0 could count two cited fragments but could not
+guarantee two **different PD documents**. `core20/normative_semantic_proof.py`
+now supports two opt-in, backward-compatible features:
+
+1. `minimum_distinct_documents`: count non-empty, normalized document
+   **basenames**, case-insensitively, rather than count pages, evidence
+   fragments or copies in differently named folders. Gate readiness
+   requires both minimum selected evidence and minimum distinct documents.
+   Gate results expose the required and selected distinct counts.
+2. `required_groups[].scope = SAME_EVIDENCE_PER_DOCUMENT`:
+   **every selected document** needs at least one addressable selected
+   excerpt that satisfies the entire configured group within that
+   single excerpt. Tokens from two pages cannot be assembled into
+   one fictitious registration record. The previous `SAME_EVIDENCE`
+   and collective scopes retain their behavior; a dedicated
+   backward-compatibility test exercises this.
+
+The new GOST 7.4.1 contract configures:
+- `minimum_selected_evidence = 2`;
+- `minimum_distinct_documents = 2`;
+- `source_scope = ALL_SELECTED_EVIDENCE` limited to named
+  original PD document types (ПЗ, ПЗУ, АР, КР, ИОС, ТХ, ПОС, ООС, ПБ)
+  using the `document` field, without accepting generic journals;
+- one `SAME_EVIDENCE_PER_DOCUMENT` typed-revision group, which requires
+  both a revision-registration context (revision table, title block,
+  or DE record) **and** an explicit positive change ordinal or
+  possible organisation-specific alphanumeric code in the same
+  addressable excerpt of **each** document.
+
+Numerically identical revision numbers in different PD documents
+are allowed by the gate; global alignment is not required.
+
+### Test evidence
+
+12 additional focused positive/negative regressions:
+- two pages of one document cannot satisfy cross-document proof;
+- case differences and different enclosing folder paths of one
+  filename do not generate fictitious document identities;
+- an external/general change journal does not stand in for an
+  original changed document;
+- one document with revision record and another without fails;
+- the second document's table header but no revision number fails;
+- change ordinal zero fails;
+- registration context on one page and isolated revision number on
+  another page of one document do not combine into one registration;
+- two selected fragments from the same document fail;
+- two distinct documents with independent revision records are
+  eligible for independent semantic Judge/Critic;
+- identical ordinal `Изм. 1` on two distinct documents is eligible;
+- an alphanumeric `Изм. А-2` code is not categorically rejected;
+- old SAME_EVIDENCE contracts remain executable.
+
+Source commit:
+`bb2dca44d72d1e1f8374e3a7b185856912106219`.
+
+Temporary validation-only draft PR #64 was **closed without merge**;
+`main` was not modified.
+
+- Core20 quality gates #1228: **SUCCESS**, **411 tests passed**.
+- Results-integrity suite: **17/17 passed**.
+- Core25 Quality Leap gates #870: **SUCCESS**, Core25 tests,
+  Core20 targeted regression, baseline full diagnostic and
+  alpha1 release gate.
+- Test78 deterministic A/B #281: **SUCCESS**, `NO_CHANGE`.
+  Comparison remains 56 requirements / 25 VERIFIED_OK /
+  2 PROJECT_FINDING / 29 REVIEW_QUESTION.
+- Source Snapshot Artifact #676: **SUCCESS** on source commit.
+- Streamlit startup smoke #49: **SUCCESS** on source commit.
+
+### Coverage after this slice
+
+- Atomic normative requirements: **104** (unchanged).
+- Verified requirements: **75** (unchanged).
+- Executable contracts: **73** (unchanged).
+- Hardened executable contracts: **72 -> 73**.
+- Hardened Verified Coverage: **96.0% -> 97.3%**.
+- Hardened Total Coverage: **69.2% -> 70.2%**.
+- Generic semantic executable contracts: **1 -> 0**.
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+
+**Two verified/non-executable hold-only requirements still remain:**
+`PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+Completion of all generic semantic gates does **not** close these gaps.
+
+### Known limitations and honesty guards
+
+A gate-ready cross-document packet is only proof *eligibility*;
+it does not establish actual compliance in a real PD project:
+- filenames alone cannot prove the documents' authenticity,
+  unique identifiers or versions. Two differently named copies of
+  the same logical document may still require expert reconciliation.
+- registration table content can be partial, scanned or multi-page
+  and the conservative gate may therefore retain `REVIEW_QUESTION`
+  for legitimate cases (false negatives).
+- document change sequence, permitted alphanumeric coding under an
+  actual organisation standard, signature/permit authorization,
+  changes to title blocks, graphic lists, contents and total
+  document identity must be assessed by Judge/Critic.
+- special expedited journal changes under clause 7.4.3 are not
+  automatically judged regular or irregular.
+- existing legacy full-suite failures accepted in the unchanged
+  baseline are not presented as all tests being green.
+
+The next stage is **not** another generic semantic contract:
+all **73/73 executable** contracts now have hardened gates.
+Future work should prioritize evidence quality on real, diverse PD
+sets, known hold-only contracts, semantic cross-document object
+binding, and verification against non-synthetic documents.
+
+### Checkpoint continuity
+
+Resume ONLY from the journal commit immediately following this
+entry after comparing branch head and CI for that exact SHA.
+Maintain the same one-slice atomic-change, source-diff,
+fail-closed regression, temporary draft-PR no-merge and green-CI
+checkpoint protocol.

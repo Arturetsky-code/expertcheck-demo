@@ -8472,3 +8472,140 @@ behind 0). **Two** generic semantic contracts remain:
 `GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES`.
 Proceed with one new contract per slice and do not merge
 validation PRs into `main`.
+
+
+
+## Hardened semantic proof — FZ123-78-1 — 2026-10-08
+
+This bounded source change hardens exactly one existing generic
+semantic requirement:
+`FZ123-78-1-FIRE-CHARACTERISTICS`, part 1 of article 78 of the
+Federal Law No. 123-FZ on fire safety.
+The current law wording (revision of 2026-08-04) calls for
+project documentation to contain the fire-technical characteristics
+prescribed by the law for buildings, structures, structural elements,
+engineering equipment and construction materials.
+
+Current publicly checked law text:
+https://www.consultant.ru/document/cons_doc_LAW_78699/e4593aca3f06557c6e6432582d1d14618eed2b6e/
+
+No atomic NTD requirement was added; legal verification statuses,
+`SEMANTIC_PROOF` execution mode and `VERIFIED_ONLY` conclusion
+policy remain unchanged.
+
+### Declarative semantic Gate 2.0
+
+An `ALL_SELECTED_EVIDENCE` source guard requires addressable
+fragments from profile documentation sections `ПБ`, `АР`,
+`КР`, `ИОС`, `ПЗ`. Unrelated journals and POS-only evidence
+cannot satisfy the guard.
+
+Three `SAME_EVIDENCE` groups:
+
+1. `FZ123_78_ADDRESSABLE_SUBJECT`: a building, structure,
+   room, structural element or material with an addressable name
+   or mark (e.g. "Здание ДСК" / "Дверь ДПМ-01").
+2. `FZ123_78_TYPED_BUILDING_FIRE_PROPERTY`: an explicit typed
+   building or structure fire characteristic such as fire
+   resistance degree III, constructive class C1, functional
+   class Ф5.1 or category of a building (not room category).
+3. `FZ123_78_TYPED_ELEMENT_MATERIAL_PROPERTY`: a typed
+   fire-resistance limit of an element such as EI 60 / REI 120,
+   or a specific material fire-danger characteristic such
+   as KM1 or combustibility group Г2.
+
+Different cited pages may support different groups; merely citing
+article 78, writing "complies" or mentioning an untyped value
+is not evidence of the concrete characteristics.
+
+### Intended limits
+
+This Gate 2.0 is a conservative **evidence-eligibility guard**,
+not a universal proof that each facility must have *all* these
+three kinds of characteristic or that every project includes
+both buildings and rated materials. For facilities without a
+qualifying building or in atypical industrial conditions, missing
+groups may mean `REVIEW_QUESTION` (false negative), not
+`PROJECT_FINDING` or regulatory violation.
+
+The Gate does not determine whether all needed systems,
+materials, structures or equipment have been covered, whether
+characteristic values actually match source documents, or
+whether multiple fragments refer to the same element. All
+such questions remain with independent semantic Judge/Critic;
+the green gate alone does not prove project compliance.
+
+### Coverage
+
+- Atomic requirements: **104** unchanged.
+- Verified: **75** unchanged.
+- Executable: **73** unchanged.
+- Executable Verified Coverage: **97.3%** unchanged.
+- Executable Total Coverage: **70.2%** unchanged.
+- Hardened executable contracts: **71 -> 72**.
+- Hardened Verified Coverage: **94.7% -> 96.0%**.
+- Hardened Total Coverage: **68.3% -> 69.2%**.
+- Generic semantic contracts: **2 -> 1**.
+
+Verified non-executable hold-only blockers remain
+`PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Tests and validation, including one fixed expectation
+
+Nine focused tests were added:
+- reject a generic title/citation with no typed characteristic;
+- reject typed values without any named project element;
+- reject unspecified building characteristics;
+- reject an untyped fire door and material;
+- reject room category/unrelated area as building characteristics;
+- reject only a material class without other required evidence;
+- reject selected evidence from an unrelated POS document;
+- accept distributed named object, typed building and element/
+  material evidence for further Judge/Critic analysis;
+- accept explicit functional class and material combustibility
+  classification for further Judge/Critic analysis.
+
+Initial functional source commit:
+`073d319c33de28414f5d6e6e1de57f5077e6d1c1`.
+First Core20 CI on that commit failed **1 existing test**
+(398 passed, 1 failed): a legacy test incorrectly asserted that
+this now-hardened contract was still `GENERIC_SEMANTIC`.
+This was not a proof-behavior regression.
+
+A narrowly scoped follow-up test fix switches the generic sentinel
+to the still-generic `GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES`
+and asserts this FZ123 contract now is `HARDENED`.
+No semantic requirements, matching rules or source code were
+weakened to resolve that test.
+
+Validated corrected source commit:
+`3f96ceae41b1611d11e7a4d23ed12921b8b2fdc8`.
+
+Temporary draft PR #63 was **closed without merge**.
+
+- Core20 quality gates #1225: **SUCCESS**, **399 passed**;
+  results integrity **17/17**.
+- Core25 Quality Leap gates #867: **SUCCESS**, including
+  Core25 tests, Core20 regression, baseline full diagnostic
+  and alpha1 release gate.
+- Test78 deterministic A/B #280: **SUCCESS**, `NO_CHANGE`
+  on the functional source commit. Follow-up commit only
+  changed a tier-regression test (not normative behavior).
+- Source Snapshot Artifact #674: **SUCCESS** for corrected source.
+
+The known failures in the legacy full-diagnostic suite remain
+baseline-classified; a successful release gate does not imply
+all legacy tests have passed.
+
+### Resume protocol
+
+The next commit after this entry is the document-only
+checkpoint. Resume only after its Core20, Core25 and Source
+Snapshot CI are successful and branch SHA comparison reports
+`ahead = 0, behind = 0`.
+
+Exactly **one** generic semantic requirement remains:
+`GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES`.
+It is cross-document; require genuinely distinct document
+evidence rather than two excerpts from one source.
+Preserve fail-closed tests and no-merges validation PRs.

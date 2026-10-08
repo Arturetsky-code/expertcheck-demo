@@ -1589,3 +1589,117 @@ def test_gate2_sp48_516_rejects_evidence_not_owned_by_pos():
     assert decision["state"] == "REVIEW_QUESTION"
     assert decision["semantic_contract_ready"] is False
     assert decision["semantic_contract_source_scope_satisfied"] is False
+
+
+
+def _gost27751_101_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["GOST27751-10.1-CLASS-LEVEL-GAMMA"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _gost27751_101_evidence(text, page, section="КР"):
+    return {
+        "evidence_id": f"E-GOST27751-{page}",
+        "document": f"Раздел ПД №4_{section}.pdf",
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _gost27751_101_decision(evidence):
+    queue = _gate2_queue(
+        "GOST27751-10.1-CLASS-LEVEL-GAMMA",
+        "Для одного сооружения должны быть согласованы класс, "
+        "уровень ответственности и коэффициент надёжности по ответственности.",
+        evidence,
+        _gost27751_101_semantic_contract(),
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return semantic, semantic["decisions"]["GOST27751-10.1-CLASS-LEVEL-GAMMA"]
+
+
+def test_gate2_gost27751_101_blocks_stray_class_token_without_class_declaration():
+    semantic, decision = _gost27751_101_decision([
+        _gost27751_101_evidence(
+            "В тексте встречается КС-2. Уровень ответственности: нормальный; "
+            "коэффициент надежности по ответственности — 1,0.", 24,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "КС-1/КС-2/КС-3" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost27751_101_blocks_unspecified_responsibility_level():
+    semantic, decision = _gost27751_101_decision([
+        _gost27751_101_evidence(
+            "Класс сооружения КС-2. Уровень ответственности установлен проектом; "
+            "коэффициент надежности по ответственности — 1,0.", 24,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "явно установленным значением" in "; ".join(
+        decision["semantic_contract_missing_groups"]
+    )
+
+
+def test_gate2_gost27751_101_blocks_numeric_value_without_gamma_binding():
+    semantic, decision = _gost27751_101_decision([
+        _gost27751_101_evidence(
+            "Класс сооружения КС-2. Уровень ответственности: нормальный. "
+            "Таблица показателей: площадь 1,0 тыс. м2. "
+            "Коэффициент надежности по ответственности установлен проектом.", 24,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "конкретным числовым значением" in "; ".join(
+        decision["semantic_contract_missing_groups"]
+    )
+
+
+def test_gate2_gost27751_101_allows_addressable_distributed_triple_for_judgement():
+    semantic, decision = _gost27751_101_decision([
+        _gost27751_101_evidence(
+            "Для здания проборазделки класс сооружения — КС-2.", 24,
+        ),
+        _gost27751_101_evidence(
+            "Для здания проборазделки уровень ответственности: нормальный; "
+            "коэффициент надежности по ответственности — 1,0.", 25,
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+    assert len(decision["selected_evidence"]) == 2
+
+
+def test_gate2_gost27751_101_accepts_greek_gamma_symbol_as_typed_coefficient():
+    semantic, decision = _gost27751_101_decision([
+        _gost27751_101_evidence(
+            "Для проектируемого склада класс сооружения КС-3. "
+            "Уровень ответственности — повышенный; γn = 1,1.", 28,
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["semantic_contract_ready"] is True

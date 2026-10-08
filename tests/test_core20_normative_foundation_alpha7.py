@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 63
-    assert summary["hardened_verified_coverage_pct"] == 84.0
-    assert summary["hardened_total_coverage_pct"] == 60.6
+    assert summary["hardened_executable_contracts"] == 64
+    assert summary["hardened_verified_coverage_pct"] == 85.3
+    assert summary["hardened_total_coverage_pct"] == 61.5
 
-    assert summary["generic_semantic_executable_contracts"] == 10
+    assert summary["generic_semantic_executable_contracts"] == 9
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -338,6 +338,16 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert article104["execution_tier"] == "HARDENED"
     assert article104_semantic["version"] == "2.0"
     assert article104_semantic["required_groups"][0]["id"] == "AUPT_SUPPRESSION_METHOD_DECLARATION"
+
+    sp12=contracts["SP12-4.1-CATEGORY-TAXONOMY"]
+    sp12_semantic=sp12["evidence_contract"]["semantic_proof_contract"]
+    assert sp12["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert sp12["executable_contract_ready"] is True
+    assert sp12["hardened_proof_ready"] is True
+    assert sp12["execution_tier"] == "HARDENED"
+    assert sp12_semantic["version"] == "2.0"
+    assert sp12_semantic["required_groups"][0]["id"] == "SP12_CATEGORY_TYPED_DECLARATION"
+    assert len(sp12_semantic["required_groups"][0]["regex_any_of"]) == 3
 
     blocked=contracts["PP87-CLAUSE-15-IOS"]
     assert blocked["resolved_proof_type"] == "SET_COMPLETENESS"

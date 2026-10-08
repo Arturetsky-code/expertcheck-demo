@@ -2117,3 +2117,160 @@ def test_gate2_sp10_14_allows_typed_below_table_threshold_case():
     assert proof["verified_ok"] == 1
     assert proof["contract_gate_blocked"] == 0
     assert d["semantic_contract_ready"] is True
+
+
+
+def _sp10_t72_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["SP10-T7.2-PRODUCTION-FLOW"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _sp10_t72_evidence(text, page=1, document="Раздел ПД №9_ПБ.pdf", section="ПБ"):
+    return {
+        "evidence_id": f"E-SP10-T72-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _sp10_t72_decision(evidence):
+    queue = _gate2_queue(
+        "SP10-T7.2-PRODUCTION-FLOW",
+        "Для производственного/складского здания расход и число ПК-с "
+        "должны выбираться по таблице 7.2 с учётом параметров здания.",
+        evidence,
+        _sp10_t72_semantic_contract(),
+    )
+    out = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return out, out["decisions"]["SP10-T7.2-PRODUCTION-FLOW"]
+
+
+def _sp10_t72_complete_evidence():
+    return [
+        _sp10_t72_evidence(
+            "Для производственного здания: степень огнестойкости III; "
+            "категория здания по пожарной опасности В; "
+            "класс конструктивной пожарной опасности С1; "
+            "строительный объем здания 12000 м3; высота здания 16 м.",
+            page=21,
+        ),
+        _sp10_t72_evidence(
+            "По таблице 7.2 СП 10.13130.2020 принято количество "
+            "одновременно используемых пожарных кранов — 2; "
+            "минимальный расход диктующего ПК-с — 2,5 л/с.",
+            page=22, document="Раздел ПД №5_ИОС2.pdf", section="ИОС2",
+        ),
+    ]
+
+
+def test_gate2_sp10_t72_rejects_table_alone_without_typed_values():
+    proof, d = _sp10_t72_decision([
+        _sp10_t72_evidence(
+            "Внутреннее пожаротушение производственного здания "
+            "выполнено по таблице 7.2 СП 10.13130.2020."
+        )
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_sp10_t72_rejects_room_category_not_building_category():
+    rows = _sp10_t72_complete_evidence()
+    rows[0]["text"] = rows[0]["text"].replace(
+        "категория здания по пожарной опасности В",
+        "категория помещения В1",
+    )
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Категория пожарной опасности здания" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_missing_constructive_hazard_class():
+    rows = _sp10_t72_complete_evidence()
+    rows[0]["text"] = rows[0]["text"].replace(
+        "класс конструктивной пожарной опасности С1",
+        "класс конструктивной пожарной опасности определён проектом",
+    )
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "конструктивной" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_building_volume_without_units():
+    rows = _sp10_t72_complete_evidence()
+    rows[0]["text"] = rows[0]["text"].replace(
+        "строительный объем здания 12000 м3",
+        "строительный объем здания 12000",
+    )
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "м³" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_no_height_for_table_72():
+    rows = _sp10_t72_complete_evidence()
+    rows[0]["text"] = rows[0]["text"].replace("высота здания 16 м.", "")
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "высота здания" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_unbound_product_instead_of_typed_hydrant_count():
+    rows = _sp10_t72_complete_evidence()
+    rows[1]["text"] = (
+        "По таблице 7.2 СП 10.13130.2020 принято 2 х 2,5 л/с."
+    )
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "количество" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_flow_without_liters_per_second():
+    rows = _sp10_t72_complete_evidence()
+    rows[1]["text"] = rows[1]["text"].replace(
+        "минимальный расход диктующего ПК-с — 2,5 л/с",
+        "минимальный расход диктующего ПК-с — 2,5",
+    )
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "л/с" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp10_t72_rejects_evidence_from_unrelated_pos_section():
+    rows = _sp10_t72_complete_evidence()
+    rows[0]["document"] = "Раздел ПД №6_ПОС.pdf"
+    rows[0]["section"] = "ПОС"
+    proof, d = _sp10_t72_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert d["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_sp10_t72_allows_distributed_complete_evidence_for_semantic_judgement():
+    proof, d = _sp10_t72_decision(_sp10_t72_complete_evidence())
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True
+    assert len(d["selected_evidence"]) == 2

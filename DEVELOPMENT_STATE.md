@@ -7748,3 +7748,84 @@ Core25 Quality Leap gates, run **840**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one typed fire-category taxonomy contract.
+
+
+
+## SP48-5.16 semantic Gate 2.0 — 2026-10-08
+
+This validated bounded slice hardens exactly one existing generic semantic NTD contract:
+`SP48-5.16-SUPPLY-TRANSPORT-TEP` (SP 48.13330.2019, clause 5.16).
+No new atomic requirements or deterministic compliance verdicts were added.
+
+### Machine-enforced evidence gate
+
+Semantic Proof Gate 2.0 now requires three separate proof groups:
+
+1. `SP48_DELIVERY_ALTERNATIVES` — two distinguishable alternatives for the
+   delivery of main construction materials, within one addressable fragment;
+2. `SP48_COMPARABLE_TEP_VALUES` — two numeric comparable indicators (cost,
+   expenditure, distance or time), within an addressable fragment;
+3. `SP48_SELECTION_JUSTIFIED_BY_COMPARISON` — explicit relation between the
+   chosen delivery scheme/source and the results of comparison.
+
+All selected addressable evidence must belong to the POS section
+(`source_scope = ALL_SELECTED_EVIDENCE`). Every group uses
+`scope = SAME_EVIDENCE`; mandatory groups may be supported by different
+POS fragments. A description of delivery options alone, indicators alone,
+or an unsubstantiated adopted scheme cannot lead to `VERIFIED_OK`.
+If a required group is missing, the result stays `REVIEW_QUESTION`,
+never `PROJECT_FINDING`.
+
+This proof gate checks the minimum existence of addressable comparison and
+selection links. Whether a transport scheme is technically and economically
+justified remains for independent Judge/Critic judgement. Comparative tables
+with unusual layouts may remain review-only; proof is not weakened to improve
+nominal coverage.
+
+### Coverage
+
+- Atomic requirements: **104** (unchanged).
+- Verified clauses: **75** (unchanged).
+- Executable contracts: **73** (unchanged).
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+- Hardened executable contracts: **64 -> 65**.
+- Hardened Verified Coverage: **85.3% -> 86.7%**.
+- Hardened Total Coverage: **61.5% -> 62.5%**.
+- Generic semantic executable contracts: **9 -> 8**.
+
+Existing blocked contracts remain unchanged:
+`PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Regression validation
+
+Four new focused regressions assert:
+
+1. options without numeric comparable indicators cannot pass;
+2. costs and options without an explicitly comparison-justified choice cannot pass;
+3. a complete two-fragment POS proof passes the Gate and may be judged by Judge/Critic;
+4. otherwise complete evidence sourced outside POS cannot pass.
+
+Validated source commit:
+`433dda46c87c96f200556a757501c9ff16f1833a`.
+
+Validation-only draft PR #56 was closed without merge.
+
+CI at source commit:
+
+- Core20 quality gates #1200: **SUCCESS**, 346 Core20 tests passed,
+  17 results-integrity tests passed.
+- Core25 Quality Leap gates #842: **SUCCESS**; Core25 tests: 160 passed;
+  Core20 regression: 346 passed; baseline-full-diagnostic: SUCCESS;
+  alpha1 release gate: SUCCESS; legacy suite checked against baseline
+  allowlist; Core25 compile: SUCCESS.
+- Legacy full diagnostic has pre-existing failures (32), recognized against
+  the stable baseline; this is not a claim that the full suite is all green.
+
+### Next work
+
+Continue from this green source point and hardened 65/73 baseline.
+Choose only one of the **8** remaining generic semantic contracts per slice.
+Preserve strict fail-closed routing, positive/negative regression cases,
+CI validation, and GitHub checkpointing. No PR merge to main without
+a separate explicit decision.

@@ -7125,3 +7125,114 @@ Core25 Quality Leap gates, run **804**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one AUPT semantic contract.
+
+
+## Hardened semantic proof — 123-FZ article 30 with regex Gate 2.0 — 2026-10-08
+
+This bounded stage safely hardens the existing triggered semantic requirement:
+`FZ123-30-1-FIRE-RESISTANCE-TAXONOMY`.
+
+The earlier deterministic-taxonomy experiment remains rejected.
+No deterministic fast path was introduced.
+
+### New Gate 2.0 primitive
+
+Semantic Proof Gate 2.0 now supports an optional `regex_any_of` matcher in
+required groups and source scopes.
+
+The primitive is intentionally fail-closed:
+- at least one configured regex must match;
+- invalid regex patterns are ignored as non-matches;
+- if all configured regex patterns are invalid or non-matching, the semantic gate
+  blocks promotion rather than raising an exception or allowing evidence through;
+- existing `any_of`, `all_of` and `all_of_groups` semantics are unchanged.
+
+This primitive was added specifically because single-character Roman taxonomy
+values `I–V` are unsafe with ordinary substring matching.
+
+### Article 30 contract
+
+The article-30 semantic contract now includes the Gate 2.0 group:
+`FIRE_RESISTANCE_CLASS_DECLARATION`.
+
+A selected addressable evidence fragment passes the machine guard only when it
+contains a syntactically linked fire-resistance declaration using one of the statutory
+Roman values `I`, `II`, `III`, `IV` or `V`.
+
+Accepted high-precision shapes include:
+- fire-resistance wording followed by a bounded descriptor sequence, an explicit
+  separator and the Roman value, e.g. `Степень огнестойкости проектируемого здания — II`;
+- the Roman value immediately preceding a short fire-resistance phrase.
+
+A nearby unrelated Roman numeral is not enough. For example, a fragment that says
+that the fire-resistance degree is defined and later mentions an unrelated
+`тип II` remains blocked by Gate 2.0.
+
+The regex guard only proves that the selected evidence explicitly declares the
+regulated property and taxonomy value. Final promotion still requires the independent
+semantic Judge/Critic path.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **58 -> 59**;
+- Hardened Verified Coverage: **77.3% -> 78.7%**;
+- Hardened Total Coverage: **55.8% -> 56.7%**;
+- generic semantic executable contracts: **15 -> 14**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+Article 32 remains generic semantic at this checkpoint because its proof requires
+purpose/class consistency, not merely a safe lexical taxonomy guard.
+
+### Regression proof
+
+Four new semantic-gate regressions protect this stage:
+1. a valid bounded regex predicate can pass Gate 2.0;
+2. an invalid regex fails closed and keeps the requirement at review;
+3. article 30 rejects a nearby unrelated Roman numeral;
+4. article 30 accepts an explicit declaration
+   `Степень огнестойкости проектируемого здания — II` for semantic judgement.
+
+### Commits
+
+- `f6a4a4b9b11509543b2a1156267149d6d82827e8` — add fail-closed
+  `regex_any_of` support to Semantic Proof Gate 2.0;
+- `8ae237c05d634fe5f4261b1a99dd9ea2860f744f` — cover valid and invalid
+  regex-gate behaviour;
+- `ddf6f582e53501cc0a65d80d5deb39e3a988c2a7` — harden the article-30
+  semantic contract with bounded Roman-value regexes;
+- `eb0fcc6714675f7d82b072858486ab1ec5708c02` — lock updated hardened
+  coverage metrics;
+- `010b8c1abe3fa04c526654e40a0c2194b3702c0d` — add article-30
+  false-positive and positive Gate 2.0 regressions.
+
+### Validation
+
+Temporary draft PR #50 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1169**:
+- Core20 regression: **332 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **811**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one taxonomy contract plus the reusable
+fail-closed regex Gate 2.0 primitive required to make that hardening safe.

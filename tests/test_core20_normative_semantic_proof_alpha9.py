@@ -732,3 +732,78 @@ def test_gate2_article31_taxonomy_allows_explicit_c0_c3_value_for_semantic_judge
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _article104_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article104_requires_explicit_surface_or_volumetric_method():
+    contract=_article104_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-104-1-AUPT-SUPPRESSION-METHOD",
+        "АУПТ должна обеспечивать ликвидацию пожара поверхностным или объемным способом подачи огнетушащего вещества.",
+        [{
+            "evidence_id":"E-PB-104-WITHOUT-METHOD",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":42,
+            "section":"ПБ",
+            "text":"Для защищаемого помещения предусмотрена автоматическая установка пожаротушения.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "поверхностный/объёмный" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article104_allows_explicit_auptr_suppression_method_for_semantic_judgement():
+    contract=_article104_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-104-1-AUPT-SUPPRESSION-METHOD",
+        "АУПТ должна обеспечивать ликвидацию пожара поверхностным или объемным способом подачи огнетушащего вещества.",
+        [{
+            "evidence_id":"E-PB-104-VOLUMETRIC",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":42,
+            "section":"ПБ",
+            "text":"АУПТ обеспечивает тушение пожара объемным способом подачи огнетушащего вещества.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

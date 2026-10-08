@@ -7323,3 +7323,133 @@ Core25 Quality Leap gates, run **816**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one functional-class semantic contract.
+
+
+## Hardened semantic proof — 123-FZ article 61 — 2026-10-08
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-61-3-AUPT-SELECTION-BASIS`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The existing semantic contract now has four machine-enforced required groups:
+
+- `AUPT_SELECTION_SOLUTION` — selected evidence identifies the AUPT solution,
+  extinguishing agent and delivery method;
+- `AUPT_COMBUSTIBLE_BASIS` — selected evidence covers combustible material
+  or fire load;
+- `AUPT_PLANNING_BASIS` — selected evidence covers space-planning decisions;
+- `AUPT_ENVIRONMENT_BASIS` — selected evidence covers environmental parameters.
+
+These groups use collective evidence rather than `SAME_EVIDENCE`.
+The justification may therefore be distributed across multiple addressable project
+fragments/pages. Gate 2.0 only requires that the selected evidence set collectively
+contains the verified clause components.
+
+The machine gate does not decide whether the AUPT selection is engineering-correct.
+Final promotion still requires independent semantic Judge/Critic review.
+
+Missing any required basis keeps the result at `REVIEW_QUESTION`; it does not create
+a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **60 -> 61**;
+- Hardened Verified Coverage: **80.0% -> 81.3%**;
+- Hardened Total Coverage: **57.7% -> 58.7%**;
+- generic semantic executable contracts: **13 -> 12**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+### Regression proof
+
+Two article-61-specific regressions were added:
+
+1. evidence covers the AUPT solution, fire load and space-planning basis but omits
+   environmental parameters; Gate 2.0 blocks promotion even though Judge/Critic
+   both support the requirement;
+2. four separate addressable fragments collectively cover the AUPT solution,
+   fire load, space-planning basis and environmental parameters; Gate 2.0 passes
+   and the requirement remains eligible for semantic `VERIFIED_OK`.
+
+This explicitly confirms that the contract supports distributed justification
+rather than requiring one artificial all-in-one paragraph.
+
+### First validation failure and correction
+
+Temporary draft PR #52 was used only for validation.
+
+First validation head:
+`ae76916b242e27f480eefcb1cb4a1339ec19609b`.
+
+Core20 quality gates, run **1180**:
+- results-integrity: SUCCESS;
+- Core20 regression: **335 passed / 1 failed**;
+- the only failure was
+  `test_gate2_article61_allows_distributed_complete_basis_for_semantic_judgement`.
+
+Core25 Quality Leap gates, run **822**:
+- Core25 tests: SUCCESS;
+- targeted Core20 regression failed on the same single test;
+- alpha1 release gate was skipped after the failed dependency.
+
+Root cause:
+the environmental Gate group contained `параметр окружающей среды` and
+`параметров окружающей среды`, but not the normal project wording
+`параметры окружающей среды`.
+
+This was a narrow morphological false negative, not a failure of collective-evidence
+logic. The contract was not weakened. The accepted exact phrase variants were extended
+to cover nominative/instrumental/genitive forms while retaining the environment + parameter
+semantic anchor.
+
+Correction commit:
+- `ba2da1648308e00eaa2e5a58ba11fe5916009add` — cover normal environment
+  phrase forms in the article-61 Gate.
+
+### Commits
+
+- `56e4977f0ff0c3f082109de460d3dba73068473b` — harden the article-61
+  semantic proof contract;
+- `fc5b3a115c1d6b6bda1345e3dca22cbe1636f466` — lock updated hardened
+  coverage metrics;
+- `ae76916b242e27f480eefcb1cb4a1339ec19609b` — add article-61
+  positive/negative distributed-evidence regressions;
+- `ba2da1648308e00eaa2e5a58ba11fe5916009add` — fix the bounded
+  environmental phrase morphology exposed by validation.
+
+### Final validation
+
+Final Core20 quality gates, run **1182**:
+- Core20 regression: **336 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Final Core25 Quality Leap gates, run **824**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+Validation PR #52 was closed without merge.
+
+This stage is intentionally limited to one AUPT-selection semantic contract.

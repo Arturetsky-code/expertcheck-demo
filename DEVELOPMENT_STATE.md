@@ -8114,3 +8114,121 @@ The next slice must start from the document-only checkpoint immediately
 after this journal entry. Preserve one-contract slices, fail-closed
 regressions, no-merges validation PRs and a branch SHA comparison.
 **Five** generic semantic contracts remain.
+
+
+
+## Hardened semantic proof — SP10-1.4-VPV-EXEMPTION — 2026-10-08
+
+This bounded slice hardens exactly one existing generic NTD semantic
+proof contract: `SP10-1.4-VPV-EXEMPTION`, SP 10.13130.2020
+clause 1.4, Amendment No. 1 effective 2026-09-01.
+
+No new atomic requirements or altered normative verification statuses.
+The existing `execution_mode = SEMANTIC_PROOF` and the
+`VERIFIED_ONLY` conclusion policy remain unchanged.
+
+### Current normative basis
+
+The MChS amendment updates clause 1.4 to list multiple distinct
+circumstances in which VPV is not required in buildings or parts
+of buildings, such as buildings below table 7.1/7.2 thresholds,
+specified functional classes, transformer substations, and
+category Г/Д production/storage buildings under the stipulated
+fire-resistance and volume conditions.
+Clause 1.5 separately specifies exemptions for *rooms* and should
+not be silently substituted for a building-wide 1.4 exemption.
+
+Verified public sources:
+- Official Rostandart SP 10 Amendment No. 1 record:
+  https://protect.gost.ru/sp/changesdetails/2a55b7f6-0322-4573-9aa0-6a2979e7a130
+- MChS Amendment No. 1 text:
+  https://dcvi.tks.ru/document/841342
+
+### Gate 2.0 evidence criteria
+
+Selected addressable evidence is restricted with
+`source_scope = ALL_SELECTED_EVIDENCE` to the expected PD
+sections `ИОС2`, `ПБ`, `АР`, `КР` via document/section metadata.
+
+Three independent `SAME_EVIDENCE` proof groups are mandatory:
+
+1. `SP10_14_EXPLICIT_NO_VPV`: explicit engineering/design
+   decision that VPV is not required or not provided.
+2. `SP10_14_CLAUSE_CITATION`: typed clause 1.4 citation.
+3. `SP10_14_TYPED_EXCEPTION_BASIS`: a specific building type,
+   functional fire class, category with fire-resistance degree,
+   or numerical building parameter compared against the
+   applicable table 7.1 / 7.2 threshold.
+
+Groups may be supported by separate cited PD fragments; each group
+must be present within an individual addressable fragment. A vague
+assertion "does not require VPV under clause 1.4" without a factual
+basis cannot pass the Gate. A bare category Д without fire resistance
+does not satisfy the industrial category/degree pathway.
+
+### Deliberately retained limitations
+
+The Gate only enforces minimally addressable evidence *presence*.
+Passing the Gate is not proof that the cited category/degree applies
+to the same building as the decision, that building volume satisfies
+the amended threshold (in particular III-IV degrees), that the
+selected threshold fits this building/part, or that explicit clause
+1.4 exceptions are inapplicable. These are Judge/Critic obligations.
+A class/type or fire category found somewhere in the project is not
+automatically evidence of a lawful VPV exemption. Under-specified
+cases stay `REVIEW_QUESTION` and never become automatic
+`PROJECT_FINDING`. Unusual layouts may remain review-only.
+
+### Coverage and validation
+
+- Atomic requirements **104** (unchanged).
+- Verified clauses **75** (unchanged).
+- Executable contracts **73** (unchanged).
+- Executable Verified Coverage **97.3%** (unchanged).
+- Executable Total Coverage **70.2%** (unchanged).
+- Hardened executable contracts **68 -> 69**.
+- Hardened Verified Coverage **90.7% -> 92.0%**.
+- Hardened Total Coverage **65.4% -> 66.3%**.
+- Generic semantic contracts **5 -> 4**.
+- Verified non-executable `SET_CONTRACT_HOLD_ONLY` blockers still
+  `PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+Eight focused regressions assert:
+- absence of an explicit no-VPV decision blocks proof;
+- generic no-VPV assertion with clause citation but no typed basis
+  blocks proof;
+- typed basis with no clause 1.4 citation blocks proof;
+- complete evidence from an unrelated POS section blocks proof;
+- category Д without fire-resistance degree blocks proof;
+- explicit transformer-substation exemption enters Judge/Critic;
+- distributed industrial category/degree/volume fragments enter
+  Judge/Critic;
+- a numerical building parameter and below-table comparison
+  enter Judge/Critic.
+
+Source commit:
+`fbb6e220cb00556d2991d16388b770f98a6a2389`.
+
+Temporary validation PR #60 was **closed without merge**.
+
+CI:
+- Core20 quality gates #1213 **SUCCESS**:
+  **372 Core20 tests passed** and **17 integrity passed**.
+- Core25 Quality Leap gates #855 **SUCCESS**,
+  including Core25 **160 passed**, Core20 regression,
+  full baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #277 **SUCCESS**, `NO_CHANGE`.
+- Source Snapshot Artifact #666 **SUCCESS** on source.
+
+The legacy full suite retains known baseline-accepted failures;
+the successful release gate is NOT evidence that legacy full-suite
+diagnostics are all-green.
+
+### Next checkpoint and continuation
+
+Resume from the commit immediately following this journal entry,
+not from the old source SHA. Validate branch/head identity and green
+CI there. There are **4** generic semantic contracts remaining.
+Keep one requirement per slice; keep normative evidence fail-closed,
+run the focused test suite, and never merge validation PRs into
+`main` without an explicit decision.

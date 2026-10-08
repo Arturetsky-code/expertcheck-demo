@@ -2274,3 +2274,177 @@ def test_gate2_sp10_t72_allows_distributed_complete_evidence_for_semantic_judgem
     assert d["state"] == "VERIFIED_OK"
     assert d["semantic_contract_ready"] is True
     assert len(d["selected_evidence"]) == 2
+
+
+
+def _sp4_612_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["SP4-6.1.2-PRODUCTION-FIRE-DISTANCE"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _sp4_612_evidence(text, page=1, document="Раздел ПД №2_ПЗУ.pdf", section="ПЗУ"):
+    return {
+        "evidence_id": f"E-SP4-612-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _sp4_612_decision(evidence):
+    queue = _gate2_queue(
+        "SP4-6.1.2-PRODUCTION-FIRE-DISTANCE",
+        "Противопожарные расстояния для пары зданий производственного "
+        "объекта назначаются по таблице 3 СП 4.13130.2013.",
+        evidence,
+        _sp4_612_semantic_contract(),
+    )
+    result = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return result, result["decisions"]["SP4-6.1.2-PRODUCTION-FIRE-DISTANCE"]
+
+
+def _sp4_612_complete_evidence():
+    return [
+        _sp4_612_evidence(
+            "Противопожарное расстояние между зданием ДСК и складом "
+            "реагентов составляет 12 м согласно таблице 3 СП 4.13130.2013.",
+            page=17,
+        ),
+        _sp4_612_evidence(
+            "Здание ДСК: степень огнестойкости III, класс конструктивной "
+            "пожарной опасности С1, категория здания В. "
+            "Склад реагентов: степень огнестойкости II, класс конструктивной "
+            "пожарной опасности С0, категория здания А.",
+            page=42, document="Раздел ПД №3_АР.pdf", section="АР",
+        ),
+    ]
+
+
+def test_gate2_sp4_612_rejects_table_reference_without_building_pair():
+    proof, d = _sp4_612_decision([
+        _sp4_612_evidence(
+            "Противопожарные расстояния назначаются по таблице 3 "
+            "СП 4.13130.2013. Степень огнестойкости III; "
+            "класс конструктивной пожарной опасности С1; категория здания В."
+        ),
+    ])
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Привязанное к паре" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp4_612_rejects_unrelated_12_meter_dimension():
+    rows = _sp4_612_complete_evidence()
+    rows[0]["text"] = (
+        "Согласно таблице 3 СП 4.13130.2013 расстояния проверены. "
+        "Ширина проезда между зданиями — 12 м."
+    )
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_sp4_612_rejects_missing_table_reference():
+    rows = _sp4_612_complete_evidence()
+    rows[0]["text"] = rows[0]["text"].replace(
+        "согласно таблице 3 СП 4.13130.2013", "по проекту"
+    )
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "таблицу 3" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp4_612_rejects_room_category_instead_of_building():
+    rows = _sp4_612_complete_evidence()
+    rows[1]["text"] = rows[1]["text"].replace(
+        "категория здания В", "категория помещения В1"
+    ).replace("категория здания А", "категория помещения А")
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Категория здания" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp4_612_rejects_untyped_constructive_fire_class():
+    rows = _sp4_612_complete_evidence()
+    rows[1]["text"] = rows[1]["text"].replace(
+        "класс конструктивной пожарной опасности С1",
+        "класс конструктивной пожарной опасности установлен",
+    ).replace(
+        "класс конструктивной пожарной опасности С0",
+        "класс конструктивной пожарной опасности установлен",
+    )
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "Конкретный класс" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp4_612_rejects_unspecified_fire_resistance_degree():
+    rows = _sp4_612_complete_evidence()
+    rows[1]["text"] = rows[1]["text"].replace(
+        "степень огнестойкости III", "степень огнестойкости определена"
+    ).replace(
+        "степень огнестойкости II", "степень огнестойкости определена"
+    )
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "степень огнестойкости" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp4_612_rejects_pos_or_journal_as_source():
+    rows = _sp4_612_complete_evidence()
+    rows[0]["document"] = "Раздел ПД №6_ПОС.pdf"
+    rows[0]["section"] = "ПОС"
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert d["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_sp4_612_allows_numeric_pair_with_addressed_characteristics():
+    proof, d = _sp4_612_decision(_sp4_612_complete_evidence())
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True
+    assert len(d["selected_evidence"]) == 2
+
+
+def test_gate2_sp4_612_allows_exception_phrase_for_independent_expert_review():
+    rows = _sp4_612_complete_evidence()
+    rows[0]["text"] = (
+        "Противопожарное расстояние между зданием КТП и складом "
+        "инертных материалов не нормируется по таблице 3 СП 4.13130.2013."
+    )
+    rows[1]["text"] = (
+        "Здание КТП: степень огнестойкости II, класс конструктивной "
+        "пожарной опасности С0, категория здания Г. "
+        "Склад инертных материалов: степень огнестойкости II, "
+        "класс конструктивной пожарной опасности С0, категория здания Д."
+    )
+    proof, d = _sp4_612_decision(rows)
+    assert proof["verified_ok"] == 1
+    assert proof["contract_gate_blocked"] == 0
+    assert d["semantic_contract_ready"] is True
+    assert d["state"] == "VERIFIED_OK"

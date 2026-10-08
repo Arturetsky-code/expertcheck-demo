@@ -8232,3 +8232,120 @@ CI there. There are **4** generic semantic contracts remaining.
 Keep one requirement per slice; keep normative evidence fail-closed,
 run the focused test suite, and never merge validation PRs into
 `main` without an explicit decision.
+
+
+## SP10-T7.2 semantic Gate 2.0 — 2026-10-08
+
+This single bounded validated slice hardens the existing semantic NTD contract
+`SP10-T7.2-PRODUCTION-FLOW` (SP 10.13130.2020, table 7.2,
+Amendment No. 1, effective 2026-09-01).
+No atomic requirements, clause verification statuses, execution mode or
+conclusion policies were changed. The meaning of `VERIFIED_OK` still
+depends on independent Judge/Critic semantic evaluation.
+
+### Normative context
+
+Amendment No. 1 revises table 7.2 of SP 10.13130.2020. For
+production/warehouse buildings up to 50 m high the applicable table
+row uses fire-resistance degree, building fire-hazard category, class
+of structural fire hazard, and building volume up to/over 150 thousand m3.
+The row gives simultaneous medium-flow hydrant (ПК-с) count and the
+minimum flow of the most unfavorable (dictating) hydrant. The symbol
+"-" can designate non-applicability; clause 1.4 and clause 1.5
+exemptions require independent attention. Buildings over 50 m require
+review of clause 7.13.
+
+Primary/current sources used for this proof-slice interpretation:
+- https://protect.gost.ru/sp/changesdetails/2a55b7f6-0322-4573-9aa0-6a2979e7a130
+- https://bazanpa.ru/mchs-rossii-prikaz-ot18052026-h7246350/
+
+### Declarative Gate 2.0
+
+Set `source_scope = ALL_SELECTED_EVIDENCE` for profile sections
+`ИОС2`, `ПБ`, `АР`, `КР`, using the document/section metadata.
+
+Nine compulsory addressable `SAME_EVIDENCE` groups:
+
+1. `SP10_T72_BUILDING_TYPE` — explicit production or warehouse building;
+2. `SP10_T72_FIRE_RESISTANCE` — typed fire-resistance degree;
+3. `SP10_T72_BUILDING_CATEGORY` — fire category specifically of the
+   building; a room category alone cannot substitute;
+4. `SP10_T72_STRUCTURAL_HAZARD_CLASS` — explicit C0-C3
+   structural fire-hazard class;
+5. `SP10_T72_BUILDING_VOLUME` — numeric construction volume with m3;
+6. `SP10_T72_BUILDING_HEIGHT` — numeric building height with metres;
+7. `SP10_T72_TABLE_CITATION` — citation to table 7.2;
+8. `SP10_T72_SIMULTANEOUS_HYDRANTS` — typed numerical count of
+   simultaneously used hydrants;
+9. `SP10_T72_DICTATING_FLOW` — numeric minimum dictated hydrant
+   flow with l/s units.
+
+Groups may be supported by separate addressable fragments in different
+profile PD sections. An untyped "2 x 2.5", a table citation, or generic
+statement of compliance without typed parameters cannot pass the gate.
+
+### Safety and proof limitations
+
+This is a strict minimum-evidence presence guard only. It does
+NOT calculate normative hydrant flow; it does NOT check numerical
+volume threshold, fire-class compatibility, system coverage, whether
+all values belong to one physical building, or whether a building
+over 50 m should instead apply clause 7.13. These remain
+Judge/Critic obligations; the SP10-1.4 exception proof is separate.
+
+The gate is deliberately conservative. Tabular layouts or alternative
+terminology may remain `REVIEW_QUESTION`. Failure to prove an
+attribute does not lead to an automatic `PROJECT_FINDING`.
+A green gate is not, by itself, engineering verification.
+
+### Metrics
+
+- Atomic requirements: **104** (unchanged).
+- Verified clauses: **75** (unchanged).
+- Executable contracts: **73** (unchanged).
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+- Hardened executable contracts: **69 -> 70**.
+- Hardened Verified Coverage: **92.0% -> 93.3%**.
+- Hardened Total Coverage: **66.3% -> 67.3%**.
+- Generic semantic executable contracts: **4 -> 3**.
+
+The verified non-executable `SET_CONTRACT_HOLD_ONLY` blockers remain:
+`PP87-CLAUSE-15-IOS` and `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Regression verification and immutable source
+
+Nine added regressions block:
+- table citation with no concrete engineering values;
+- room-level category substituted for building category;
+- missing constructive fire-hazard class;
+- building volume without measurement units;
+- missing numeric building height;
+- untyped "2 x 2.5" rather than named simultaneous ПК-с count;
+- dictated flow without l/s units;
+- positive-looking evidence selected from an unrelated POS document.
+
+One positive regression allows two complete addressable fragments from
+profile documents (ПБ plus ИОС2) to proceed to independent Judge/Critic.
+
+Source commit:
+`173dd8afa7119821ed483190d04e8221cad5a8c5`.
+
+Validation-only draft PR #61 was **closed without merge**.
+
+- Core20 quality gates #1217: **SUCCESS**, **381 passed**;
+  results integrity **17 passed**.
+- Core25 Quality Leap gates #859: **SUCCESS**, Core25 tests,
+  Core20 regression, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #278: **SUCCESS**, classification `NO_CHANGE`.
+- Source Snapshot Artifact #669: **SUCCESS** on source commit.
+
+The legacy full diagnostic still has pre-existing baseline-accepted
+failures. Do not represent the entire legacy test suite as all-green.
+
+### Next stage
+
+Resume from the journal checkpoint immediately after this entry.
+Only **3** generic semantic contracts remain. Repeat one bounded slice,
+source diff, positive/negative regressions, green CI and documentation;
+never merge validation PRs to `main` without explicit approval.

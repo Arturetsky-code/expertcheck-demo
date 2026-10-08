@@ -7236,3 +7236,90 @@ Core25 Quality Leap gates, run **811**:
 
 This stage is intentionally limited to one taxonomy contract plus the reusable
 fail-closed regex Gate 2.0 primitive required to make that hardening safe.
+
+
+## Hardened semantic proof — 123-FZ article 32 — 2026-10-08
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The semantic contract now includes the machine-enforced Gate 2.0 group:
+`FUNCTIONAL_FIRE_CLASS_WITH_PURPOSE`.
+
+One selected addressable evidence fragment must contain both:
+- an explicit bounded declaration of the functional fire-hazard class `Ф1–Ф5`
+  (including a subclass form such as `Ф5.1`);
+- explicit object-purpose wording such as `назначение` / `предназначено`.
+
+The machine gate does not decide whether the declared class is correct for the stated
+purpose. Purpose/class consistency remains an independent semantic Judge/Critic task.
+
+Therefore:
+- a bare `Класс функциональной пожарной опасности: Ф5.1` does not close the gate;
+- `Назначение объекта: производственное здание. Класс функциональной пожарной
+  опасности: Ф5.1.` is eligible for semantic judgement;
+- failed/missing proof remains `REVIEW_QUESTION`, not `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **59 -> 60**;
+- Hardened Verified Coverage: **78.7% -> 80.0%**;
+- Hardened Total Coverage: **56.7% -> 57.7%**;
+- generic semantic executable contracts: **14 -> 13**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+### Regression proof
+
+Two article-32-specific regressions were added:
+1. an explicit `Ф5.1` class without object-purpose evidence is blocked by Gate 2.0
+   even when Judge and Critic both return SUPPORTS;
+2. one addressable fragment with explicit object purpose and `Ф5.1` class passes
+   the machine gate and remains eligible for semantic `VERIFIED_OK`.
+
+### Commits
+
+- `56ce57062109735752059f68f324018da1d18930` — harden the article-32
+  semantic proof contract;
+- `4bf3507c18ccca3c2f0d5854dfd53ffddce62188` — lock updated hardened
+  coverage metrics and retain article 57 as the generic-semantic regression example;
+- `a7859f1cbb020dfb30be8c87d7c82f62a99eca95` — add article-32 Gate 2.0
+  positive/negative regression tests.
+
+### Validation
+
+Temporary draft PR #51 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1174**:
+- Core20 regression: **334 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **816**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one functional-class semantic contract.

@@ -966,3 +966,78 @@ def test_gate2_article30_accepts_explicit_fire_resistance_degree_with_roman_valu
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _article32_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article32_requires_purpose_with_functional_class():
+    contract=_article32_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY",
+        "Класс функциональной пожарной опасности должен соответствовать назначению объекта.",
+        [{
+            "evidence_id":"E-PB-32-WITHOUT-PURPOSE",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":22,
+            "section":"ПБ",
+            "text":"Класс функциональной пожарной опасности: Ф5.1.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "назначение объекта" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article32_allows_explicit_purpose_and_functional_class_for_semantic_judgement():
+    contract=_article32_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY",
+        "Класс функциональной пожарной опасности должен соответствовать назначению объекта.",
+        [{
+            "evidence_id":"E-PB-32-F51",
+            "document":"Раздел ПД №9_ПБ.pdf",
+            "page":22,
+            "section":"ПБ",
+            "text":"Назначение объекта: производственное здание. Класс функциональной пожарной опасности: Ф5.1.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-32-1-FUNCTIONAL-FIRE-HAZARD-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 61
-    assert summary["hardened_verified_coverage_pct"] == 81.3
-    assert summary["hardened_total_coverage_pct"] == 58.7
+    assert summary["hardened_executable_contracts"] == 62
+    assert summary["hardened_verified_coverage_pct"] == 82.7
+    assert summary["hardened_total_coverage_pct"] == 59.6
 
-    assert summary["generic_semantic_executable_contracts"] == 12
+    assert summary["generic_semantic_executable_contracts"] == 11
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -302,6 +302,18 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
         "AUPT_COMBUSTIBLE_BASIS",
         "AUPT_PLANNING_BASIS",
         "AUPT_ENVIRONMENT_BASIS",
+    }
+
+    article58=contracts["FZ123-58-2-FIRE-RESISTANCE-LIMITS"]
+    article58_semantic=article58["evidence_contract"]["semantic_proof_contract"]
+    assert article58["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article58["executable_contract_ready"] is True
+    assert article58["hardened_proof_ready"] is True
+    assert article58["execution_tier"] == "HARDENED"
+    assert article58_semantic["version"] == "2.0"
+    assert {group["id"] for group in article58_semantic["required_groups"]} == {
+        "FIRE_RESISTANCE_DEGREE_BASIS",
+        "CONSTRUCTION_FIRE_RESISTANCE_LIMIT",
     }
 
     article104=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]

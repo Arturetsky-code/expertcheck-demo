@@ -7829,3 +7829,90 @@ Choose only one of the **8** remaining generic semantic contracts per slice.
 Preserve strict fail-closed routing, positive/negative regression cases,
 CI validation, and GitHub checkpointing. No PR merge to main without
 a separate explicit decision.
+
+
+## Hardened semantic proof — GOST27751-10.1 — 2026-10-08
+
+This bounded validated change hardens one existing generic NTD semantic
+contract: `GOST27751-10.1-CLASS-LEVEL-GAMMA`, GOST 27751-2014 clause 10.1
+(as amended by Amendment No. 1), table 2.
+
+No new NTD requirements were added. The requirement remains
+`proof_type = SEMANTIC_REQUIREMENT`, `execution_mode = SEMANTIC_PROOF`;
+no deterministic normative verdict is introduced.
+
+### Semantic Proof Gate 2.0 hardening
+
+Three machine-enforced required groups use `scope = SAME_EVIDENCE`:
+
+1. `GOST27751_OBJECT_CLASS_VALUE`: an addressable fragment explicitly
+   binds a class declaration to `КС-1`, `КС-2`, or `КС-3`.
+   A loose standalone `КС-2` token does not suffice.
+2. `GOST27751_RESPONSIBILITY_LEVEL_VALUE`: an addressable fragment
+   explicitly binds `уровень ответственности` to `повышенный`,
+   `нормальный`, or `пониженный`. A generic reference to the
+   level without an assigned value does not suffice.
+3. `GOST27751_RELIABILITY_GAMMA_VALUE`: an addressable fragment
+   explicitly binds a reliability-by-responsibility coefficient, or
+   typed `γn` notation, to a numeric value. An unrelated number
+   elsewhere cannot satisfy this requirement.
+
+The required groups may be supported by different addressable project
+fragments. The gate does NOT prove common-object identity among fragments,
+nor calculate or enforce normative class/gamma thresholds, special minimums,
+exceptional cases, or engineering classification of the object. These remain
+mandatory for independent semantic Judge/Critic assessment. Incomplete
+evidence remains `REVIEW_QUESTION`; it does not produce
+`PROJECT_FINDING` or an automatic deterministic proof.
+
+The current gate intentionally prefers a false negative over unjustified
+promotion on a stray class marker, untyped number, or unspecified level.
+
+### Coverage after this slice
+
+- Atomic requirements: **104** (unchanged).
+- Verified: **75** (unchanged).
+- Executable: **73** (unchanged).
+- Executable Verified Coverage: **97.3%** (unchanged).
+- Executable Total Coverage: **70.2%** (unchanged).
+- Hardened: **65 -> 66**.
+- Hardened Verified Coverage: **86.7% -> 88.0%**.
+- Hardened Total Coverage: **62.5% -> 63.5%**.
+- Generic semantic: **8 -> 7**.
+
+The two verified/nonexecutable `SET_CONTRACT_HOLD_ONLY` blockers remain:
+`PP87-CLAUSE-15-IOS`, `SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Tests and source validation
+
+Five new targeted regressions:
+- reject a standalone KS token without a class declaration;
+- reject an untyped responsibility level;
+- reject an unrelated numeric value without coefficient binding;
+- accept class, level and coefficient over two addressable fragments for
+  later semantic judgement;
+- accept a concrete coefficient declared with `γn` notation.
+
+Validated source commit:
+`fa0caa0e0a1b2b2181f17c006a4147602eec5f08`.
+
+Temporary draft PR #57 used for validation, **closed without merge**.
+
+CI:
+- Core20 quality gates #1204 — **SUCCESS**, 351 passed;
+  results integrity **17/17**.
+- Core25 Quality Leap gates #846 — **SUCCESS**:
+  Core25 tests (160 passed), Core20 regression, baseline-full-diagnostic,
+  alpha1 release gate with legacy baseline allowlist, and compile.
+- Test78 deterministic A/B #274 — **SUCCESS**, classification `NO_CHANGE`.
+
+The legacy full suite's known baseline diagnostic failures are not claimed
+as clean; the release gate accepts them relative to the stable baseline.
+
+### Checkpoint procedure
+
+The branch is the durable source of truth. The next stage must begin from
+the validated checkpoint recorded below, with a branch/head comparison.
+Only seven generic semantic contracts remain. Proceed one requirement at a
+time; do not merge temporary validation PRs to `main` without explicit
+approval.

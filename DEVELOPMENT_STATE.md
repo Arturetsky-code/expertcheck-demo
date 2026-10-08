@@ -8349,3 +8349,126 @@ Resume from the journal checkpoint immediately after this entry.
 Only **3** generic semantic contracts remain. Repeat one bounded slice,
 source diff, positive/negative regressions, green CI and documentation;
 never merge validation PRs to `main` without explicit approval.
+
+
+
+## Hardened semantic proof — SP4-6.1.2 — 2026-10-08
+
+This bounded, CI-validated slice hardens exactly one existing generic
+semantic NTD contract: `SP4-6.1.2-PRODUCTION-FIRE-DISTANCE` of
+SP 4.13130.2013 clause 6.1.2 / table 3. There are no new atomic
+requirements, no changed normative-source verification statuses, and
+no deterministic engineering verdicts.
+
+### Source interpretation and exception awareness
+
+Clause 6.1.2 uses fire-resistance degree, structural fire-hazard class
+and fire/explosion category to define separation between buildings on
+the site of a production facility. Table 3 provides numeric distances
+and also a `не нормируется` case for appropriate category/degree/class
+combinations. Other possible exemptions in clause 6.1.3 and specified
+reductions under 6.1.5 need independent engineering interpretation.
+
+Reference sources reviewed at the time of the slice:
+- Official registry: https://protect.gost.ru/sp/details/fe915813-95ec-43a6-ab1c-91027e06bf1c
+- Table 3 in current text: https://www.consultant.ru/document/cons_doc_LAW_148575/2991cc240088bbcbccba1f40dcca1d1b105ee746/
+- 2026 explanatory letter of VNIIPO:
+  https://base.garant.ru/414519877/
+
+### Gate 2.0 requirements
+
+`source_scope` uses `mode = ALL_SELECTED_EVIDENCE` on
+`document` and `section` metadata to require named profile
+sections `ПЗУ`, `АР`, or `КР`, excluding unrelated `ПОС`
+and generic notes/journals.
+
+Five required `SAME_EVIDENCE` groups:
+
+1. `SP4_612_PAIR_DISTANCE`: a stated separation between a
+   named pair of buildings or structures, with explicit numeric
+   metre value **or** express declaration `не нормируется`.
+2. `SP4_612_TABLE3_CITATION`: addressable normative citation
+   to table 3 of SP 4.13130.2013 or clause 6.1.2.
+3. `SP4_612_FIRE_RESISTANCE`: typed fire-resistance degree.
+4. `SP4_612_STRUCTURAL_FIRE_CLASS`: typed structural
+   fire-hazard class C0-C3.
+5. `SP4_612_BUILDING_CATEGORY`: typed fire/explosion category
+   A-D of a **building**, not only an isolated room category.
+
+The groups may be located in different addressable excerpts from
+different profile documents. This is evidence eligibility only,
+not a compliance calculation.
+
+### Scope / known limitations
+
+The Gate cannot establish that all matched characteristics refer to
+**both buildings of the same pair**, that the design distance is
+measured in the clear with the protruding-structure rule, or that the
+selected table cell is correct. The adequacy of `не нормируется`,
+other clause 6.1.3 special exemptions, and a claimed reduction under
+6.1.5 must be assessed by independent Judge/Critic. A positive Gate
+alone does **not** mean the pair of objects satisfies the standard.
+
+The conservative regex representation can leave semantically sound
+graphic/table-based cases or unusual naming conventions in
+`REVIEW_QUESTION`. A missing component does not automatically
+produce `PROJECT_FINDING`; it cannot itself show a deviation.
+
+### Metrics after source change
+
+- Atomic requirements **104** (unchanged).
+- Verified clauses **75** (unchanged).
+- Executable contracts **73** (unchanged).
+- Executable Verified Coverage **97.3%** (unchanged).
+- Executable Total Coverage **70.2%** (unchanged).
+- Hardened executable contracts **70 -> 71**.
+- Hardened Verified Coverage **93.3% -> 94.7%**.
+- Hardened Total Coverage **67.3% -> 68.3%**.
+- Generic semantic contracts **3 -> 2**.
+
+Verified/non-executable hold-only requirements unchanged:
+`PP87-CLAUSE-15-IOS` and
+`SP52-7.6.3-EVACUATION-LIGHTING`.
+
+### Tests, release and source trace
+
+Nine new regressions:
+- reject table citation with no explicitly described building pair;
+- reject an unrelated `12 м` dimension as pair separation;
+- reject a declared distance without table/standard citation;
+- reject substitution of room category for building category;
+- reject an untyped constructive fire-hazard class;
+- reject an unspecified fire-resistance degree;
+- reject evidence from an unrelated POS source;
+- accept a declared numeric separation plus supporting AR
+  classifications for later Judge/Critic;
+- accept a declared `не нормируется` pathway with typed building
+  characteristics for later Judge/Critic without automatically
+  accepting the purported exception.
+
+Source commit:
+`eff28f09b32107bf69cd729d24eb53b7e83136ce`.
+
+Draft validation-only PR #62 was **closed without merge**.
+
+- Core20 quality gates #1220: **SUCCESS**, **390 passed**;
+  results integrity **17 passed**.
+- Core25 Quality Leap gates #862: **SUCCESS**, core25, core20
+  regression, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #279: **SUCCESS**, `NO_CHANGE`.
+- Source Snapshot Artifact #671: **SUCCESS** on validated source.
+
+The existing baseline-accepted failures of the full legacy
+diagnostic remain. Green release gates do NOT mean all legacy
+tests are failure-free.
+
+### Next checkpoint protocol
+
+The commit immediately after this journal entry becomes the
+green checkpoint only when CI for that exact SHA is successful
+and the branch/head comparison reports identical (ahead 0 /
+behind 0). **Two** generic semantic contracts remain:
+`FZ123-78-1-FIRE-CHARACTERISTICS` and
+`GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES`.
+Proceed with one new contract per slice and do not merge
+validation PRs into `main`.

@@ -1473,3 +1473,119 @@ def test_gate2_sp12_accepts_room_category_v1_for_semantic_judgement():
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _sp48_516_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["SP48-5.16-SUPPLY-TRANSPORT-TEP"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _sp48_516_evidence(text, page):
+    return {
+        "evidence_id": f"E-POS-SP48-{page}",
+        "document": "Раздел ПД №6_ПОС.pdf",
+        "page": page,
+        "section": "ПОС",
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _sp48_516_decision(evidence):
+    queue = _gate2_queue(
+        "SP48-5.16-SUPPLY-TRANSPORT-TEP",
+        "Транспортная схема доставки основных строительных материалов должна "
+        "быть обоснована сравнением технико-экономических показателей вариантов.",
+        evidence,
+        _sp48_516_semantic_contract(),
+    )
+    semantic = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return semantic, semantic["decisions"]["SP48-5.16-SUPPLY-TRANSPORT-TEP"]
+
+
+def test_gate2_sp48_516_blocks_delivery_options_without_comparable_numeric_tep():
+    semantic, decision = _sp48_516_decision([
+        _sp48_516_evidence(
+            "Сравнение вариантов доставки строительных материалов: "
+            "вариант 1 — карьер Северный; вариант 2 — карьер Южный.", 35,
+        ),
+        _sp48_516_evidence(
+            "По результатам сравнения вариантов поставки основных строительных "
+            "материалов принята транспортная схема доставки с карьера Северный.", 36,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "технико-экономических" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp48_516_blocks_unjustified_selection_despite_cost_comparison():
+    semantic, decision = _sp48_516_decision([
+        _sp48_516_evidence(
+            "Сравнение стоимости вариантов доставки щебня: "
+            "вариант 1 — 1300 руб/т, вариант 2 — 1700 руб/т.", 35,
+        ),
+        _sp48_516_evidence(
+            "Принята транспортная схема доставки щебня из карьера Северный.", 36,
+        ),
+    ])
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert "результатом сравнения" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp48_516_allows_addressable_comparison_and_justified_selection():
+    semantic, decision = _sp48_516_decision([
+        _sp48_516_evidence(
+            "Сравнение стоимости вариантов доставки строительных материалов: "
+            "вариант 1 — карьер Северный, стоимость 1300 руб/т; "
+            "вариант 2 — карьер Южный, стоимость 1700 руб/т.", 35,
+        ),
+        _sp48_516_evidence(
+            "По результатам сравнения вариантов поставки основных строительных "
+            "материалов принята транспортная схема доставки с карьера Северный.", 36,
+        ),
+    ])
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+    assert len(decision["selected_evidence"]) == 2
+
+
+def test_gate2_sp48_516_rejects_evidence_not_owned_by_pos():
+    evidence = [
+        _sp48_516_evidence(
+            "Сравнение стоимости вариантов доставки щебня: "
+            "вариант 1 — 1300 руб/т, вариант 2 — 1700 руб/т.", 35,
+        ),
+        _sp48_516_evidence(
+            "По результатам сравнения вариантов поставки принята схема "
+            "доставки щебня из карьера Северный.", 36,
+        ),
+    ]
+    for row in evidence:
+        row["document"] = "Раздел ПД №2_ПЗУ.pdf"
+        row["section"] = "ПЗУ"
+    semantic, decision = _sp48_516_decision(evidence)
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert decision["semantic_contract_source_scope_satisfied"] is False

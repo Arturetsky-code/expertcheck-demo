@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 64
-    assert summary["hardened_verified_coverage_pct"] == 85.3
-    assert summary["hardened_total_coverage_pct"] == 61.5
+    assert summary["hardened_executable_contracts"] == 65
+    assert summary["hardened_verified_coverage_pct"] == 86.7
+    assert summary["hardened_total_coverage_pct"] == 62.5
 
-    assert summary["generic_semantic_executable_contracts"] == 9
+    assert summary["generic_semantic_executable_contracts"] == 8
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 

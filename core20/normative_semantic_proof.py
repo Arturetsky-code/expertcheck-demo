@@ -204,6 +204,13 @@ def _group_matches_text(group:dict[str,Any],text:str)->bool:
     return True
 
 
+def _document_identity(row:dict[str,Any])->str:
+    # Use the normalized filename, not the page or enclosing folder: two
+    # pages or two copies of one PDF are not two independent PD documents.
+    value=str(row.get("document") or "").replace("\\","/").rsplit("/",1)[-1]
+    return _norm_contract_text(value)
+
+
 def _contract_group_result(
     group:dict[str,Any],
     selected:list[dict[str,Any]],
@@ -215,6 +222,26 @@ def _contract_group_result(
             _group_matches_text(group,_evidence_text(row,fields))
             for row in selected
         )
+    elif scope=="SAME_EVIDENCE_PER_DOCUMENT":
+        by_document:dict[str,list[dict[str,Any]]]={}
+        for row in selected:
+            document=_document_identity(row)
+            if not document:
+                break
+            by_document.setdefault(document,[]).append(row)
+        else:
+            matched=bool(by_document) and all(
+                any(_group_matches_text(group,_evidence_text(row,fields))
+                    for row in document_rows)
+                for document_rows in by_document.values()
+            )
+            return {
+                "id":str(group.get("id") or ""),
+                "label":str(group.get("label") or group.get("id") or "Обязательный смысловой компонент"),
+                "scope":scope,
+                "matched":bool(matched),
+            }
+        matched=False
     else:
         matched=_group_matches_text(
             group,
@@ -280,6 +307,13 @@ def _semantic_contract_gate(
         if str(row.get("evidence_id") or "") in wanted
     ]
     minimum=max(1,int(contract.get("minimum_selected_evidence") or 1))
+    minimum_documents=max(0,int(contract.get("minimum_distinct_documents") or 0))
+    distinct_documents={
+        _document_identity(row) for row in selected if _document_identity(row)
+    }
+    documents_ok=(
+        not minimum_documents or len(distinct_documents)>=minimum_documents
+    )
     source_result=_source_scope_result(dict(contract.get("source_scope") or {}),selected)
     group_results=[
         _contract_group_result(dict(group),selected)
@@ -294,6 +328,7 @@ def _semantic_contract_gate(
     count_ok=len(selected)>=minimum
     ready=bool(
         count_ok
+        and documents_ok
         and source_result.get("matched")
         and not missing
     )
@@ -301,6 +336,11 @@ def _semantic_contract_gate(
     if not count_ok:
         reasons.append(
             f"выбрано доказательств {len(selected)}, требуется не менее {minimum}"
+        )
+    if not documents_ok:
+        reasons.append(
+            f"различных документов {len(distinct_documents)}, "
+            f"требуется не менее {minimum_documents}"
         )
     if not source_result.get("matched"):
         reasons.append(
@@ -315,6 +355,9 @@ def _semantic_contract_gate(
         "ready":ready,
         "selected_evidence_count":len(selected),
         "minimum_selected_evidence":minimum,
+        "minimum_distinct_documents":minimum_documents,
+        "selected_distinct_documents":len(distinct_documents),
+        "distinct_documents_satisfied":bool(documents_ok),
         "source_scope_satisfied":bool(source_result.get("matched")),
         "source_scope":source_result,
         "missing_groups":missing,

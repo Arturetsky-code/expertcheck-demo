@@ -2604,3 +2604,183 @@ def test_gate2_fz123_78_allows_functional_class_and_material_flammability():
     assert proof["contract_gate_blocked"] == 0
     assert d["state"] == "VERIFIED_OK"
     assert d["semantic_contract_ready"] is True
+
+
+
+def _gost21101_741_semantic_contract():
+    contracts = {
+        row["requirement_id"]: row for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def _gost21101_741_evidence(text, page=1, document="Раздел ПД №1_ПЗ.pdf", section="ПЗ"):
+    return {
+        "evidence_id": f"E-GOST21101-741-{page}",
+        "document": document,
+        "page": page,
+        "section": section,
+        "text": text,
+        "retrieval_keyword_score": 100,
+        "retrieval_keyword_coverage": 1.0,
+    }
+
+
+def _gost21101_741_decision(evidence):
+    queue = _gate2_queue(
+        "GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES",
+        "Изменения документов разделов ПД ведутся самостоятельно "
+        "по каждому отдельному документу согласно ГОСТ Р 21.101-2026.",
+        evidence,
+        _gost21101_741_semantic_contract(),
+    )
+    proof = run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    return proof, proof["decisions"]["GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES"]
+
+
+def _gost21101_741_two_documents():
+    return [
+        _gost21101_741_evidence(
+            "Таблица регистрации изменений. Изм. 1. Лист 8 заменен.",
+            page=8, document="Раздел ПД №1_ПЗ.pdf", section="ПЗ",
+        ),
+        _gost21101_741_evidence(
+            "Таблица регистрации изменений. Изм. 2. Лист 17 заменен.",
+            page=17, document="Раздел ПД №4_КР.pdf", section="КР",
+        ),
+    ]
+
+
+def test_gate2_gost21101_741_blocks_two_pages_of_one_document():
+    rows = _gost21101_741_two_documents()
+    rows[1]["document"] = rows[0]["document"]
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert proof["contract_gate_blocked"] == 1
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "различных документов" in d["reason"]
+
+
+def test_gate2_gost21101_741_blocks_case_and_folder_aliases_of_same_filename():
+    rows = _gost21101_741_two_documents()
+    rows[0]["document"] = "A/Раздел ПД №1_ПЗ.pdf"
+    rows[1]["document"] = "B\\раздел пд №1_пз.PDF"
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_741_blocks_generic_journal_instead_of_source_document():
+    rows = _gost21101_741_two_documents()
+    rows[1]["document"] = "Журнал_изменений.pdf"
+    rows[1]["section"] = "Журнал"
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert d["semantic_contract_source_scope_satisfied"] is False
+
+
+def test_gate2_gost21101_741_blocks_change_record_missing_in_second_document():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = "Документ КР изменен; данные приведены в таблице состава томов."
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+    assert "В каждом самостоятельном" in "; ".join(d["semantic_contract_missing_groups"])
+
+
+def test_gate2_gost21101_741_blocks_second_document_with_only_registration_header():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = "Таблица регистрации изменений. Номер документа 8, лист 12."
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_741_blocks_change_zero_as_revision_number():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = "Таблица регистрации изменений. Изм. 0."
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_741_blocks_registration_and_number_on_separate_pages():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = "Таблица регистрации изменений: запись отсутствует."
+    rows.append(_gost21101_741_evidence(
+        "Изм. 2. Выполнена замена листа 19.", page=19,
+        document="Раздел ПД №4_КР.pdf", section="КР",
+    ))
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_741_blocks_one_selected_document_despite_two_fragments():
+    rows = _gost21101_741_two_documents()
+    rows[1]["document"] = rows[0]["document"]
+    rows[1]["section"] = rows[0]["section"]
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 0
+    assert d["state"] == "REVIEW_QUESTION"
+
+
+def test_gate2_gost21101_741_accepts_two_distinct_document_registrations():
+    proof, d = _gost21101_741_decision(_gost21101_741_two_documents())
+    assert proof["verified_ok"] == 1
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True
+    assert len(d["selected_evidence"]) == 2
+
+
+def test_gate2_gost21101_741_accepts_same_ordinal_on_distinct_documents():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = "Таблица регистрации изменений. Изм. 1. Лист 7 изменен."
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 1
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True
+
+
+def test_gate2_gost21101_741_accepts_organisation_alphanumeric_code():
+    rows = _gost21101_741_two_documents()
+    rows[1]["text"] = (
+        "Таблица изменений. Изм. А-2. Код изменения по СТО организации."
+    )
+    proof, d = _gost21101_741_decision(rows)
+    assert proof["verified_ok"] == 1
+    assert d["state"] == "VERIFIED_OK"
+    assert d["semantic_contract_ready"] is True
+
+
+def test_gate2_gost21101_741_old_same_evidence_scope_remains_backward_compatible():
+    source = {
+        "version": "2.0",
+        "required_groups": [{
+            "id": "EXISTING_SCOPE",
+            "label": "Группа существующего контракта",
+            "scope": "SAME_EVIDENCE",
+            "fields": ["text"],
+            "any_of": ["класс сооружения"],
+        }],
+    }
+    queue = _gate2_queue(
+        "LEGACY-SAME-EVIDENCE",
+        "Проверка совместимости scope",
+        [_gost21101_741_evidence("Класс сооружения КС-2.")],
+        source,
+    )
+    proof = run_normative_semantic_proof(
+        queue, judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"), limit=8,
+    )
+    assert proof["verified_ok"] == 1

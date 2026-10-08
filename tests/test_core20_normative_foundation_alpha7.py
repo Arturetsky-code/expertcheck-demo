@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 72
-    assert summary["hardened_verified_coverage_pct"] == 96.0
-    assert summary["hardened_total_coverage_pct"] == 69.2
+    assert summary["hardened_executable_contracts"] == 73
+    assert summary["hardened_verified_coverage_pct"] == 97.3
+    assert summary["hardened_total_coverage_pct"] == 70.2
 
-    assert summary["generic_semantic_executable_contracts"] == 1
+    assert summary["generic_semantic_executable_contracts"] == 0
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -235,11 +235,12 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}
 
-    generic=contracts["GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES"]
-    assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
-    assert generic["executable_contract_ready"] is True
-    assert generic["hardened_proof_ready"] is False
-    assert generic["execution_tier"] == "GENERIC_SEMANTIC"
+    independent_changes=contracts["GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES"]
+    assert independent_changes["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert independent_changes["executable_contract_ready"] is True
+    assert independent_changes["hardened_proof_ready"] is True
+    assert independent_changes["execution_tier"] == "HARDENED"
+    assert independent_changes["evidence_contract"]["semantic_proof_contract"]["minimum_distinct_documents"] == 2
 
     fire_characteristics=contracts["FZ123-78-1-FIRE-CHARACTERISTICS"]
     assert fire_characteristics["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"

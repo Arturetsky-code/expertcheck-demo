@@ -7650,3 +7650,101 @@ Core25 Quality Leap gates, run **834**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one construction-fire-performance semantic contract.
+
+
+## Hardened semantic proof — SP 12 category taxonomy — 2026-10-08
+
+This bounded stage hardens one existing semantic requirement only:
+`SP12-4.1-CATEGORY-TAXONOMY`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- no deterministic compliance verdict.
+
+### Gate 2.0 hardening
+
+The semantic contract now contains one machine-enforced `SAME_EVIDENCE` group:
+`SP12_CATEGORY_TYPED_DECLARATION`.
+
+One selected addressable fragment must explicitly bind a category to the corresponding
+object type and to a value from that type's taxonomy:
+
+- rooms: `А`, `Б`, `В1–В4`, `Г`, `Д`;
+- buildings: `А`, `Б`, `В`, `Г`, `Д`;
+- outdoor installations: `АН`, `БН`, `ВН`, `ГН`, `ДН`.
+
+This prevents a value from one taxonomy from satisfying another merely because the
+token occurs in the evidence. For example, `В1` is acceptable as a room category
+but is not accepted as a building category.
+
+The regex window intentionally allows normal project wording such as
+`Категория помещения по взрывопожарной и пожарной опасности — В1` while remaining
+bounded to the same sentence/addressable fragment.
+
+The machine gate does not decide whether the selected category was correctly
+calculated for the actual combustible substances, process or fire/explosion
+characteristics. That engineering judgement remains with the independent semantic
+Judge/Critic path.
+
+Missing or mistyped taxonomy evidence keeps the result at `REVIEW_QUESTION`;
+it does not create a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **63 -> 64**;
+- Hardened Verified Coverage: **84.0% -> 85.3%**;
+- Hardened Total Coverage: **60.6% -> 61.5%**;
+- generic semantic executable contracts: **10 -> 9**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+### Regression proof
+
+Two SP 12-specific regressions were added:
+
+1. `Категория здания ... — В1` is rejected by Gate 2.0 because `В1` belongs
+   to the room taxonomy, not the building taxonomy, even if Judge/Critic support it;
+2. `Категория помещения по взрывопожарной и пожарной опасности — В1` passes
+   the machine guard and remains eligible for semantic `VERIFIED_OK`.
+
+### Commits
+
+- `b7bc68f3730823fc887932cd2d6e4d1132ff56f3` — harden the SP 12 typed
+  category semantic proof contract;
+- `44166fdbdf4f01228c7ef8c652b2aa702f6609ee` — allow normal descriptive
+  wording inside the bounded typed-category phrase;
+- `500e28eabf8a5599a448d8e0a5dca7ddb3f5755b` — lock updated hardened
+  coverage metrics;
+- `57a685a8b8fa69468bf687c07cb5958458e999f1` — add typed-taxonomy
+  positive/negative Gate 2.0 regressions.
+
+### Validation
+
+Temporary draft PR #55 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1198**:
+- Core20 regression: **342 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **840**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one typed fire-category taxonomy contract.

@@ -1041,3 +1041,128 @@ def test_gate2_article32_allows_explicit_purpose_and_functional_class_for_semant
     assert semantic["contract_gate_blocked"] == 0
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
+
+
+
+def _article61_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["FZ123-61-3-AUPT-SELECTION-BASIS"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_article61_requires_all_selection_basis_groups():
+    contract=_article61_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-61-3-AUPT-SELECTION-BASIS",
+        "Тип АУПТ, огнетушащее вещество и способ подачи должны выбираться с учётом горючих материалов, объёмно-планировочных решений и параметров окружающей среды.",
+        [
+            {
+                "evidence_id":"E-PB-61-SOLUTION",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":44,
+                "section":"ПБ",
+                "text":"Предусмотрена АУПТ. Огнетушащее вещество — вода. Способ подачи — спринклерный.",
+                "retrieval_keyword_score":100,
+                "retrieval_keyword_coverage":1.0,
+            },
+            {
+                "evidence_id":"E-PB-61-LOAD",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":45,
+                "section":"ПБ",
+                "text":"При выборе установки учтена пожарная нагрузка защищаемого помещения.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+            {
+                "evidence_id":"E-PB-61-PLANNING",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":46,
+                "section":"ПБ",
+                "text":"Учтены объемно-планировочные решения защищаемого помещения.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+        ],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-61-3-AUPT-SELECTION-BASIS"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "параметры окружающей среды" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_article61_allows_distributed_complete_basis_for_semantic_judgement():
+    contract=_article61_semantic_contract()
+    queue=_gate2_queue(
+        "FZ123-61-3-AUPT-SELECTION-BASIS",
+        "Тип АУПТ, огнетушащее вещество и способ подачи должны выбираться с учётом горючих материалов, объёмно-планировочных решений и параметров окружающей среды.",
+        [
+            {
+                "evidence_id":"E-PB-61-SOLUTION",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":44,
+                "section":"ПБ",
+                "text":"Предусмотрена АУПТ. Огнетушащее вещество — вода. Способ подачи — спринклерный.",
+                "retrieval_keyword_score":100,
+                "retrieval_keyword_coverage":1.0,
+            },
+            {
+                "evidence_id":"E-PB-61-LOAD",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":45,
+                "section":"ПБ",
+                "text":"При выборе установки учтена пожарная нагрузка защищаемого помещения.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+            {
+                "evidence_id":"E-PB-61-PLANNING",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":46,
+                "section":"ПБ",
+                "text":"Учтены объемно-планировочные решения защищаемого помещения.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+            {
+                "evidence_id":"E-PB-61-ENV",
+                "document":"Раздел ПД №9_ПБ.pdf",
+                "page":47,
+                "section":"ПБ",
+                "text":"При выборе установки учтены параметры окружающей среды в защищаемой зоне.",
+                "retrieval_keyword_score":90,
+                "retrieval_keyword_coverage":0.9,
+            },
+        ],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["FZ123-61-3-AUPT-SELECTION-BASIS"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True
+    assert len(decision["selected_evidence"]) == 4

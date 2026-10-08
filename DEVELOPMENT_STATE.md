@@ -7551,3 +7551,102 @@ Core25 Quality Leap gates, run **829**:
 - workflow conclusion: **SUCCESS**.
 
 This stage is intentionally limited to one fire-resistance semantic contract.
+
+
+## Hardened semantic proof — 123-FZ article 57 — 2026-10-08
+
+This bounded stage hardens one existing triggered semantic requirement only:
+`FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE`.
+
+No new NTD atoms were added. The requirement remains:
+- `proof_type = SEMANTIC_REQUIREMENT`;
+- `execution_mode = SEMANTIC_PROOF`;
+- `activation = TRIGGERED_ONLY`;
+- no deterministic fast path.
+
+### Gate 2.0 hardening
+
+The semantic contract now has four machine-enforced required groups:
+
+- `FIRE_RESISTANCE_DEGREE_DECLARATION` — one addressable fragment explicitly
+  binds the fire-resistance degree to a bounded value `I–V`;
+- `CONSTRUCTIVE_FIRE_HAZARD_CLASS_DECLARATION` — one addressable fragment
+  explicitly binds the object's constructive fire-hazard class to `С0–С3`;
+- `CONSTRUCTION_FIRE_RESISTANCE_LIMIT_DECLARATION` — one addressable fragment
+  explicitly contains fire-resistance-limit wording and a concrete
+  `R/RE/REI/EI/E` value;
+- `CONSTRUCTION_FIRE_HAZARD_CLASS_DECLARATION` — one addressable fragment
+  explicitly binds the fire-hazard class of a construction to `К0–К3`.
+
+Each attribute/value pair uses `scope = SAME_EVIDENCE`, so a stray `С0`, `К0`,
+or `R 90` elsewhere in selected evidence cannot satisfy the corresponding group.
+The four required groups themselves may be distributed across different project
+fragments and sections.
+
+The machine gate does not decide whether the four project parameters are mutually
+compliant with the requirements of article 57. Their engineering correspondence
+remains the semantic Judge/Critic responsibility.
+
+Missing any required attribute/value declaration keeps the requirement at
+`REVIEW_QUESTION`; it does not create a `PROJECT_FINDING`.
+
+### Coverage after this slice
+
+Registry state remains:
+- total atomic requirements: **104**;
+- verified clauses: **75**;
+- executable contracts: **73**;
+- Executable Verified Coverage: **97.3%**;
+- Executable Total Coverage: **70.2%**.
+
+Hardened coverage:
+- hardened executable contracts: **62 -> 63**;
+- Hardened Verified Coverage: **82.7% -> 84.0%**;
+- Hardened Total Coverage: **59.6% -> 60.6%**;
+- generic semantic executable contracts: **11 -> 10**.
+
+The two verified but non-executable blockers are unchanged:
+- `PP87-CLAUSE-15-IOS` — `SET_CONTRACT_HOLD_ONLY`;
+- `SP52-7.6.3-EVACUATION-LIGHTING` — `SET_CONTRACT_HOLD_ONLY`.
+
+### Regression proof
+
+Two article-57-specific regressions were added:
+
+1. selected evidence explicitly provides the building fire-resistance degree,
+   constructive fire-hazard class and a concrete construction fire-resistance limit,
+   but the construction fire-hazard class is mentioned without a `К0–К3` value;
+   Gate 2.0 blocks promotion even when Judge/Critic both support it;
+2. four addressable fragments separately provide `II`, `С0`, `R 90` and
+   `К0`, each explicitly tied to the corresponding regulated characteristic;
+   Gate 2.0 passes and the requirement remains eligible for semantic
+   `VERIFIED_OK`.
+
+### Commits
+
+- `b4bebf8192945e99671a0e0a97411a6571923d4c` — harden the article-57
+  semantic proof contract;
+- `b5e1e48a57ea596cac07b6ccc05bc71ed02b5b0d` — lock updated hardened
+  coverage metrics and retain article 78 as the generic-semantic regression example;
+- `edfd5d3fa8798901ce7b58a0735a6ca47570ad17` — add article-57
+  positive/negative distributed-evidence regressions.
+
+### Validation
+
+Temporary draft PR #54 was used only for validation and closed without merge.
+
+Core20 quality gates, run **1192**:
+- Core20 regression: **340 passed**;
+- results-integrity: **17 passed**;
+- workflow conclusion: **SUCCESS**.
+
+Core25 Quality Leap gates, run **834**:
+- targeted Core20 regression: SUCCESS;
+- Core25 tests: SUCCESS;
+- baseline-full-diagnostic: SUCCESS;
+- alpha1 release gate: SUCCESS;
+- legacy full repository suite against baseline allowlist: SUCCESS;
+- Core25 compile: SUCCESS;
+- workflow conclusion: **SUCCESS**.
+
+This stage is intentionally limited to one construction-fire-performance semantic contract.

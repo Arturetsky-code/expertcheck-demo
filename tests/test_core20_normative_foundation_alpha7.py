@@ -213,11 +213,11 @@ def test_alpha7_executable_ntd_coverage_is_reported_separately_from_verification
     assert summary["executable_verified_coverage_pct"] == 97.3
     assert summary["executable_total_coverage_pct"] == 70.2
 
-    assert summary["hardened_executable_contracts"] == 62
-    assert summary["hardened_verified_coverage_pct"] == 82.7
-    assert summary["hardened_total_coverage_pct"] == 59.6
+    assert summary["hardened_executable_contracts"] == 63
+    assert summary["hardened_verified_coverage_pct"] == 84.0
+    assert summary["hardened_total_coverage_pct"] == 60.6
 
-    assert summary["generic_semantic_executable_contracts"] == 11
+    assert summary["generic_semantic_executable_contracts"] == 10
     assert summary["executable_triggered_only_contracts"] == 9
     assert sum(summary["executable_by_proof_type"].values()) == 73
 
@@ -235,7 +235,7 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}
 
-    generic=contracts["FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE"]
+    generic=contracts["FZ123-78-1-FIRE-CHARACTERISTICS"]
     assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
     assert generic["executable_contract_ready"] is True
     assert generic["hardened_proof_ready"] is False
@@ -314,6 +314,20 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     assert {group["id"] for group in article58_semantic["required_groups"]} == {
         "FIRE_RESISTANCE_DEGREE_BASIS",
         "CONSTRUCTION_FIRE_RESISTANCE_LIMIT",
+    }
+
+    article57=contracts["FZ123-57-1-CONSTRUCTION-FIRE-PERFORMANCE"]
+    article57_semantic=article57["evidence_contract"]["semantic_proof_contract"]
+    assert article57["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert article57["executable_contract_ready"] is True
+    assert article57["hardened_proof_ready"] is True
+    assert article57["execution_tier"] == "HARDENED"
+    assert article57_semantic["version"] == "2.0"
+    assert {group["id"] for group in article57_semantic["required_groups"]} == {
+        "FIRE_RESISTANCE_DEGREE_DECLARATION",
+        "CONSTRUCTIVE_FIRE_HAZARD_CLASS_DECLARATION",
+        "CONSTRUCTION_FIRE_RESISTANCE_LIMIT_DECLARATION",
+        "CONSTRUCTION_FIRE_HAZARD_CLASS_DECLARATION",
     }
 
     article104=contracts["FZ123-104-1-AUPT-SUPPRESSION-METHOD"]

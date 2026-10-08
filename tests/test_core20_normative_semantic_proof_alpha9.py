@@ -1398,3 +1398,78 @@ def test_gate2_article57_allows_complete_distributed_construction_fire_parameter
     assert decision["state"] == "VERIFIED_OK"
     assert decision["semantic_contract_ready"] is True
     assert len(decision["selected_evidence"]) == 4
+
+
+
+def _sp12_semantic_contract():
+    contracts={
+        row["requirement_id"]:row
+        for row in default_foundation().contracts()
+    }
+    return dict(
+        contracts["SP12-4.1-CATEGORY-TAXONOMY"]
+        ["evidence_contract"]["semantic_proof_contract"]
+    )
+
+
+def test_gate2_sp12_rejects_room_subcategory_for_building():
+    contract=_sp12_semantic_contract()
+    queue=_gate2_queue(
+        "SP12-4.1-CATEGORY-TAXONOMY",
+        "Категория должна быть явно задана по соответствующей шкале для помещения, здания или наружной установки.",
+        [{
+            "evidence_id":"E-TH-SP12-BUILDING-V1",
+            "document":"Раздел ПД №5_ТХ.pdf",
+            "page":31,
+            "section":"ТХ",
+            "text":"Категория здания по взрывопожарной и пожарной опасности — В1.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["SP12-4.1-CATEGORY-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 0
+    assert semantic["contract_gate_blocked"] == 1
+    assert decision["state"] == "REVIEW_QUESTION"
+    assert decision["semantic_contract_ready"] is False
+    assert "допустимой шкалой СП 12" in "; ".join(decision["semantic_contract_missing_groups"])
+
+
+def test_gate2_sp12_accepts_room_category_v1_for_semantic_judgement():
+    contract=_sp12_semantic_contract()
+    queue=_gate2_queue(
+        "SP12-4.1-CATEGORY-TAXONOMY",
+        "Категория должна быть явно задана по соответствующей шкале для помещения, здания или наружной установки.",
+        [{
+            "evidence_id":"E-TH-SP12-ROOM-V1",
+            "document":"Раздел ПД №5_ТХ.pdf",
+            "page":31,
+            "section":"ТХ",
+            "text":"Категория помещения по взрывопожарной и пожарной опасности — В1.",
+            "retrieval_keyword_score":100,
+            "retrieval_keyword_coverage":1.0,
+        }],
+        contract,
+    )
+
+    semantic=run_normative_semantic_proof(
+        queue,
+        judge_provider=FakeProvider("Judge-A"),
+        critic_provider=FakeProvider("Critic-B"),
+        limit=8,
+    )
+    decision=semantic["decisions"]["SP12-4.1-CATEGORY-TAXONOMY"]
+
+    assert semantic["verified_ok"] == 1
+    assert semantic["contract_gate_blocked"] == 0
+    assert decision["state"] == "VERIFIED_OK"
+    assert decision["semantic_contract_ready"] is True

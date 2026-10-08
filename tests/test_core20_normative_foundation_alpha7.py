@@ -235,11 +235,17 @@ def test_alpha7_executable_ntd_contract_tiers_distinguish_generic_hardened_and_b
     foundation=NormativeKnowledgeFoundation20(ROOT)
     contracts={row["requirement_id"]:row for row in foundation.contracts()}
 
-    generic=contracts["FZ123-78-1-FIRE-CHARACTERISTICS"]
+    generic=contracts["GOST21101-2026-7.4.1-PD-INDEPENDENT-CHANGES"]
     assert generic["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
     assert generic["executable_contract_ready"] is True
     assert generic["hardened_proof_ready"] is False
     assert generic["execution_tier"] == "GENERIC_SEMANTIC"
+
+    fire_characteristics=contracts["FZ123-78-1-FIRE-CHARACTERISTICS"]
+    assert fire_characteristics["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"
+    assert fire_characteristics["executable_contract_ready"] is True
+    assert fire_characteristics["hardened_proof_ready"] is True
+    assert fire_characteristics["execution_tier"] == "HARDENED"
 
     hardened=contracts["FZ384-15-5.1-SAFETY-JUSTIFICATION"]
     assert hardened["resolved_proof_type"] == "SEMANTIC_REQUIREMENT"

@@ -520,6 +520,62 @@ def test_alpha8_ios_inventory_routes_to_set_completeness_without_auto_verificati
 
 
 
+
+def test_alpha8_ios_inventory_mismatched_metadata_does_not_invent_two_subsections():
+    from core20.normative_execution import _ios_inventory
+
+    documents=[{
+        "Файл":"Раздел ПД №5_подраздел ПД №2_ИОС2.pdf",
+        "Тип документа":"ИОС1",
+    }]
+    inventory=_ios_inventory(documents)
+    assert len(inventory)==1
+    assert inventory[0]["metadata_conflict"] is True
+    assert inventory[0]["subsections"]==["ИОС"]
+    assert inventory[0]["metadata_subsections"]==["ИОС1"]
+    assert inventory[0]["filename_subsections"]==["ИОС2"]
+
+
+def test_alpha8_ios_inventory_preserves_consistent_nested_code_and_ignores_folder_code():
+    from core20.normative_execution import _ios_inventory
+
+    inventory=_ios_inventory([{
+        "Файл":r"Проект\\ИОС6\\Раздел_ИОС1.1.pdf",
+        "Тип документа":"ИОС1",
+    }])
+    assert len(inventory)==1
+    assert inventory[0]["metadata_conflict"] is False
+    assert inventory[0]["subsections"]==["ИОС1.1"]
+
+
+def test_alpha8_ios_inventory_conflict_is_diagnostic_and_never_promotes_set():
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{
+            "set_contract":{
+                "mode":"APPLICABILITY_AWARE_INVENTORY",
+                "promotion_policy":"HOLD",
+                "atomization_complete":False,
+            },
+        },
+    }
+    documents=[
+        {"Файл":"ИОС2.pdf","Тип документа":"ИОС1"},
+        {"Файл":"ИОС3.pdf","Тип документа":"ИОС3"},
+        {"Файл":"Общий_ИОС.pdf","Тип документа":"ИОС"},
+    ]
+    result=_set_completeness_evaluation(contract,[],documents)
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"
+    assert result["observed_inventory"]==["ИОС3"]
+    assert result["ambiguous_inventory"]==[{
+        "document":"ИОС2.pdf",
+        "metadata_subsections":["ИОС1"],
+        "filename_subsections":["ИОС2"],
+    }]
+    assert "IOS_SUBSECTION_METADATA_CONFLICT" in result["missing_ids"]
+
+
 def test_alpha8_set_completeness_reports_missing_elements():
     contract={
         "requirement_id":"SET-X",

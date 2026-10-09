@@ -8744,3 +8744,37 @@ entry after comparing branch head and CI for that exact SHA.
 Maintain the same one-slice atomic-change, source-diff,
 fail-closed regression, temporary draft-PR no-merge and green-CI
 checkpoint protocol.
+
+
+## ExpertCheck 25.3 — IOS inventory metadata conflict fail-closed — 2026-10-09
+
+Checkpoint parent: `6d22f4c7aff4286ffe9e012bfc894fd73218a121`. No change to the normative catalogue, its
+73 hardened executable gates, or Test78 acceptance thresholds.
+
+First bounded real-document quality hardening for
+`PP87-CLAUSE-15-IOS` (Government Decree 87 clause 15):
+
+- Cross-check an explicit IOS subsection code in document metadata against
+  the file **basename**, never code-looking strings in ancestor directories.
+- Treat two different major codes (e.g. metadata ИОС1 vs file ИОС2)
+  as one **ambiguous document**, not two observed subsections.
+- Preserve compatible nested codes such as ИОС1 / ИОС1.1.
+- Record an explicit `IOS_SUBSECTION_METADATA_CONFLICT` diagnostic with
+  both claimed sources; unresolved and bare ИОС names do not contribute
+  fabricated numbered subsections to `observed_inventory`.
+- Retrieval remains a diagnostic candidate only, and the clause remains
+  `SET_CONTRACT_HOLD_ONLY`. No automatic completeness or
+  noncompliance verdict is permitted without an applicability map.
+- Three new negative/positive regressions cover a mismatched designation,
+  a nested code with a misleading parent folder, and safe observed-inventory
+  counting.
+
+Normative reference: clause 15 currently lists six IOS subsections;
+the former letter (ж) was repealed on 2022-09-01. Applicability to specific
+reconstruction/repair stages and the scope of an actual project requires
+independent source/assignment review; no mandatory-six shortcut is added.
+
+Validation pending at commit time: Core20, Core25, Test78 deterministic A/B
+and Source Snapshot checks must be read from GitHub Actions for the **exact**
+source SHA. Accept only green validated checkpoint; if a gate fails,
+preserve the WIP branch and repair without rewriting the accepted baseline.

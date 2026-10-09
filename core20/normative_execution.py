@@ -426,8 +426,21 @@ def _conditional_applicability(
 
 
 def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
+    """Return a diagnostic inventory, never an applicability/completeness proof.
+
+    A section type and the file basename must not silently contribute different
+    major IOS subsection numbers to the same document.
+    """
     output=[]
     seen=set()
+
+    def subsection_codes(value:str)->list[str]:
+        normalized=_norm(value).replace(" ","")
+        return list(dict.fromkeys(
+            f"ИОС{match.group(1)}"
+            for match in re.finditer(r"иос(\\d+(?:\\.\\d+)*)",normalized)
+        ))
+
     for row in documents or []:
         if not isinstance(row,dict):
             continue
@@ -447,15 +460,21 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
         if _section_key(raw_section or raw_name)!="иос":
             continue
 
-        normalized=_norm(f"{raw_section} {raw_name}").replace(" ","")
-        codes=[]
-        for match in re.finditer(r"иос(\d+(?:\.\d+)*)",normalized):
-            code=f"ИОС{match.group(1)}"
-            if code not in codes:
-                codes.append(code)
-        if not codes:
-            codes=["ИОС"]
+        # Directory names belong to storage/routing, not the PD document code.
+        basename=re.split(r"[\\\\/]",raw_name)[-1]
+        section_codes=subsection_codes(raw_section)
+        filename_codes=subsection_codes(basename)
+        section_roots={code.split(".")[0] for code in section_codes}
+        filename_roots={code.split(".")[0] for code in filename_codes}
+        conflict=bool(section_roots and filename_roots and section_roots!=filename_roots)
 
+        # The filename may carry a more precise subpart (ИОС1.1) than the
+        # canonical section type (ИОС1). A genuine major-code mismatch is
+        # unresolved, not proof that both claimed subsections were loaded.
+        codes=(
+            ["ИОС"] if conflict
+            else (filename_codes or section_codes or ["ИОС"])
+        )
         document=raw_name or raw_section or "ИОС"
         key=(document,tuple(codes))
         if key in seen:
@@ -465,6 +484,9 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             "document":document,
             "section":"ИОС",
             "subsections":codes,
+            "metadata_conflict":conflict,
+            "metadata_subsections":section_codes if conflict else [],
+            "filename_subsections":filename_codes if conflict else [],
         })
     output.sort(key=lambda item:(item["subsections"],item["document"]))
     return output
@@ -2118,8 +2140,20 @@ def _set_completeness_evaluation(
     if mode=="APPLICABILITY_AWARE_INVENTORY":
         inventory=_ios_inventory(documents)
         observed=[]
+        ambiguous=[]
         for item in inventory:
-            observed.extend(str(value) for value in (item.get("subsections") or []) if str(value))
+            if item.get("metadata_conflict"):
+                ambiguous.append({
+                    "document":item.get("document") or "",
+                    "metadata_subsections":list(item.get("metadata_subsections") or []),
+                    "filename_subsections":list(item.get("filename_subsections") or []),
+                })
+                continue
+            # A bare "ИОС" is not a proven subsection number.
+            observed.extend(
+                code for code in (item.get("subsections") or [])
+                if re.fullmatch(r"ИОС\\d+(?:\\.\\d+)*",str(code))
+            )
         observed=list(dict.fromkeys(observed))
         return {
             "configured":True,
@@ -2129,9 +2163,14 @@ def _set_completeness_evaluation(
             "matched_count":len(observed),
             "total_count":None,
             "elements":[],
-            "missing_ids":["APPLICABILITY_MAP_REQUIRED"],
-            "missing_labels":["Требуется карта применимых подразделов ИОС"],
+            "missing_ids":["APPLICABILITY_MAP_REQUIRED"] + (
+                ["IOS_SUBSECTION_METADATA_CONFLICT"] if ambiguous else []
+            ),
+            "missing_labels":["Требуется карта применимых подразделов ИОС"] + (
+                ["Несовпадение кода ИОС в метаданных и имени файла"] if ambiguous else []
+            ),
             "observed_inventory":observed,
+            "ambiguous_inventory":ambiguous,
             "evidence":[],
         }
 
@@ -3171,10 +3210,26 @@ class NormativeExecutionEngine20:
                     "document":item.get("document") or "ИОС",
                     "page":None,
                     "section":"ИОС",
-                    "fragment":f"Инвентарь загруженных подразделов: {codes}. Документ: {item.get('document') or 'ИОС'}.",
-                    "matched_keywords":list(item.get("subsections") or []),
-                    "retrieval_keyword_score":len(item.get("subsections") or []),
-                    "retrieval_keyword_coverage":1.0,
+                    "fragment":(
+                        f"Инвентарь загруженных подразделов: {codes}. "
+                        + (
+                            "ТРЕБУЕТ СВЕРКИ: код ИОС в метаданных противоречит "
+                            "коду в имени файла. "
+                            if item.get("metadata_conflict") else ""
+                        )
+                        + f"Документ: {item.get('document') or 'ИОС'}."
+                    ),
+                    "matched_keywords":(
+                        [] if item.get("metadata_conflict")
+                        else list(item.get("subsections") or [])
+                    ),
+                    "retrieval_keyword_score":(
+                        0 if item.get("metadata_conflict")
+                        else len(item.get("subsections") or [])
+                    ),
+                    "retrieval_keyword_coverage":(
+                        0.0 if item.get("metadata_conflict") else 1.0
+                    ),
                     "locator_kind":"DOCUMENT_INVENTORY",
                 })
             primary=inventory_candidates[0]

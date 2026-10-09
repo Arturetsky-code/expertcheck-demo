@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `500f2b9f442e38375ef3817fa61382d6dc696735`
-Green validation marker commit: `500f2b9f442e38375ef3817fa61382d6dc696735`
+Latest validated source commit: `424ea00c286b6618d01e95115e989f9aed4d85a4`
+Green validation marker commit: `424ea00c286b6618d01e95115e989f9aed4d85a4`
 
 ## Official accepted local checkpoint
 
@@ -9184,3 +9184,75 @@ particularly distinctions between sourced and unsourced opposing
 statements, missing pages versus genuine engineering contradictions,
 and specialist-facing reasons — without allowing candidate
 conflicts to be misreported as verified project noncompliance.
+
+
+## ExpertCheck 25.3 — provenance-grade IOS conflict source diagnostics — 2026-10-09
+
+Previous green documentation checkpoint:
+`fcb53b0f6463d729a2735b205a6cec91e2fde210`.
+Validated functional source SHA:
+`424ea00c286b6618d01e95115e989f9aed4d85a4`.
+
+### Scope and exact behavior
+
+A single atomic commit changed:
+- `core20/ios_applicability_candidates.py`: conflict-source evaluation
+  and precise per-claim reasons, using the same source probe as ordinary
+  candidate admission;
+- `tests/test_core20_ios_applicability_candidates.py`: six fail-closed
+  focused regressions and one updated existing conflict assertion.
+
+For conflicting `REQUIRED` and `NOT_REQUIRED` statements about the
+same (`object_id`, `subsection`) pair, the diagnostic now distinguishes:
+
+- `PAGE_QUOTE_LOCATED_APPLICABILITY_UNVERIFIED` — exact canonical
+  document path, unique page address, quote, subsection-code mention and
+  unique matching *Project Understanding reference owner* were located;
+  **not** authoritative technical or legal proof.
+- `SOURCE_NOT_GROUNDED` — source verification failed. Each claim records
+  a precise `source_reason_code`, including
+  `IOS_SOURCE_IDENTITY_NOT_PROVEN`, `IOS_SUBSECTION_SOURCE_MISMATCH`,
+  `SOURCE_PAGE_NOT_UNIQUE`, `AMBIGUOUS_OBJECT_OWNER`,
+  `SOURCE_QUOTE_NOT_LOCATED`, `IOS_CODE_NOT_IN_SOURCE_QUOTE`.
+- The group records `source_matched_claim_count`,
+  `source_unmatched_claim_count` and
+  `CONTRADICTORY_CLAIMS_NOT_NORMATIVE_VIOLATION_PROOF` interpretation.
+  Its existing `IOS_APPLICABILITY_CLAIM_CONFLICT` quarantine remains
+  authoritative for admission, irrespective of quote-location status.
+- The owner page must belong **uniquely to the same claimed object**,
+  not merely any one indexed owner. This guards an object-provenance
+  attribution weakness in the previous candidate-only implementation.
+- The `rejected` list also retains the underlying source reason for
+  conflicted claims without changing their quarantine reason.
+
+The checks are diagnostics over the currently loaded source corpus
+and Project Understanding references. They do not establish project
+object authority, applicability of the law, compliance or noncompliance.
+The parent `PP87-CLAUSE-15-IOS` contract remains hold-only:
+`complete=False`, no automated positive/negative normative verdict.
+No change to the normative catalogue or 73 hardened gates.
+
+### Exact-source CI
+
+- Core20 quality gates #1245: **SUCCESS**, **455 passed**,
+  results-integrity job **SUCCESS**.
+- Core25 Quality Leap gates #887: **SUCCESS**, including Core25 tests,
+  Core20 regression, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #289: **SUCCESS**, `NO_CHANGE`.
+  Baseline/current identical: 56 assignment requirements /
+  25 VERIFIED_OK / 2 PROJECT_FINDING / 29 REVIEW_QUESTION;
+  changed IDs empty.
+- Source Snapshot Artifact #693: **SUCCESS**.
+- Streamlit startup smoke #57: **SUCCESS**.
+
+### Recovery instructions
+
+The immediately following commit changes `DEVELOPMENT_STATE.md` only.
+After it lands, compare the branch head with the documentation checkpoint
+(ahead=0, behind=0), and check exact checkpoint Core20/Core25/Snapshot
+runs. Do not merge `main`.
+
+Next bounded improvement: independent authoritative applicability evidence
+and owner validation, or specialist-facing diagnostics downstream of this
+candidate map. Avoid adding unverified `VERIFIED_OK`/compliance status
+or claiming a quote alone is normative proof.

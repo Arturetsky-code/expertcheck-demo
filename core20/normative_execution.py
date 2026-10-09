@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .normative_foundation import NormativeKnowledgeFoundation20, _section_key, default_foundation
+from .ios_applicability_candidates import build_ios_applicability_candidates
 from .normative_proof import NormativeProofEngine20, proof_frontier_summary
 from .normative_semantic_proof import apply_normative_semantic_proof
 from .normative_visual_proof import apply_normative_visual_proof
@@ -2263,6 +2264,7 @@ def _set_completeness_evaluation(
 
     if mode=="APPLICABILITY_AWARE_INVENTORY":
         inventory=_ios_inventory(documents)
+        applicability_candidates=build_ios_applicability_candidates(documents,pages,inventory)
         observed=[]
         ambiguous=[]
         for item in inventory:
@@ -2313,6 +2315,7 @@ def _set_completeness_evaluation(
             ),
             "observed_inventory":observed,
             "ambiguous_inventory":ambiguous,
+            "applicability_map_candidates":applicability_candidates,
             "evidence":[],
         }
 

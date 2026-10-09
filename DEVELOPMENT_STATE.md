@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `5f0b987838185b5acbc9a42fe0ecb22850603726`
-Green validation marker commit: `5f0b987838185b5acbc9a42fe0ecb22850603726`
+Latest validated source commit: `b0ee1e62a21fa4a0556205e0af4ad7d133461c0c`
+Green validation marker commit: `b0ee1e62a21fa4a0556205e0af4ad7d133461c0c`
 
 ## Official accepted local checkpoint
 
@@ -9030,3 +9030,84 @@ Next proposed bounded work: prepare a typed *candidate-only*
 applicability-map inventory with source and object provenance, while
 keeping the IOS contract HOLD and requiring engineering confirmation
 before compliance promotion.
+
+
+## ExpertCheck 25.3 — typed candidate-only IOS applicability map — 2026-10-09
+
+Previous verified checkpoint:
+`eb84604d45f6c06275d05d9e9a6123b2a61f7e5d`.
+Validated functional source SHA:
+`b0ee1e62a21fa4a0556205e0af4ad7d133461c0c`.
+
+### Scope
+
+One bounded candidate-only extension:
+
+- New `core20/ios_applicability_candidates.py` builds review candidates
+  strictly from a typed Project Understanding property
+  `project_understanding.objects[].properties.ios_subsection_applicability`.
+- `core20/normative_execution.py` exposes this diagnostic under
+  `set_completeness.applicability_map_candidates` for
+  `PP87-CLAUSE-15-IOS` only.
+- Added 11 focused fail-closed tests in
+  `tests/test_core20_ios_applicability_candidates.py`.
+
+Each candidate must have a nonempty unique `object_id`, an explicit
+subsection identifier such as ИОС1, an applicability **claim** typed
+`REQUIRED` / `NOT_REQUIRED`, a full document identity, positive
+page number and a substantive quoted passage found verbatim after
+whitespace/case normalization in one **unique exact-address document
+page** from the current PD corpus. The declared subsection code must
+be present in that passage and agree with an unambiguous source
+inventory identity. Full path comparison preserves distinct object
+folders; identical basenames never prove identity. Contradictory
+Project Understanding models, duplicate object identifiers, an
+ambiguous shared owner page, missing or duplicated page addresses,
+wrong subsection identity and fabricated quotes are rejected with
+typed reason codes.
+
+A candidate's owner is identified only by the Project Understanding
+model, and exposed as `PROJECT_UNDERSTANDING_CLAIM_ONLY`, **not** as
+a verified underlying engineering owner. Claimed applicability
+(`NOT_REQUIRED` included) is **not** a confirmed normative exception.
+
+No universal six-subsection requirement, false `VERIFIED_OK`, or
+`PROJECT_FINDING` is introduced. The parent IOS completeness
+contract remains `SET_CONTRACT_HOLD_ONLY`, the generated map
+`CANDIDATE_ONLY`, `complete=False`, and all candidates require
+specialist review and external documentary cross-check.
+
+### Exact functional-source checks
+
+- Core20 quality gates #1241: **SUCCESS**, **441 passed**; report and
+  results-integrity job **SUCCESS**.
+- Core25 Quality Leap gates #883: **SUCCESS**, including Core25
+  functional tests, Core20 regression, baseline diagnostic and
+  alpha1 release gate.
+- Test78 deterministic A/B #287: **SUCCESS**, `NO_CHANGE`.
+  Both baseline and current: 56 requirements / 25 VERIFIED_OK /
+  2 PROJECT_FINDING / 29 REVIEW_QUESTION; changed IDs empty.
+- Source Snapshot Artifact #689: **SUCCESS**.
+- Streamlit startup smoke #55: **SUCCESS**.
+
+### Checkpoint and next slice
+
+The immediately following commit changes this journal *only*.
+Validate Core20/Core25/Source Snapshot on its exact SHA, and
+compare branch HEAD to the checkpoint SHA, ahead=0, behind=0.
+Never merge to `main` without explicit instruction.
+
+Limitations carried forward:
+- The typed applicability property is not yet populated automatically
+  from assignments, surveys or actual design evidence.
+- Page quotation matching verifies location in the loaded corpus,
+  not authenticity, contractual authority, or legal applicability.
+- Object ownership and applicability assertions must be independently
+  verified against project/design context and the normative source.
+- The existing baseline allowlist in legacy diagnostics is unchanged;
+  no claim that all historical tests are fully green.
+
+Next: improve specialist-facing *rejection/explanation trace* and
+prevent contradictory `REQUIRED` versus `NOT_REQUIRED` candidates
+for the same object/subsection from being presented as independent
+uncontested claims; still keep the HOLD normative policy.

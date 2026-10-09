@@ -94,6 +94,7 @@ def build_ios_applicability_candidates(
                 "applicability_claim":decision,
                 "document":document,
                 "page":int(page) if page else None,
+                "fragment":str(ev.get("fragment") or "").strip(),
                 "source_state":"UNVERIFIED_PROJECT_UNDERSTANDING_CLAIM",
             }
             if evidence not in bucket.setdefault(decision,[]):
@@ -103,20 +104,6 @@ def build_ios_applicability_candidates(
         key for key,decisions in claims_by_owner.items()
         if {"REQUIRED","NOT_REQUIRED"} <= set(decisions)
     }
-    for oid,code in sorted(conflict_keys):
-        claims=claims_by_owner[(oid,code)]
-        result["conflicts"].append({
-            "object_id":oid,
-            "subsection":code,
-            "reason_code":"IOS_APPLICABILITY_CLAIM_CONFLICT",
-            "claims":[
-                item for decision in ("REQUIRED","NOT_REQUIRED")
-                for item in claims.get(decision,[])
-            ],
-            "resolution":"SPECIALIST_REVIEW_REQUIRED",
-        })
-    result["conflict_count"]=len(result["conflicts"])
-
     page_index:dict[tuple[str,str],list[str]]={}
     for page in (pages or []):
         if not isinstance(page,dict):
@@ -152,6 +139,70 @@ def build_ios_applicability_candidates(
                 if all(key):
                     page_owners.setdefault(key,set()).add(oid)
 
+    def source_probe(oid:str,code:str,document:str,page:str,fragment:str)->str:
+        """Return a source-address diagnostic, not normative applicability proof."""
+        if not document or not page or not code:
+            return "INVALID_TYPED_APPLICABILITY_RECORD"
+        key=(_path(document),page)
+        matches=source_index.get(key[0]) or []
+        if len(matches)!=1 or matches[0].get("metadata_conflict"):
+            return "IOS_SOURCE_IDENTITY_NOT_PROVEN"
+        if code not in (matches[0].get("subsections") or []):
+            return "IOS_SUBSECTION_SOURCE_MISMATCH"
+        matches_text=page_index.get(key) or []
+        if len(matches_text)!=1:
+            return "SOURCE_PAGE_NOT_UNIQUE"
+        if page_owners.get(key,set())!={oid}:
+            return "AMBIGUOUS_OBJECT_OWNER"
+        normalized_fragment=_text(fragment)
+        if (
+            not fragment or len(normalized_fragment)<20
+            or normalized_fragment not in _text(matches_text[0])
+        ):
+            return "SOURCE_QUOTE_NOT_LOCATED"
+        if not re.search(
+            rf"(?<![а-яa-z0-9]){re.escape(code.casefold())}(?!\d|\.\d)",
+            normalized_fragment
+        ):
+            return "IOS_CODE_NOT_IN_SOURCE_QUOTE"
+        return ""
+
+    # Populate conflict groups only after resolving exact document/page and
+    # unique owner checks. Found citations remain unverified legal assertions.
+    for oid,code in sorted(conflict_keys):
+        claims=[]
+        for decision in ("REQUIRED","NOT_REQUIRED"):
+            for item in claims_by_owner[(oid,code)].get(decision,[]):
+                page=str(item.get("page") or "")
+                reason=source_probe(
+                    oid,code,str(item.get("document") or ""),page,
+                    str(item.get("fragment") or "")
+                )
+                claims.append({
+                    **item,
+                    "source_state":(
+                        "PAGE_QUOTE_LOCATED_APPLICABILITY_UNVERIFIED"
+                        if not reason else "SOURCE_NOT_GROUNDED"
+                    ),
+                    "source_reason_code":reason or "EXACT_DOCUMENT_PAGE_QUOTE_MATCH",
+                    "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
+                })
+        matched=sum(
+            item["source_state"]=="PAGE_QUOTE_LOCATED_APPLICABILITY_UNVERIFIED"
+            for item in claims
+        )
+        result["conflicts"].append({
+            "object_id":oid,
+            "subsection":code,
+            "reason_code":"IOS_APPLICABILITY_CLAIM_CONFLICT",
+            "claims":claims,
+            "source_matched_claim_count":matched,
+            "source_unmatched_claim_count":len(claims)-matched,
+            "interpretation":"CONTRADICTORY_CLAIMS_NOT_NORMATIVE_VIOLATION_PROOF",
+            "resolution":"SPECIALIST_REVIEW_REQUIRED",
+        })
+    result["conflict_count"]=len(result["conflicts"])
+
     seen:set[tuple[str,str,str,str]]=set()
     claims_found=0
     for obj,oid in zip(objects,ids):
@@ -175,32 +226,17 @@ def build_ios_applicability_candidates(
             code=_section_code(ev.get("subsection"))
             decision=str(ev.get("applicability") or "").strip().upper()
             fragment=str(ev.get("fragment") or "").strip()
-            reject=""
             source_key=_path(doc)
-            key=(source_key,pg)
-            matched_source=source_index.get(source_key) or []
-            page_texts=page_index.get(key) or []
-            if (oid,code) in conflict_keys and decision in {"REQUIRED","NOT_REQUIRED"}:
-                reject="IOS_APPLICABILITY_CLAIM_CONFLICT"
-            elif not doc or not pg or not code or decision not in {"REQUIRED","NOT_REQUIRED"}:
+            # Perform exact source/page/owner checks *even for conflicted
+            # claims* so specialist diagnostics can distinguish absent
+            # evidence from a quote located in the loaded document.
+            source_issue=source_probe(oid,code,doc,pg,fragment)
+            if not doc or not pg or not code or decision not in {"REQUIRED","NOT_REQUIRED"}:
                 reject="INVALID_TYPED_APPLICABILITY_RECORD"
-            elif len(matched_source)!=1 or matched_source[0].get("metadata_conflict"):
-                reject="IOS_SOURCE_IDENTITY_NOT_PROVEN"
-            elif code not in (matched_source[0].get("subsections") or []):
-                reject="IOS_SUBSECTION_SOURCE_MISMATCH"
-            elif len(page_texts)!=1:
-                reject="SOURCE_PAGE_NOT_UNIQUE"
-            elif len(page_owners.get(key,set()))!=1:
-                reject="AMBIGUOUS_OBJECT_OWNER"
-            elif not fragment or len(_text(fragment))<20 or _text(fragment) not in _text(page_texts[0]):
-                reject="SOURCE_QUOTE_NOT_LOCATED"
+            elif (oid,code) in conflict_keys:
+                reject="IOS_APPLICABILITY_CLAIM_CONFLICT"
             else:
-                normalized_fragment=_text(fragment)
-                if not re.search(
-                    rf"(?<![а-яa-z0-9]){re.escape(code.casefold())}(?!\d|\.\d)",
-                    normalized_fragment
-                ):
-                    reject="IOS_CODE_NOT_IN_SOURCE_QUOTE"
+                reject=source_issue
 
             if reject:
                 result["rejected"].append({
@@ -209,6 +245,9 @@ def build_ios_applicability_candidates(
                     "page":pg or None,
                     "subsection":code,
                     "reason_code":reject,
+                    **({
+                        "source_reason_code":source_issue or "EXACT_DOCUMENT_PAGE_QUOTE_MATCH"
+                    } if reject=="IOS_APPLICABILITY_CLAIM_CONFLICT" else {}),
                 })
                 continue
 

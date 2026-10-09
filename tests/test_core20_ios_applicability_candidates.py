@@ -181,8 +181,11 @@ def test_opposite_applicability_claims_same_object_and_subsection_are_quarantine
     assert [x["applicability_claim"] for x in group["claims"]]==[
         "REQUIRED","NOT_REQUIRED"
     ]
-    assert all(x["source_state"]=="UNVERIFIED_PROJECT_UNDERSTANDING_CLAIM"
+    assert all(x["source_state"]=="PAGE_QUOTE_LOCATED_APPLICABILITY_UNVERIFIED"
                for x in group["claims"])
+    assert group["source_matched_claim_count"]==2
+    assert group["source_unmatched_claim_count"]==0
+    assert group["interpretation"]=="CONTRADICTORY_CLAIMS_NOT_NORMATIVE_VIOLATION_PROOF"
     assert group["resolution"]=="SPECIALIST_REVIEW_REQUIRED"
     assert [x["reason_code"] for x in result["rejected"]]==[
         "IOS_APPLICABILITY_CLAIM_CONFLICT"
@@ -293,3 +296,104 @@ def test_opposite_claims_never_promote_completeness_set_or_rendered_verdict():
              if row["requirement_id"]=="PP87-CLAUSE-15-IOS")
     assert ios["kind"]=="REVIEW_QUESTION"
     assert ios["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+
+
+
+def test_conflict_diagnostic_identifies_located_vs_missing_document_source():
+    docs,pages=_fixture()
+    _add_claim(docs,document="Объект Б/ИОС1.pdf",page=51,
+               fragment="В другом томе подраздел ИОС1 не требуется по проекту.")
+    result=_run(docs,pages)
+    group=result["conflicts"][0]
+    assert result["candidate_count"]==0
+    assert group["source_matched_claim_count"]==1
+    assert group["source_unmatched_claim_count"]==1
+    assert group["claims"][0]["source_reason_code"]=="EXACT_DOCUMENT_PAGE_QUOTE_MATCH"
+    assert group["claims"][1]["source_reason_code"]=="IOS_SOURCE_IDENTITY_NOT_PROVEN"
+    assert group["claims"][1]["source_state"]=="SOURCE_NOT_GROUNDED"
+    assert result["rejected"][0]["reason_code"]=="IOS_APPLICABILITY_CLAIM_CONFLICT"
+    assert result["rejected"][1]["source_reason_code"]=="IOS_SOURCE_IDENTITY_NOT_PROVEN"
+
+
+def test_conflict_diagnostic_quote_not_on_real_page_is_not_found():
+    docs,pages=_fixture()
+    _add_claim(docs,fragment="В томе ИОС1 не требуется для данного объекта.")
+    pages.append({
+        "document":"Объект А/ИОС1.pdf","page":8,
+        "text":"Технические решения приведены без такого утверждения.",
+    })
+    group=_run(docs,pages)["conflicts"][0]
+    assert group["source_matched_claim_count"]==1
+    assert group["claims"][1]["source_reason_code"]=="SOURCE_QUOTE_NOT_LOCATED"
+
+
+def test_conflict_diagnostic_duplicate_page_is_not_unique_evidence():
+    docs,pages=_fixture()
+    opposite="Для объекта подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    group=_run(docs,pages)["conflicts"][0]
+    assert group["source_matched_claim_count"]==1
+    assert group["claims"][1]["source_reason_code"]=="SOURCE_PAGE_NOT_UNIQUE"
+
+
+def test_conflict_diagnostic_shared_owner_page_cannot_be_called_source_matched():
+    docs,pages=_fixture()
+    opposite="Для объекта подраздел ИОС1 не требуется согласно заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    docs[1]["project_understanding"]["objects"].append({
+        "object_id":"OBJ-B",
+        "properties":{"other_property":[{
+            "document":"Объект А/ИОС1.pdf","page":8,
+        }]}
+    })
+    group=_run(docs,pages)["conflicts"][0]
+    assert group["claims"][1]["source_reason_code"]=="AMBIGUOUS_OBJECT_OWNER"
+    assert group["source_unmatched_claim_count"]==1
+
+
+def test_uncontested_page_belonging_to_another_owner_cannot_be_accepted():
+    docs,pages=_fixture()
+    claim=docs[1]["project_understanding"]["objects"][0]["properties"][
+        "ios_subsection_applicability"
+    ][0]
+    # OBJ-A makes the candidate claim, but only OBJ-B cites this page
+    # in the source-owner index. The owner must match, not just be unique.
+    claim["document"]="Объект А/ИОС1.pdf"
+    claim["page"]=7
+    props=docs[1]["project_understanding"]["objects"][0]["properties"]
+    props["ios_subsection_applicability"]=[]
+    docs[1]["project_understanding"]["objects"].append({
+        "object_id":"OBJ-B",
+        "properties":{"other_property":[{
+            "document":"Объект А/ИОС1.pdf","page":7,
+        }]}
+    })
+    # Restore OBJ-A's claim without introducing an additional ownership
+    # evidence record (the code currently treats all claims as owner refs).
+    # A dedicated property in OBJ-A with the same page is unavoidable
+    # without a separate trusted owner index, so assert conflict for
+    # two competing owners rather than a false unique admission.
+    props["ios_subsection_applicability"]=[claim]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="AMBIGUOUS_OBJECT_OWNER"
+
+
+def test_conflict_diagnostic_never_asserts_normative_failure_when_both_quotes_found():
+    docs,pages=_fixture()
+    opposite="По этому объекту подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    result=_run(docs,pages)
+    group=result["conflicts"][0]
+    assert group["source_matched_claim_count"]==2
+    assert all(x["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+               for x in group["claims"])
+    assert group["interpretation"]=="CONTRADICTORY_CLAIMS_NOT_NORMATIVE_VIOLATION_PROOF"
+    assert group["resolution"]=="SPECIALIST_REVIEW_REQUIRED"
+    assert result["promotion_policy"]=="HOLD"
+    assert result["complete"] is False
+    assert result["candidate_count"]==0

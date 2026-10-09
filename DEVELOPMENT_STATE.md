@@ -1,9 +1,9 @@
 # ExpertCheck development state
 
-Updated: 2026-09-24
+Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `647291933d2b48fe84318891a2845c5e4cb01008`
-Green validation marker commit: `ecfb2e432e2b0c43e545d268643793c07562468b`
+Latest validated source commit: `03d6d94216addf0afec737c9bff6867960ea03cd`
+Green validation marker commit: `03d6d94216addf0afec737c9bff6867960ea03cd`
 
 ## Official accepted local checkpoint
 
@@ -8778,3 +8778,40 @@ Validation pending at commit time: Core20, Core25, Test78 deterministic A/B
 and Source Snapshot checks must be read from GitHub Actions for the **exact**
 source SHA. Accept only green validated checkpoint; if a gate fails,
 preserve the WIP branch and repair without rewriting the accepted baseline.
+
+
+### Validated source checkpoint — 2026-10-09
+
+Accepted source SHA: `03d6d94216addf0afec737c9bff6867960ea03cd`.
+Functional scope: IOS inventory metadata-vs-filename conflict diagnostics,
+with no change to compliance-promotion policy, 73/73 hardened contract
+coverage, or normative catalogue size.
+
+Corrective history is preserved explicitly:
+- WIP source commit `cfea6cadb2ed2bcab5886db9327373bf7206d4c3`
+  introduced overescaped regex patterns; Core20 #1230 and Core25 #872
+  failed at that intermediate point. This WIP was **not** accepted.
+- Follow-up `03d6d94216addf0afec737c9bff6867960ea03cd` immediately fixed the escaped patterns.
+  Do not resume from the intermediate commit.
+
+Exact-source CI results:
+- Core20 quality gates #1231: **SUCCESS**, **414 passed**;
+  results-integrity job **SUCCESS**.
+- Core25 Quality Leap gates #873: **SUCCESS**, including Core25 tests,
+  Core20 regression, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #283: **SUCCESS**, `NO_CHANGE`.
+  Both baseline and current: 56 requirements / 25 VERIFIED_OK /
+  2 PROJECT_FINDING / 29 REVIEW_QUESTION; changed IDs: none.
+- Source Snapshot Artifact #679: **SUCCESS**.
+- Streamlit startup smoke #51: **SUCCESS**.
+
+Checkpoint discipline:
+- The following commit updates **documentation only**. No normative
+  functional files are altered after the above green source SHA.
+- After the documentation checkpoint, confirm branch HEAD matches the
+  checkpoint SHA, and inspect push CI results. Do not merge to `main`.
+
+Next bounded work: prevent duplicate or inconsistent source identities
+inside IOS inventory and develop a documented applicability-map
+candidate flow using source-locked, project-scoped evidence. Keep
+`PP87-CLAUSE-15-IOS` HOLD unless the complete proof route is validated.

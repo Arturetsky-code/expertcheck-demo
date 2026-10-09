@@ -48,6 +48,8 @@ def build_ios_applicability_candidates(
         "candidate_count":0,
         "candidates":[],
         "rejected":[],
+        "conflict_count":0,
+        "conflicts":[],
         "reason_code":"NO_TYPED_PROJECT_APPLICABILITY_CLAIMS",
     }
     project_models=[
@@ -67,6 +69,53 @@ def build_ios_applicability_candidates(
     if not ids or any(not oid for oid in ids) or len(set(ids))!=len(ids):
         result["reason_code"]="UNRESOLVED_OBJECT_IDENTITIES"
         return result
+
+    # A single object/subsection cannot have mutually opposite applicability
+    # assertions admitted as independent review candidates. Collect *all*
+    # typed claims, even ungrounded ones: a missing source must not suppress
+    # the conflict warning or allow the opposing claim to appear uncontested.
+    claims_by_owner:dict[tuple[str,str],dict[str,list[dict[str,Any]]]]={}
+    for obj,oid in zip(objects,ids):
+        props=obj.get("properties") or {}
+        records=props.get(PROPERTY_KEY) if isinstance(props,dict) else None
+        if not isinstance(records,list):
+            continue
+        for ev in records:
+            if not isinstance(ev,dict):
+                continue
+            code=_section_code(ev.get("subsection"))
+            decision=str(ev.get("applicability") or "").strip().upper()
+            if not code or decision not in {"REQUIRED","NOT_REQUIRED"}:
+                continue
+            document=str(ev.get("document") or "").strip()
+            page=_page_number(ev.get("page"))
+            bucket=claims_by_owner.setdefault((oid,code),{})
+            evidence={
+                "applicability_claim":decision,
+                "document":document,
+                "page":int(page) if page else None,
+                "source_state":"UNVERIFIED_PROJECT_UNDERSTANDING_CLAIM",
+            }
+            if evidence not in bucket.setdefault(decision,[]):
+                bucket[decision].append(evidence)
+
+    conflict_keys={
+        key for key,decisions in claims_by_owner.items()
+        if {"REQUIRED","NOT_REQUIRED"} <= set(decisions)
+    }
+    for oid,code in sorted(conflict_keys):
+        claims=claims_by_owner[(oid,code)]
+        result["conflicts"].append({
+            "object_id":oid,
+            "subsection":code,
+            "reason_code":"IOS_APPLICABILITY_CLAIM_CONFLICT",
+            "claims":[
+                item for decision in ("REQUIRED","NOT_REQUIRED")
+                for item in claims.get(decision,[])
+            ],
+            "resolution":"SPECIALIST_REVIEW_REQUIRED",
+        })
+    result["conflict_count"]=len(result["conflicts"])
 
     page_index:dict[tuple[str,str],list[str]]={}
     for page in (pages or []):
@@ -131,7 +180,9 @@ def build_ios_applicability_candidates(
             key=(source_key,pg)
             matched_source=source_index.get(source_key) or []
             page_texts=page_index.get(key) or []
-            if not doc or not pg or not code or decision not in {"REQUIRED","NOT_REQUIRED"}:
+            if (oid,code) in conflict_keys and decision in {"REQUIRED","NOT_REQUIRED"}:
+                reject="IOS_APPLICABILITY_CLAIM_CONFLICT"
+            elif not doc or not pg or not code or decision not in {"REQUIRED","NOT_REQUIRED"}:
                 reject="INVALID_TYPED_APPLICABILITY_RECORD"
             elif len(matched_source)!=1 or matched_source[0].get("metadata_conflict"):
                 reject="IOS_SOURCE_IDENTITY_NOT_PROVEN"
@@ -183,7 +234,8 @@ def build_ios_applicability_candidates(
 
     result["candidate_count"]=len(result["candidates"])
     result["reason_code"]=(
-        "REVIEW_ONLY_TYPED_CANDIDATES" if result["candidates"]
+        "CONTRADICTORY_TYPED_APPLICABILITY_CLAIMS" if conflict_keys
+        else "REVIEW_ONLY_TYPED_CANDIDATES" if result["candidates"]
         else "TYPED_CLAIMS_REJECTED" if claims_found or result["rejected"]
         else "NO_TYPED_PROJECT_APPLICABILITY_CLAIMS"
     )

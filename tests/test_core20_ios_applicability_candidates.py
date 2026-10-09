@@ -148,3 +148,148 @@ def test_unrelated_legacy_project_property_does_not_generate_candidate():
     result=_run(docs,[{"document":"ИОС1.pdf","page":1,"text":"ИОС1"}])
     assert result["candidate_count"]==0
     assert result["reason_code"]=="NO_TYPED_PROJECT_APPLICABILITY_CLAIMS"
+
+
+def _add_claim(documents, *, oid="OBJ-A", section="ИОС1",
+               decision="NOT_REQUIRED", document="Объект А/ИОС1.pdf",
+               page=8, fragment="По данному объекту подраздел ИОС1 не требуется."):
+    objects=documents[1]["project_understanding"]["objects"]
+    obj=next((row for row in objects if row["object_id"]==oid),None)
+    if obj is None:
+        obj={"object_id":oid,"properties":{}}
+        objects.append(obj)
+    obj["properties"].setdefault("ios_subsection_applicability",[]).append({
+        "subsection":section,"applicability":decision,
+        "document":document,"page":page,"fragment":fragment,
+    })
+
+
+def test_opposite_applicability_claims_same_object_and_subsection_are_quarantined():
+    docs,pages=_fixture()
+    opposite="Для этого объекта подраздел ИОС1 не требуется по обоснованию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    result=_run(docs,pages)
+    assert result["state"]=="CANDIDATE_ONLY"
+    assert result["promotion_policy"]=="HOLD"
+    assert result["complete"] is False
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    assert result["reason_code"]=="CONTRADICTORY_TYPED_APPLICABILITY_CLAIMS"
+    group=result["conflicts"][0]
+    assert (group["object_id"],group["subsection"])==("OBJ-A","ИОС1")
+    assert [x["applicability_claim"] for x in group["claims"]]==[
+        "REQUIRED","NOT_REQUIRED"
+    ]
+    assert all(x["source_state"]=="UNVERIFIED_PROJECT_UNDERSTANDING_CLAIM"
+               for x in group["claims"])
+    assert group["resolution"]=="SPECIALIST_REVIEW_REQUIRED"
+    assert [x["reason_code"] for x in result["rejected"]]==[
+        "IOS_APPLICABILITY_CLAIM_CONFLICT"
+    ]*2
+
+
+def test_ungrounded_opposite_claim_still_blocks_uncontested_candidate():
+    docs,pages=_fixture()
+    _add_claim(docs,document="Объект Б/ИОС1.pdf",page=51,
+               fragment="Не подтверждено документом, подраздел ИОС1 не требуется.")
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    assert {x["applicability_claim"]
+            for x in result["conflicts"][0]["claims"]}=={
+                "REQUIRED","NOT_REQUIRED"
+            }
+    assert all(x["reason_code"]=="IOS_APPLICABILITY_CLAIM_CONFLICT"
+               for x in result["rejected"])
+
+
+def test_two_consistent_claims_do_not_create_false_opposition():
+    docs,pages=_fixture()
+    quote="Проектом предусмотрен подраздел ИОС1 и необходимые сети."
+    _add_claim(docs,decision="REQUIRED",fragment=quote)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":quote})
+    result=_run(docs,pages)
+    assert result["conflict_count"]==0
+    assert result["reason_code"]=="REVIEW_ONLY_TYPED_CANDIDATES"
+    assert result["candidate_count"]==2
+
+
+def test_opposite_claims_for_different_objects_are_separate():
+    docs,pages=_fixture()
+    other="Для второго объекта подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,oid="OBJ-B",decision="NOT_REQUIRED",
+               document="Объект Б/ИОС1.pdf",page=8,fragment=other)
+    docs.insert(1,{"Файл":"Объект Б/ИОС1.pdf","Тип документа":"ИОС1"})
+    pages.append({"document":"Объект Б/ИОС1.pdf","page":8,"text":other})
+    result=_run(docs,pages)
+    assert result["conflict_count"]==0
+    assert result["candidate_count"]==2
+    assert {c["object_id"] for c in result["candidates"]}=={"OBJ-A","OBJ-B"}
+
+
+def test_opposite_claims_for_different_subsections_do_not_conflict():
+    docs,pages=_fixture()
+    other="Для объекта подраздел ИОС2 не предусматривается по заданию."
+    _add_claim(docs,section="ИОС2",decision="NOT_REQUIRED",
+               document="Объект А/ИОС2.pdf",fragment=other)
+    docs.insert(1,{"Файл":"Объект А/ИОС2.pdf","Тип документа":"ИОС2"})
+    pages.append({"document":"Объект А/ИОС2.pdf","page":8,"text":other})
+    result=_run(docs,pages)
+    assert result["conflict_count"]==0
+    assert result["candidate_count"]==2
+
+
+def test_undeclared_decision_is_not_construed_as_opposition():
+    docs,pages=_fixture()
+    _add_claim(docs,decision="MAYBE")
+    result=_run(docs,pages)
+    assert result["conflict_count"]==0
+    assert result["candidate_count"]==1
+    assert result["rejected"][0]["reason_code"]=="INVALID_TYPED_APPLICABILITY_RECORD"
+
+
+def test_opposite_claims_can_coexist_with_independent_safe_candidate():
+    docs,pages=_fixture()
+    _add_claim(docs)
+    third="Предусмотрен подраздел ИОС2 для данного объекта по заданию."
+    _add_claim(docs,section="ИОС2",decision="REQUIRED",
+               document="Объект А/ИОС2.pdf",page=9,fragment=third)
+    docs.insert(1,{"Файл":"Объект А/ИОС2.pdf","Тип документа":"ИОС2"})
+    pages.append({"document":"Объект А/ИОС2.pdf","page":9,"text":third})
+    result=_run(docs,pages)
+    assert result["conflict_count"]==1
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["subsection"]=="ИОС2"
+    assert result["reason_code"]=="CONTRADICTORY_TYPED_APPLICABILITY_CLAIMS"
+
+
+def test_opposite_claims_never_promote_completeness_set_or_rendered_verdict():
+    from core20.normative_execution import NormativeExecutionEngine20
+    from core20.normative_foundation import NormativeKnowledgeFoundation20
+    from pathlib import Path
+
+    docs,pages=_fixture()
+    other="Для объекта подраздел ИОС1 не требуется по техническому заданию."
+    _add_claim(docs,fragment=other)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":other})
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{"set_contract":{
+            "mode":"APPLICABILITY_AWARE_INVENTORY","promotion_policy":"HOLD"
+        }},
+    }
+    set_result=_set_completeness_evaluation(contract,pages,docs)
+    assert set_result["complete"] is False
+    assert set_result["promotion_policy"]=="HOLD"
+    assert set_result["evidence"]==[]
+    assert set_result["applicability_map_candidates"]["conflict_count"]==1
+
+    foundation=NormativeKnowledgeFoundation20(
+        Path(__file__).resolve().parents[1]/"knowledge"
+    )
+    runtime=NormativeExecutionEngine20(foundation).run(docs,pages)
+    ios=next(row for row in runtime["rows"]
+             if row["requirement_id"]=="PP87-CLAUSE-15-IOS")
+    assert ios["kind"]=="REVIEW_QUESTION"
+    assert ios["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"

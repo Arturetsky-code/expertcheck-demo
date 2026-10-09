@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `03d6d94216addf0afec737c9bff6867960ea03cd`
-Green validation marker commit: `03d6d94216addf0afec737c9bff6867960ea03cd`
+Latest validated source commit: `474934943aede39f59f6870fc384a626d5c771db`
+Green validation marker commit: `474934943aede39f59f6870fc384a626d5c771db`
 
 ## Official accepted local checkpoint
 
@@ -8815,3 +8815,69 @@ Next bounded work: prevent duplicate or inconsistent source identities
 inside IOS inventory and develop a documented applicability-map
 candidate flow using source-locked, project-scoped evidence. Keep
 `PP87-CLAUSE-15-IOS` HOLD unless the complete proof route is validated.
+
+
+## ExpertCheck 25.3 — repeated IOS file identity fail-closed — 2026-10-09
+
+Previous green documentation checkpoint:
+`bc5e7622a04fa030e4469509a692531e63d40eee`.
+
+**Bounded source change:** `core20/normative_execution.py` now consolidates
+repeat inventory rows whose **full relative file path** is equal after
+case-folding, slash normalization, and duplicate-separator normalization.
+The filename basename alone is explicitly NOT a safe document identity:
+`Объект А/ИОС1.pdf` and `Объект Б/ИОС1.pdf` remain distinct inventory sources.
+
+- Compatible duplicate declarations (ИОС1 vs ИОС1.1) count as one source,
+  with the most specific code retained.
+- Conflicting major or sibling-subpart declarations for the same document
+  (ИОС1 vs ИОС2, or ИОС1.1 vs ИОС1.2) are quarantined as one
+  `metadata_conflict` entry with all source claims retained for review.
+- The `APPLICABILITY_AWARE_INVENTORY` diagnostic excludes quarantined
+  sources from the `observed_inventory` and exposes
+  `IOS_SUBSECTION_METADATA_CONFLICT`; no guessed two-subsection inventory.
+- `source_rows` records the number of registry rows merged into the
+  normalized source identity. Ambiguous rows are ranked after unambiguous
+  sources in the short retrieval-candidate packet.
+- The PP87 clause 15 completeness contract **remains HOLD**:
+  inventory presence alone cannot prove normative completeness or absence
+  of a required subsection; a source-locked project applicability map
+  is still missing.
+
+Five focused regressions added to
+`tests/test_core20_normative_execution_alpha8.py`:
+consistent repeated Windows/Unix paths, contradictory duplicate metadata,
+sibling-subpart contradiction, distinct folders with identical basenames,
+and end-to-end REVIEW_QUESTION/no-promotion guarantee.
+
+Commits and exact CI:
+- Functional source `a5d123aa07eb78ebbbd871e3faf49b293262a94f`: Core20 #1233 SUCCESS,
+  Source Snapshot #681 SUCCESS, Streamlit startup smoke #52 SUCCESS.
+- On that **same functional source SHA**, Test78 deterministic A/B #284:
+  **SUCCESS**, `NO_CHANGE`, 56 requirements / 25 VERIFIED_OK /
+  2 PROJECT_FINDING / 29 REVIEW_QUESTION, changed IDs empty.
+- Intermediate tests commit
+  `a165cd7c8ec8c6107e64d34e96bd803a3868b7a8` was intentionally
+  **not accepted**: Core20 #1234 and Core25 #876 failed one new assertion
+  because `executable_contract_ready` belongs to a contract catalogue
+  row, not a rendered runtime verdict row (418 passed, 1 failed).
+- Corrective *test-only* source commit `474934943aede39f59f6870fc384a626d5c771db`:
+  Core20 #1235 **SUCCESS** (419 passed);
+  Core25 #877 **SUCCESS**, including full release gate and Core20
+  regression; Source Snapshot #683 **SUCCESS**.
+  No production-engine files changed after functional source SHA above.
+
+The following checkpoint commit updates this journal **only**. Preserve all
+intermediate commits for traceability and do not merge to main.
+
+Known deferred risks:
+- Repeated records for the same actual logical PDF under different paths
+  are not automatically collapsed without a trusted stable document ID.
+- Contradictory simultaneous metadata aliases within one individual input
+  row are not yet comprehensively reconciled.
+- The applicability-map source corpus, object-specific scope, and file
+  authenticity are not yet proven.
+
+**Next bounded slice:** fail-closed diagnosis for contradictory metadata
+aliases in one row, then develop an independently sourced applicability-map
+candidate path without upgrading PP87 hold-only verdicts.

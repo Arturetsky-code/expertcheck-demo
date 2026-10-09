@@ -426,13 +426,15 @@ def _conditional_applicability(
 
 
 def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
-    """Return a diagnostic inventory, never an applicability/completeness proof.
+    """Build a diagnostic, path-aware IOS inventory without proving completeness.
 
-    A section type and the file basename must not silently contribute different
-    major IOS subsection numbers to the same document.
+    Multiple registry rows for one normalized full path describe one source.
+    Conflicting claims from those rows quarantine that source: they must not
+    create two apparently observed IOS subsections. The basename alone is
+    deliberately not used as an identity key across different folders.
     """
     output=[]
-    seen=set()
+    by_path={}
 
     def subsection_codes(value:str)->list[str]:
         normalized=_norm(value).replace(" ","")
@@ -440,6 +442,20 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             f"ИОС{match.group(1)}"
             for match in re.finditer(r"иос(\d+(?:\.\d+)*)",normalized)
         ))
+
+    def compatible_codes(first:str,second:str)->bool:
+        return (
+            first==second
+            or first.startswith(second+".")
+            or second.startswith(first+".")
+        )
+
+    def conflict_in(claims:list[str])->bool:
+        return any(
+            not compatible_codes(code,other)
+            for index,code in enumerate(claims)
+            for other in claims[index+1:]
+        )
 
     for row in documents or []:
         if not isinstance(row,dict):
@@ -460,35 +476,71 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
         if _section_key(raw_section or raw_name)!="иос":
             continue
 
-        # Directory names belong to storage/routing, not the PD document code.
         basename=re.split(r"[\\/]",raw_name)[-1]
         section_codes=subsection_codes(raw_section)
         filename_codes=subsection_codes(basename)
-        section_roots={code.split(".")[0] for code in section_codes}
-        filename_roots={code.split(".")[0] for code in filename_codes}
-        conflict=bool(section_roots and filename_roots and section_roots!=filename_roots)
+        identity_key=re.sub(r"/+","/",_norm(raw_name).replace("\\","/"))
+        document=raw_name or raw_section or "ИОС"
 
-        # The filename may carry a more precise subpart (ИОС1.1) than the
-        # canonical section type (ИОС1). A genuine major-code mismatch is
-        # unresolved, not proof that both claimed subsections were loaded.
+        # Only a file path supplies a deduplication identity. A bare section
+        # label without a file must not collapse separate unknown documents.
+        prior=by_path.get(identity_key) if identity_key else None
+        if prior is not None:
+            prior["source_rows"]+=1
+            prior["_metadata_claims"]=list(dict.fromkeys(
+                prior["_metadata_claims"]+section_codes
+            ))
+            prior["_filename_claims"]=list(dict.fromkeys(
+                prior["_filename_claims"]+filename_codes
+            ))
+            claims=list(dict.fromkeys(
+                prior["_metadata_claims"]+prior["_filename_claims"]
+            ))
+            conflict=conflict_in(claims)
+            prior["metadata_conflict"]=conflict
+            prior["subsections"]=(
+                ["ИОС"] if conflict
+                else ([max(claims,key=lambda code:(code.count("."),len(code)))]
+                      if claims else ["ИОС"])
+            )
+            prior["metadata_subsections"]=(
+                list(prior["_metadata_claims"]) if conflict else []
+            )
+            prior["filename_subsections"]=(
+                list(prior["_filename_claims"]) if conflict else []
+            )
+            continue
+
+        claims=list(dict.fromkeys(section_codes+filename_codes))
+        conflict=conflict_in(claims)
         codes=(
             ["ИОС"] if conflict
-            else (filename_codes or section_codes or ["ИОС"])
+            else ([max(claims,key=lambda code:(code.count("."),len(code)))]
+                  if claims else ["ИОС"])
         )
-        document=raw_name or raw_section or "ИОС"
-        key=(document,tuple(codes))
-        if key in seen:
-            continue
-        seen.add(key)
-        output.append({
+        entry={
             "document":document,
             "section":"ИОС",
             "subsections":codes,
             "metadata_conflict":conflict,
             "metadata_subsections":section_codes if conflict else [],
             "filename_subsections":filename_codes if conflict else [],
-        })
-    output.sort(key=lambda item:(item["subsections"],item["document"]))
+            "source_rows":1,
+            "_metadata_claims":section_codes,
+            "_filename_claims":filename_codes,
+        }
+        output.append(entry)
+        if identity_key:
+            by_path[identity_key]=entry
+
+    for item in output:
+        item.pop("_metadata_claims",None)
+        item.pop("_filename_claims",None)
+    # An ambiguous source must not hide a valid source in the short
+    # retrieval-candidate list.
+    output.sort(key=lambda item:(
+        bool(item["metadata_conflict"]),item["subsections"],_norm(item["document"])
+    ))
     return output
 
 

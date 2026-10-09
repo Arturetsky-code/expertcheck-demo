@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `474934943aede39f59f6870fc384a626d5c771db`
-Green validation marker commit: `474934943aede39f59f6870fc384a626d5c771db`
+Latest validated source commit: `d35490a4625b36a5b181aac74ea55cfd597c443c`
+Green validation marker commit: `d35490a4625b36a5b181aac74ea55cfd597c443c`
 
 ## Official accepted local checkpoint
 
@@ -8881,3 +8881,73 @@ Known deferred risks:
 **Next bounded slice:** fail-closed diagnosis for contradictory metadata
 aliases in one row, then develop an independently sourced applicability-map
 candidate path without upgrading PP87 hold-only verdicts.
+
+
+## ExpertCheck 25.3 — within-row IOS section aliases fail-closed — 2026-10-09
+
+Previous green checkpoint: `05a47b527490f6a3d3cfc8fecf28e8cb3e1fc7a1`.
+Accepted functional source commit: `d35490a4625b36a5b181aac74ea55cfd597c443c`.
+Scope: `core20/normative_execution.py` plus exactly five regressions in
+`tests/test_core20_normative_execution_alpha8.py`.
+
+### Problem and guarded behavior
+
+The inventory previously used only the first nonempty section metadata
+alias of one input row (`Тип документа`, `document_type`, `Раздел`,
+`section`). Different nonempty aliases could contradict one another
+without being detected.
+
+- Collect IOS identifiers from **all** these alias fields; apply the
+  existing compatibility rule (ИОС1 vs ИОС1.1 compatible, ИОС1 vs ИОС2
+  and ИОС1.1 vs ИОС1.2 incompatible).
+- When an alias explicitly asserts another canonical section
+  (ПЗ, ПЗУ, АР, КР, ТХ, ПБ, ОДИ, ПОС, ПМООС, ЭЭ), an IOS reference
+  in another alias or in the file basename triggers a guarded
+  `metadata_conflict` with `metadata_route_conflicts`.
+  Ambiguity is not allowed to silently eliminate the file from the
+  diagnostic inventory just because the first alias was non-IOS.
+- Merge alias claims across duplicate registry rows referring to the
+  same normalized file path; later conflicts quarantine the whole
+  source, without inventing more observed subsections.
+- Ambiguous source entries are omitted from the numeric
+  `observed_inventory` and receive
+  `IOS_SUBSECTION_METADATA_CONFLICT` diagnostics. Route conflicts
+  are preserved in `ambiguous_inventory` only when present, retaining
+  backward-compatible shapes for previously known code-code mismatches.
+- The underlying clause remains
+  `PP87-CLAUSE-15-IOS` / `SET_CONTRACT_HOLD_ONLY`.
+  No invented completeness, absence, or normative-deviation verdicts.
+
+Five focused tests: different IOS aliases in one row, compatible nested
+and generic IOS descriptions, explicit PZ-vs-IOS role mismatch,
+conflict introduced by the later duplicate input row, and end-to-end
+fail-closed REVIEW_QUESTION.
+
+### CI on exact source commit
+
+- Core20 quality gates #1237: **SUCCESS**; **424 passed** and
+  report/integrity job successful.
+- Core25 Quality Leap gates #879: **SUCCESS**, including Core25 tests,
+  targeted Core20 regressions, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #285: **SUCCESS** / `NO_CHANGE`.
+  Baseline and current: 56 requirements, 25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION; no changed IDs.
+- Source Snapshot Artifact #685: **SUCCESS**.
+- Streamlit startup smoke #53: **SUCCESS**.
+- No changes to the 73/73 previously hardened executable
+  contracts, standards registry, or normative promotion policy.
+  Successful release gates do not mean the historical legacy suite
+  is free of baseline-allowlisted failures.
+
+### Continuation and checkpoint guard
+
+The immediately following commit is *documentation only*. Inspect
+exact-commit CI and branch-head equality on that commit before
+promoting it as the next green checkpoint. Do not merge into `main`.
+
+Next small quality task: reconcile contradictory **filename aliases**
+(`Файл` / `document` / `filename`) within one source record.
+Keep different project objects and different directories separate
+unless trusted identity evidence establishes equivalence. The
+applicability map remains a separate source-locked, project-scoped
+milestone; no mandatory-six IOS shortcut.

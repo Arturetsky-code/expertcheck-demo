@@ -460,25 +460,38 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
     for row in documents or []:
         if not isinstance(row,dict):
             continue
-        raw_section=str(
-            row.get("Тип документа")
-            or row.get("document_type")
-            or row.get("Раздел")
-            or row.get("section")
-            or ""
-        )
+        section_values=[
+            str(row.get(field) or "").strip()
+            for field in ("Тип документа","document_type","Раздел","section")
+            if str(row.get(field) or "").strip()
+        ]
+        raw_section=section_values[0] if section_values else ""
         raw_name=str(
             row.get("Файл")
             or row.get("document")
             or row.get("filename")
             or ""
         ).strip()
-        if _section_key(raw_section or raw_name)!="иос":
-            continue
-
         basename=re.split(r"[\\/]",raw_name)[-1]
-        section_codes=subsection_codes(raw_section)
+
+        # Do not trust only the first non-empty alias. Each section field is
+        # an independent claim about the same uploaded document.
+        section_codes=list(dict.fromkeys(
+            code for value in section_values for code in subsection_codes(value)
+        ))
         filename_codes=subsection_codes(basename)
+        foreign_roles=list(dict.fromkeys(
+            _section_key(value) for value in section_values
+            if _section_key(value) in {
+                "пз","пзу","ар","кр","тх","пб","оди","пос","пмоос","ээ"
+            }
+        ))
+        if not (
+            section_codes or filename_codes
+            or any(_section_key(value)=="иос" for value in section_values)
+            or _section_key(basename)=="иос"
+        ):
+            continue
         identity_key=re.sub(r"/+","/",_norm(raw_name).replace("\\","/"))
         document=raw_name or raw_section or "ИОС"
 
@@ -493,10 +506,13 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             prior["_filename_claims"]=list(dict.fromkeys(
                 prior["_filename_claims"]+filename_codes
             ))
+            prior["_foreign_role_claims"]=list(dict.fromkeys(
+                prior["_foreign_role_claims"]+foreign_roles
+            ))
             claims=list(dict.fromkeys(
                 prior["_metadata_claims"]+prior["_filename_claims"]
             ))
-            conflict=conflict_in(claims)
+            conflict=conflict_in(claims) or bool(prior["_foreign_role_claims"])
             prior["metadata_conflict"]=conflict
             prior["subsections"]=(
                 ["ИОС"] if conflict
@@ -509,10 +525,11 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             prior["filename_subsections"]=(
                 list(prior["_filename_claims"]) if conflict else []
             )
+            prior["metadata_route_conflicts"]=list(prior["_foreign_role_claims"])
             continue
 
         claims=list(dict.fromkeys(section_codes+filename_codes))
-        conflict=conflict_in(claims)
+        conflict=conflict_in(claims) or bool(foreign_roles)
         codes=(
             ["ИОС"] if conflict
             else ([max(claims,key=lambda code:(code.count("."),len(code)))]
@@ -525,9 +542,11 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             "metadata_conflict":conflict,
             "metadata_subsections":section_codes if conflict else [],
             "filename_subsections":filename_codes if conflict else [],
+            "metadata_route_conflicts":list(foreign_roles),
             "source_rows":1,
             "_metadata_claims":section_codes,
             "_filename_claims":filename_codes,
+            "_foreign_role_claims":list(foreign_roles),
         }
         output.append(entry)
         if identity_key:
@@ -536,6 +555,7 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
     for item in output:
         item.pop("_metadata_claims",None)
         item.pop("_filename_claims",None)
+        item.pop("_foreign_role_claims",None)
     # An ambiguous source must not hide a valid source in the short
     # retrieval-candidate list.
     output.sort(key=lambda item:(
@@ -2195,11 +2215,16 @@ def _set_completeness_evaluation(
         ambiguous=[]
         for item in inventory:
             if item.get("metadata_conflict"):
-                ambiguous.append({
+                diagnostic={
                     "document":item.get("document") or "",
                     "metadata_subsections":list(item.get("metadata_subsections") or []),
                     "filename_subsections":list(item.get("filename_subsections") or []),
-                })
+                }
+                if item.get("metadata_route_conflicts"):
+                    diagnostic["metadata_route_conflicts"]=list(
+                        item["metadata_route_conflicts"]
+                    )
+                ambiguous.append(diagnostic)
                 continue
             # A bare "ИОС" is not a proven subsection number.
             observed.extend(

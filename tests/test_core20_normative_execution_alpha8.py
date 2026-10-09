@@ -667,6 +667,103 @@ def test_alpha8_ios_inventory_duplicate_diagnostic_does_not_promote_clause():
     assert contract["executable_contract_ready"] is False
 
 
+
+def test_alpha8_ios_single_row_conflicting_section_aliases_are_quarantined():
+    from core20.normative_execution import _ios_inventory
+
+    docs=[{
+        "Файл":"Том_ИОС.pdf",
+        "Тип документа":"ИОС1",
+        "document_type":"ИОС2",
+    }]
+    inventory=_ios_inventory(docs)
+    assert len(inventory)==1
+    assert inventory[0]["metadata_conflict"] is True
+    assert inventory[0]["subsections"]==["ИОС"]
+    assert inventory[0]["metadata_subsections"]==["ИОС1","ИОС2"]
+    assert inventory[0]["source_rows"]==1
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{"set_contract":{
+            "mode":"APPLICABILITY_AWARE_INVENTORY","promotion_policy":"HOLD"
+        }},
+    }
+    result=_set_completeness_evaluation(contract,[],docs)
+    assert result["observed_inventory"]==[]
+    assert result["complete"] is False
+    assert "IOS_SUBSECTION_METADATA_CONFLICT" in result["missing_ids"]
+
+
+def test_alpha8_ios_same_row_compatible_parent_and_nested_aliases():
+    from core20.normative_execution import _ios_inventory
+
+    inventory=_ios_inventory([{
+        "Файл":"Том_ИОС1.1.pdf",
+        "Тип документа":"ИОС1",
+        "document_type":"ИОС1.1",
+        "Раздел":"ИОС",
+    }])
+    assert len(inventory)==1
+    assert inventory[0]["metadata_conflict"] is False
+    assert inventory[0]["metadata_subsections"]==[]
+    assert inventory[0]["subsections"]==["ИОС1.1"]
+
+
+def test_alpha8_ios_non_ios_section_alias_conflict_stays_review_only():
+    from core20.normative_execution import _ios_inventory
+
+    docs=[{
+        "Файл":"Том_ИОС1.pdf",
+        "Тип документа":"ПЗ",
+        "document_type":"ИОС1",
+    }]
+    inventory=_ios_inventory(docs)
+    assert len(inventory)==1
+    assert inventory[0]["metadata_conflict"] is True
+    assert inventory[0]["metadata_route_conflicts"]==["пз"]
+    assert inventory[0]["subsections"]==["ИОС"]
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{"set_contract":{
+            "mode":"APPLICABILITY_AWARE_INVENTORY","promotion_policy":"HOLD"
+        }},
+    }
+    result=_set_completeness_evaluation(contract,[],docs)
+    assert result["observed_inventory"]==[]
+    assert result["ambiguous_inventory"][0]["metadata_route_conflicts"]==["пз"]
+
+
+def test_alpha8_ios_alias_conflict_on_later_duplicate_row_quarantines_source():
+    from core20.normative_execution import _ios_inventory
+
+    docs=[
+        {"Файл":"Объект/Том_ИОС1.pdf","Тип документа":"ИОС1"},
+        {"Файл":"объект/том_иос1.pdf","Тип документа":"ИОС1",
+         "section":"ИОС2"},
+    ]
+    inventory=_ios_inventory(docs)
+    assert len(inventory)==1
+    assert inventory[0]["source_rows"]==2
+    assert inventory[0]["metadata_conflict"] is True
+    assert inventory[0]["subsections"]==["ИОС"]
+    assert inventory[0]["metadata_subsections"]==["ИОС1","ИОС2"]
+
+
+def test_alpha8_ios_single_row_conflict_never_promotes_normative_verdict():
+    engine=NormativeExecutionEngine20(_foundation())
+    docs=[{
+        "Файл":"Том_ИОС1.pdf",
+        "Тип документа":"ИОС1",
+        "document_type":"ИОС2",
+    }]
+    result=engine.run(docs,[])
+    row=next(x for x in result["rows"]
+             if x["requirement_id"]=="PP87-CLAUSE-15-IOS")
+    assert row["kind"]=="REVIEW_QUESTION"
+    assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
+    assert row["retrieval_reason_code"]=="NORMATIVE_IOS_INVENTORY_CANDIDATE"
+
+
 def test_alpha8_set_completeness_reports_missing_elements():
     contract={
         "requirement_id":"SET-X",

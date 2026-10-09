@@ -457,6 +457,27 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             for other in claims[index+1:]
         )
 
+    def filename_alias_conflict(claims:list[str])->bool:
+        """Compare path claims conservatively; never merge two full paths.
+
+        A basename-only value may be an alias for one explicit full path
+        when the basename is identical. Two different explicit directories
+        are never treated as equivalent just because filenames match.
+        """
+        normalized=list(dict.fromkeys(
+            re.sub(r"/+","/",_norm(value).replace("\\","/"))
+            for value in claims if str(value or "").strip()
+        ))
+        for index,first in enumerate(normalized):
+            for second in normalized[index+1:]:
+                if first==second:
+                    continue
+                if first.rsplit("/",1)[-1]!=second.rsplit("/",1)[-1]:
+                    return True
+                if "/" in first and "/" in second:
+                    return True
+        return False
+
     for row in documents or []:
         if not isinstance(row,dict):
             continue
@@ -466,20 +487,29 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             if str(row.get(field) or "").strip()
         ]
         raw_section=section_values[0] if section_values else ""
-        raw_name=str(
-            row.get("Файл")
-            or row.get("document")
-            or row.get("filename")
-            or ""
-        ).strip()
+        file_values=[
+            str(row.get(field) or "").strip()
+            for field in ("Файл","document","filename")
+            if str(row.get(field) or "").strip()
+        ]
+        raw_name=file_values[0] if file_values else ""
         basename=re.split(r"[\\/]",raw_name)[-1]
+        file_claims=list(dict.fromkeys(
+            re.sub(r"/+","/",_norm(value).replace("\\","/"))
+            for value in file_values
+        ))
 
         # Do not trust only the first non-empty alias. Each section field is
         # an independent claim about the same uploaded document.
         section_codes=list(dict.fromkeys(
             code for value in section_values for code in subsection_codes(value)
         ))
-        filename_codes=subsection_codes(basename)
+        # File aliases can disagree even when the first non-empty one looks
+        # usable. Keep all filename claims for a source-identity diagnostic.
+        filename_codes=list(dict.fromkeys(
+            code for name in file_values
+            for code in subsection_codes(re.split(r"[\\/]",name)[-1])
+        ))
         foreign_roles=list(dict.fromkeys(
             _section_key(value) for value in section_values
             if _section_key(value) in {
@@ -489,7 +519,10 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
         if not (
             section_codes or filename_codes
             or any(_section_key(value)=="иос" for value in section_values)
-            or _section_key(basename)=="иос"
+            or any(
+                _section_key(re.split(r"[\\/]",name)[-1])=="иос"
+                for name in file_values
+            )
         ):
             continue
         identity_key=re.sub(r"/+","/",_norm(raw_name).replace("\\","/"))
@@ -509,10 +542,20 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             prior["_foreign_role_claims"]=list(dict.fromkeys(
                 prior["_foreign_role_claims"]+foreign_roles
             ))
+            prior["_source_filename_aliases"]=list(dict.fromkeys(
+                prior["_source_filename_aliases"]+file_claims
+            ))
             claims=list(dict.fromkeys(
                 prior["_metadata_claims"]+prior["_filename_claims"]
             ))
-            conflict=conflict_in(claims) or bool(prior["_foreign_role_claims"])
+            alias_conflict=filename_alias_conflict(
+                prior["_source_filename_aliases"]
+            )
+            conflict=(
+                conflict_in(claims)
+                or bool(prior["_foreign_role_claims"])
+                or alias_conflict
+            )
             prior["metadata_conflict"]=conflict
             prior["subsections"]=(
                 ["ИОС"] if conflict
@@ -526,10 +569,15 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
                 list(prior["_filename_claims"]) if conflict else []
             )
             prior["metadata_route_conflicts"]=list(prior["_foreign_role_claims"])
+            prior["filename_alias_conflict"]=alias_conflict
+            prior["filename_alias_claims"]=(
+                list(prior["_source_filename_aliases"]) if alias_conflict else []
+            )
             continue
 
         claims=list(dict.fromkeys(section_codes+filename_codes))
-        conflict=conflict_in(claims) or bool(foreign_roles)
+        alias_conflict=filename_alias_conflict(file_claims)
+        conflict=conflict_in(claims) or bool(foreign_roles) or alias_conflict
         codes=(
             ["ИОС"] if conflict
             else ([max(claims,key=lambda code:(code.count("."),len(code)))]
@@ -543,10 +591,13 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             "metadata_subsections":section_codes if conflict else [],
             "filename_subsections":filename_codes if conflict else [],
             "metadata_route_conflicts":list(foreign_roles),
+            "filename_alias_conflict":alias_conflict,
+            "filename_alias_claims":file_claims if alias_conflict else [],
             "source_rows":1,
             "_metadata_claims":section_codes,
             "_filename_claims":filename_codes,
             "_foreign_role_claims":list(foreign_roles),
+            "_source_filename_aliases":file_claims,
         }
         output.append(entry)
         if identity_key:
@@ -556,6 +607,7 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
         item.pop("_metadata_claims",None)
         item.pop("_filename_claims",None)
         item.pop("_foreign_role_claims",None)
+        item.pop("_source_filename_aliases",None)
     # An ambiguous source must not hide a valid source in the short
     # retrieval-candidate list.
     output.sort(key=lambda item:(
@@ -2224,6 +2276,10 @@ def _set_completeness_evaluation(
                     diagnostic["metadata_route_conflicts"]=list(
                         item["metadata_route_conflicts"]
                     )
+                if item.get("filename_alias_conflict"):
+                    diagnostic["filename_alias_claims"]=list(
+                        item.get("filename_alias_claims") or []
+                    )
                 ambiguous.append(diagnostic)
                 continue
             # A bare "ИОС" is not a proven subsection number.
@@ -2242,9 +2298,18 @@ def _set_completeness_evaluation(
             "elements":[],
             "missing_ids":["APPLICABILITY_MAP_REQUIRED"] + (
                 ["IOS_SUBSECTION_METADATA_CONFLICT"] if ambiguous else []
+            ) + (
+                ["IOS_FILENAME_ALIAS_CONFLICT"]
+                if any(item.get("filename_alias_conflict") for item in inventory)
+                else []
             ),
             "missing_labels":["Требуется карта применимых подразделов ИОС"] + (
-                ["Несовпадение кода ИОС в метаданных и имени файла"] if ambiguous else []
+                ["Противоречие обозначений раздела или файла ИОС"]
+                if ambiguous else []
+            ) + (
+                ["Разные идентификаторы файла в полях Файл/document/filename"]
+                if any(item.get("filename_alias_conflict") for item in inventory)
+                else []
             ),
             "observed_inventory":observed,
             "ambiguous_inventory":ambiguous,
@@ -3290,8 +3355,8 @@ class NormativeExecutionEngine20:
                     "fragment":(
                         f"Инвентарь загруженных подразделов: {codes}. "
                         + (
-                            "ТРЕБУЕТ СВЕРКИ: код ИОС в метаданных противоречит "
-                            "коду в имени файла. "
+                            "ТРЕБУЕТ СВЕРКИ: обозначения раздела или "
+                            "идентификаторы файла ИОС противоречат друг другу. "
                             if item.get("metadata_conflict") else ""
                         )
                         + f"Документ: {item.get('document') or 'ИОС'}."

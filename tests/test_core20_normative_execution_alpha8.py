@@ -659,7 +659,12 @@ def test_alpha8_ios_inventory_duplicate_diagnostic_does_not_promote_clause():
     )
     assert row["kind"]=="REVIEW_QUESTION"
     assert row["proof_state"]=="SET_PROOF_CONTRACT_REQUIRED"
-    assert row["executable_contract_ready"] is False
+    # Executability belongs to the contract catalogue, not the result row.
+    contract=next(
+        item for item in _foundation().contracts()
+        if item["requirement_id"]=="PP87-CLAUSE-15-IOS"
+    )
+    assert contract["executable_contract_ready"] is False
 
 
 def test_alpha8_set_completeness_reports_missing_elements():

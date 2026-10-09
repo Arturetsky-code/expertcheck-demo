@@ -122,6 +122,36 @@ def build_ios_applicability_candidates(
             if key:
                 source_index.setdefault(key,[]).append(item)
 
+    # Unlike a claim stored inside Project Understanding, an explicit
+    # file-registry object_id is a separate *metadata assertion*. It is
+    # useful as a contradiction guard, but still not independently verified
+    # engineering ownership. No guessed owner from folder or basename.
+    source_owner_ids:dict[str,set[str]]={}
+    for row in documents or []:
+        if not isinstance(row,dict):
+            continue
+        owner=str(row.get("object_id") or "").strip()
+        if not owner:
+            continue
+        name=next((
+            str(row.get(field)).strip()
+            for field in ("Файл","document","filename")
+            if str(row.get(field) or "").strip()
+        ),"")
+        key=_path(name)
+        if key in source_index:
+            source_owner_ids.setdefault(key,set()).add(owner)
+
+    def registry_owner_state(oid:str,document:str)->str:
+        owners=source_owner_ids.get(_path(document),set())
+        if len(owners)>1:
+            return "DOCUMENT_REGISTRY_OBJECT_IDS_CONFLICT"
+        if owners and oid not in owners:
+            return "DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"
+        if owners:
+            return "DOCUMENT_REGISTRY_OBJECT_ID_MATCH_UNVERIFIED"
+        return "DOCUMENT_REGISTRY_OBJECT_ID_ABSENT"
+
     # A page listed under two separate objects cannot prove a unique
     # engineering owner. This is a diagnostic guard, not owner verification.
     page_owners:dict[tuple[str,str],set[str]]={}
@@ -149,6 +179,12 @@ def build_ios_applicability_candidates(
             return "IOS_SOURCE_IDENTITY_NOT_PROVEN"
         if code not in (matches[0].get("subsections") or []):
             return "IOS_SUBSECTION_SOURCE_MISMATCH"
+        owner_state=registry_owner_state(oid,document)
+        if owner_state in {
+            "DOCUMENT_REGISTRY_OBJECT_IDS_CONFLICT",
+            "DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH",
+        }:
+            return owner_state
         matches_text=page_index.get(key) or []
         if len(matches_text)!=1:
             return "SOURCE_PAGE_NOT_UNIQUE"
@@ -186,6 +222,9 @@ def build_ios_applicability_candidates(
                     ),
                     "source_reason_code":reason or "EXACT_DOCUMENT_PAGE_QUOTE_MATCH",
                     "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
+                    "registry_owner_state":registry_owner_state(
+                        oid,str(item.get("document") or "")
+                    ),
                 })
         matched=sum(
             item["source_state"]=="PAGE_QUOTE_LOCATED_APPLICABILITY_UNVERIFIED"
@@ -268,6 +307,7 @@ def build_ios_applicability_candidates(
                 "fragment":fragment,
                 "source_state":"EXACT_PAGE_QUOTE_MATCHED",
                 "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
+                "registry_owner_state":registry_owner_state(oid,doc),
                 "admission":"SPECIALIST_REVIEW_ONLY",
             })
 

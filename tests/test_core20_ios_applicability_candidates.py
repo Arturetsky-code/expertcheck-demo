@@ -397,3 +397,93 @@ def test_conflict_diagnostic_never_asserts_normative_failure_when_both_quotes_fo
     assert result["promotion_policy"]=="HOLD"
     assert result["complete"] is False
     assert result["candidate_count"]==0
+
+
+
+def test_registry_explicit_matching_owner_is_diagnostic_not_proof():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-A"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    item=result["candidates"][0]
+    assert item["registry_owner_state"]=="DOCUMENT_REGISTRY_OBJECT_ID_MATCH_UNVERIFIED"
+    assert item["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+    assert item["admission"]=="SPECIALIST_REVIEW_ONLY"
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"
+
+
+def test_missing_registry_owner_keeps_review_only_with_explicit_unknown_state():
+    docs,pages=_fixture()
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["registry_owner_state"]=="DOCUMENT_REGISTRY_OBJECT_ID_ABSENT"
+    assert result["candidates"][0]["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+
+
+def test_wrong_explicit_registry_owner_blocks_self_attributed_candidate():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-B"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"
+    assert result["complete"] is False
+
+
+def test_two_different_registry_owners_for_same_path_block_candidate():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-A"
+    docs.append({
+        "Файл":r"объект а\иос1.PDF",
+        "Тип документа":"ИОС1","object_id":"OBJ-B",
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="DOCUMENT_REGISTRY_OBJECT_IDS_CONFLICT"
+
+
+def test_registry_owner_of_distinct_document_does_not_poison_target_claim():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-A"
+    docs.append({"Файл":"Объект Б/ИОС1.pdf","Тип документа":"ИОС1",
+                 "object_id":"OBJ-B"})
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["registry_owner_state"]=="DOCUMENT_REGISTRY_OBJECT_ID_MATCH_UNVERIFIED"
+
+
+def test_conflicting_applicability_claims_keep_registry_owner_diagnostic():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-B"
+    opposite="Данному объекту подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    group=result["conflicts"][0]
+    assert group["source_matched_claim_count"]==0
+    assert all(x["registry_owner_state"]=="DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"
+               for x in group["claims"])
+    assert all(x["source_reason_code"]=="DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"
+               for x in group["claims"])
+    assert all(x["reason_code"]=="IOS_APPLICABILITY_CLAIM_CONFLICT"
+               for x in result["rejected"])
+
+
+def test_registry_owner_guard_preserves_normative_hold_only():
+    docs,pages=_fixture()
+    docs[0]["object_id"]="OBJ-B"
+    contract={
+        "requirement_id":"PP87-CLAUSE-15-IOS",
+        "evidence_contract":{"set_contract":{
+            "mode":"APPLICABILITY_AWARE_INVENTORY","promotion_policy":"HOLD",
+        }},
+    }
+    result=_set_completeness_evaluation(contract,pages,docs)
+    assert result["complete"] is False
+    assert result["evidence"]==[]
+    assert result["applicability_map_candidates"]["candidate_count"]==0
+    assert result["applicability_map_candidates"]["rejected"][0][
+        "reason_code"
+    ]=="DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"

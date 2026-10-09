@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `d35490a4625b36a5b181aac74ea55cfd597c443c`
-Green validation marker commit: `d35490a4625b36a5b181aac74ea55cfd597c443c`
+Latest validated source commit: `5f0b987838185b5acbc9a42fe0ecb22850603726`
+Green validation marker commit: `5f0b987838185b5acbc9a42fe0ecb22850603726`
 
 ## Official accepted local checkpoint
 
@@ -8951,3 +8951,82 @@ Keep different project objects and different directories separate
 unless trusted identity evidence establishes equivalence. The
 applicability map remains a separate source-locked, project-scoped
 milestone; no mandatory-six IOS shortcut.
+
+
+## ExpertCheck 25.3 — within-row IOS filename alias identity fail-closed — 2026-10-09
+
+Previous validated documentation checkpoint:
+`539f889a3baca24ae9168712eb27537d631d53bc`.
+Accepted source SHA: `5f0b987838185b5acbc9a42fe0ecb22850603726`.
+
+### Scope and behavior
+
+One bounded change in `core20/normative_execution.py`, with six
+regressions in `tests/test_core20_normative_execution_alpha8.py`.
+
+Previously, `_ios_inventory` accepted the first nonempty source name
+from `Файл`, `document`, `filename`, ignoring contradictory names in
+other fields. A record could silently make one document's actual path
+appear equivalent to another document's path or subsection.
+
+New conservative safeguards:
+
+- Inspect all nonempty filename aliases in each input registry row,
+  compare case-insensitively and normalize separators. The same full
+  relative path with slash/case differences is one source identity.
+- A bare basename and an identical basename at an explicit path are
+  compatible within the same row, but **two different explicit paths**
+  are never merged only because their basenames coincide. Different
+  basenames, including ИОС1.pdf versus ИОС2.pdf, are a conflict.
+- All alias basenames contribute typed IOS-code candidates, even if
+  the first filename field does not reveal a section number. An
+  ambiguous source is still admitted as a diagnostic, not silently
+  dropped or used to prove compliance.
+- Preserve filename identity claims through duplicate registry rows
+  with the same canonical source path; contradictions found on a
+  subsequent row quarantine the whole source.
+- `metadata_conflict` and `filename_alias_conflict` force the
+  numerical inventory to exclude the source. The set-completeness
+  diagnostic contains `IOS_FILENAME_ALIAS_CONFLICT` and the
+  `filename_alias_claims` trace, in addition to existing
+  `IOS_SUBSECTION_METADATA_CONFLICT`.
+- Preserve the existing `PP87-CLAUSE-15-IOS` hold-only status.
+  There is **no** categorical project-completeness or noncompliance
+  conclusion from filename or folder names.
+
+Tests address normalized matching filenames, divergent subsection
+names, same basename in two different project folders, IOS code in a
+non-first filename alias, conflicts introduced by a duplicate row,
+and end-to-end hold-only verdict.
+
+### Exact-source verification
+
+- Core20 quality gates #1239: **SUCCESS**, **430 passed** and
+  results-integrity job successful.
+- Core25 Quality Leap gates #881: **SUCCESS**, including Core25,
+  Core20 regression, baseline diagnostic and alpha1 release gate.
+- Test78 deterministic A/B #286: **SUCCESS**, `NO_CHANGE`.
+  Baseline and current remain exactly 56 requirements,
+  25 VERIFIED_OK / 2 PROJECT_FINDING / 29 REVIEW_QUESTION,
+  changed IDs empty.
+- Source Snapshot Artifact #687: **SUCCESS**.
+- Streamlit startup smoke #54: **SUCCESS**.
+
+### Remaining limitations and next slice
+
+The extra `filename_alias_claims` values are trace diagnostics, not
+verified document identifiers. Same-looking basenames under distinct
+object paths are **not** proof of a common underlying file. A trusted
+stable document identity and a source-locked, project-scoped
+applicability map for PP87 clause 15 remain absent. Full legacy
+diagnostics use the pre-existing baseline allowlist, not a claim
+that the entire historical suite is clean.
+
+The next commit after this entry is documentation-only. Recheck
+Core20/Core25/Snapshot CI for that exact checkpoint SHA and verify
+branch HEAD equality (ahead=0, behind=0). Do not merge `main`.
+
+Next proposed bounded work: prepare a typed *candidate-only*
+applicability-map inventory with source and object provenance, while
+keeping the IOS contract HOLD and requiring engineering confirmation
+before compliance promotion.

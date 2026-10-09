@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `b0ee1e62a21fa4a0556205e0af4ad7d133461c0c`
-Green validation marker commit: `b0ee1e62a21fa4a0556205e0af4ad7d133461c0c`
+Latest validated source commit: `500f2b9f442e38375ef3817fa61382d6dc696735`
+Green validation marker commit: `500f2b9f442e38375ef3817fa61382d6dc696735`
 
 ## Official accepted local checkpoint
 
@@ -9111,3 +9111,76 @@ Next: improve specialist-facing *rejection/explanation trace* and
 prevent contradictory `REQUIRED` versus `NOT_REQUIRED` candidates
 for the same object/subsection from being presented as independent
 uncontested claims; still keep the HOLD normative policy.
+
+
+## ExpertCheck 25.3 — opposite IOS applicability claims quarantine — 2026-10-09
+
+Previous green documentation checkpoint:
+`fcfece15b3c099955b7ceff88ea2e9c57951a0b8`.
+Validated functional source SHA:
+`500f2b9f442e38375ef3817fa61382d6dc696735`.
+
+### Scope: candidate-only evidence reliability, no normative promotion
+
+Changed exactly:
+- `core20/ios_applicability_candidates.py`: prescan the
+  `project_understanding.objects[].properties.ios_subsection_applicability`
+  typed claims for opposite `REQUIRED` and `NOT_REQUIRED` decisions
+  on the *same* (`object_id`, `subsection`) pair.
+- `tests/test_core20_ios_applicability_candidates.py`: eight new
+  positive and fail-closed regressions.
+
+Conflicting claims, even when one supporting page or document is not
+source-verified, are presented in `conflicts` with
+`IOS_APPLICABILITY_CLAIM_CONFLICT`, both claim types and the
+claimed document/page. These provenance pointers are explicitly
+`UNVERIFIED_PROJECT_UNDERSTANDING_CLAIM`, not accepted evidence.
+`conflict_count` is the number of distinct conflicting
+object/subsection pairs, not number of contradicting records.
+
+Conflicting typed claims are also individually emitted as
+`rejected` with `IOS_APPLICABILITY_CLAIM_CONFLICT`; neither is
+admitted as an independent uncontested candidate. The map
+`reason_code` becomes `CONTRADICTORY_TYPED_APPLICABILITY_CLAIMS`.
+The check does *not* cross object boundaries or collapse distinct
+subsections; consistent repeated `REQUIRED` declarations may remain
+independent candidate evidence (still requiring expert review).
+An unrelated candidate may coexist with a quarantined conflict.
+
+The normative `PP87-CLAUSE-15-IOS` contract remains
+`SET_CONTRACT_HOLD_ONLY`. Parent completeness stays `False`,
+its evidence list stays empty, final runtime verdict stays
+`REVIEW_QUESTION`. No `PROJECT_FINDING`, `VERIFIED_OK` or
+engineering applicability decision is inferred from two opposing
+unverified statements. The new conflict record is for specialist
+diagnosis, *not* proof of a normative violation.
+
+Eight regression cases include: same-object conflict; ungrounded
+opposite claim still quarantines a seemingly valid positive;
+consistent assertions; separate objects; separate subsections;
+invalid `MAYBE` claim; unrelated safe candidate; and end-to-end
+hold-only normative verdict.
+
+### Exact-source verification
+
+- Core20 quality gates #1243: **SUCCESS**, **449 passed**,
+  results-integrity job **SUCCESS**.
+- Core25 Quality Leap gates #885: **SUCCESS**, including Core25
+  tests, Core20 regression, baseline diagnostic, alpha1 release gate.
+- Test78 deterministic A/B #288: **SUCCESS**, `NO_CHANGE`.
+  Both baseline/current: 56 requirements; 25 VERIFIED_OK /
+  2 PROJECT_FINDING / 29 REVIEW_QUESTION, zero changed IDs.
+- Source Snapshot Artifact #691: **SUCCESS**.
+- Streamlit startup smoke #56: **SUCCESS**.
+
+### Resume contract
+
+The following commit is documentation-only. Confirm the checkpoint
+commit as branch HEAD and inspect Core20/Core25/Snapshot CI on its
+exact SHA; do **not** merge `main`.
+
+Next bounded task: improve candidate conflict trace quality,
+particularly distinctions between sourced and unsourced opposing
+statements, missing pages versus genuine engineering contradictions,
+and specialist-facing reasons — without allowing candidate
+conflicts to be misreported as verified project noncompliance.

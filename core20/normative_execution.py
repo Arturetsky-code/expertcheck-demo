@@ -438,7 +438,7 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
         normalized=_norm(value).replace(" ","")
         return list(dict.fromkeys(
             f"ИОС{match.group(1)}"
-            for match in re.finditer(r"иос(\\d+(?:\\.\\d+)*)",normalized)
+            for match in re.finditer(r"иос(\d+(?:\.\d+)*)",normalized)
         ))
 
     for row in documents or []:
@@ -461,7 +461,7 @@ def _ios_inventory(documents:list[dict[str,Any]]|None)->list[dict[str,Any]]:
             continue
 
         # Directory names belong to storage/routing, not the PD document code.
-        basename=re.split(r"[\\\\/]",raw_name)[-1]
+        basename=re.split(r"[\\/]",raw_name)[-1]
         section_codes=subsection_codes(raw_section)
         filename_codes=subsection_codes(basename)
         section_roots={code.split(".")[0] for code in section_codes}
@@ -2152,7 +2152,7 @@ def _set_completeness_evaluation(
             # A bare "ИОС" is not a proven subsection number.
             observed.extend(
                 code for code in (item.get("subsections") or [])
-                if re.fullmatch(r"ИОС\\d+(?:\\.\\d+)*",str(code))
+                if re.fullmatch(r"ИОС\d+(?:\.\d+)*",str(code))
             )
         observed=list(dict.fromkeys(observed))
         return {

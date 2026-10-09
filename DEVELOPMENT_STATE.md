@@ -2,8 +2,8 @@
 
 Updated: 2026-10-09
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `424ea00c286b6618d01e95115e989f9aed4d85a4`
-Green validation marker commit: `424ea00c286b6618d01e95115e989f9aed4d85a4`
+Latest validated source commit: `f7e712eb527afd03e81657ab71cc3eeb35a53a0e`
+Green validation marker commit: `f7e712eb527afd03e81657ab71cc3eeb35a53a0e`
 
 ## Official accepted local checkpoint
 
@@ -9256,3 +9256,74 @@ Next bounded improvement: independent authoritative applicability evidence
 and owner validation, or specialist-facing diagnostics downstream of this
 candidate map. Avoid adding unverified `VERIFIED_OK`/compliance status
 or claiming a quote alone is normative proof.
+
+
+## ExpertCheck 25.3 — IOS applicability candidate registry-object owner guard — 2026-10-09
+
+Previous validated checkpoint:
+`fe224998e1ebfb2031469b325f0c8b4450058263`.
+Accepted source commit:
+`f7e712eb527afd03e81657ab71cc3eeb35a53a0e`.
+
+### What was changed
+
+An atomic commit changed only
+`core20/ios_applicability_candidates.py` and
+`tests/test_core20_ios_applicability_candidates.py` (seven focused tests).
+
+The former source page/owner index derived from Project Understanding
+properties, including the applicability claim itself. Such an internal
+claim cannot independently establish object ownership. The new
+*additional fail-closed check* inspects explicit `object_id` identifiers
+in document registry rows with a canonical source path. It compares
+the asserted owner against the object owning the applicability claim:
+
+- `DOCUMENT_REGISTRY_OBJECT_ID_MATCH_UNVERIFIED`: the extra registry
+  metadata agrees, but it is still an unverified assertion;
+- `DOCUMENT_REGISTRY_OBJECT_ID_ABSENT`: no owner ID is recorded in the
+  document registry; candidate remains review-only, with explicit
+  uncertainty rather than inferred confidence;
+- `DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH`: a different owner ID is
+  declared; fail-closed, candidate rejected;
+- `DOCUMENT_REGISTRY_OBJECT_IDS_CONFLICT`: duplicate source path rows
+  declare different owner IDs; fail-closed, candidate rejected.
+
+The extra match/absence state appears as `registry_owner_state` on
+accepted review candidates and on per-claim conflict explanations.
+A mismatch or multiple owner IDs results in a source-specific rejection
+code. Existing `IOS_APPLICABILITY_CLAIM_CONFLICT` quarantines retain
+priority for contradictory required/not-required decisions, with the
+actual source diagnosis displayed separately.
+
+Full normalized path is used for identity, preserving distinct object
+folders and filename aliases. No object is inferred from its directory
+name. Registry `object_id` is still unverified project metadata, not
+independent engineering or legal confirmation of applicability.
+`PP87-CLAUSE-15-IOS` remains HOLD-only, with
+`complete=False`; no positive or negative normative verdict promotion.
+
+### Exact source SHA CI
+
+- Core20 quality gates #1247: **SUCCESS**, **462 passed**,
+  integrity job successful.
+- Core25 Quality Leap gates #889: **SUCCESS**, including Core20
+  regression, baseline and release gates.
+- Test78 deterministic A/B #290: **SUCCESS** / `NO_CHANGE`.
+  Both baseline and current: 56 requirements, 25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION, zero changed IDs.
+- Source Snapshot Artifact #695: **SUCCESS**.
+- Streamlit startup smoke #58: **SUCCESS**.
+
+### Restart and checkpoint instructions
+
+The immediately following commit updates this journal **only**.
+Verify Core20, Core25 and Source Snapshot workflows on that exact
+checkpoint SHA; compare branch tip with checkpoint (ahead=0,
+behind=0), and do not merge `main`.
+
+Remaining important limitation: candidate owner registry IDs are only
+additional metadata claims. Actual ownership needs independent
+source-locked design/survey/assignment corroboration and object-scope
+resolution, not string agreement alone. Next small slice: distinguish
+self-citing Project Understanding reference ownership from
+cross-property referencing without overstating either as proof.

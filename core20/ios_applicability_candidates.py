@@ -155,11 +155,15 @@ def build_ios_applicability_candidates(
     # A page listed under two separate objects cannot prove a unique
     # engineering owner. This is a diagnostic guard, not owner verification.
     page_owners:dict[tuple[str,str],set[str]]={}
+    # Retain where a Project Understanding owner/source reference originated.
+    # Another model property is NOT independent documentary proof; the
+    # applicability assertion citing itself must not look corroborated.
+    page_owner_references:dict[tuple[str,str],dict[str,set[str]]]={}
     for obj,oid in zip(objects,ids):
         props=obj.get("properties") or {}
         if not isinstance(props,dict):
             continue
-        for rows in props.values():
+        for property_name,rows in props.items():
             if not isinstance(rows,list):
                 continue
             for ev in rows:
@@ -168,6 +172,24 @@ def build_ios_applicability_candidates(
                 key=(_path(ev.get("document")),_page_number(ev.get("page")))
                 if all(key):
                     page_owners.setdefault(key,set()).add(oid)
+                    kind=(
+                        "APPLICABILITY_SELF_CITATION"
+                        if property_name==PROPERTY_KEY
+                        else "OTHER_PROJECT_MODEL_PROPERTY"
+                    )
+                    page_owner_references.setdefault(key,{}).setdefault(
+                        oid,set()
+                    ).add(kind)
+
+    def owner_reference_state(oid:str,document:str,page:str)->str:
+        kinds=page_owner_references.get(
+            (_path(document),page),{}
+        ).get(oid,set())
+        if "OTHER_PROJECT_MODEL_PROPERTY" in kinds:
+            return "CROSS_PROPERTY_PROJECT_MODEL_REFERENCE_UNVERIFIED"
+        if "APPLICABILITY_SELF_CITATION" in kinds:
+            return "SELF_CITED_APPLICABILITY_CLAIM_ONLY"
+        return "NO_PROJECT_MODEL_OWNER_REFERENCE"
 
     def source_probe(oid:str,code:str,document:str,page:str,fragment:str)->str:
         """Return a source-address diagnostic, not normative applicability proof."""
@@ -222,6 +244,9 @@ def build_ios_applicability_candidates(
                     ),
                     "source_reason_code":reason or "EXACT_DOCUMENT_PAGE_QUOTE_MATCH",
                     "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
+                    "owner_reference_state":owner_reference_state(
+                        oid,str(item.get("document") or ""),page
+                    ),
                     "registry_owner_state":registry_owner_state(
                         oid,str(item.get("document") or "")
                     ),
@@ -307,6 +332,7 @@ def build_ios_applicability_candidates(
                 "fragment":fragment,
                 "source_state":"EXACT_PAGE_QUOTE_MATCHED",
                 "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
+                "owner_reference_state":owner_reference_state(oid,doc,pg),
                 "registry_owner_state":registry_owner_state(oid,doc),
                 "admission":"SPECIALIST_REVIEW_ONLY",
             })

@@ -487,3 +487,92 @@ def test_registry_owner_guard_preserves_normative_hold_only():
     assert result["applicability_map_candidates"]["rejected"][0][
         "reason_code"
     ]=="DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH"
+
+
+
+def test_self_cited_owner_reference_is_marked_without_extra_corroboration():
+    docs,pages=_fixture()
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["owner_reference_state"]==(
+        "SELF_CITED_APPLICABILITY_CLAIM_ONLY"
+    )
+    assert result["candidates"][0]["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+    assert result["promotion_policy"]=="HOLD"
+
+
+def test_same_page_reference_from_another_property_is_only_model_corroboration():
+    docs,pages=_fixture()
+    model_obj=docs[1]["project_understanding"]["objects"][0]
+    model_obj["properties"]["engineering_network_description"]=[{
+        "document":"Объект А/ИОС1.pdf","page":7,
+        "fragment":"В этом подразделе описаны сети ИОС1."
+    }]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["owner_reference_state"]==(
+        "CROSS_PROPERTY_PROJECT_MODEL_REFERENCE_UNVERIFIED"
+    )
+    assert result["candidates"][0]["admission"]=="SPECIALIST_REVIEW_ONLY"
+    assert result["candidates"][0]["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+    assert result["complete"] is False
+
+
+def test_reference_to_other_page_does_not_count_as_candidate_corroboration():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["different_fact"]=[
+        {"document":"Объект А/ИОС1.pdf","page":8}
+    ]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["owner_reference_state"]==(
+        "SELF_CITED_APPLICABILITY_CLAIM_ONLY"
+    )
+
+
+def test_same_basename_from_another_object_is_not_cross_property_evidence():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["different_fact"]=[
+        {"document":"Объект Б/ИОС1.pdf","page":7}
+    ]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["owner_reference_state"]==(
+        "SELF_CITED_APPLICABILITY_CLAIM_ONLY"
+    )
+
+
+def test_cross_property_owner_ref_does_not_override_two_object_page_conflict():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["other"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7}
+    ]
+    docs[1]["project_understanding"]["objects"].append({
+        "object_id":"OBJ-B","properties":{"other":[
+            {"document":"Объект А/ИОС1.pdf","page":7}
+        ]}
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="AMBIGUOUS_OBJECT_OWNER"
+
+
+def test_opposite_claims_explain_self_citation_vs_cross_property_without_promotion():
+    docs,pages=_fixture()
+    opposite="Для этого объекта подраздел ИОС1 не требуется согласно заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    docs[1]["project_understanding"]["objects"][0]["properties"]["assignment"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7}
+    ]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    assert result["conflicts"][0]["source_matched_claim_count"]==2
+    assert [x["owner_reference_state"] for x in result["conflicts"][0]["claims"]]==[
+        "CROSS_PROPERTY_PROJECT_MODEL_REFERENCE_UNVERIFIED",
+        "SELF_CITED_APPLICABILITY_CLAIM_ONLY",
+    ]
+    assert result["conflicts"][0]["resolution"]=="SPECIALIST_REVIEW_REQUIRED"
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"

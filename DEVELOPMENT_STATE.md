@@ -1,9 +1,9 @@
 # ExpertCheck development state
 
-Updated: 2026-10-09
+Updated: 2026-10-12
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `f7e712eb527afd03e81657ab71cc3eeb35a53a0e`
-Green validation marker commit: `f7e712eb527afd03e81657ab71cc3eeb35a53a0e`
+Latest validated source commit: `536fc01feb4faf3ee2063b0d6d3aa0a9c3393535`
+Green validation marker commit: `536fc01feb4faf3ee2063b0d6d3aa0a9c3393535`
 
 ## Official accepted local checkpoint
 
@@ -9327,3 +9327,73 @@ source-locked design/survey/assignment corroboration and object-scope
 resolution, not string agreement alone. Next small slice: distinguish
 self-citing Project Understanding reference ownership from
 cross-property referencing without overstating either as proof.
+
+
+## ExpertCheck 25.3 workstream — IOS project-model reference provenance — 2026-10-12
+
+Previous exact green checkpoint:
+`b2691d8fda8bc7c46521c4d2812283c0bfc151e8`.
+Validated functional source commit:
+`536fc01feb4faf3ee2063b0d6d3aa0a9c3393535`.
+Active branch remains
+`codex/expertcheck-25.2-coverage-breakthrough`.
+The branch label is a historical branch name, not a 25.3 official release.
+
+### Small atomic change
+
+Only `core20/ios_applicability_candidates.py` and
+`tests/test_core20_ios_applicability_candidates.py` changed,
+with six focused regression tests.
+
+Previously, the `page_owners` index counted the applicability
+assertion's own Project Understanding document/page reference as an
+owner reference. An additional reference from another Project
+Understanding property was indistinguishable. The new
+`owner_reference_state` field on review-only candidates and
+conflicting claims distinguishes:
+
+- `SELF_CITED_APPLICABILITY_CLAIM_ONLY`: only the same applicability
+  property cites that exact normalized source path and page;
+- `CROSS_PROPERTY_PROJECT_MODEL_REFERENCE_UNVERIFIED`: some other
+  property for the same model object cites that exact source path
+  and page, but this remains an **unverified model-level reference**;
+- `NO_PROJECT_MODEL_OWNER_REFERENCE`: the model supplies no
+  owner-page reference for that record (defensive diagnostic).
+
+No independence or normative validity is implied by cross-property
+model references. Matching basenames under distinct folders do not
+count as the same source, and another object's source reference
+still triggers `AMBIGUOUS_OBJECT_OWNER`. Existing registry metadata
+checks and source-quote checks remain fail closed; the new field
+does not change admission or normative verdict status.
+
+`PP87-CLAUSE-15-IOS` remains specialist-only,
+`promotion_policy=HOLD`, `complete=False`.
+
+### Exact-source CI (all green)
+
+- Core20 quality gates #1249: **SUCCESS**, **468 passed**,
+  results-integrity successful.
+- Core25 Quality Leap gates #891: **SUCCESS**, all jobs including
+  alpha1 release gate.
+- Test78 deterministic A/B #291: **SUCCESS**, `NO_CHANGE`.
+  56 requirements in baseline and current, 25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION, changed IDs `[]`.
+- Streamlit startup smoke #59: **SUCCESS**.
+- Source Snapshot Artifact #697: **SUCCESS**.
+
+### Resume instructions
+
+The next commit changes this journal alone. Check the resulting
+documentation checkpoint for Core20, Core25 and Source Snapshot
+green status and compare the branch tip exactly to that SHA,
+ahead=behind=0. Do not merge to `main`.
+
+Next narrow improvement: model-only object/source links must not
+masquerade as independent engineering evidence. An authoritative
+source-backed owner verification workflow requires a separate
+well-defined owner assertion contract and specialist approval.
+Do not automatically promote a normative verdict.
+
+Supabase remediation is a separate paused task; do not touch it
+as part of this development checkpoint.

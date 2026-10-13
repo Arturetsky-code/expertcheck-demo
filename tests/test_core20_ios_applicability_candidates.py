@@ -576,3 +576,108 @@ def test_opposite_claims_explain_self_citation_vs_cross_property_without_promoti
     assert result["conflicts"][0]["resolution"]=="SPECIALIST_REVIEW_REQUIRED"
     assert result["complete"] is False
     assert result["promotion_policy"]=="HOLD"
+
+
+def test_cross_property_source_without_any_reference_reports_zero_support():
+    docs,pages=_fixture()
+    result=_run(docs,pages)
+    diagnostic=result["candidates"][0]["cross_property_source_diagnostic"]
+    assert diagnostic["state"]=="NO_CROSS_PROPERTY_MODEL_REFERENCE"
+    assert diagnostic["matched_quote_count"]==0
+    assert diagnostic["unverified_reference_count"]==0
+    assert diagnostic["independence"]=="MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF"
+    assert result["promotion_policy"]=="HOLD"
+
+
+def test_other_model_property_exact_page_quote_is_located_but_not_owner_proof():
+    docs,pages=_fixture()
+    quote="Данным разделом ИОС1 описываются проектируемые инженерные сети."
+    pages[0]["text"]+=" "+quote
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7,"fragment":quote}
+    ]
+    result=_run(docs,pages)
+    diagnostic=result["candidates"][0]["cross_property_source_diagnostic"]
+    assert diagnostic["state"]=="CROSS_PROPERTY_QUOTES_LOCATED_OWNER_UNVERIFIED"
+    assert diagnostic["matched_quote_count"]==1
+    assert diagnostic["unverified_reference_count"]==0
+    assert diagnostic["reason_codes"]==["EXACT_PAGE_QUOTE_MATCHED"]
+    assert diagnostic["independence"]=="MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF"
+    assert result["candidates"][0]["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+    assert result["complete"] is False
+
+
+def test_other_property_quote_absent_from_page_is_not_source_support():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7,
+         "fragment":"В этом разделе ИОС1 описаны несуществующие технические решения."}
+    ]
+    diagnostic=_run(docs,pages)["candidates"][0]["cross_property_source_diagnostic"]
+    assert diagnostic["state"]=="CROSS_PROPERTY_REFERENCES_NOT_FULLY_GROUNDED"
+    assert diagnostic["matched_quote_count"]==0
+    assert diagnostic["reason_codes"]==["SOURCE_QUOTE_NOT_LOCATED"]
+
+
+def test_other_property_page_reference_with_no_quote_is_unverified():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7}
+    ]
+    diagnostic=_run(docs,pages)["candidates"][0]["cross_property_source_diagnostic"]
+    assert diagnostic["unverified_reference_count"]==1
+    assert diagnostic["reason_codes"]==["SOURCE_QUOTE_NOT_PROVIDED_OR_TOO_SHORT"]
+
+
+def test_mixed_cross_property_source_quality_does_not_hide_forged_quote():
+    docs,pages=_fixture()
+    good="Раздел ИОС1 включает сведения о проектируемых инженерных сетях."
+    wrong="Раздел ИОС1 содержит выдуманное утверждение о данном объекте."
+    pages[0]["text"]+=" "+good
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7,"fragment":good},
+        {"document":"Объект А/ИОС1.pdf","page":7,"fragment":wrong},
+    ]
+    result=_run(docs,pages)
+    d=result["candidates"][0]["cross_property_source_diagnostic"]
+    assert d["state"]=="CROSS_PROPERTY_REFERENCES_NOT_FULLY_GROUNDED"
+    assert d["matched_quote_count"]==1
+    assert d["unverified_reference_count"]==1
+    assert d["reason_codes"]==["EXACT_PAGE_QUOTE_MATCHED","SOURCE_QUOTE_NOT_LOCATED"]
+    assert result["candidate_count"]==1
+    assert result["complete"] is False
+
+
+def test_cross_property_reference_to_other_document_not_counted_for_candidate():
+    docs,pages=_fixture()
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект Б/ИОС1.pdf","page":7,
+         "fragment":"Раздел ИОС1 содержит сведения об инженерных сетях другого объекта."}
+    ]
+    result=_run(docs,pages)
+    diagnostic=result["candidates"][0]["cross_property_source_diagnostic"]
+    assert diagnostic["state"]=="NO_CROSS_PROPERTY_MODEL_REFERENCE"
+    assert result["candidate_count"]==1
+
+
+def test_conflicting_ios_claims_show_separate_cross_property_quote_checks():
+    docs,pages=_fixture()
+    opposite="Для объекта проектом подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,fragment=opposite)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    docs[1]["project_understanding"]["objects"][0]["properties"]["networks"]=[
+        {"document":"Объект А/ИОС1.pdf","page":7,
+         "fragment":"Заявление ИОС1, отсутствующее на указанной странице."}
+    ]
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    claims=result["conflicts"][0]["claims"]
+    assert claims[0]["cross_property_source_diagnostic"]["reason_codes"]==[
+        "SOURCE_QUOTE_NOT_LOCATED"
+    ]
+    assert claims[1]["cross_property_source_diagnostic"]["state"]==(
+        "NO_CROSS_PROPERTY_MODEL_REFERENCE"
+    )
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"

@@ -159,6 +159,7 @@ def build_ios_applicability_candidates(
     # Another model property is NOT independent documentary proof; the
     # applicability assertion citing itself must not look corroborated.
     page_owner_references:dict[tuple[str,str],dict[str,set[str]]]={}
+    cross_property_fragments:dict[tuple[str,str,str],list[str]]={}
     for obj,oid in zip(objects,ids):
         props=obj.get("properties") or {}
         if not isinstance(props,dict):
@@ -180,6 +181,10 @@ def build_ios_applicability_candidates(
                     page_owner_references.setdefault(key,{}).setdefault(
                         oid,set()
                     ).add(kind)
+                    if property_name!=PROPERTY_KEY:
+                        cross_property_fragments.setdefault(
+                            (key[0],key[1],oid),[]
+                        ).append(str(ev.get("fragment") or "").strip())
 
     def owner_reference_state(oid:str,document:str,page:str)->str:
         kinds=page_owner_references.get(
@@ -190,6 +195,53 @@ def build_ios_applicability_candidates(
         if "APPLICABILITY_SELF_CITATION" in kinds:
             return "SELF_CITED_APPLICABILITY_CLAIM_ONLY"
         return "NO_PROJECT_MODEL_OWNER_REFERENCE"
+
+
+    def cross_property_source_diagnostic(
+        oid:str,document:str,page:str
+    )->dict[str,Any]:
+        """Check secondary model citations, never prove source ownership.
+
+        A reference in another model property is not independent evidence.
+        Even a page-matched quote cannot establish the engineering owner.
+        """
+        key=(_path(document),page)
+        fragments=cross_property_fragments.get((key[0],key[1],oid),[])
+        if not fragments:
+            return {
+                "state":"NO_CROSS_PROPERTY_MODEL_REFERENCE",
+                "matched_quote_count":0,
+                "unverified_reference_count":0,
+                "reason_codes":[],
+                "independence":"MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF",
+            }
+        source_rows=source_index.get(key[0]) or []
+        page_texts=page_index.get(key) or []
+        reasons=[]
+        for fragment in fragments:
+            if len(source_rows)!=1 or source_rows[0].get("metadata_conflict"):
+                reason="IOS_SOURCE_IDENTITY_NOT_PROVEN"
+            elif len(page_texts)!=1:
+                reason="SOURCE_PAGE_NOT_UNIQUE"
+            elif len(_text(fragment))<20:
+                reason="SOURCE_QUOTE_NOT_PROVIDED_OR_TOO_SHORT"
+            elif _text(fragment) not in _text(page_texts[0]):
+                reason="SOURCE_QUOTE_NOT_LOCATED"
+            else:
+                reason="EXACT_PAGE_QUOTE_MATCHED"
+            reasons.append(reason)
+        matched=reasons.count("EXACT_PAGE_QUOTE_MATCHED")
+        return {
+            "state":(
+                "CROSS_PROPERTY_QUOTES_LOCATED_OWNER_UNVERIFIED"
+                if matched==len(reasons)
+                else "CROSS_PROPERTY_REFERENCES_NOT_FULLY_GROUNDED"
+            ),
+            "matched_quote_count":matched,
+            "unverified_reference_count":len(reasons)-matched,
+            "reason_codes":sorted(set(reasons)),
+            "independence":"MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF",
+        }
 
     def source_probe(oid:str,code:str,document:str,page:str,fragment:str)->str:
         """Return a source-address diagnostic, not normative applicability proof."""
@@ -245,6 +297,9 @@ def build_ios_applicability_candidates(
                     "source_reason_code":reason or "EXACT_DOCUMENT_PAGE_QUOTE_MATCH",
                     "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
                     "owner_reference_state":owner_reference_state(
+                        oid,str(item.get("document") or ""),page
+                    ),
+                    "cross_property_source_diagnostic":cross_property_source_diagnostic(
                         oid,str(item.get("document") or ""),page
                     ),
                     "registry_owner_state":registry_owner_state(
@@ -333,6 +388,9 @@ def build_ios_applicability_candidates(
                 "source_state":"EXACT_PAGE_QUOTE_MATCHED",
                 "owner_state":"PROJECT_UNDERSTANDING_CLAIM_ONLY",
                 "owner_reference_state":owner_reference_state(oid,doc,pg),
+                "cross_property_source_diagnostic":cross_property_source_diagnostic(
+                    oid,doc,pg
+                ),
                 "registry_owner_state":registry_owner_state(oid,doc),
                 "admission":"SPECIALIST_REVIEW_ONLY",
             })

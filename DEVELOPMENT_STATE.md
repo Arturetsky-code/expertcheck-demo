@@ -2,8 +2,8 @@
 
 Updated: 2026-10-13
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `3891657843ff86e8c4e459dd632bc705674e0f06`
-Green validation marker commit: `3891657843ff86e8c4e459dd632bc705674e0f06`
+Latest validated source commit: `dd5925122177bf493976914535ceecc50254e905`
+Green validation marker commit: `dd5925122177bf493976914535ceecc50254e905`
 
 ## Official accepted local checkpoint
 
@@ -9536,3 +9536,73 @@ Next small slice: use a separately source-locked documentary
 object-identity evidence contract for provenance diagnosis and
 specialist review, not merely model links or quoted file aliases.
 Do not automatically upgrade normative findings.
+
+
+## ExpertCheck — IOS parsed-page text/content contradiction guard — 2026-10-13
+
+Previous fully verified documentation checkpoint:
+`3029cfcd82806da5d7dea86b81c3b128ce5a97d3`.
+Validated atomic code-and-tests source commit:
+`dd5925122177bf493976914535ceecc50254e905`.
+Active historical branch:
+`codex/expertcheck-25.2-coverage-breakthrough`.
+This change is not a published product release.
+
+### Scope and reason
+
+Exactly two files changed:
+`core20/ios_applicability_candidates.py` and
+`tests/test_core20_ios_applicability_candidates.py`.
+Seven focused regression tests added.
+
+Previously the IOS evidence builder used
+`page.get("text") or page.get("content")`, implicitly preferring
+`text` when both extracted page fields were provided.
+A contradictory `content` value could therefore be ignored, allowing
+a Project Understanding claim to appear source-matched when only
+one inconsistent page representation contained its quotation.
+
+Now, for a normalized document path plus page, non-empty
+`text` and `content` fields must agree after the established
+Unicode/whitespace/case normalization. Mismatches are quarantined
+in `page_text_conflicts` as
+`SOURCE_PAGE_TEXT_FIELDS_CONFLICT`, even when a separate clean
+row alleges that same exact source page.
+
+The diagnostic applies to direct IOS applicability source probing
+and cross-property source quotations. Text field equivalence or a
+single populated field continues to support page-quote location.
+Other clean pages remain independently available; page filename
+alias conflict guards still take precedence when both kinds occur.
+
+This is **not** independent document ownership or normative
+applicability proof. Normative contract `PP87-CLAUSE-15-IOS`
+remains `HOLD`, `complete=False`, with
+`SPECIALIST_REVIEW_ONLY` for admitted candidates. No existing
+classification or proof policy was promoted.
+
+### Exact source commit CI (all green)
+
+- Core20 quality gates #1255: **SUCCESS**, **489 passed**,
+  results-integrity successful.
+- Core25 Quality Leap gates #897: **SUCCESS**, including
+  baseline diagnostic, core20 regression, core25 tests, and release gate.
+- Test78 deterministic A/B #294: **SUCCESS**, `NO_CHANGE`:
+  56 requirements; both baseline and current 25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION, changed IDs `[]`.
+- Streamlit startup smoke #62: **SUCCESS**.
+- Source Snapshot Artifact #703: **SUCCESS**.
+
+### Recovery procedure
+
+The next documentation-only commit changes
+`DEVELOPMENT_STATE.md` only.
+Confirm the exact checkpoint SHA's Core20, Core25 and
+Source Snapshot jobs are green and branch HEAD equals that SHA
+(ahead=0, behind=0). Do not merge into `main` or change
+Supabase during this workstream.
+
+A later bounded increment may add an independent documentary
+object-identity evidence contract with explicit source attribution,
+but must distinguish document content from trustworthy object
+ownership and retain specialist review until standards proof exists.

@@ -109,6 +109,7 @@ def build_ios_applicability_candidates(
     # contradictory canonical paths must not be attributed to *either* file.
     # Track each alleged path to quarantine conflicting page provenance.
     page_path_conflicts:set[tuple[str,str]]=set()
+    page_text_conflicts:set[tuple[str,str]]=set()
     for page in (pages or []):
         if not isinstance(page,dict):
             continue
@@ -125,6 +126,16 @@ def build_ios_applicability_candidates(
             page_path_conflicts.update((name,number) for name in aliases)
             continue
         document=next(iter(aliases))
+        # A parsed page can carry both extracted-text aliases. Neither
+        # one may silently override an incompatible source representation.
+        texts={
+            _text(page.get(field))
+            for field in ("text","content")
+            if str(page.get(field) or "").strip()
+        }
+        if len(texts)>1:
+            page_text_conflicts.add((document,number))
+            continue
         page_index.setdefault((document,number),[]).append(
             str(page.get("text") or page.get("content") or "")
         )
@@ -235,6 +246,8 @@ def build_ios_applicability_candidates(
         for fragment in fragments:
             if key in page_path_conflicts:
                 reason="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+            elif key in page_text_conflicts:
+                reason="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
             elif len(source_rows)!=1 or source_rows[0].get("metadata_conflict"):
                 reason="IOS_SOURCE_IDENTITY_NOT_PROVEN"
             elif len(page_texts)!=1:
@@ -277,6 +290,8 @@ def build_ios_applicability_candidates(
             return owner_state
         if key in page_path_conflicts:
             return "SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+        if key in page_text_conflicts:
+            return "SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
         matches_text=page_index.get(key) or []
         if len(matches_text)!=1:
             return "SOURCE_PAGE_NOT_UNIQUE"

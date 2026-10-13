@@ -772,3 +772,96 @@ def test_conflicting_alias_for_another_document_cannot_replace_claim_page():
     result=_run(docs,pages)
     assert result["candidate_count"]==0
     assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+
+
+def test_conflicting_page_text_and_content_never_support_ios_candidate():
+    docs,pages=_fixture()
+    pages[0]["content"]="Совершенно иной фрагмент проектной документации."
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+    assert result["complete"] is False
+    assert result["promotion_policy"]=="HOLD"
+
+
+def test_equivalent_text_and_content_with_normalized_case_are_accepted_for_review():
+    docs,pages=_fixture()
+    pages[0]["content"]="  ДЛЯ ОБЪЕКТА  ПРЕДУСМОТРЕН подраздел ИОС1 согласно заданию. "
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["admission"]=="SPECIALIST_REVIEW_ONLY"
+    assert result["complete"] is False
+
+
+def test_content_only_page_remains_valid_when_text_is_empty():
+    docs,pages=_fixture()
+    pages[0]["content"]=pages[0]["text"]
+    pages[0]["text"]=""
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["complete"] is False
+
+
+def test_other_content_cannot_override_disagreeing_text():
+    docs,pages=_fixture()
+    pages[0]["content"]=pages[0]["text"]
+    pages[0]["text"]="В документе не указан этот подраздел ИОС1."
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+
+
+def test_conflicting_page_text_even_with_clean_duplicate_fails_closed():
+    docs,pages=_fixture()
+    pages.append({
+        "document":"Объект А/ИОС1.pdf",
+        "page":7,
+        "text":pages[0]["text"],
+        "content":"Проектное решение с противоположным смыслом.",
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+
+
+def test_conflicting_page_text_cannot_ground_cross_property_quote():
+    docs,pages=_fixture()
+    cross="В подразделе ИОС1 описаны технологические инженерные коммуникации."
+    pages[0]["text"]+=" "+cross
+    pages[0]["content"]="Документ содержит информацию о другом объекте."
+    props=docs[1]["project_understanding"]["objects"][0]["properties"]
+    props["networks"]=[{
+        "document":"Объект А/ИОС1.pdf",
+        "page":7,"fragment":cross
+    }]
+    _add_claim(
+        docs,fragment="Для объекта подраздел ИОС1 не требуется согласно заданию."
+    )
+    pages.append({
+        "document":"Объект А/ИОС1.pdf","page":8,
+        "text":"Для объекта подраздел ИОС1 не требуется согласно заданию."
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    claim=result["conflicts"][0]["claims"][0]
+    assert claim["source_reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+    assert claim["cross_property_source_diagnostic"]["reason_codes"]==[
+        "SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+    ]
+    assert result["promotion_policy"]=="HOLD"
+
+
+def test_text_conflict_for_one_page_does_not_taint_clean_second_page():
+    docs,pages=_fixture()
+    pages[0]["content"]="В документе отсутствует требуемый фрагмент."
+    another="Для объекта также предусмотрен подраздел ИОС1 по заданию."
+    _add_claim(docs,decision="REQUIRED",page=8,fragment=another)
+    pages.append({
+        "document":"Объект А/ИОС1.pdf","page":8,"text":another
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["page"]==8
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+    assert result["complete"] is False

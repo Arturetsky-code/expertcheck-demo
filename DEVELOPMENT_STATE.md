@@ -9675,3 +9675,84 @@ be connected to a separately verified document-object membership
 assertion before any owner evidence could be considered stronger
 than review-only. Do not equate literal quote matching with
 authoritative document ownership or automatic normative proof.
+
+
+## ExpertCheck Streamlit practical audit P0 fixes — 2026-10-13
+
+Previous fully validated checkpoint: e9baf3d42c78d19a1dfdcfb6cac0932747616f60.
+Exact code-and-tests commit: 66ded90fef2ef28cb0b22162796d98583d0ad4b5.
+Automatic validation journal commit: 318aac0d4121409a4f9d60643126d67e1b6f15ac.
+Historical working branch: codex/expertcheck-25.2-coverage-breakthrough.
+No edits to main, Supabase or saved project data; not a product release.
+
+### Scope / guardrails
+
+A read-only Streamlit audit recovered a September project with
+39 object candidates, 36 confirmed positions and 3 exclusions.
+Two P0 problems were corrected without changing engineering verdicts,
+running PDFs, touching the project database or rerunning user AI.
+
+1. Confirmed object scope. app.py stores both complete comparison data in
+   ctx.data[2] and the assembly-filtered frame in ctx.data[5].
+   The cross-section page previously used the complete frame,
+   showing manually excluded complex/group positions in active checks.
+   studio/pages/checks.py now uses the confirmed-only ctx.data[5]
+   through _active_comparisons(ctx). Synthetic regression tests cover
+   excluded positions 4 / 4.2, retained position 4.2.1, compressor
+   preservation, and an empty selection. Original diagnostic data
+   remain saved separately and unchanged.
+
+2. Canonical source quantity+unit. core/cross_section_consistency.py
+   previously appended the original item["unit"] to numeric_value(item)
+   even when numeric_value had already scaled the quantity.
+   This printed e.g. "1.6e+06 тыс.т/год" instead of "1.6e+06 т/год".
+   Now human-readable source lines take BOTH normalized quantity and
+   unit from normalize_engineering_value(item), with a legacy fallback.
+   Raw fact values and machine-readable proof data are unchanged.
+   Two tests guard values 1600 тыс.т/год vs 1.6 млн.т/год.
+
+Exactly four functional/test files changed:
+- studio/pages/checks.py;
+- core/cross_section_consistency.py;
+- tests/test_cross_section_proof_th.py;
+- tests/test_streamlit_crosscheck_active_scope.py (new).
+
+### Exact source SHA CI (all SUCCESS)
+
+- Core20 quality gates #1259: SUCCESS, 498 passed.
+- Core25 Quality Leap gates #901: SUCCESS across four jobs.
+  Legacy diagnostic: 1041 passed, 32 historical failures
+  (fixture-bound 3, obsolete 4, baseline-existing 25),
+  no new/unclassified blockers. Do not call legacy suite flawless.
+- Test78 deterministic A/B #296: SUCCESS, NO_CHANGE, 56 requirements:
+  baseline=current 25 VERIFIED_OK, 2 PROJECT_FINDING,
+  29 REVIEW_QUESTION, changed_ids=[].
+- Streamlit startup smoke #64: SUCCESS.
+- Source Snapshot Artifact #707: SUCCESS.
+- Validate ExpertCheck 25.2 branch #95: SUCCESS.
+  Its automated commit only updated
+  checkpoints/252_validation/LAST_GREEN.md.
+
+### Recovery and remaining practical audit
+
+This is a journal-only checkpoint commit. Confirm its exact Core20,
+Core25 and Source Snapshot workflows are all successful and compare
+its SHA to branch HEAD (ahead=behind=0).
+Streamlit end-to-end tests on a NEW COPY of the saved project
+remain necessary; the old September snapshot is not a fresh proof.
+
+Remaining issues deliberately NOT changed in this P0 increment:
+- L5 UI cards count some legacy text statuses as categorical proof;
+  require strict final proof-state accounting.
+- Passport binding must respect the same fact/owner admission as
+  Project Understanding; 43 414 m2 on equipment 4.2.1 is a
+  regression candidate, not yet a verified current-code failure.
+- Addressable documentary sources for every passport characteristic.
+- Passport completeness wording, unknown object-type success state,
+  raw None UI text, outdated OpenRouter label.
+- Compressor 54.3 vs 48.7 m2 is a provisional audit witness:
+  do not promote it to proven noncompliance without validating owner,
+  semantic scope, documents, pages and project edition.
+
+Future changes: atomic code+tests, full CI, read-only practical QA
+on copied projects, no main merge, no Supabase work without approval.

@@ -865,3 +865,115 @@ def test_text_conflict_for_one_page_does_not_taint_clean_second_page():
     assert result["candidates"][0]["page"]==8
     assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
     assert result["complete"] is False
+
+
+def _add_documentary_owner_quote(docs,pages):
+    name="Насосная станция технологических растворов"
+    quote=("Экспликация объектов капитального строительства: "
+           "Насосная станция технологических растворов, позиция 5.")
+    obj=docs[1]["project_understanding"]["objects"][0]
+    obj["name"]=name
+    obj["position"]="5"
+    obj["source_records"]=[{
+        "kind":"PZ_COMPLEX_OBJECT_REGISTER",
+        "document":"Объект А/ПЗ.pdf","page":4,
+        "fragment":quote,"position":"5",
+    }]
+    docs.append({"Файл":"Объект А/ПЗ.pdf","Тип документа":"ПЗ"})
+    pages.append({"document":"Объект А/ПЗ.pdf","page":4,"text":quote})
+    return obj,quote
+
+
+def test_documentary_object_identity_requires_typed_exact_page_quote():
+    docs,pages=_fixture()
+    _add_documentary_owner_quote(docs,pages)
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    d=result["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["state"]=="DOCUMENTARY_OBJECT_QUOTES_LOCATED_OWNER_UNVERIFIED"
+    assert d["matched_quote_count"]==1
+    assert d["unverified_reference_count"]==0
+    assert d["scope"]=="OBJECT_REGISTER_LINEAGE_NOT_IOS_DOCUMENT_OWNERSHIP"
+    assert d["independence"]=="MODEL_SOURCE_RECORD_NOT_INDEPENDENT_OWNER_PROOF"
+    assert result["promotion_policy"]=="HOLD"
+    assert result["complete"] is False
+
+
+def test_no_object_register_records_do_not_masquerade_as_proof():
+    docs,pages=_fixture()
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["state"]=="NO_TYPED_DOCUMENTARY_OBJECT_REFERENCE"
+    assert d["matched_quote_count"]==0
+
+
+def test_documentary_owner_quote_must_appear_on_its_exact_page():
+    docs,pages=_fixture()
+    _,quote=_add_documentary_owner_quote(docs,pages)
+    pages[-1]["text"]="Экспликация не содержит указанного объекта."
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["DOCUMENTARY_QUOTE_NOT_LOCATED"]
+    assert d["matched_quote_count"]==0
+
+
+def test_documentary_quote_without_object_name_is_not_owner_support():
+    docs,pages=_fixture()
+    obj,_=_add_documentary_owner_quote(docs,pages)
+    wrong="Экспликация объектов капитального строительства: склад реагентов."
+    obj["source_records"][0]["fragment"]=wrong
+    pages[-1]["text"]=wrong
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["OBJECT_NAME_NOT_IN_DOCUMENTARY_QUOTE"]
+
+
+def test_documentary_quote_same_basename_wrong_folder_is_not_source():
+    docs,pages=_fixture()
+    obj,_=_add_documentary_owner_quote(docs,pages)
+    obj["source_records"][0]["document"]="Объект Б/ПЗ.pdf"
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["DOCUMENTARY_SOURCE_NOT_UNIQUELY_REGISTERED"]
+
+
+def test_documentary_page_conflicting_alias_quarantines_owner_quote():
+    docs,pages=_fixture()
+    _add_documentary_owner_quote(docs,pages)
+    pages[-1]["filename"]="Объект Б/ПЗ.pdf"
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["SOURCE_PAGE_FILE_ALIASES_CONFLICT"]
+
+
+def test_documentary_registry_conflicting_alias_poison_even_with_clean_row():
+    docs,pages=_fixture()
+    _add_documentary_owner_quote(docs,pages)
+    docs.append({
+        "Файл":"Объект А/ПЗ.pdf",
+        "document":"Объект Б/ПЗ.pdf","Тип документа":"ПЗ",
+    })
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["DOCUMENTARY_REGISTRY_FILE_ALIASES_CONFLICT"]
+
+
+def test_documentary_name_shared_by_two_objects_is_ambiguous():
+    docs,pages=_fixture()
+    obj,_=_add_documentary_owner_quote(docs,pages)
+    docs[1]["project_understanding"]["objects"].append({
+        "object_id":"OBJ-B","name":obj["name"],"properties":{},
+    })
+    d=_run(docs,pages)["candidates"][0]["documentary_object_identity_diagnostic"]
+    assert d["reason_codes"]==["OBJECT_NAME_NOT_UNIQUE_IN_PROJECT_MODEL"]
+
+
+def test_documentary_support_never_promotes_opposite_ios_claims():
+    docs,pages=_fixture()
+    _add_documentary_owner_quote(docs,pages)
+    opposite="Для данного объекта подраздел ИОС1 не требуется по заданию."
+    _add_claim(docs,page=8,fragment=opposite,decision="NOT_REQUIRED")
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":opposite})
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    for claim in result["conflicts"][0]["claims"]:
+        d=claim["documentary_object_identity_diagnostic"]
+        assert d["state"]=="DOCUMENTARY_OBJECT_QUOTES_LOCATED_OWNER_UNVERIFIED"
+        assert claim["owner_state"]=="PROJECT_UNDERSTANDING_CLAIM_ONLY"
+    assert result["promotion_policy"]=="HOLD"
+    assert result["complete"] is False

@@ -272,6 +272,107 @@ def build_ios_applicability_candidates(
             "independence":"MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF",
         }
 
+    def documentary_object_identity_diagnostic(oid:str)->dict[str,Any]:
+        """Trace typed object-register quotes without proving IOS file ownership.
+
+        Source records are produced by Project Understanding, not by an
+        independent signed object-ownership assertion. Even a located,
+        name-bearing quote is ONLY a review signal.
+        """
+        obj=next(item for item,item_id in zip(objects,ids) if item_id==oid)
+        records=obj.get("source_records")
+        outcome={
+            "state":"NO_TYPED_DOCUMENTARY_OBJECT_REFERENCE",
+            "matched_quote_count":0,
+            "unverified_reference_count":0,
+            "reason_codes":[],
+            "scope":"OBJECT_REGISTER_LINEAGE_NOT_IOS_DOCUMENT_OWNERSHIP",
+            "independence":"MODEL_SOURCE_RECORD_NOT_INDEPENDENT_OWNER_PROOF",
+        }
+        if records is None or records==[]:
+            return outcome
+        if not isinstance(records,list):
+            outcome["state"]="DOCUMENTARY_REFERENCES_NOT_FULLY_GROUNDED"
+            outcome["unverified_reference_count"]=1
+            outcome["reason_codes"]=["INVALID_SOURCE_RECORDS_SHAPE"]
+            return outcome
+
+        name=_text(obj.get("name"))
+        other_names=[_text(other.get("name")) for other in objects]
+        reasons=[]
+        for rec in records:
+            if not isinstance(rec,dict):
+                reasons.append("INVALID_DOCUMENTARY_REFERENCE_SHAPE")
+                continue
+            kind=str(rec.get("kind") or "").strip().upper()
+            document=_path(rec.get("document"))
+            page=_page_number(rec.get("page"))
+            fragment=_text(rec.get("fragment"))
+            key=(document,page)
+            if kind not in {"PZ_COMPLEX_OBJECT_REGISTER","GENERAL_PLAN_EXPLICATION"}:
+                reason="NOT_A_TYPED_OBJECT_REGISTER_SOURCE"
+            elif not document or not page:
+                reason="DOCUMENTARY_SOURCE_ADDRESS_MISSING"
+            elif not name or len(name)<5 or other_names.count(name)!=1:
+                reason="OBJECT_NAME_NOT_UNIQUE_IN_PROJECT_MODEL"
+            elif (
+                rec.get("position") not in (None,"")
+                and _text(rec.get("position"))!=_text(obj.get("position"))
+            ):
+                reason="DOCUMENTARY_POSITION_ASSERTION_CONFLICT"
+            else:
+                # All file aliases in every registry row are identity claims.
+                # A conflicting alias taints a source even when another
+                # otherwise clean row cites the same path.
+                registered=[]
+                registry_conflict=False
+                for source_row in documents or []:
+                    if not isinstance(source_row,dict):
+                        continue
+                    aliases={
+                        _path(source_row.get(field))
+                        for field in ("Файл","document","filename")
+                        if str(source_row.get(field) or "").strip()
+                    }
+                    aliases.discard("")
+                    if document in aliases:
+                        registered.append(source_row)
+                        if len(aliases)>1:
+                            registry_conflict=True
+                if registry_conflict:
+                    reason="DOCUMENTARY_REGISTRY_FILE_ALIASES_CONFLICT"
+                elif len(registered)!=1:
+                    reason="DOCUMENTARY_SOURCE_NOT_UNIQUELY_REGISTERED"
+                elif key in page_path_conflicts:
+                    reason="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+                elif key in page_text_conflicts:
+                    reason="SOURCE_PAGE_TEXT_FIELDS_CONFLICT"
+                elif len(page_index.get(key) or [])!=1:
+                    reason="SOURCE_PAGE_NOT_UNIQUE"
+                elif len(fragment)<20:
+                    reason="DOCUMENTARY_QUOTE_NOT_PROVIDED_OR_TOO_SHORT"
+                elif not re.search(
+                    rf"(?<![a-zа-я0-9]){re.escape(name)}(?![a-zа-я0-9])",
+                    fragment
+                ):
+                    reason="OBJECT_NAME_NOT_IN_DOCUMENTARY_QUOTE"
+                elif fragment not in _text(page_index[key][0]):
+                    reason="DOCUMENTARY_QUOTE_NOT_LOCATED"
+                else:
+                    reason="OBJECT_REGISTER_PAGE_QUOTE_LOCATED_OWNER_UNVERIFIED"
+            reasons.append(reason)
+        matched=reasons.count("OBJECT_REGISTER_PAGE_QUOTE_LOCATED_OWNER_UNVERIFIED")
+        outcome["state"]=(
+            "DOCUMENTARY_OBJECT_QUOTES_LOCATED_OWNER_UNVERIFIED"
+            if matched==len(reasons)
+            else "DOCUMENTARY_REFERENCES_NOT_FULLY_GROUNDED"
+        )
+        outcome["matched_quote_count"]=matched
+        outcome["unverified_reference_count"]=len(reasons)-matched
+        outcome["reason_codes"]=sorted(set(reasons))
+        return outcome
+
+
     def source_probe(oid:str,code:str,document:str,page:str,fragment:str)->str:
         """Return a source-address diagnostic, not normative applicability proof."""
         if not document or not page or not code:
@@ -337,6 +438,9 @@ def build_ios_applicability_candidates(
                     ),
                     "registry_owner_state":registry_owner_state(
                         oid,str(item.get("document") or "")
+                    ),
+                    "documentary_object_identity_diagnostic":(
+                        documentary_object_identity_diagnostic(oid)
                     ),
                 })
         matched=sum(
@@ -425,6 +529,9 @@ def build_ios_applicability_candidates(
                     oid,doc,pg
                 ),
                 "registry_owner_state":registry_owner_state(oid,doc),
+                "documentary_object_identity_diagnostic":(
+                    documentary_object_identity_diagnostic(oid)
+                ),
                 "admission":"SPECIALIST_REVIEW_ONLY",
             })
 

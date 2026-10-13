@@ -9606,3 +9606,72 @@ A later bounded increment may add an independent documentary
 object-identity evidence contract with explicit source attribution,
 but must distinguish document content from trustworthy object
 ownership and retain specialist review until standards proof exists.
+
+## ExpertCheck IOS documentary object identity provenance diagnostic — 2026-10-13
+
+Last fully validated checkpoint before this increment:
+`91be7c53e85eccbbd3b4db3538d17f3939d60f8b`.
+Atomic source/test commit:
+`2e041cca945df82ab19f77c778110dc7c13d3e50`.
+Historical working branch:
+`codex/expertcheck-25.2-coverage-breakthrough`.
+This is not a published 25.3 release.
+
+### Atomic scope and limits
+
+Exactly two functional files changed:
+- `core20/ios_applicability_candidates.py`;
+- `tests/test_core20_ios_applicability_candidates.py`.
+
+Nine focused tests added. The review-only IOS candidate and contradictory
+claim diagnostics now include `documentary_object_identity_diagnostic`.
+This checks typed `source_records` from Project Understanding for
+`PZ_COMPLEX_OBJECT_REGISTER` and `GENERAL_PLAN_EXPLICATION`:
+exact normalized source path, exact page, uniquely registered file,
+non-conflicting document/page aliases, unique parsed page and
+non-conflicting text/content, a literal quote found on that page and
+a sufficiently distinctive model object name inside the quote.
+Conflicting registry aliases quarantine the reference even when
+another clean file registry row alleges the same path. Duplicate
+object names are not treated as unique owner identification.
+Record position disagreement is a diagnostic blocker.
+
+`source_records` can still lack a `fragment` in ordinary upstream
+project models; without an explicit suitable fragment, the check
+remains unverified. This is **not** independent evidence that a
+specific IOS document belongs to that object, merely a traceable
+source reference to an object-register statement. It does **not**
+establish document ownership, applicability, legal compliance
+or complete set proof. No changes to normative catalogue or
+verdict promotion: `PP87-CLAUSE-15-IOS` remains
+`promotion_policy=HOLD`, `complete=False`,
+`SPECIALIST_REVIEW_ONLY` for admitted candidates.
+In particular, finding an object's name in the PZ object register
+never authorizes asserting that the cited IOS file is its property.
+
+### Verified source SHA CI (all SUCCESS)
+
+- Core20 quality gates #1257: **SUCCESS**, **498 passed**,
+  results-integrity successful.
+- Core25 Quality Leap gates #899: **SUCCESS**,
+  core20-regression, core25-tests, baseline-full-diagnostic
+  and alpha1-release-gate all completed successfully.
+- Test78 deterministic A/B #295: **SUCCESS**, `NO_CHANGE`.
+  Baseline=current=56 requirements:
+  25 VERIFIED_OK, 2 PROJECT_FINDING, 29 REVIEW_QUESTION,
+  changed_ids=[].
+- Streamlit startup smoke #63: **SUCCESS**.
+- Source Snapshot Artifact #705: **SUCCESS**.
+
+### Resume / checkpoint procedure
+
+The next commit updates this journal **only**. Confirm its precise
+SHA has successful Core20, Core25 and Source Snapshot workflows.
+Compare the branch tip to the journal SHA with ahead=behind=0.
+Do not merge into `main`. Supabase remains separately paused.
+
+Next bounded work: source-locked typed object-register metadata must
+be connected to a separately verified document-object membership
+assertion before any owner evidence could be considered stronger
+than review-only. Do not equate literal quote matching with
+authoritative document ownership or automatic normative proof.

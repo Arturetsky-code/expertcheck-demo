@@ -384,7 +384,9 @@ def build_cross_section_checks(findings: list[dict[str, Any]]) -> list[dict[str,
                 })
                 evidence_parts.append(
                     f"{section_family(item)} — {item.get('document')}, стр. {item.get('page') or '-'}: "
-                    f"{name} · {parameter_name} — {numeric_value(item):g} {item.get('unit') or unit}".strip()
+                    f"{name} · {parameter_name} — "
+                    f"{normalized_item.value if normalized_item else numeric_value(item):g} "
+                    f"{normalized_item.unit if normalized_item else (item.get('unit') or unit)}".strip()
                 )
 
             check_id = re.sub(r"[^A-Za-zА-Яа-я0-9]+", "-", f"{position}-{name}").strip("-")[:38]

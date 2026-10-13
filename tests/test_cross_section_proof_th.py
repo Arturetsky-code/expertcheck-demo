@@ -168,3 +168,34 @@ def test_report_counts_cross_section_finding_once_and_exports_proof_route():
     assert "owner_sections" in headers
     assert "control_sections" in headers
     assert "cross_section_gate_state" in headers
+
+
+def test_source_line_uses_same_canonical_value_and_unit_as_comparison():
+    # Reproduces the Streamlit audit: 1 600 thousand t/year = 1 600 000 t/year.
+    # The old diagnostic source line incorrectly printed 1.6e+06 тыс.т/год.
+    source = _fact("ПЗ", 1600, "тыс.т/год")
+    rows = build_cross_section_checks([source])
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["unit"] == "т/год"
+    assert "1.6e+06 т/год" in row["document_values"]
+    assert "1.6e+06 т/год" in row["sources"]
+    assert "1.6e+06 тыс.т/год" not in row["sources"]
+    assert row["verification_evidence"][0]["value"] == 1_600_000
+    assert row["verification_evidence"][0]["unit"] == "т/год"
+    assert source["value"] == 1600
+    assert source["unit"] == "тыс.т/год"
+
+
+def test_canonical_source_lines_agree_for_two_input_unit_scales():
+    rows = build_cross_section_checks([
+        _fact("ТХ", 1.6, "млн.т/год"),
+        _fact("ПЗ", 1600, "тыс.т/год", page=22),
+    ])
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["status"] == "СОВПАДАЕТ"
+    assert row["unit"] == "т/год"
+    assert row["sources"].count("1.6e+06 т/год") == 2
+    assert "млн.т/год" not in row["sources"]
+    assert "тыс.т/год" not in row["sources"]

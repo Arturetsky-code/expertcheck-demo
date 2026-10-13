@@ -55,8 +55,18 @@ def _render_gate(row) -> None:
         st.caption('Причины: ' + ' | '.join(reasons))
 
 
+def _active_comparisons(ctx) -> pd.DataFrame:
+    """Use comparisons filtered by the user's confirmed object assembly.
+
+    app.py passes the complete diagnostic frame at index 2 and the active,
+    assembly-filtered frame at index 5. Never treat excluded candidates as
+    active project checks.
+    """
+    return ctx.data[5]
+
+
 def render(ctx):
-    df=ctx.data[2]
+    df=_active_comparisons(ctx)
     section('Межраздельная сверка','Сначала показаны только результаты, требующие внимания. Совпадения доступны отдельной вкладкой.')
     if not st.session_state.get('object_registry_confirmed'):
         st.warning('Сначала подтвердите состав объектов.')

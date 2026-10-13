@@ -2,8 +2,8 @@
 
 Updated: 2026-10-13
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `cf1cb18006eadc6561095c7e4057f6d9a76820a8`
-Green validation marker commit: `cf1cb18006eadc6561095c7e4057f6d9a76820a8`
+Latest validated source commit: `3891657843ff86e8c4e459dd632bc705674e0f06`
+Green validation marker commit: `3891657843ff86e8c4e459dd632bc705674e0f06`
 
 ## Official accepted local checkpoint
 
@@ -9470,3 +9470,69 @@ with a typed engineering/source contract and genuine documentary
 support. Do not infer object ownership merely from a quoted string.
 Any Supabase remediation is separately postponed and must not
 be made in this workstream.
+
+
+## ExpertCheck IOS typed source-page alias provenance guard — 2026-10-13
+
+Previous fully verified checkpoint:
+`856a4bfe2575483f018caf61ab9d007055ec9168`.
+Accepted functional source-and-test commit:
+`3891657843ff86e8c4e459dd632bc705674e0f06`.
+Branch remains `codex/expertcheck-25.2-coverage-breakthrough`,
+the historical branch name. This work is not a published 25.3 release.
+
+### Atomic scope
+
+Exactly two files changed:
+- `core20/ios_applicability_candidates.py`
+- `tests/test_core20_ios_applicability_candidates.py`
+
+Seven regression tests were added.
+
+Parsed pages can supply multiple file identity fields:
+`document`, `Файл`, `filename`. Previously the IOS review-only
+evidence builder took just the first available alias, allowing a
+page which also named a conflicting file to masquerade as fully
+attributed to the first. It now normalizes ALL present aliases,
+requiring one canonical full path to treat the page as uniquely
+identified. If aliases disagree, the source page is quarantined
+for *every* alleged file path under reason
+`SOURCE_PAGE_FILE_ALIASES_CONFLICT`, even when another clean row
+with the same path/page also exists.
+
+The same source-page alias guard applies to direct applicability
+citation checks and secondary Project Understanding cross-property
+quote diagnostics. Equivalent slash/case-normalized aliases are
+accepted; `filename` by itself can identify a page; separate
+nonconflicting pages and sources remain independently available.
+
+The outcome remains `CANDIDATE_ONLY`, `promotion_policy=HOLD`,
+`complete=False`, `SPECIALIST_REVIEW_ONLY`. The change does
+not prove object identity or normative applicability, and it
+does not alter established `PP87-CLAUSE-15-IOS` verdict policy.
+
+### Source SHA CI (all SUCCESS)
+
+- Core20 quality gates #1253: **SUCCESS** — **482 passed**,
+  results-integrity successful.
+- Core25 Quality Leap gates #895: **SUCCESS**, including
+  targeted Core20 regression, Core25 tests, baseline diagnostic
+  and legacy release gate.
+- Test78 deterministic A/B #293: **SUCCESS** / `NO_CHANGE`,
+  baseline=current=56 requirements, 25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION, changed IDs empty.
+- Source Snapshot Artifact #701: **SUCCESS**.
+- Streamlit startup smoke #61: **SUCCESS**.
+
+### Resume instructions
+
+The next commit updates `DEVELOPMENT_STATE.md` *only*. Check the
+new exact branch HEAD against that documentation checkpoint:
+ahead=0, behind=0; then verify Core20, Core25 and Source Snapshot
+on the checkpoint's own SHA. Do not merge to `main`. Do not
+modify Supabase.
+
+Next small slice: use a separately source-locked documentary
+object-identity evidence contract for provenance diagnosis and
+specialist review, not merely model links or quoted file aliases.
+Do not automatically upgrade normative findings.

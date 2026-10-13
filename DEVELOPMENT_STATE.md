@@ -1,9 +1,9 @@
 # ExpertCheck development state
 
-Updated: 2026-10-12
+Updated: 2026-10-13
 Active branch: `codex/expertcheck-25.2-coverage-breakthrough`
-Latest validated source commit: `536fc01feb4faf3ee2063b0d6d3aa0a9c3393535`
-Green validation marker commit: `536fc01feb4faf3ee2063b0d6d3aa0a9c3393535`
+Latest validated source commit: `cf1cb18006eadc6561095c7e4057f6d9a76820a8`
+Green validation marker commit: `cf1cb18006eadc6561095c7e4057f6d9a76820a8`
 
 ## Official accepted local checkpoint
 
@@ -9397,3 +9397,76 @@ Do not automatically promote a normative verdict.
 
 Supabase remediation is a separate paused task; do not touch it
 as part of this development checkpoint.
+
+
+## ExpertCheck 25.3 workstream — cross-property quote source diagnostics — 2026-10-13
+
+Previous fully validated documentation checkpoint:
+`2f64712092649663438bb0eaf61bd33a0333e6e6`.
+Validated source/test commit:
+`cf1cb18006eadc6561095c7e4057f6d9a76820a8`.
+The 25.2 branch name remains the stable historical working branch,
+not a newly published product version.
+
+### Bounded code change
+
+Only `core20/ios_applicability_candidates.py` and
+`tests/test_core20_ios_applicability_candidates.py` were changed,
+with seven focused new regression tests.
+
+The IOS applicability review-only candidate builder now checks the
+literal source quotation for references from **other Project Understanding
+model properties**, at the same exact normalized document path and page.
+A new `cross_property_source_diagnostic` on each review candidate
+and each conflicting claim distinguishes:
+
+- `NO_CROSS_PROPERTY_MODEL_REFERENCE`: none exists for this object,
+  file and page;
+- `CROSS_PROPERTY_QUOTES_LOCATED_OWNER_UNVERIFIED`: every additional
+  property reference has an exact page quote in a unique indexed
+  source page with unconflicted document metadata;
+- `CROSS_PROPERTY_REFERENCES_NOT_FULLY_GROUNDED`: one or more reference
+  quotations are missing, too short, not found, have ambiguous pages
+  or have unproven source identity.
+
+The diagnostic includes `matched_quote_count`,
+`unverified_reference_count`, per-group `reason_codes`,
+and an explicit `independence=MODEL_REFERENCE_ONLY_NOT_OWNER_PROOF`.
+A mixed list of one matched and one invented quote is not reported
+as fully grounded. Full-path and exact-page identity are preserved;
+same basenames in other object directories do not count.
+
+Critical engineering boundary: even a matched model-level quotation
+is **not independent project object-ownership evidence** and never
+proves applicability or compliance. No normative catalogue changes
+or automatic verdict promotion were made. The contract
+`PP87-CLAUSE-15-IOS` stays `HOLD`, `complete=False`,
+with specialist review required. Existing source-identity and
+contradictory-claim quarantine guards remain in effect.
+
+### Exact source CI (all SUCCESS)
+
+- Core20 quality gates #1251: **SUCCESS**, **475 passed**,
+  results-integrity successful.
+- Core25 Quality Leap gates #893: **SUCCESS**, including
+  core25-tests, core20-regression, baseline-full-diagnostic,
+  and alpha1-release-gate.
+- Test78 deterministic A/B #292: **SUCCESS**, `NO_CHANGE`:
+  56 requirements; baseline=current=25 VERIFIED_OK,
+  2 PROJECT_FINDING, 29 REVIEW_QUESTION; changed_ids=[].
+- Source Snapshot Artifact #699: **SUCCESS**.
+- Streamlit startup smoke #60: **SUCCESS**.
+
+### Resume/checkpoint guidance
+
+The next commit changes this journal **only**. Verify its exact
+SHA against Core20, Core25, and Source Snapshot completed successful
+runs, and compare the branch tip with its SHA (ahead=behind=0).
+Do not merge into `main`.
+
+Next independent increment: distinguish quote-in-page from an
+authoritative source document stating the exact object's identity
+with a typed engineering/source contract and genuine documentary
+support. Do not infer object ownership merely from a quoted string.
+Any Supabase remediation is separately postponed and must not
+be made in this workstream.

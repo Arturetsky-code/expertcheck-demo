@@ -105,15 +105,29 @@ def build_ios_applicability_candidates(
         if {"REQUIRED","NOT_REQUIRED"} <= set(decisions)
     }
     page_index:dict[tuple[str,str],list[str]]={}
+    # Never trust only the first page filename alias. A parsed page with
+    # contradictory canonical paths must not be attributed to *either* file.
+    # Track each alleged path to quarantine conflicting page provenance.
+    page_path_conflicts:set[tuple[str,str]]=set()
     for page in (pages or []):
         if not isinstance(page,dict):
             continue
-        document=_path(page.get("document") or page.get("Файл"))
         number=_page_number(page.get("page"))
-        if document and number:
-            page_index.setdefault((document,number),[]).append(
-                str(page.get("text") or page.get("content") or "")
-            )
+        aliases={
+            _path(page.get(field))
+            for field in ("document","Файл","filename")
+            if str(page.get(field) or "").strip()
+        }
+        aliases.discard("")
+        if not number or not aliases:
+            continue
+        if len(aliases)!=1:
+            page_path_conflicts.update((name,number) for name in aliases)
+            continue
+        document=next(iter(aliases))
+        page_index.setdefault((document,number),[]).append(
+            str(page.get("text") or page.get("content") or "")
+        )
 
     source_index:dict[str,list[dict[str,Any]]]={}
     for item in inventory or []:
@@ -219,7 +233,9 @@ def build_ios_applicability_candidates(
         page_texts=page_index.get(key) or []
         reasons=[]
         for fragment in fragments:
-            if len(source_rows)!=1 or source_rows[0].get("metadata_conflict"):
+            if key in page_path_conflicts:
+                reason="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+            elif len(source_rows)!=1 or source_rows[0].get("metadata_conflict"):
                 reason="IOS_SOURCE_IDENTITY_NOT_PROVEN"
             elif len(page_texts)!=1:
                 reason="SOURCE_PAGE_NOT_UNIQUE"
@@ -259,6 +275,8 @@ def build_ios_applicability_candidates(
             "DOCUMENT_REGISTRY_OBJECT_ID_MISMATCH",
         }:
             return owner_state
+        if key in page_path_conflicts:
+            return "SOURCE_PAGE_FILE_ALIASES_CONFLICT"
         matches_text=page_index.get(key) or []
         if len(matches_text)!=1:
             return "SOURCE_PAGE_NOT_UNIQUE"

@@ -681,3 +681,94 @@ def test_conflicting_ios_claims_show_separate_cross_property_quote_checks():
     )
     assert result["complete"] is False
     assert result["promotion_policy"]=="HOLD"
+
+
+def test_conflicting_source_page_file_aliases_are_never_accepted():
+    docs,pages=_fixture()
+    pages[0]["Файл"]="Объект Б/ИОС1.pdf"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+    assert result["promotion_policy"]=="HOLD"
+    assert result["complete"] is False
+
+
+def test_page_source_alias_equivalence_after_canonicalization_is_allowed():
+    docs,pages=_fixture()
+    pages[0]["Файл"]=r"ОБЪЕКТ А\\ИОС1.PDF"
+    pages[0]["filename"]="объект а/иос1.pdf"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["admission"]=="SPECIALIST_REVIEW_ONLY"
+
+
+def test_source_page_filename_field_alone_can_resolve_exact_document():
+    docs,pages=_fixture()
+    pages[0].pop("document")
+    pages[0]["filename"]="Объект А/ИОС1.pdf"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==1
+    assert result["complete"] is False
+
+
+def test_conflicting_page_alias_even_with_valid_duplicate_row_fails_closed():
+    docs,pages=_fixture()
+    pages.append({
+        "document":"Объект А/ИОС1.pdf",
+        "Файл":"Объект Б/ИОС1.pdf",
+        "page":7,"text":pages[0]["text"],
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+
+
+def test_cross_property_diagnostics_do_not_approve_conflicting_page_alias():
+    docs,pages=_fixture()
+    quote="Дополнительный текст ИОС1 содержит сведения об инженерных сетях."
+    pages[0]["text"]+=" "+quote
+    pages[0]["Файл"]="Объект Б/ИОС1.pdf"
+    props=docs[1]["project_understanding"]["objects"][0]["properties"]
+    props["networks"]=[{
+        "document":"Объект А/ИОС1.pdf","page":7,"fragment":quote
+    }]
+    # Original applicability candidate is rejected; a conflict group
+    # retains the same per-page source diagnostic for specialist review.
+    _add_claim(docs,fragment="Для объекта подраздел ИОС1 не требуется.")
+    pages.append({
+        "document":"Объект А/ИОС1.pdf","page":8,
+        "text":"Для объекта подраздел ИОС1 не требуется.",
+    })
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["conflict_count"]==1
+    conflict=result["conflicts"][0]["claims"][0]
+    assert conflict["source_reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+    assert conflict["cross_property_source_diagnostic"]["reason_codes"]==[
+        "SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+    ]
+    assert result["complete"] is False
+
+
+def test_conflict_on_one_page_does_not_poison_other_page_or_document():
+    docs,pages=_fixture()
+    pages[0]["Файл"]="Объект Б/ИОС1.pdf"
+    quote="Для объекта обязательно предусмотрен подраздел ИОС1."
+    _add_claim(docs,decision="REQUIRED",page=8,fragment=quote)
+    pages.append({"document":"Объект А/ИОС1.pdf","page":8,"text":quote})
+    result=_run(docs,pages)
+    assert result["conflict_count"]==0
+    assert result["candidate_count"]==1
+    assert result["candidates"][0]["page"]==8
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
+
+
+def test_conflicting_alias_for_another_document_cannot_replace_claim_page():
+    docs,pages=_fixture()
+    pages[0]["filename"]="Объект Б/ИОС1.pdf"
+    docs.append({"Файл":"Объект Б/ИОС1.pdf","Тип документа":"ИОС1"})
+    model=docs[1]["project_understanding"]["objects"][0]["properties"]
+    model["ios_subsection_applicability"][0]["document"]="Объект Б/ИОС1.pdf"
+    result=_run(docs,pages)
+    assert result["candidate_count"]==0
+    assert result["rejected"][0]["reason_code"]=="SOURCE_PAGE_FILE_ALIASES_CONFLICT"
